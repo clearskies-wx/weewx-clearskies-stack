@@ -1,0 +1,51 @@
+name: clearskies-dev
+
+services:
+  mariadb:
+    image: mariadb:10.11
+    profiles: ["mariadb", "all"]
+    environment:
+      MARIADB_ROOT_PASSWORD: ${MARIADB_ROOT_PASSWORD:?must be set}
+      MARIADB_DATABASE: ${MARIADB_DATABASE:-weewx}
+      MARIADB_USER: ${MARIADB_USER:-weewx}
+      MARIADB_PASSWORD: ${MARIADB_PASSWORD:?must be set}
+    volumes:
+      - mariadb_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    ports:
+      # Loopback-only on host. IPv4 + IPv6 both bound (rules/coding.md §1).
+      - "127.0.0.1:${MARIADB_HOST_PORT:-3307}:3306"
+      - "[::1]:${MARIADB_HOST_PORT:-3307}:3306"
+    restart: unless-stopped
+
+  seed-mariadb:
+    build:
+      context: ./seed
+    profiles: ["mariadb", "all"]
+    environment:
+      CLEARSKIES_DB_URL: "mysql+pymysql://${MARIADB_USER:-weewx}:${MARIADB_PASSWORD:?must be set}@mariadb:3306/${MARIADB_DATABASE:-weewx}"
+      SNAPSHOT_DIR: /snapshot
+    volumes:
+      - ./snapshot/data:/snapshot:ro
+    depends_on:
+      mariadb:
+        condition: service_healthy
+
+  seed-sqlite:
+    build:
+      context: ./seed
+    profiles: ["sqlite", "all"]
+    environment:
+      CLEARSKIES_DB_URL: "sqlite:////sqlite/weewx.sdb"
+      SNAPSHOT_DIR: /snapshot
+    volumes:
+      - ./snapshot/data:/snapshot:ro
+      - sqlite_data:/sqlite
+
+volumes:
+  mariadb_data:
+  sqlite_data:

@@ -1,0 +1,20 @@
+# Secrets
+.env
+.env.local
+secrets.env
+
+# Mixed (compose may run any language; cover Python + JS basics)
+__pycache__/
+*.py[cod]
+*.so
+.venv/
+node_modules/
+dist/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.idea/
+.vscode/
