@@ -25,9 +25,12 @@ test data, two backends.
 dev/
 ├── docker-compose.yml        # MariaDB service + two seed-runner profiles
 ├── .env.example              # copy to .env and fill in
+├── mariadb-init/             # MariaDB one-time init scripts (run on first start)
+│   └── 01-clearskies-ro.sql  # creates clearskies_ro SELECT-only user (ADR-012)
 ├── snapshot/
 │   ├── capture.py            # operator-run, host-side; produces a snapshot
-│   └── data/                 # gitignored output: tables.json + per-table CSVs
+│   └── data/                 # tables.json + per-table CSVs (gitignored for
+│                             #   production captures; committed for dev seed)
 └── seed/
     ├── seed_loader.py        # runs inside the seed-* container
     ├── requirements.txt      # pinned deps (== pins per rules/coding.md §1)
@@ -72,6 +75,50 @@ concern — `MARIADB_USER` from `.env` populates the database with full
 privileges; the API service connects as a different `SELECT`-only user. Tests
 that exercise the read-only-enforcement startup probe must use the SELECT-only
 user, not the seed user.
+
+### clearskies_ro user (SELECT-only, for integration tests)
+
+`mariadb-init/01-clearskies-ro.sql` runs once when the MariaDB container is
+first created (Docker's `/docker-entrypoint-initdb.d/` convention). It creates:
+
+```sql
+CREATE USER IF NOT EXISTS 'clearskies_ro'@'%' IDENTIFIED BY 'clearskies_ro_test';
+GRANT SELECT ON weewx.* TO 'clearskies_ro'@'%';
+```
+
+The password (`clearskies_ro_test`) is hard-coded in the init script because:
+- This is dev/test infrastructure only — never runs in production.
+- MariaDB init SQL cannot interpolate environment variables.
+- The seed stack is loopback-bound (`127.0.0.1` only) and never publicly exposed.
+
+Integration tests connect as `clearskies_ro` using `MARIADB_RO_PASSWORD` from
+`.env` (default `clearskies_ro_test`). The writable seed user (`MARIADB_USER`)
+is used only for the negative write-probe tests that must confirm the probe
+correctly rejects a user with DML privileges.
+
+**Important:** If you tear down the MariaDB data volume (`docker compose down -v`)
+the init script re-runs on next `docker compose up`, recreating the user.
+If you only stop/start the container without removing the volume, the user
+already exists and the `IF NOT EXISTS` guard prevents errors.
+
+## Seed data
+
+`snapshot/data/tables.json` and `snapshot/data/archive.csv` are committed.
+These are 5 rows of real production data from the `weewx` container (captured
+2026-05-06) including:
+
+- All stock weewx columns (dateTime through windSpeed).
+- Extension columns added by the AirVisual plugin: `aqi`, `main_pollutant`,
+  `aqi_level`, `aqi_location`.
+- Extension columns added by the OpenWeather plugin: `ow_aqi`, `ow_cloud_cover`,
+  `ow_co`, `ow_nh3`, `ow_no`, `ow_no2`, `ow_ozone`, `ow_pm10`, `ow_pm25`,
+  `ow_so2`, `ow_visibility`.
+
+This is the minimum needed to exercise the schema reflection registry (ADR-035)
+against a realistic production schema that has both stock and non-stock columns.
+
+The full production capture (thousands of rows, date-windowed) is still an
+operator-run step — see [`snapshot/README.md`](snapshot/README.md).
 
 ## What was tested
 

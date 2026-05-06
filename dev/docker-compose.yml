@@ -11,6 +11,10 @@ services:
       MARIADB_PASSWORD: ${MARIADB_PASSWORD:?must be set}
     volumes:
       - mariadb_data:/var/lib/mysql
+      # Init scripts run once on first container start (when data volume is empty).
+      # 01-clearskies-ro.sql creates the SELECT-only 'clearskies_ro' user used
+      # by the API service and integration tests (ADR-012 read-only enforcement).
+      - ./mariadb-init:/docker-entrypoint-initdb.d:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s

@@ -1,6 +1,12 @@
 .env
+# snapshot/data/ contains:
+#   - tables.json + archive.csv: COMMITTED (real production schema, 5 rows)
+#   - Full production capture CSVs from operator runs: GITIGNORED
+# The .gitignore below allows the committed seed files through.
 snapshot/data/*
 !snapshot/data/.gitkeep
+!snapshot/data/tables.json
+!snapshot/data/archive.csv
 __pycache__/
 *.pyc
 .pytest_cache/
