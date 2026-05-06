@@ -1,0 +1,41 @@
+name: dep-audit
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+  audit-python:
+    name: pip-audit (dev infrastructure)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: '3.12'
+
+      - name: Audit dev/seed and dev/snapshot Python deps
+        run: |
+          set -eu
+          pip install --quiet pip-audit
+          ran=0
+          if [ -f dev/seed/requirements.txt ]; then
+            echo "::group::pip-audit dev/seed"
+            pip-audit --requirement dev/seed/requirements.txt --strict
+            echo "::endgroup::"
+            ran=1
+          fi
+          if [ -f dev/snapshot/pyproject.toml ]; then
+            echo "::group::pip-audit dev/snapshot"
+            (cd dev/snapshot && pip-audit --strict)
+            echo "::endgroup::"
+            ran=1
+          fi
+          if [ "$ran" = "0" ]; then
+            echo "No Python manifests under dev/ — nothing to audit."
+          fi
