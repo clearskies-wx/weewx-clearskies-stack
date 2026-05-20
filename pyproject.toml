@@ -30,6 +30,12 @@ dependencies = [
 wizard = [
     "timezonefinder>=6.5.0",
 ]
+dev = [
+    "pytest>=8.0",
+    "respx>=0.22.0",
+    "httpx>=0.28.0",
+    "starlette>=0.40.0",
+]
 
 [project.scripts]
 weewx-clearskies-config = "weewx_clearskies_config.__main__:main"
@@ -70,6 +76,12 @@ disallow_incomplete_defs = true
 check_untyped_defs = true
 disallow_any_generics = true
 no_implicit_reexport = true
+
+# ---------------------------------------------------------------------------
+# pytest
+# ---------------------------------------------------------------------------
+[tool.pytest.ini_options]
+testpaths = ["tests"]
 
 [[tool.mypy.overrides]]
 module = ["configobj.*"]
