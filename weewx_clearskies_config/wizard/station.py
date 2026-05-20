@@ -83,10 +83,12 @@ def _parse_altitude_meters(raw: str) -> float | None:
     """
     if not raw:
         return None
-    # Strip surrounding quotes/whitespace
-    raw = raw.strip().strip("\"'")
-    # weewx format: "value, unit" (e.g. "100, foot")
-    parts = [p.strip() for p in raw.split(",")]
+    # ConfigObj may parse "50, foot" as a list ['50', 'foot'] or a string.
+    if isinstance(raw, list):
+        parts = [str(p).strip() for p in raw]
+    else:
+        raw = str(raw).strip().strip("\"'")
+        parts = [p.strip() for p in raw.split(",")]
     if not parts:
         return None
     try:

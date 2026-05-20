@@ -37,9 +37,9 @@ def _today() -> str:
 
 def _serialize_configobj(cfg: ConfigObj) -> str:
     """Serialize a ConfigObj to a string."""
-    buf = io.StringIO()
+    buf = io.BytesIO()
     cfg.write(outfile=buf)
-    return buf.getvalue()
+    return buf.getvalue().decode("utf-8")
 
 
 def update_managed_region(

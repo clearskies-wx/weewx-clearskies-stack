@@ -39,9 +39,9 @@ def _wrap_with_managed_region(cfg: ConfigObj) -> str:
     """Serialize *cfg* and wrap it in MANAGED REGION markers."""
     import io
 
-    buf = io.StringIO()
+    buf = io.BytesIO()
     cfg.write(outfile=buf)
-    content = buf.getvalue()
+    content = buf.getvalue().decode("utf-8")
 
     lines = [
         _MANAGED_HEADER.format(date=_today()),
