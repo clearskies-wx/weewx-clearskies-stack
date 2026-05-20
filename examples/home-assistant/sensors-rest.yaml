@@ -1,0 +1,78 @@
+# Home Assistant REST sensor configuration for weewx-clearskies-api
+#
+# Add these entries to your Home Assistant configuration.yaml,
+# or split them into a sensor.yaml file if you use packages.
+#
+# Replace the host/port in `resource` with your clearskies-api address.
+#   IPv4 example: http://192.0.2.5:8765/api/v1/current
+#   IPv6 example: http://[2001:db8::5]:8765/api/v1/current
+#
+# scan_interval is in seconds. External provider endpoints (forecast, aqi)
+# should be polled less frequently than current conditions.
+
+sensor:
+  # --------------------------------------------------------------------------
+  # Current conditions (from weewx archive DB)
+  # --------------------------------------------------------------------------
+  - platform: rest
+    name: "ClearSkies Outdoor Temperature"
+    resource: "http://192.0.2.5:8765/api/v1/current"
+    value_template: "{{ value_json.data.outTemp }}"
+    unit_of_measurement: "°F"
+    device_class: temperature
+    scan_interval: 120
+
+  - platform: rest
+    name: "ClearSkies Outdoor Humidity"
+    resource: "http://192.0.2.5:8765/api/v1/current"
+    value_template: "{{ value_json.data.outHumidity }}"
+    unit_of_measurement: "%"
+    device_class: humidity
+    scan_interval: 120
+
+  - platform: rest
+    name: "ClearSkies Barometric Pressure"
+    resource: "http://192.0.2.5:8765/api/v1/current"
+    value_template: "{{ value_json.data.barometer }}"
+    unit_of_measurement: "inHg"
+    device_class: atmospheric_pressure
+    scan_interval: 120
+
+  - platform: rest
+    name: "ClearSkies Wind Speed"
+    resource: "http://192.0.2.5:8765/api/v1/current"
+    value_template: "{{ value_json.data.windSpeed }}"
+    unit_of_measurement: "mph"
+    device_class: wind_speed
+    scan_interval: 120
+
+  - platform: rest
+    name: "ClearSkies Rain Rate"
+    resource: "http://192.0.2.5:8765/api/v1/current"
+    value_template: "{{ value_json.data.rainRate }}"
+    unit_of_measurement: "in/hr"
+    scan_interval: 120
+
+  # --------------------------------------------------------------------------
+  # AQI (from configured AQI provider)
+  # --------------------------------------------------------------------------
+  - platform: rest
+    name: "ClearSkies AQI"
+    resource: "http://192.0.2.5:8765/api/v1/aqi/current"
+    value_template: "{{ value_json.data.aqi if value_json.data else none }}"
+    scan_interval: 600
+
+  - platform: rest
+    name: "ClearSkies AQI Category"
+    resource: "http://192.0.2.5:8765/api/v1/aqi/current"
+    value_template: "{{ value_json.data.aqiCategory if value_json.data else 'Unknown' }}"
+    scan_interval: 600
+
+  # --------------------------------------------------------------------------
+  # Station metadata
+  # --------------------------------------------------------------------------
+  - platform: rest
+    name: "ClearSkies Station"
+    resource: "http://192.0.2.5:8765/api/v1/station"
+    value_template: "{{ value_json.data.name }}"
+    scan_interval: 3600

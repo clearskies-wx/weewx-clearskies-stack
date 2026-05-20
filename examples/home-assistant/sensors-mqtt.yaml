@@ -1,0 +1,89 @@
+# Home Assistant MQTT sensor configuration for weewx loop packets
+#
+# These sensors consume the weewx-mqtt extension's loop-packet topic directly.
+# They update with every weewx loop cycle (typically every 2 seconds) without
+# going through clearskies-api.
+#
+# Prerequisites:
+#   - weewx-mqtt extension installed and publishing to your MQTT broker
+#   - Home Assistant MQTT integration configured with your broker
+#
+# Replace "weewx/loop" with your configured topic if you changed it.
+#
+# JSON field names match the weewx archive column names (camelCase for most
+# fields; weewx uses underscore names in some versions — adjust to match your
+# weewx installation and weewx-mqtt configuration).
+
+mqtt:
+  sensor:
+    # -------------------------------------------------------------------------
+    # Current conditions (updates every weewx loop cycle)
+    # -------------------------------------------------------------------------
+    - name: "ClearSkies Live Outdoor Temperature"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.outTemp }}"
+      unit_of_measurement: "°F"
+      device_class: temperature
+      expire_after: 120
+
+    - name: "ClearSkies Live Outdoor Humidity"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.outHumidity }}"
+      unit_of_measurement: "%"
+      device_class: humidity
+      expire_after: 120
+
+    - name: "ClearSkies Live Barometric Pressure"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.barometer }}"
+      unit_of_measurement: "inHg"
+      device_class: atmospheric_pressure
+      expire_after: 120
+
+    - name: "ClearSkies Live Wind Speed"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.windSpeed }}"
+      unit_of_measurement: "mph"
+      device_class: wind_speed
+      expire_after: 120
+
+    - name: "ClearSkies Live Wind Direction"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.windDir }}"
+      unit_of_measurement: "°"
+      expire_after: 120
+
+    - name: "ClearSkies Live Rain Rate"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.rainRate }}"
+      unit_of_measurement: "in/hr"
+      expire_after: 120
+
+    - name: "ClearSkies Live UV Index"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.UV }}"
+      expire_after: 120
+
+    - name: "ClearSkies Live Solar Radiation"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.radiation }}"
+      unit_of_measurement: "W/m²"
+      device_class: irradiance
+      expire_after: 120
+
+    # -------------------------------------------------------------------------
+    # Indoor sensors (if your station includes indoor probes)
+    # -------------------------------------------------------------------------
+    - name: "ClearSkies Live Indoor Temperature"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.inTemp }}"
+      unit_of_measurement: "°F"
+      device_class: temperature
+      expire_after: 120
+
+    - name: "ClearSkies Live Indoor Humidity"
+      state_topic: "weewx/loop"
+      value_template: "{{ value_json.inHumidity }}"
+      unit_of_measurement: "%"
+      device_class: humidity
+      expire_after: 120
