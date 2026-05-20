@@ -1,81 +1,51 @@
+{# -------------------------------------------------------------------------
+   Generic section edit form.
+   Used for all config sections.  Provider sections (forecast, alerts, aqi,
+   earthquakes, radar) delegate to provider_section.html via include.
+   Column mapping delegates to column_mapping.html via include.
+   Context variables (from routes.py):
+     component, section, display_name, is_column_mapping,
+     values, secret_fields, mapping, canonical_fields, result, error
+   ------------------------------------------------------------------------- #}
+
+{% set _provider_sections = ("forecast", "alerts", "aqi", "earthquakes", "radar") %}
+
+{% if is_column_mapping %}
+  {% include "config/column_mapping.html" %}
+{% elif section in _provider_sections %}
+  {% include "config/provider_section.html" %}
+{% else %}
+
+{# ======================================================================== #}
+{# Generic section edit form                                                 #}
+{# ======================================================================== #}
 <article>
   <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin/config"
+             hx-get="/admin/config"
+             hx-target="#config-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">
+            Configuration
+          </a>
+        </li>
+        <li>{{ display_name }}</li>
+      </ul>
+    </nav>
     <h2>{{ display_name }}</h2>
     <p>
-      {% if is_column_mapping %}
-      Map database column names to canonical weewx field names.
-      Column mapping takes effect on the next API request — no service restart required.
-      {% else %}
       Edit settings for the <strong>{{ section }}</strong> section of
       <code>{{ component }}.conf</code>.
-      {% endif %}
+      Non-secret values are written into the managed region of the config file.
     </p>
   </header>
 
-  <div id="section-result" aria-live="polite"></div>
+  {# Result notification area — populated by HTMX after save #}
+  <div id="section-result" role="status" aria-live="polite" aria-atomic="true"></div>
 
-  {% if is_column_mapping %}
-  {# ---- Column mapping form ---- #}
-  <form id="column-mapping-form"
-        hx-post="/admin/config/column-mapping"
-        hx-target="#config-content"
-        hx-swap="innerHTML">
-
-    {% if mapping %}
-    <table>
-      <caption>Current column mappings</caption>
-      <thead>
-        <tr>
-          <th scope="col">Database column</th>
-          <th scope="col">Canonical field</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for db_col, canonical in mapping.items() %}
-        <tr>
-          <td>
-            <label for="col_{{ db_col }}">{{ db_col }}</label>
-          </td>
-          <td>
-            <input type="text"
-                   id="col_{{ db_col }}"
-                   name="col_{{ db_col }}"
-                   value="{{ canonical or '' }}"
-                   list="canonical-fields-list"
-                   autocomplete="off"
-                   aria-label="Canonical name for {{ db_col }}">
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p>No column mappings configured. Add mappings by entering database column names
-       and their canonical weewx equivalents below.</p>
-    {% endif %}
-
-    {# Datalist for canonical field autocomplete #}
-    <datalist id="canonical-fields-list">
-      {% for field in canonical_fields %}
-      <option value="{{ field }}">
-      {% endfor %}
-    </datalist>
-
-    <div role="group">
-      <button type="submit">Save Column Mapping</button>
-      <a href="/admin/config"
-         hx-get="/admin/config"
-         hx-target="#config-content"
-         hx-swap="innerHTML"
-         role="button"
-         class="secondary">
-        Cancel
-      </a>
-    </div>
-  </form>
-
-  {% else %}
-  {# ---- Generic section edit form ---- #}
   <form id="section-form-{{ component }}-{{ section }}"
         hx-post="/admin/config/{{ component }}/{{ section }}"
         hx-target="#config-content"
@@ -85,36 +55,77 @@
       <legend>{{ display_name }} settings</legend>
 
       {% if values %}
-        {% for key, val in values.items() %}
+        {% for key in values | sort %}
+        {% set val = values[key] %}
         {% set field_id = "field_" + component + "_" + section + "_" + key %}
-        {% if key in secret_fields %}
-        {# Secret field — render as password input, never pre-fill with existing value #}
-        <label for="{{ field_id }}">
-          {{ key }}
-          <small aria-label="This value is stored in secrets.env">(secret — stored separately)</small>
-        </label>
-        <input type="password"
-               id="{{ field_id }}"
-               name="{{ key }}"
-               placeholder="Enter new value to update, or leave blank to keep existing"
-               autocomplete="new-password"
-               aria-describedby="{{ field_id }}-hint">
-        <small id="{{ field_id }}-hint">
-          Leave blank to keep the current value. Enter a new value to update secrets.env.
-        </small>
-        {% else %}
-        <label for="{{ field_id }}">{{ key }}</label>
-        <input type="text"
-               id="{{ field_id }}"
-               name="{{ key }}"
-               value="{{ val }}"
-               autocomplete="off">
-        {% endif %}
+        {% set is_secret = key in secret_fields %}
+
+        <div style="margin-block-end:1rem">
+          <label for="{{ field_id }}">
+            {{ key | replace("_", " ") | title }}
+            {% if is_secret %}
+            <small aria-label="Stored in secrets.env"
+                   style="color:var(--pico-muted-color)">
+              (secret — stored in secrets.env)
+            </small>
+            {% endif %}
+          </label>
+
+          {% if is_secret %}
+          {#
+             Password field — never pre-fill with existing value.
+             Show/hide toggle uses checkboxVisible state.
+          #}
+          <div style="display:flex;gap:0.5rem;align-items:center">
+            <input type="password"
+                   id="{{ field_id }}"
+                   name="{{ key }}"
+                   placeholder="Enter new value to update, or leave blank to keep existing"
+                   autocomplete="new-password"
+                   aria-describedby="{{ field_id }}-hint"
+                   style="flex:1;margin-bottom:0">
+            <button type="button"
+                    class="secondary outline"
+                    style="white-space:nowrap;margin-bottom:0;padding:0.4rem 0.75rem;font-size:0.85rem"
+                    aria-label="Show password for {{ key | replace('_', ' ') | title }}"
+                    aria-pressed="false"
+                    onclick="(function(btn){
+                      var inp = document.getElementById('{{ field_id }}');
+                      var showing = inp.type === 'text';
+                      inp.type = showing ? 'password' : 'text';
+                      btn.textContent = showing ? 'Show' : 'Hide';
+                      btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+                      btn.setAttribute('aria-label',
+                        (showing ? 'Show' : 'Hide') + ' password for {{ key | replace("_", " ") | title }}');
+                    })(this)">
+              Show
+            </button>
+          </div>
+          <small id="{{ field_id }}-hint">
+            Leave blank to keep the current value.
+            Enter a new value to update <code>secrets.env</code>.
+          </small>
+
+          {% else %}
+          <input type="text"
+                 id="{{ field_id }}"
+                 name="{{ key }}"
+                 value="{{ val }}"
+                 autocomplete="off"
+                 aria-describedby="{{ field_id }}-hint">
+          <small id="{{ field_id }}-hint" class="sr-only">
+            Setting <code>{{ key }}</code> in {{ component }}.conf [{{ section }}]
+          </small>
+          {% endif %}
+        </div>
+
         {% endfor %}
+
       {% else %}
-      <p aria-live="polite">
-        <em>No values found for this section. This section may not have been configured
-        during setup. Save with new values to create it.</em>
+      <p>
+        <em>No values found for this section.
+          This section may not have been configured during setup.
+          Save with new values to create it.</em>
       </p>
       {% endif %}
     </fieldset>
@@ -125,11 +136,28 @@
          hx-get="/admin/config"
          hx-target="#config-content"
          hx-swap="innerHTML"
+         hx-push-url="true"
          role="button"
-         class="secondary">
+         class="secondary outline">
         Cancel
       </a>
     </div>
   </form>
-  {% endif %}
 </article>
+
+{# Visually hidden sr-only helper — defined here so it's available within this fragment #}
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+
+{% endif %}{# end generic / provider / column_mapping branch #}

@@ -1,0 +1,301 @@
+{# -------------------------------------------------------------------------
+   Provider section editor — included by section.html for:
+     forecast, alerts, aqi, earthquakes, radar
+
+   Context: component ("api"), section, display_name, values,
+            secret_fields (always empty for provider sections — secrets go to
+            wizard step 5 / secrets.env directly)
+
+   Provider metadata is embedded inline from the static PROVIDERS list.
+   Selecting a different provider in the dropdown reveals its auth fields.
+   The inline "Test" button posts to /admin/config/test-provider.
+   Saving the provider selection posts to /admin/config/api/<section>.
+   ------------------------------------------------------------------------- #}
+
+{# ---------------------------------------------------------------------- #}
+{# Static provider metadata per domain — mirrors wizard/providers.py       #}
+{# This avoids an extra HTMX round-trip just to discover auth fields.      #}
+{# Update here if PROVIDERS list changes.                                  #}
+{# ---------------------------------------------------------------------- #}
+{% set provider_meta = {
+  "nws":               {"display": "National Weather Service", "keyless": true,  "fields": [],                          "coverage": "US only",  "notes": "Keyless — uses User-Agent header"},
+  "openmeteo":         {"display": "Open-Meteo",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless, free tier"},
+  "openweathermap":    {"display": "OpenWeatherMap",          "keyless": false, "fields": ["api_key"],                 "coverage": "Global",   "notes": ""},
+  "aeris":             {"display": "Aeris Weather",           "keyless": false, "fields": ["client_id","client_secret"],"coverage": "Global",  "notes": ""},
+  "nws_alerts":        {"display": "NWS Alerts",              "keyless": true,  "fields": [],                          "coverage": "US only",  "notes": "Keyless"},
+  "iqair":             {"display": "IQAir / AirVisual",       "keyless": false, "fields": ["api_key"],                 "coverage": "Global",   "notes": ""},
+  "openweathermap_aqi":{"display": "OpenWeatherMap AQI",      "keyless": false, "fields": ["api_key"],                 "coverage": "Global",   "notes": ""},
+  "usgs":              {"display": "USGS Earthquakes",        "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"},
+  "rainviewer":        {"display": "RainViewer",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"}
+} %}
+
+{% set domain_providers = {
+  "forecast":    ["nws", "openmeteo", "openweathermap", "aeris"],
+  "alerts":      ["nws_alerts"],
+  "aqi":         ["iqair", "openweathermap_aqi"],
+  "earthquakes": ["usgs"],
+  "radar":       ["rainviewer"]
+} %}
+
+{% set available_providers = domain_providers.get(section, []) %}
+{% set current_provider = values.get("provider", "") %}
+
+<style>
+  .provider-key-fields {
+    margin-block-start: 0.75rem;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--pico-muted-border-color);
+    border-radius: var(--pico-border-radius);
+    background: var(--pico-secondary-background, #f8f9fa);
+  }
+  .provider-key-fields legend {
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 0 0.4rem;
+    color: var(--pico-muted-color);
+  }
+  .provider-test-area {
+    margin-block-start: 0.75rem;
+  }
+  /* Show/hide key-field sections based on dropdown selection */
+  .provider-keys-section { display: none; }
+  .provider-keys-section.active { display: block; }
+
+  .test-result-inline {
+    margin-block-start: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--pico-border-radius);
+    font-size: 0.9rem;
+  }
+  .test-result-success {
+    background-color: #d4edda;
+    border: 1px solid #a3cfaa;
+    color: #155724;
+  }
+  .test-result-failure {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+  }
+</style>
+
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin/config"
+             hx-get="/admin/config"
+             hx-target="#config-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">
+            Configuration
+          </a>
+        </li>
+        <li>{{ display_name }}</li>
+      </ul>
+    </nav>
+    <h2>{{ display_name }}</h2>
+    <p>
+      Choose a data provider for <strong>{{ section }}</strong>.
+      API keys are stored in <code>secrets.env</code> (mode 0600) and are never
+      written to the config file. Use the <em>Test</em> button to verify
+      connectivity before saving.
+    </p>
+  </header>
+
+  {# Save-result notification area #}
+  <div id="section-result" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  {# ------------------------------------------------------------------ #}
+  {# Outer form — saves the provider selection                           #}
+  {# The test button uses a separate HTMX POST and does not submit this form #}
+  {# ------------------------------------------------------------------ #}
+  <form id="provider-section-form"
+        hx-post="/admin/config/{{ component }}/{{ section }}"
+        hx-target="#config-content"
+        hx-swap="innerHTML">
+
+    <label for="provider-select-{{ section }}">Provider</label>
+    <select id="provider-select-{{ section }}"
+            name="provider"
+            aria-describedby="provider-select-hint-{{ section }}"
+            onchange="onProviderChange_{{ section }}(this.value)">
+      <option value="" {% if not current_provider %}selected{% endif %}>
+        — choose a provider —
+      </option>
+      {% for pid in available_providers %}
+      {% set meta = provider_meta.get(pid, {}) %}
+      <option value="{{ pid }}"
+              {% if current_provider == pid %}selected{% endif %}>
+        {{ meta.get("display", pid) }}
+        ({{ meta.get("coverage", "") }}{% if meta.get("keyless") %}, keyless{% endif %})
+      </option>
+      {% endfor %}
+    </select>
+    <small id="provider-select-hint-{{ section }}">
+      {% if current_provider and provider_meta.get(current_provider) %}
+      Currently: <strong>{{ provider_meta[current_provider].display }}</strong>
+      {% if provider_meta[current_provider].notes %}
+        — {{ provider_meta[current_provider].notes }}
+      {% endif %}
+      {% else %}
+      No provider configured yet.
+      {% endif %}
+    </small>
+
+    {# ---------------------------------------------------------------- #}
+    {# Per-provider API key fieldsets — only the active one is visible   #}
+    {# Keys are NOT submitted by this form; they are tested and stored   #}
+    {# via the test-provider POST (which calls secrets.env directly).    #}
+    {# ---------------------------------------------------------------- #}
+    {% for pid in available_providers %}
+    {% set meta = provider_meta.get(pid, {}) %}
+    {% if meta.get("fields") %}
+    <div id="provider-keys-{{ section }}-{{ pid }}"
+         class="provider-keys-section {% if current_provider == pid %}active{% endif %}"
+         aria-hidden="{{ 'false' if current_provider == pid else 'true' }}">
+
+      <fieldset class="provider-key-fields">
+        <legend>{{ meta.get("display", pid) }} — API credentials</legend>
+        <p><small>Enter credentials to test connectivity.
+          Keys are stored in <code>secrets.env</code> when you use the
+          wizard or update them in the Secrets section.</small></p>
+
+        {% for field_name in meta.get("fields", []) %}
+        {% set key_field_id = "key_" + section + "_" + pid + "_" + field_name %}
+        <label for="{{ key_field_id }}">
+          {{ field_name | replace("_", " ") | title }}
+          <small style="color:var(--pico-muted-color)">(stored in secrets.env)</small>
+        </label>
+        <div style="display:flex;gap:0.5rem;align-items:center">
+          <input type="password"
+                 id="{{ key_field_id }}"
+                 name="{{ field_name }}"
+                 placeholder="Enter key to test (not saved here)"
+                 autocomplete="new-password"
+                 aria-describedby="{{ key_field_id }}-hint"
+                 style="flex:1;margin-bottom:0">
+          <button type="button"
+                  class="secondary outline"
+                  style="white-space:nowrap;margin-bottom:0;padding:0.4rem 0.75rem;font-size:0.85rem"
+                  aria-label="Show value for {{ field_name | replace('_', ' ') | title }}"
+                  aria-pressed="false"
+                  onclick="(function(btn){
+                    var inp = document.getElementById('{{ key_field_id }}');
+                    var showing = inp.type === 'text';
+                    inp.type = showing ? 'password' : 'text';
+                    btn.textContent = showing ? 'Show' : 'Hide';
+                    btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+                    btn.setAttribute('aria-label',
+                      (showing ? 'Show' : 'Hide') + ' value for {{ field_name | replace("_", " ") | title }}');
+                  })(this)">
+            Show
+          </button>
+        </div>
+        <small id="{{ key_field_id }}-hint">
+          Enter the key to run a connectivity test below.
+          To permanently update this key use the setup wizard.
+        </small>
+        {% endfor %}
+
+        <div class="provider-test-area">
+          {#
+             Test button posts to /admin/config/test-provider.
+             The response is a result.html article fragment that is displayed
+             in the main content area (replacing the current form).  The result.html
+             template already has "Edit again" and "Back to overview" buttons, so
+             the operator can easily return to editing after the test.
+          #}
+          <button type="button"
+                  class="secondary"
+                  aria-label="Test connectivity for {{ meta.get('display', pid) }}"
+                  hx-post="/admin/config/test-provider"
+                  hx-target="#config-content"
+                  hx-swap="innerHTML"
+                  hx-include="#provider-keys-{{ section }}-{{ pid }}"
+                  hx-vals='{"provider_id": "{{ pid }}"}'
+                  hx-indicator="#test-spinner-{{ section }}-{{ pid }}">
+            Test {{ meta.get("display", pid) }}
+          </button>
+          <span id="test-spinner-{{ section }}-{{ pid }}"
+                class="htmx-indicator"
+                aria-label="Testing…"
+                aria-live="polite"
+                style="display:inline;margin-inline-start:0.5rem;font-size:0.85rem;
+                       color:var(--pico-muted-color)">
+            Testing…
+          </span>
+        </div>
+
+      </fieldset>
+    </div>
+    {% endif %}
+    {% endfor %}
+
+    {# Save button row #}
+    <div role="group" style="margin-block-start:1.25rem">
+      <button type="submit">Save Provider Selection</button>
+      <a href="/admin/config"
+         hx-get="/admin/config"
+         hx-target="#config-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+</article>
+
+{# ------------------------------------------------------------------ #}
+{# Inline JS — show/hide API key fieldsets when provider changes       #}
+{# Using a per-section named function to avoid name collisions when    #}
+{# multiple provider sections are rendered on the same page.           #}
+{# ------------------------------------------------------------------ #}
+<script>
+(function () {
+  "use strict";
+
+  var section = {{ section | tojson }};
+  var providerIds = {{ available_providers | tojson }};
+
+  function onProviderChange(newValue) {
+    providerIds.forEach(function (pid) {
+      var el = document.getElementById("provider-keys-" + section + "-" + pid);
+      if (!el) return;
+      if (pid === newValue) {
+        el.classList.add("active");
+        el.setAttribute("aria-hidden", "false");
+      } else {
+        el.classList.remove("active");
+        el.setAttribute("aria-hidden", "true");
+      }
+    });
+  }
+
+  // Expose as a named global for the onchange= attribute above
+  window["onProviderChange_" + section] = onProviderChange;
+}());
+</script>
+
+{# sr-only helper if not already defined on this page #}
+<style>
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+  /* HTMX loading indicator — hidden by default, shown during request */
+  .htmx-indicator { display: none !important; }
+  .htmx-request .htmx-indicator { display: inline !important; }
+  .htmx-request.htmx-indicator { display: inline !important; }
+</style>

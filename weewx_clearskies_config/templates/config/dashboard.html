@@ -1,91 +1,262 @@
 {% extends "base.html" %}
 {% block title %}Clear Skies — Configuration{% endblock %}
 {% block content %}
+
+{# Group nav_sections by component for sidebar grouping #}
+{% set components = ["api", "realtime", "stack"] %}
+{% set component_labels = {"api": "API", "realtime": "Realtime", "stack": "Stack"} %}
+
+<style>
+  /* Config dashboard layout */
+  .config-layout {
+    display: grid;
+    grid-template-columns: 16rem 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .config-sidebar {
+    position: sticky;
+    top: 1rem;
+  }
+  .config-sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .config-sidebar nav li {
+    margin: 0;
+  }
+  .config-sidebar .component-group {
+    margin-block-end: 1rem;
+  }
+  .config-sidebar .component-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pico-muted-color);
+    padding: 0.25rem 0.5rem;
+    margin-block-start: 0.5rem;
+  }
+  .config-sidebar a {
+    display: flex;
+    flex-direction: column;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--pico-border-radius);
+    text-decoration: none;
+    color: var(--pico-color);
+    transition: background-color 0.1s;
+  }
+  .config-sidebar a:hover,
+  .config-sidebar a:focus {
+    background-color: var(--pico-secondary-background);
+    outline: none;
+  }
+  .config-sidebar a:focus-visible {
+    outline: 2px solid var(--pico-primary);
+    outline-offset: 1px;
+  }
+  .config-sidebar .section-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    line-height: 1.3;
+  }
+  .config-sidebar .section-summary {
+    font-size: 0.75rem;
+    color: var(--pico-muted-color);
+    margin-block-start: 0.1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .config-sidebar .column-mapping-link {
+    border-block-start: 1px solid var(--pico-muted-border-color);
+    padding-block-start: 0.75rem;
+    margin-block-start: 0.25rem;
+  }
+  .config-sidebar-footer {
+    border-block-start: 1px solid var(--pico-muted-border-color);
+    padding-block-start: 0.75rem;
+    margin-block-start: 0.75rem;
+  }
+  @media (max-width: 768px) {
+    .config-layout {
+      grid-template-columns: 1fr;
+    }
+    .config-sidebar {
+      position: static;
+    }
+  }
+
+  /* Overview cards */
+  .overview-card {
+    margin-block-end: 1rem;
+  }
+  .overview-card dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.15rem 1rem;
+    font-size: 0.85rem;
+    margin: 0;
+  }
+  .overview-card dt {
+    font-weight: 600;
+    color: var(--pico-muted-color);
+  }
+  .overview-card dd {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .overview-section-group {
+    margin-block-end: 1.5rem;
+  }
+</style>
+
 <header>
   <h1>Clear Skies Configuration</h1>
-  <p>Edit component settings. Each section is independently editable. Changes are merged
-     into the managed region of the relevant config file; your free-form customisations
-     below the managed region are not touched.</p>
+  <p>Edit component settings. Each section is independently saved.
+     Changes are merged into the managed region of the relevant config file —
+     your free-form customisations below the managed region are not touched.</p>
 </header>
 
-<div class="grid">
-  {# Sidebar navigation #}
-  <aside>
-    <nav aria-label="Config sections">
-      <ul>
-        {% for s in nav_sections %}
-        <li>
-          <a href="/admin/config/{{ s.component }}/{{ s.section }}"
-             hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
-             hx-target="#config-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             aria-label="Edit {{ s.display_name }}">
-            {{ s.display_name }}
-          </a>
-        </li>
-        {% endfor %}
-        <li>
-          <a href="/admin/config/column-mapping"
-             hx-get="/admin/config/column-mapping"
-             hx-target="#config-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             aria-label="Edit Column Mapping">
-            Column Mapping
-          </a>
-        </li>
-      </ul>
+<div class="config-layout">
+
+  {# ------------------------------------------------------------------ #}
+  {# Left sidebar — navigation grouped by component                      #}
+  {# ------------------------------------------------------------------ #}
+  <aside class="config-sidebar">
+    <nav aria-label="Configuration sections">
+      {% for comp in components %}
+      {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | list %}
+      {% if comp_sections %}
+      <div class="component-group" role="group" aria-labelledby="comp-label-{{ comp }}">
+        <span class="component-label" id="comp-label-{{ comp }}">
+          {{ component_labels.get(comp, comp | capitalize) }}
+        </span>
+        <ul>
+          {% for s in comp_sections %}
+          <li>
+            <a href="/admin/config/{{ s.component }}/{{ s.section }}"
+               hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
+               hx-target="#config-content"
+               hx-swap="innerHTML"
+               hx-push-url="true">
+              <span class="section-name">{{ s.display_name }}</span>
+              {# Show a one-line value summary next to the section name #}
+              {% if s.values %}
+              {% set summary_items = [] %}
+              {% for k, v in s.values.items() %}
+              {% if loop.index <= 2 and k not in ("password", "api_key", "client_secret") %}
+              {% set _ = summary_items.append(v | string) %}
+              {% endif %}
+              {% endfor %}
+              {% if summary_items %}
+              <span class="section-summary" aria-hidden="true">
+                {{ summary_items | join(" · ") }}
+              </span>
+              {% endif %}
+              {% endif %}
+            </a>
+          </li>
+          {% endfor %}
+        </ul>
+      </div>
+      {% endif %}
+      {% endfor %}
+
+      {# Column Mapping — always shown under API group #}
+      <div class="column-mapping-link">
+        <a href="/admin/config/column-mapping"
+           hx-get="/admin/config/column-mapping"
+           hx-target="#config-content"
+           hx-swap="innerHTML"
+           hx-push-url="true">
+          <span class="section-name">Column Mapping</span>
+          <span class="section-summary" aria-hidden="true">DB column → weewx field</span>
+        </a>
+      </div>
     </nav>
 
-    <hr>
-
-    <form action="/logout" method="post">
-      <button type="submit" class="secondary">Log out</button>
-    </form>
+    <div class="config-sidebar-footer">
+      <form action="/logout" method="post">
+        <button type="submit" class="secondary outline" style="width:100%;font-size:0.85rem">
+          Log out
+        </button>
+      </form>
+    </div>
   </aside>
 
-  {# Content area — section forms load here via HTMX #}
-  <section id="config-content" aria-live="polite">
-    <article>
+  {# ------------------------------------------------------------------ #}
+  {# Right content area — section edit forms load here via HTMX         #}
+  {# ------------------------------------------------------------------ #}
+  <div id="config-content" aria-live="polite" aria-label="Configuration editor">
+
+    <section aria-labelledby="overview-heading">
       <header>
-        <h2>Configuration Overview</h2>
+        <h2 id="overview-heading">Configuration Overview</h2>
       </header>
 
       {% if nav_sections %}
       <p>Select a section from the sidebar to view and edit its settings.</p>
 
-      {% for s in nav_sections %}
-      <section aria-labelledby="section-heading-{{ s.component }}-{{ s.section }}">
-        <h3 id="section-heading-{{ s.component }}-{{ s.section }}">
-          {{ s.display_name }}
-          <small>({{ s.component }}.conf)</small>
+      {% for comp in components %}
+      {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | list %}
+      {% if comp_sections %}
+      <div class="overview-section-group">
+        <h3>{{ component_labels.get(comp, comp | capitalize) }}
+          <small style="font-weight:400;font-size:0.7em;color:var(--pico-muted-color)">
+            ({{ comp }}.conf)
+          </small>
         </h3>
-        {% if s.values %}
-        <dl>
-          {% for key, val in s.values.items() %}
-          <dt>{{ key }}</dt>
-          <dd>{{ val }}</dd>
-          {% endfor %}
-        </dl>
-        {% else %}
-        <p aria-live="polite"><em>No values configured — run the setup wizard first.</em></p>
-        {% endif %}
-        <a href="/admin/config/{{ s.component }}/{{ s.section }}"
-           hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
-           hx-target="#config-content"
-           hx-swap="innerHTML"
-           hx-push-url="true">
-          Edit {{ s.display_name }}
-        </a>
-      </section>
+
+        {% for s in comp_sections %}
+        <article class="overview-card">
+          <header>
+            <h4 style="margin-bottom:0.25rem">
+              {{ s.display_name }}
+              <a href="/admin/config/{{ s.component }}/{{ s.section }}"
+                 hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
+                 hx-target="#config-content"
+                 hx-swap="innerHTML"
+                 hx-push-url="true"
+                 style="font-size:0.75em;margin-inline-start:0.75rem;font-weight:400">
+                Edit
+              </a>
+            </h4>
+          </header>
+          {% if s.values %}
+          <dl>
+            {% for key, val in s.values.items() %}
+            {% if key not in ("password", "api_key", "client_secret") %}
+            <dt>{{ key }}</dt>
+            <dd>{{ val }}</dd>
+            {% else %}
+            <dt>{{ key }}</dt>
+            <dd><em style="color:var(--pico-muted-color)">(stored in secrets.env)</em></dd>
+            {% endif %}
+            {% endfor %}
+          </dl>
+          {% else %}
+          <p><em style="color:var(--pico-muted-color)">
+            No values configured — run the setup wizard first.
+          </em></p>
+          {% endif %}
+        </article>
+        {% endfor %}
+      </div>
+      {% endif %}
       {% endfor %}
 
       {% else %}
-      <p aria-live="polite">No configuration files found in <code>{{ config_dir }}</code>.
-         Run the setup wizard first.</p>
+      <p>No configuration files found in <code>{{ config_dir }}</code>.
+        <a href="/wizard">Run the setup wizard</a> to create them.</p>
       {% endif %}
-    </article>
-  </section>
-</div>
+    </section>
+
+  </div>{# /#config-content #}
+
+</div>{# /.config-layout #}
 {% endblock %}
