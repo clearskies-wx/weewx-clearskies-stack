@@ -1,0 +1,53 @@
+<div class="provider-key-fields" aria-label="API credentials for {{ provider.display_name }}">
+  {% for field_name in provider.auth_fields %}
+  {% set input_id = provider.provider_id ~ "_" ~ field_name %}
+  {% set is_secret = ("secret" in field_name or "password" in field_name or "key" in field_name) %}
+
+  <label for="{{ input_id }}">
+    {{ field_name | replace("_", " ") | title }}
+    {% if is_secret %}<span class="sr-only">(hidden by default)</span>{% endif %}
+  </label>
+  {% if is_secret %}
+  <div class="password-field">
+    <input type="password"
+           id="{{ input_id }}"
+           name="{{ provider.provider_id }}_{{ field_name }}"
+           value="{{ state.api_keys.get(provider.provider_id, {}).get(field_name, '') }}"
+           autocomplete="off"
+           aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint">
+    <button type="button"
+            class="password-toggle"
+            aria-label="Show {{ field_name | replace('_', ' ') | title }}"
+            aria-controls="{{ input_id }}"
+            onclick="togglePassword(this)">
+      <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </button>
+  </div>
+  {% else %}
+  <input type="text"
+         id="{{ input_id }}"
+         name="{{ provider.provider_id }}_{{ field_name }}"
+         value="{{ state.api_keys.get(provider.provider_id, {}).get(field_name, '') }}"
+         autocomplete="off"
+         aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint">
+  {% endif %}
+  <small id="{{ provider.provider_id }}-{{ field_name }}-hint">
+    Required credential for {{ provider.display_name }}.
+  </small>
+  {% endfor %}
+
+  <div id="test-result-{{ provider.provider_id }}" role="status" aria-live="polite"></div>
+
+  <button type="button"
+          hx-post="/wizard/step/4/test-key/{{ provider.provider_id }}"
+          hx-target="#test-result-{{ provider.provider_id }}"
+          hx-swap="innerHTML"
+          hx-include="#providers-form"
+          hx-indicator="#wizard-spinner">
+    Test {{ provider.display_name }} connection
+  </button>
+</div>

@@ -1,0 +1,9 @@
+{% if test_result.success %}
+<span class="pico-color-green-500">
+  <strong>{{ test_provider_name }}</strong>: connection successful ({{ test_result.response_time_ms }}ms)
+</span>
+{% else %}
+<span class="pico-color-red-500">
+  <strong>{{ test_provider_name }}</strong>: {{ test_result.error }}
+</span>
+{% endif %}

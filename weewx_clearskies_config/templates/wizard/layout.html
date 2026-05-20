@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Clear Skies Setup Wizard — Step {{ step }} of 8{% endblock %}
+{% block title %}Clear Skies Setup Wizard — Step {{ step }} of 5{% endblock %}
 {% block content %}
 
 {# ------------------------------------------------------------------ #}
@@ -209,15 +209,12 @@
   "Columns",
   "Station",
   "Providers",
-  "API Keys",
-  "Topology",
-  "Binds",
   "Review"
 ] %}
 
 <nav aria-label="Wizard progress">
   <ol class="wizard-progress" role="list">
-    {% for i in range(1, 9) %}
+    {% for i in range(1, 6) %}
     <li
       {% if i == step %}aria-current="step"{% endif %}
       {% if i < step %}class="is-complete"{% endif %}
@@ -265,7 +262,7 @@
     }
   });
 
-  /* Password show/hide toggle — used by step_db.html and step_keys.html.
+  /* Password show/hide toggle — used by step_db.html and step_provider_key_fields.html.
      Defined here (layout) so it is always available regardless of whether
      HTMX evaluates scripts in swapped fragments. */
   function togglePassword(btn) {

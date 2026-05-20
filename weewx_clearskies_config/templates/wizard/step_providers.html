@@ -1,8 +1,9 @@
 <article>
   <header>
-    <h2>Step 4 of 8 — Provider Selection</h2>
+    <h2>Step 4 of 5 — Providers &amp; API Keys</h2>
     <p>Choose a data provider for each service domain.
-       Providers recommended for your station location are pre-selected and marked.</p>
+       Providers recommended for your station location are pre-selected and marked.
+       For providers that require an API key, the key fields appear inline when you select them.</p>
   </header>
 
   {% if error %}
@@ -11,7 +12,8 @@
   </div>
   {% endif %}
 
-  <form hx-post="/wizard/step/4"
+  <form id="providers-form"
+        hx-post="/wizard/step/4"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
@@ -39,17 +41,22 @@
       <p><small>{{ domain_descriptions[domain] }}</small></p>
       {% endif %}
 
+      {% set selected_id = state.providers.get(domain) or recommendations.get(domain) %}
+
       {% for provider in providers %}
       {% set is_recommended = (recommendations.get(domain) == provider.provider_id) %}
+      {% set is_selected = (provider.provider_id == selected_id) %}
       <label>
         <input type="radio"
                name="provider_{{ domain }}"
                value="{{ provider.provider_id }}"
-               {% if state.providers.get(domain) == provider.provider_id
-                     or (not state.providers.get(domain) and is_recommended) %}
-               checked
-               {% endif %}
-               aria-describedby="provider-desc-{{ provider.provider_id }}">
+               {% if is_selected %}checked{% endif %}
+               aria-describedby="provider-desc-{{ provider.provider_id }}"
+               hx-get="/wizard/step/4/key-fields/{{ domain }}/{{ provider.provider_id }}"
+               hx-target="#key-fields-{{ domain }}"
+               hx-swap="innerHTML"
+               hx-trigger="change"
+               hx-indicator="#wizard-spinner">
         <strong>{{ provider.display_name }}</strong>
         {% if is_recommended %}
         <span class="provider-recommended" aria-label="Recommended for your location">(Recommended)</span>
@@ -63,6 +70,16 @@
         </span>
       </label>
       {% endfor %}
+
+      {# Inline key fields — swapped by HTMX when a keyed provider is selected.
+         Pre-rendered on page load for the currently-selected provider if it requires keys. #}
+      <div id="key-fields-{{ domain }}">
+        {% for provider in providers %}
+        {% if provider.provider_id == selected_id and provider.auth_fields %}
+        {% include "wizard/step_provider_key_fields.html" %}
+        {% endif %}
+        {% endfor %}
+      </div>
     </fieldset>
     {% endfor %}
 
@@ -74,7 +91,7 @@
               hx-indicator="#wizard-spinner">
         ← Previous
       </button>
-      <button type="submit">Next: API Keys →</button>
+      <button type="submit">Next: Review →</button>
     </div>
   </form>
 </article>

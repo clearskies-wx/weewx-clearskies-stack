@@ -1,4 +1,4 @@
-"""FastAPI router for the 8-step setup wizard.
+"""FastAPI router for the 5-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -9,21 +9,16 @@ Route summary:
   GET  /wizard/step/1           — step 1 fragment
   POST /wizard/step/1/test      — test DB connection, return result fragment
   POST /wizard/step/1/detect    — auto-detect from weewx.conf, return filled form
-  POST /wizard/step/1           — save DB settings, return step 2 fragment
+  POST /wizard/step/1           — save DB settings, return step 2 or 3 fragment
   GET  /wizard/step/2           — introspect schema, render step 2 fragment
   POST /wizard/step/2           — save column mapping, return step 3 fragment
   GET  /wizard/step/3           — read station identity, render step 3 fragment
   POST /wizard/step/3           — save station info, return step 4 fragment
-  GET  /wizard/step/4           — provider selection, render step 4 fragment
-  POST /wizard/step/4           — save provider choices, return step 5 fragment
-  GET  /wizard/step/5           — API key entry, render step 5 fragment
-  POST /wizard/step/5/test      — test one provider, return result fragment
-  POST /wizard/step/5           — save keys, return step 6 fragment
-  GET  /wizard/step/6           — topology selection, render step 6 fragment
-  POST /wizard/step/6           — save topology, return step 7 fragment
-  GET  /wizard/step/7           — bind address form, render step 7 fragment
-  POST /wizard/step/7           — save binds, return step 8 fragment
-  GET  /wizard/step/8           — review summary, render step 8 fragment
+  GET  /wizard/step/4           — provider selection + inline key entry, render step 4 fragment
+  GET  /wizard/step/4/key-fields/{domain}/{provider_id} — inline key fields fragment
+  POST /wizard/step/4/test-key/{provider_id}            — test one provider's key, return result fragment
+  POST /wizard/step/4           — save provider choices + keys, return step 5 fragment
+  GET  /wizard/step/5           — review summary, render step 5 fragment
   POST /wizard/apply            — write config files, render completion page
 """
 
@@ -62,10 +57,7 @@ from weewx_clearskies_config.wizard.station import (
     lookup_timezone,
     station_from_weewx_conf,
 )
-from weewx_clearskies_config.wizard.topology import (
-    generate_proxy_secret,
-    topology_defaults,
-)
+from weewx_clearskies_config.wizard.topology import generate_proxy_secret
 
 logger = logging.getLogger(__name__)
 
@@ -259,7 +251,7 @@ async def step1_detect(request: Request) -> HTMLResponse:
 
 @router.post("/step/1", response_class=HTMLResponse)
 async def step1_post(request: Request) -> HTMLResponse:
-    """Save DB settings and advance to step 2."""
+    """Save DB settings, auto-detect topology/binds/schema, advance to step 2 or 3."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -268,7 +260,49 @@ async def step1_post(request: Request) -> HTMLResponse:
     state.db_user = str(form.get("db_user", "")).strip() or None
     state.db_password = str(form.get("db_password", ""))
     state.db_name = str(form.get("db_name", "weewx")).strip() or "weewx"
+
+    # Auto-detect topology from DB host: loopback → same-host, anything else → cross-host.
+    _LOOPBACK = {"localhost", "127.0.0.1", "::1"}
+    if (state.db_host or "").lower() in _LOOPBACK:
+        state.topology = "same-host"
+        state.api_bind_host = "127.0.0.1"
+        state.realtime_bind_host = "127.0.0.1"
+    else:
+        state.topology = "cross-host"
+        if not state.proxy_secret:
+            state.proxy_secret = generate_proxy_secret()
+        state.api_bind_host = "::"
+        state.realtime_bind_host = "::"
+    state.api_bind_port = 8765
+    state.realtime_bind_port = 8766
+
+    # Introspect schema now so we can skip step 2 if there are no unmapped columns.
+    skip_schema = False
+    if state.db_host and state.db_user:
+        db_url = build_db_url(
+            state.db_host,
+            state.db_port,
+            state.db_user,
+            state.db_password or "",
+            state.db_name,
+        )
+        try:
+            schema_data = introspect_schema(db_url)
+            if not schema_data.get("unmapped_columns"):
+                # All columns are stock; auto-save the stock mapping and skip step 2.
+                state.column_mapping = {
+                    col["db_name"]: col["canonical"]
+                    for col in schema_data.get("stock_columns", [])
+                }
+                skip_schema = True
+        except Exception:  # noqa: BLE001
+            # If introspection fails, fall through to show step 2 so the user
+            # can address the connection issue or review manually.
+            logger.warning("Schema introspection failed in step1_post; showing step 2", exc_info=True)
+
     save_wizard_state(session_id, state)
+    if skip_schema:
+        return await step3_get(request)
     return await step2_get(request)
 
 
@@ -385,7 +419,7 @@ async def step3_post(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 4: Provider Selection
+# Step 4: Provider Selection + Inline API Key Entry
 # ---------------------------------------------------------------------------
 
 
@@ -414,9 +448,61 @@ async def step4_get(request: Request) -> HTMLResponse:
     )
 
 
+@router.get("/step/4/key-fields/{domain}/{provider_id}", response_class=HTMLResponse)
+async def step4_key_fields(request: Request, domain: str, provider_id: str) -> HTMLResponse:
+    """Return inline key input fields for a provider that requires credentials."""
+    session_id = _require_session(request)
+    info = get_provider(provider_id)
+    if not info or not info.auth_fields:
+        assert _templates is not None
+        return HTMLResponse(content="", status_code=200)
+
+    state = get_wizard_state(session_id)
+
+    return _render(
+        request,
+        "step_provider_key_fields.html",
+        {"provider": info, "state": state},
+    )
+
+
+@router.post("/step/4/test-key/{provider_id}", response_class=HTMLResponse)
+async def step4_test_key(request: Request, provider_id: str) -> HTMLResponse:
+    """Test one provider's API key; return a result fragment."""
+    _require_session(request)
+    form = await request.form()
+    info = get_provider(provider_id)
+
+    if not info:
+        return _render(
+            request,
+            "step_provider_test_result.html",
+            {
+                "test_result": {"success": False, "error": f"Unknown provider: {provider_id}"},
+                "test_provider_id": provider_id,
+                "test_provider_name": provider_id,
+            },
+        )
+
+    credentials: dict[str, str] = {}
+    for field_name in info.auth_fields:
+        credentials[field_name] = str(form.get(f"{provider_id}_{field_name}", "")).strip()
+
+    result = test_provider(info, credentials)
+    return _render(
+        request,
+        "step_provider_test_result.html",
+        {
+            "test_result": result,
+            "test_provider_id": provider_id,
+            "test_provider_name": info.display_name,
+        },
+    )
+
+
 @router.post("/step/4", response_class=HTMLResponse)
 async def step4_post(request: Request) -> HTMLResponse:
-    """Save provider selections and advance to step 5."""
+    """Save provider selections and inline API keys, advance to step 5."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -427,89 +513,9 @@ async def step4_post(request: Request) -> HTMLResponse:
         if provider_id:
             providers[domain] = provider_id
     state.providers = providers
-    save_wizard_state(session_id, state)
-    return await step5_get(request)
 
-
-# ---------------------------------------------------------------------------
-# Step 5: API Keys
-# ---------------------------------------------------------------------------
-
-
-@router.get("/step/5", response_class=HTMLResponse)
-async def step5_get(request: Request) -> HTMLResponse:
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-    if not state.api_keys:
-        _merge_from_existing_config(state)
-
-    # Collect providers that require credentials.
-    keyed_providers = []
-    for provider_id in state.providers.values():
-        info = get_provider(provider_id)
-        if info and info.auth_fields:
-            keyed_providers.append(info)
-
-    # De-duplicate (same provider in multiple domains)
-    seen: set[str] = set()
-    unique_keyed: list[Any] = []
-    for p in keyed_providers:
-        if p.provider_id not in seen:
-            unique_keyed.append(p)
-            seen.add(p.provider_id)
-
-    return _render(
-        request,
-        "step_keys.html",
-        {"step": 5, "state": state, "keyed_providers": unique_keyed, "error": None},
-    )
-
-
-@router.post("/step/5/test", response_class=HTMLResponse)
-async def step5_test(request: Request) -> HTMLResponse:
-    """Test one provider's connectivity; return a result fragment."""
-    _require_session(request)
-    form = await request.form()
-    provider_id = str(form.get("provider_id", "")).strip()
-    info = get_provider(provider_id)
-
-    if not info:
-        assert _templates is not None
-        return _templates.TemplateResponse(
-            request=request,
-            name="wizard/step_keys.html",
-            context={
-                "step": 5,
-                "test_result": {"success": False, "error": f"Unknown provider: {provider_id}"},
-                "test_provider_id": provider_id,
-            },
-        )
-
-    credentials: dict[str, str] = {}
-    for field_name in info.auth_fields:
-        credentials[field_name] = str(form.get(field_name, "")).strip()
-
-    result = test_provider(info, credentials)
-    assert _templates is not None
-    return _templates.TemplateResponse(
-        request=request,
-        name="wizard/step_keys.html",
-        context={
-            "step": 5,
-            "test_result": result,
-            "test_provider_id": provider_id,
-            "test_provider_name": info.display_name,
-        },
-    )
-
-
-@router.post("/step/5", response_class=HTMLResponse)
-async def step5_post(request: Request) -> HTMLResponse:
-    """Save API keys and advance to step 6."""
-    session_id = _require_session(request)
-    form = await request.form()
-    state = get_wizard_state(session_id)
-
+    # Collect inline API keys submitted alongside the provider selection.
+    # Form fields are namespaced "{provider_id}_{field_name}".
     api_keys: dict[str, dict[str, str]] = {}
     for provider_id in state.providers.values():
         info = get_provider(provider_id)
@@ -521,98 +527,19 @@ async def step5_post(request: Request) -> HTMLResponse:
                     creds[field_name] = value
             if creds:
                 api_keys[provider_id] = creds
-
     state.api_keys = api_keys
-    save_wizard_state(session_id, state)
-    return await step6_get(request)
-
-
-# ---------------------------------------------------------------------------
-# Step 6: Topology
-# ---------------------------------------------------------------------------
-
-
-@router.get("/step/6", response_class=HTMLResponse)
-async def step6_get(request: Request) -> HTMLResponse:
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-    if state.proxy_secret is None:
-        _merge_from_existing_config(state)
-    defaults = topology_defaults(same_host=(state.topology == "same-host"))
-    return _render(
-        request,
-        "step_topology.html",
-        {"step": 6, "state": state, "defaults": defaults, "error": None},
-    )
-
-
-@router.post("/step/6", response_class=HTMLResponse)
-async def step6_post(request: Request) -> HTMLResponse:
-    """Save topology choice and advance to step 7."""
-    session_id = _require_session(request)
-    form = await request.form()
-    state = get_wizard_state(session_id)
-
-    topology = str(form.get("topology", "same-host")).strip()
-    if topology not in ("same-host", "cross-host"):
-        topology = "same-host"
-    state.topology = topology
-
-    if topology == "cross-host" and not state.proxy_secret:
-        state.proxy_secret = generate_proxy_secret()
-
-    # Apply topology-based address defaults before rendering step 7.
-    td = topology_defaults(same_host=(topology == "same-host"))
-    state.api_bind_host = td["api_bind_host"]
-    state.realtime_bind_host = td["realtime_bind_host"]
 
     save_wizard_state(session_id, state)
-    return await step7_get(request)
+    return await step5_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 7: Bind Addresses
+# Step 5: Review + Apply
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/7", response_class=HTMLResponse)
-async def step7_get(request: Request) -> HTMLResponse:
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-    if state.api_bind_host == "127.0.0.1" and state.api_bind_port == 8765:
-        _merge_from_existing_config(state)
-    return _render(
-        request,
-        "step_binds.html",
-        {"step": 7, "state": state, "error": None},
-    )
-
-
-@router.post("/step/7", response_class=HTMLResponse)
-async def step7_post(request: Request) -> HTMLResponse:
-    """Save bind addresses and advance to step 8."""
-    session_id = _require_session(request)
-    form = await request.form()
-    state = get_wizard_state(session_id)
-
-    state.api_bind_host = str(form.get("api_bind_host", "127.0.0.1")).strip()
-    state.api_bind_port = _parse_int(str(form.get("api_bind_port", "8765")), default=8765)
-    state.realtime_bind_host = str(form.get("realtime_bind_host", "127.0.0.1")).strip()
-    state.realtime_bind_port = _parse_int(
-        str(form.get("realtime_bind_port", "8766")), default=8766
-    )
-
-    save_wizard_state(session_id, state)
-    return await step8_get(request)
-
-
-# ---------------------------------------------------------------------------
-# Step 8: Review + Apply
-# ---------------------------------------------------------------------------
-
-
-@router.get("/step/8", response_class=HTMLResponse)
-async def step8_get(request: Request) -> HTMLResponse:
+@router.get("/step/5", response_class=HTMLResponse)
+async def step5_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if state.db_host is None and state.station_name is None:
@@ -620,7 +547,7 @@ async def step8_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 8, "state": state, "error": None},
+        {"step": 5, "state": state, "error": None},
     )
 
 
@@ -636,7 +563,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 8,
+                "step": 5,
                 "error": "Config directory is not configured. Cannot write files.",
                 "result": None,
             },
@@ -659,7 +586,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     return _templates.TemplateResponse(
         request=request,
         name="wizard/step_complete.html",
-        context={"step": 8, "error": error, "result": result},
+        context={"step": 5, "error": error, "result": result},
         status_code=500 if error else 200,
     )
 
