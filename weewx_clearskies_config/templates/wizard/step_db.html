@@ -1,0 +1,102 @@
+<article>
+  <header>
+    <h2>Step 1 of 8 — Database Connection</h2>
+    <p>Enter your weewx MariaDB/MySQL connection details. Use "Detect" to read them from weewx.conf automatically.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="polite" class="pico-color-red-500">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if result %}
+    {% if result.success %}
+    <div role="status" aria-live="polite" class="pico-color-green-500">
+      Connection successful — server version: {{ result.server_version }}
+    </div>
+    {% else %}
+    <div role="alert" aria-live="polite" class="pico-color-red-500">
+      Connection failed: {{ result.error }}
+    </div>
+    {% endif %}
+  {% endif %}
+
+  <form id="db-detect-form"
+        hx-post="/wizard/step/1/detect"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+    <fieldset>
+      <legend>Auto-detect from weewx.conf</legend>
+      <label for="conf_path">weewx.conf path</label>
+      <input type="text"
+             id="conf_path"
+             name="conf_path"
+             value="/etc/weewx/weewx.conf"
+             placeholder="/etc/weewx/weewx.conf"
+             aria-describedby="conf-path-hint">
+      <small id="conf-path-hint">Common paths: /etc/weewx/weewx.conf, /home/weewx/weewx.conf</small>
+      <button type="submit">Detect from weewx.conf</button>
+    </fieldset>
+  </form>
+
+  <form id="db-form"
+        hx-post="/wizard/step/1"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+    <fieldset>
+      <legend>Database connection settings</legend>
+
+      <label for="db_host">Host</label>
+      <input type="text"
+             id="db_host"
+             name="db_host"
+             value="{{ state.db_host or 'localhost' }}"
+             required
+             autocomplete="off"
+             {% if error and not state.db_host %}aria-invalid="true"{% endif %}>
+
+      <label for="db_port">Port</label>
+      <input type="number"
+             id="db_port"
+             name="db_port"
+             value="{{ state.db_port or 3306 }}"
+             min="1"
+             max="65535"
+             required>
+
+      <label for="db_user">Username</label>
+      <input type="text"
+             id="db_user"
+             name="db_user"
+             value="{{ state.db_user or '' }}"
+             required
+             autocomplete="username">
+
+      <label for="db_password">Password</label>
+      <input type="password"
+             id="db_password"
+             name="db_password"
+             value="{{ state.db_password or '' }}"
+             autocomplete="current-password">
+
+      <label for="db_name">Database name</label>
+      <input type="text"
+             id="db_name"
+             name="db_name"
+             value="{{ state.db_name or 'weewx' }}"
+             required>
+    </fieldset>
+
+    <div role="group">
+      <button type="button"
+              hx-post="/wizard/step/1/test"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML"
+              hx-include="#db-form">
+        Test Connection
+      </button>
+      <button type="submit">Next: Column Mapping →</button>
+    </div>
+  </form>
+</article>

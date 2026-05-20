@@ -1,0 +1,65 @@
+<article>
+  <header>
+    <h2>Step 6 of 8 — Deployment Topology</h2>
+    <p>Choose how the Clear Skies services are deployed relative to your dashboard.
+       Most home users choose <em>same-host</em>.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="polite" class="pico-color-red-500">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <form hx-post="/wizard/step/6"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+    <fieldset>
+      <legend>Topology</legend>
+
+      <label>
+        <input type="radio"
+               name="topology"
+               value="same-host"
+               {% if state.topology == "same-host" %}checked{% endif %}
+               aria-describedby="same-host-desc">
+        <strong>Same-host</strong>
+      </label>
+      <p id="same-host-desc">
+        API, realtime service, and dashboard run on the same machine.
+        Services bind to <code>127.0.0.1</code> (loopback). No shared secret required.
+        Recommended for home installations.
+      </p>
+
+      <label>
+        <input type="radio"
+               name="topology"
+               value="cross-host"
+               {% if state.topology == "cross-host" %}checked{% endif %}
+               aria-describedby="cross-host-desc">
+        <strong>Cross-host</strong>
+      </label>
+      <p id="cross-host-desc">
+        Dashboard is on a separate host (e.g. a CDN or different server).
+        Services bind to <code>::</code> (all interfaces, dual-stack).
+        A shared secret is generated to authenticate the dashboard proxy.
+      </p>
+    </fieldset>
+
+    {% if state.topology == "cross-host" and state.proxy_secret %}
+    <div>
+      <p><strong>Proxy secret generated.</strong> This will be written to <code>secrets.env</code>.</p>
+    </div>
+    {% endif %}
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/5"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML">
+        ← Back
+      </button>
+      <button type="submit">Next: Bind Addresses →</button>
+    </div>
+  </form>
+</article>

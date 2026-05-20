@@ -1,0 +1,88 @@
+<article>
+  <header>
+    <h2>Step 5 of 8 — API Keys</h2>
+    <p>Enter credentials for the providers you selected that require API keys.
+       Keys are stored in <code>secrets.env</code> (mode 0600) — never in config files.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="polite" class="pico-color-red-500">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if test_result is defined %}
+  <div role="status" aria-live="polite"
+       class="{{ 'pico-color-green-500' if test_result.success else 'pico-color-red-500' }}">
+    {% if test_result.success %}
+    <strong>{{ test_provider_name }}</strong>: connection successful
+    ({{ test_result.response_time_ms }}ms)
+    {% else %}
+    <strong>{{ test_provider_name }}</strong>: {{ test_result.error }}
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if keyed_providers %}
+  <form id="keys-form"
+        hx-post="/wizard/step/5"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+
+    {% for provider in keyed_providers %}
+    <fieldset>
+      <legend>{{ provider.display_name }}</legend>
+      {% for field_name in provider.auth_fields %}
+      <label for="{{ provider.provider_id }}_{{ field_name }}">
+        {{ field_name | replace("_", " ") | title }}
+      </label>
+      <input type="{% if 'secret' in field_name or 'password' in field_name or 'key' in field_name %}password{% else %}text{% endif %}"
+             id="{{ provider.provider_id }}_{{ field_name }}"
+             name="{{ provider.provider_id }}_{{ field_name }}"
+             value="{{ state.api_keys.get(provider.provider_id, {}).get(field_name, '') }}"
+             autocomplete="off"
+             aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint">
+      <small id="{{ provider.provider_id }}-{{ field_name }}-hint">
+        Required credential for {{ provider.display_name }}
+      </small>
+      {% endfor %}
+
+      <button type="button"
+              hx-post="/wizard/step/5/test"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML"
+              hx-include="#keys-form"
+              hx-vals='{"provider_id": "{{ provider.provider_id }}"}'>
+        Test {{ provider.display_name }}
+      </button>
+    </fieldset>
+    {% endfor %}
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/4"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML">
+        ← Back
+      </button>
+      <button type="submit">Next: Deployment Topology →</button>
+    </div>
+  </form>
+
+  {% else %}
+  <p>No API keys required — all selected providers are keyless.</p>
+  <form hx-post="/wizard/step/5"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/4"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML">
+        ← Back
+      </button>
+      <button type="submit">Next: Deployment Topology →</button>
+    </div>
+  </form>
+  {% endif %}
+</article>

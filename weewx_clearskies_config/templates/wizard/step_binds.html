@@ -1,0 +1,75 @@
+<article>
+  <header>
+    <h2>Step 7 of 8 — Bind Addresses</h2>
+    <p>Configure the network addresses and ports for each service.
+       Defaults are set based on your topology choice.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="polite" class="pico-color-red-500">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <form hx-post="/wizard/step/7"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+    <fieldset>
+      <legend>API service (clearskies-api)</legend>
+
+      <label for="api_bind_host">Bind host</label>
+      <input type="text"
+             id="api_bind_host"
+             name="api_bind_host"
+             value="{{ state.api_bind_host }}"
+             required
+             aria-describedby="api-host-hint">
+      <small id="api-host-hint">
+        Use <code>127.0.0.1</code> for loopback (same-host), <code>::</code> for all interfaces (cross-host).
+      </small>
+
+      <label for="api_bind_port">Bind port</label>
+      <input type="number"
+             id="api_bind_port"
+             name="api_bind_port"
+             value="{{ state.api_bind_port }}"
+             min="1024"
+             max="65535"
+             required>
+    </fieldset>
+
+    <fieldset>
+      <legend>Realtime service (clearskies-realtime)</legend>
+
+      <label for="realtime_bind_host">Bind host</label>
+      <input type="text"
+             id="realtime_bind_host"
+             name="realtime_bind_host"
+             value="{{ state.realtime_bind_host }}"
+             required
+             aria-describedby="realtime-host-hint">
+      <small id="realtime-host-hint">
+        Use <code>127.0.0.1</code> for loopback (same-host), <code>::</code> for all interfaces (cross-host).
+      </small>
+
+      <label for="realtime_bind_port">Bind port</label>
+      <input type="number"
+             id="realtime_bind_port"
+             name="realtime_bind_port"
+             value="{{ state.realtime_bind_port }}"
+             min="1024"
+             max="65535"
+             required>
+    </fieldset>
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/6"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML">
+        ← Back
+      </button>
+      <button type="submit">Next: Review →</button>
+    </div>
+  </form>
+</article>

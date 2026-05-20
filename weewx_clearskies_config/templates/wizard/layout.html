@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}Clear Skies Setup Wizard{% endblock %}
+{% block content %}
+<header>
+  <h1>Clear Skies Setup Wizard</h1>
+</header>
+
+<nav aria-label="Wizard progress">
+  <p aria-live="polite" id="wizard-progress">
+    <strong>Step {{ step }} of 8</strong>
+    {% set step_names = [
+      "Database Connection",
+      "Column Mapping",
+      "Station Identity",
+      "Provider Selection",
+      "API Keys",
+      "Deployment Topology",
+      "Bind Addresses",
+      "Review &amp; Apply"
+    ] %}
+    — {{ step_names[step - 1] }}
+  </p>
+  <progress value="{{ step }}" max="8" aria-label="Step {{ step }} of 8"></progress>
+</nav>
+
+<section id="wizard-content" aria-live="polite">
+  {% include "wizard/step_db.html" %}
+</section>
+{% endblock %}

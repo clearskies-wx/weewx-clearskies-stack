@@ -1,0 +1,93 @@
+<article>
+  <header>
+    <h2>Step 8 of 8 — Review &amp; Apply</h2>
+    <p>Review your configuration before writing config files.
+       Applying will write <code>api.conf</code>, <code>realtime.conf</code>,
+       <code>stack.conf</code>, and <code>secrets.env</code> to the config directory.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="polite" class="pico-color-red-500">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <section aria-labelledby="review-db">
+    <h3 id="review-db">Database</h3>
+    <table>
+      <caption class="sr-only">Database connection settings</caption>
+      <tbody>
+        <tr><th scope="row">Host</th><td>{{ state.db_host or '(not set)' }}</td></tr>
+        <tr><th scope="row">Port</th><td>{{ state.db_port }}</td></tr>
+        <tr><th scope="row">User</th><td>{{ state.db_user or '(not set)' }}</td></tr>
+        <tr><th scope="row">Database</th><td>{{ state.db_name }}</td></tr>
+        <tr><th scope="row">Password</th><td><em>stored in secrets.env</em></td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="review-station">
+    <h3 id="review-station">Station</h3>
+    <table>
+      <caption class="sr-only">Station identity settings</caption>
+      <tbody>
+        <tr><th scope="row">Name</th><td>{{ state.station_name or '(not set)' }}</td></tr>
+        <tr><th scope="row">Latitude</th><td>{{ state.latitude if state.latitude is not none else '(not set)' }}</td></tr>
+        <tr><th scope="row">Longitude</th><td>{{ state.longitude if state.longitude is not none else '(not set)' }}</td></tr>
+        <tr><th scope="row">Altitude (m)</th><td>{{ state.altitude_meters if state.altitude_meters is not none else '(not set)' }}</td></tr>
+        <tr><th scope="row">Timezone</th><td>{{ state.timezone or '(not set)' }}</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section aria-labelledby="review-providers">
+    <h3 id="review-providers">Providers</h3>
+    {% if state.providers %}
+    <table>
+      <caption class="sr-only">Selected data providers</caption>
+      <thead>
+        <tr><th scope="col">Domain</th><th scope="col">Provider</th></tr>
+      </thead>
+      <tbody>
+        {% for domain, provider_id in state.providers.items() %}
+        <tr>
+          <td>{{ domain }}</td>
+          <td>{{ provider_id }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No providers selected.</p>
+    {% endif %}
+  </section>
+
+  <section aria-labelledby="review-topology">
+    <h3 id="review-topology">Topology &amp; Bind Addresses</h3>
+    <table>
+      <caption class="sr-only">Deployment topology and network settings</caption>
+      <tbody>
+        <tr><th scope="row">Topology</th><td>{{ state.topology }}</td></tr>
+        <tr><th scope="row">API</th><td>{{ state.api_bind_host }}:{{ state.api_bind_port }}</td></tr>
+        <tr><th scope="row">Realtime</th><td>{{ state.realtime_bind_host }}:{{ state.realtime_bind_port }}</td></tr>
+        {% if state.topology == "cross-host" %}
+        <tr><th scope="row">Proxy secret</th><td><em>generated — stored in secrets.env</em></td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </section>
+
+  <form hx-post="/wizard/apply"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/7"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML">
+        ← Back
+      </button>
+      <button type="submit" class="pico-background-primary">Apply Configuration</button>
+    </div>
+  </form>
+</article>

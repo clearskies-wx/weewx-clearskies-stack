@@ -1,0 +1,82 @@
+<article>
+  <header>
+    <h2>Step 3 of 8 — Station Identity</h2>
+    <p>Confirm your weather station's location and display name.
+       These are used for provider geo-routing and the dashboard header.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="polite" class="pico-color-red-500">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <form hx-post="/wizard/step/3"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML">
+    <fieldset>
+      <legend>Station information</legend>
+
+      <label for="station_name">Station display name</label>
+      <input type="text"
+             id="station_name"
+             name="station_name"
+             value="{{ state.station_name or '' }}"
+             maxlength="100"
+             placeholder="My Home Weather Station">
+
+      <label for="latitude">Latitude</label>
+      <input type="number"
+             id="latitude"
+             name="latitude"
+             value="{{ state.latitude if state.latitude is not none else '' }}"
+             step="0.000001"
+             min="-90"
+             max="90"
+             placeholder="38.8894"
+             aria-describedby="lat-hint">
+      <small id="lat-hint">Decimal degrees, e.g. 38.8894 (North) or -33.8688 (South)</small>
+
+      <label for="longitude">Longitude</label>
+      <input type="number"
+             id="longitude"
+             name="longitude"
+             value="{{ state.longitude if state.longitude is not none else '' }}"
+             step="0.000001"
+             min="-180"
+             max="180"
+             placeholder="-77.0352"
+             aria-describedby="lon-hint">
+      <small id="lon-hint">Decimal degrees, e.g. -77.0352 (West) or 151.2093 (East)</small>
+
+      <label for="altitude_meters">Altitude (meters)</label>
+      <input type="number"
+             id="altitude_meters"
+             name="altitude_meters"
+             value="{{ state.altitude_meters if state.altitude_meters is not none else '' }}"
+             step="0.1"
+             min="-500"
+             max="9000"
+             placeholder="0">
+
+      <label for="timezone">Timezone</label>
+      <input type="text"
+             id="timezone"
+             name="timezone"
+             value="{{ state.timezone or '' }}"
+             placeholder="America/New_York"
+             aria-describedby="tz-hint">
+      <small id="tz-hint">IANA timezone name, e.g. America/New_York, Europe/London, Asia/Tokyo</small>
+    </fieldset>
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/2"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML">
+        ← Back
+      </button>
+      <button type="submit">Next: Provider Selection →</button>
+    </div>
+  </form>
+</article>

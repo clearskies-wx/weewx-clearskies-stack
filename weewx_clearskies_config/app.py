@@ -20,6 +20,7 @@ from weewx_clearskies_config.auth import (
     verify_password,
     write_secrets,
 )
+from weewx_clearskies_config.wizard.routes import create_wizard_router
 
 
 @dataclass
@@ -73,6 +74,15 @@ def create_app(config: AppConfig) -> FastAPI:
     app.add_middleware(_RateLimitMiddleware, rate_limiter=rate_limiter)
     app.mount("/static", StaticFiles(directory=str(_static_dir())), name="static")
 
+    # Mount the wizard router.  create_wizard_router() injects shared objects
+    # (templates, session_manager, config_dir) that the router endpoints need.
+    wizard_router = create_wizard_router(
+        templates=templates,
+        session_manager=session_manager,
+        config_dir=config.config_dir,
+    )
+    app.include_router(wizard_router)
+
     @app.get("/health")
     async def health() -> JSONResponse:
         return JSONResponse({"status": "ok"})
@@ -82,6 +92,9 @@ def create_app(config: AppConfig) -> FastAPI:
         secrets = read_secrets()
         if "WEEWX_CLEARSKIES_ADMIN_USERNAME" not in secrets:
             return RedirectResponse(url="/bootstrap", status_code=302)
+        # If no api.conf exists yet, redirect to the setup wizard.
+        if not (config.config_dir / "api.conf").exists():
+            return RedirectResponse(url="/wizard", status_code=302)
         return RedirectResponse(url="/login", status_code=302)
 
     @app.get("/login", response_class=HTMLResponse)

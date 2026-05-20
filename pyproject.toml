@@ -21,6 +21,14 @@ dependencies = [
     "configobj==5.0.9",
     "click==8.4.0",
     "httpx==0.28.1",
+    "weewx-clearskies-api>=0.1.0",
+    "sqlalchemy>=2.0.0",
+    "pymysql>=1.1.0",
+]
+
+[project.optional-dependencies]
+wizard = [
+    "timezonefinder>=6.5.0",
 ]
 
 [project.scripts]
@@ -65,4 +73,12 @@ no_implicit_reexport = true
 
 [[tool.mypy.overrides]]
 module = ["configobj.*"]
+ignore_missing_stubs = true
+
+[[tool.mypy.overrides]]
+module = ["pymysql.*"]
+ignore_missing_stubs = true
+
+[[tool.mypy.overrides]]
+module = ["timezonefinder.*"]
 ignore_missing_stubs = true

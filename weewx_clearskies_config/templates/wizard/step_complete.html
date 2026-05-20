@@ -1,0 +1,63 @@
+<article>
+  <header>
+    <h2>Setup Complete</h2>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="assertive" class="pico-color-red-500">
+    <h3>Configuration failed</h3>
+    <p>{{ error }}</p>
+    <p>Check file permissions on the config directory and try again.</p>
+    <a href="/wizard/step/8"
+       hx-get="/wizard/step/8"
+       hx-target="#wizard-content"
+       hx-swap="innerHTML">
+      ← Back to Review
+    </a>
+  </div>
+
+  {% else %}
+  <div role="status" aria-live="polite">
+    <p>Configuration written successfully.</p>
+  </div>
+
+  {% if result %}
+  <section aria-labelledby="files-written">
+    <h3 id="files-written">Files written</h3>
+    <ul>
+      {% for path in result.files_written %}
+      <li><code>{{ path }}</code></li>
+      {% endfor %}
+    </ul>
+  </section>
+
+  {% if result.secrets_written %}
+  <section aria-labelledby="secrets-written">
+    <h3 id="secrets-written">Secrets</h3>
+    <ul>
+      {% for path in result.secrets_written %}
+      <li><code>{{ path }}</code> (mode 0600)</li>
+      {% endfor %}
+    </ul>
+    <p>
+      <strong>Keep these files secure.</strong>
+      They contain API keys and the database password.
+      Do not commit them to version control.
+    </p>
+  </section>
+  {% endif %}
+  {% endif %}
+
+  <section aria-labelledby="next-steps">
+    <h3 id="next-steps">Next steps</h3>
+    <ol>
+      <li>Start the <code>clearskies-api</code> service pointing at the config directory.</li>
+      <li>Start the <code>clearskies-realtime</code> service.</li>
+      <li>Deploy the <code>clearskies-dashboard</code> front end.</li>
+      <li>Verify the dashboard loads at your configured address.</li>
+    </ol>
+  </section>
+
+  <a href="/">Return to home</a>
+  {% endif %}
+</article>
