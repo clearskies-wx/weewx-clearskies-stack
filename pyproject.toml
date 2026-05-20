@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling==1.27.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "weewx-clearskies-config"
+version = "0.1.0"
+description = "Web-based configuration UI for the Clear Skies weather dashboard"
+license = { text = "GPL-3.0-or-later" }
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [{ name = "Clear Skies contributors" }]
+
+dependencies = [
+    "fastapi==0.136.1",
+    "uvicorn[standard]==0.47.0",
+    "jinja2==3.1.6",
+    "python-multipart==0.0.29",
+    "argon2-cffi==25.1.0",
+    "cryptography==48.0.0",
+    "configobj==5.0.9",
+    "click==8.4.0",
+    "httpx==0.28.1",
+]
+
+[project.scripts]
+weewx-clearskies-config = "weewx_clearskies_config.__main__:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["weewx_clearskies_config"]
+
+# ---------------------------------------------------------------------------
+# ruff — linting + formatting
+# ---------------------------------------------------------------------------
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "S", "N", "UP", "SIM"]
+ignore = [
+    "S101",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["S101", "S105", "S106"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# ---------------------------------------------------------------------------
+# mypy — strict mode per coding.md §2
+# ---------------------------------------------------------------------------
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_return_any = true
+warn_unused_ignores = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_any_generics = true
+no_implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = ["configobj.*"]
+ignore_missing_stubs = true

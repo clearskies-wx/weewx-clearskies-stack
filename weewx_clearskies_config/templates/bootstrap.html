@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+
+{% block title %}First-time Setup — Clear Skies Configuration{% endblock %}
+
+{% block content %}
+<article>
+  <header>
+    <h1>Clear Skies — First-time Setup</h1>
+    <p>Set your admin username and password to get started.</p>
+  </header>
+
+  {% if not token_valid and not token %}
+  <div role="alert" aria-live="polite">
+    <p class="error">
+      No bootstrap token provided. Start the server and open the URL printed in the
+      terminal, which includes your one-time setup token.
+    </p>
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div role="alert" aria-live="polite">
+    <p id="form-error" class="error">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/bootstrap?token={{ token | urlencode }}" novalidate>
+    <div>
+      <label for="username">Username</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        autocomplete="username"
+        required
+        {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}
+      >
+    </div>
+    <div>
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        autocomplete="new-password"
+        minlength="12"
+        required
+        aria-describedby="password-hint"
+        {% if error %}aria-invalid="true" aria-describedby="form-error password-hint"{% endif %}
+      >
+      <small id="password-hint">Minimum 12 characters.</small>
+    </div>
+    <div>
+      <label for="confirm_password">Confirm password</label>
+      <input
+        type="password"
+        id="confirm_password"
+        name="confirm_password"
+        autocomplete="new-password"
+        minlength="12"
+        required
+        {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}
+      >
+    </div>
+    <button type="submit">Set admin password</button>
+  </form>
+</article>
+{% endblock %}

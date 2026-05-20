@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}Log in — Clear Skies Configuration{% endblock %}
+
+{% block content %}
+<article>
+  <header>
+    <h1>Clear Skies — Log in</h1>
+  </header>
+
+  {% if error %}
+  <div role="alert" aria-live="polite">
+    <p class="error">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  <form method="post" action="/login" novalidate>
+    <div>
+      <label for="username">Username</label>
+      <input
+        type="text"
+        id="username"
+        name="username"
+        autocomplete="username"
+        required
+        {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}
+      >
+    </div>
+    <div>
+      <label for="password">Password</label>
+      <input
+        type="password"
+        id="password"
+        name="password"
+        autocomplete="current-password"
+        required
+        {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}
+      >
+    </div>
+    {% if error %}
+    <p id="form-error" class="error" aria-live="polite">{{ error }}</p>
+    {% endif %}
+    <button type="submit">Log in</button>
+  </form>
+</article>
+{% endblock %}

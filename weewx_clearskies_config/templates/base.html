@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Clear Skies Configuration{% endblock %}</title>
+  <link
+    rel="stylesheet"
+    href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css"
+    crossorigin="anonymous"
+  >
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -3rem;
+      left: 0;
+      background: var(--pico-primary);
+      color: var(--pico-primary-inverse);
+      padding: 0.5rem 1rem;
+      z-index: 1000;
+      text-decoration: none;
+      border-radius: 0 0 0.25rem 0;
+    }
+    .skip-link:focus {
+      top: 0;
+    }
+  </style>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to main content</a>
+  <main class="container" id="main-content">
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
