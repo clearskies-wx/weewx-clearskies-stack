@@ -1,0 +1,67 @@
+<article>
+  <header>
+    <h2>{{ display_name }}</h2>
+  </header>
+
+  <div aria-live="polite">
+    {% if success %}
+    <div role="status" class="pico-color-green-500">
+      <strong>Saved.</strong>
+      {% if section == "column_mapping" %}
+      Column mapping updated. The API will apply the new mapping on the next request —
+      no service restart required.
+      {% elif section == "test-provider" %}
+      Provider connectivity test passed.
+      {% else %}
+      {{ display_name }} settings written to <code>{{ component }}.conf</code>.
+      Changes take effect on the next service restart.
+      {% endif %}
+    </div>
+    {% else %}
+    <div role="alert" class="pico-color-red-500">
+      <strong>Error saving {{ display_name }}:</strong>
+      {{ error }}
+    </div>
+    {% endif %}
+
+    {% if test_result is defined %}
+    <dl>
+      <dt>Result</dt>
+      <dd>{{ "Success" if test_result.success else "Failed" }}</dd>
+      {% if test_result.response_time_ms is defined %}
+      <dt>Response time</dt>
+      <dd>{{ test_result.response_time_ms }} ms</dd>
+      {% endif %}
+      {% if test_result.status_code is defined %}
+      <dt>HTTP status</dt>
+      <dd>{{ test_result.status_code }}</dd>
+      {% endif %}
+      {% if test_result.error is defined and test_result.error %}
+      <dt>Error</dt>
+      <dd>{{ test_result.error }}</dd>
+      {% endif %}
+    </dl>
+    {% endif %}
+  </div>
+
+  <div role="group">
+    {% if section not in ("test-provider",) %}
+    <a href="/admin/config/{{ component }}/{{ section }}"
+       hx-get="/admin/config/{{ component }}/{{ section }}"
+       hx-target="#config-content"
+       hx-swap="innerHTML"
+       role="button"
+       class="secondary">
+      {% if success %}Edit again{% else %}Try again{% endif %}
+    </a>
+    {% endif %}
+    <a href="/admin/config"
+       hx-get="/admin/config"
+       hx-target="#config-content"
+       hx-swap="innerHTML"
+       role="button"
+       class="outline">
+      Back to overview
+    </a>
+  </div>
+</article>

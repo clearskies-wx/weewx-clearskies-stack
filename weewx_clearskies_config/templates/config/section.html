@@ -1,0 +1,135 @@
+<article>
+  <header>
+    <h2>{{ display_name }}</h2>
+    <p>
+      {% if is_column_mapping %}
+      Map database column names to canonical weewx field names.
+      Column mapping takes effect on the next API request — no service restart required.
+      {% else %}
+      Edit settings for the <strong>{{ section }}</strong> section of
+      <code>{{ component }}.conf</code>.
+      {% endif %}
+    </p>
+  </header>
+
+  <div id="section-result" aria-live="polite"></div>
+
+  {% if is_column_mapping %}
+  {# ---- Column mapping form ---- #}
+  <form id="column-mapping-form"
+        hx-post="/admin/config/column-mapping"
+        hx-target="#config-content"
+        hx-swap="innerHTML">
+
+    {% if mapping %}
+    <table>
+      <caption>Current column mappings</caption>
+      <thead>
+        <tr>
+          <th scope="col">Database column</th>
+          <th scope="col">Canonical field</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for db_col, canonical in mapping.items() %}
+        <tr>
+          <td>
+            <label for="col_{{ db_col }}">{{ db_col }}</label>
+          </td>
+          <td>
+            <input type="text"
+                   id="col_{{ db_col }}"
+                   name="col_{{ db_col }}"
+                   value="{{ canonical or '' }}"
+                   list="canonical-fields-list"
+                   autocomplete="off"
+                   aria-label="Canonical name for {{ db_col }}">
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>No column mappings configured. Add mappings by entering database column names
+       and their canonical weewx equivalents below.</p>
+    {% endif %}
+
+    {# Datalist for canonical field autocomplete #}
+    <datalist id="canonical-fields-list">
+      {% for field in canonical_fields %}
+      <option value="{{ field }}">
+      {% endfor %}
+    </datalist>
+
+    <div role="group">
+      <button type="submit">Save Column Mapping</button>
+      <a href="/admin/config"
+         hx-get="/admin/config"
+         hx-target="#config-content"
+         hx-swap="innerHTML"
+         role="button"
+         class="secondary">
+        Cancel
+      </a>
+    </div>
+  </form>
+
+  {% else %}
+  {# ---- Generic section edit form ---- #}
+  <form id="section-form-{{ component }}-{{ section }}"
+        hx-post="/admin/config/{{ component }}/{{ section }}"
+        hx-target="#config-content"
+        hx-swap="innerHTML">
+
+    <fieldset>
+      <legend>{{ display_name }} settings</legend>
+
+      {% if values %}
+        {% for key, val in values.items() %}
+        {% set field_id = "field_" + component + "_" + section + "_" + key %}
+        {% if key in secret_fields %}
+        {# Secret field — render as password input, never pre-fill with existing value #}
+        <label for="{{ field_id }}">
+          {{ key }}
+          <small aria-label="This value is stored in secrets.env">(secret — stored separately)</small>
+        </label>
+        <input type="password"
+               id="{{ field_id }}"
+               name="{{ key }}"
+               placeholder="Enter new value to update, or leave blank to keep existing"
+               autocomplete="new-password"
+               aria-describedby="{{ field_id }}-hint">
+        <small id="{{ field_id }}-hint">
+          Leave blank to keep the current value. Enter a new value to update secrets.env.
+        </small>
+        {% else %}
+        <label for="{{ field_id }}">{{ key }}</label>
+        <input type="text"
+               id="{{ field_id }}"
+               name="{{ key }}"
+               value="{{ val }}"
+               autocomplete="off">
+        {% endif %}
+        {% endfor %}
+      {% else %}
+      <p aria-live="polite">
+        <em>No values found for this section. This section may not have been configured
+        during setup. Save with new values to create it.</em>
+      </p>
+      {% endif %}
+    </fieldset>
+
+    <div role="group">
+      <button type="submit">Save {{ display_name }}</button>
+      <a href="/admin/config"
+         hx-get="/admin/config"
+         hx-target="#config-content"
+         hx-swap="innerHTML"
+         role="button"
+         class="secondary">
+        Cancel
+      </a>
+    </div>
+  </form>
+  {% endif %}
+</article>

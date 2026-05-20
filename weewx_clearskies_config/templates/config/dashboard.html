@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Clear Skies — Configuration{% endblock %}
+{% block content %}
+<header>
+  <h1>Clear Skies Configuration</h1>
+  <p>Edit component settings. Each section is independently editable. Changes are merged
+     into the managed region of the relevant config file; your free-form customisations
+     below the managed region are not touched.</p>
+</header>
+
+<div class="grid">
+  {# Sidebar navigation #}
+  <aside>
+    <nav aria-label="Config sections">
+      <ul>
+        {% for s in nav_sections %}
+        <li>
+          <a href="/admin/config/{{ s.component }}/{{ s.section }}"
+             hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
+             hx-target="#config-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             aria-label="Edit {{ s.display_name }}">
+            {{ s.display_name }}
+          </a>
+        </li>
+        {% endfor %}
+        <li>
+          <a href="/admin/config/column-mapping"
+             hx-get="/admin/config/column-mapping"
+             hx-target="#config-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             aria-label="Edit Column Mapping">
+            Column Mapping
+          </a>
+        </li>
+      </ul>
+    </nav>
+
+    <hr>
+
+    <form action="/logout" method="post">
+      <button type="submit" class="secondary">Log out</button>
+    </form>
+  </aside>
+
+  {# Content area — section forms load here via HTMX #}
+  <section id="config-content" aria-live="polite">
+    <article>
+      <header>
+        <h2>Configuration Overview</h2>
+      </header>
+
+      {% if nav_sections %}
+      <p>Select a section from the sidebar to view and edit its settings.</p>
+
+      {% for s in nav_sections %}
+      <section aria-labelledby="section-heading-{{ s.component }}-{{ s.section }}">
+        <h3 id="section-heading-{{ s.component }}-{{ s.section }}">
+          {{ s.display_name }}
+          <small>({{ s.component }}.conf)</small>
+        </h3>
+        {% if s.values %}
+        <dl>
+          {% for key, val in s.values.items() %}
+          <dt>{{ key }}</dt>
+          <dd>{{ val }}</dd>
+          {% endfor %}
+        </dl>
+        {% else %}
+        <p aria-live="polite"><em>No values configured — run the setup wizard first.</em></p>
+        {% endif %}
+        <a href="/admin/config/{{ s.component }}/{{ s.section }}"
+           hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
+           hx-target="#config-content"
+           hx-swap="innerHTML"
+           hx-push-url="true">
+          Edit {{ s.display_name }}
+        </a>
+      </section>
+      {% endfor %}
+
+      {% else %}
+      <p aria-live="polite">No configuration files found in <code>{{ config_dir }}</code>.
+         Run the setup wizard first.</p>
+      {% endif %}
+    </article>
+  </section>
+</div>
+{% endblock %}

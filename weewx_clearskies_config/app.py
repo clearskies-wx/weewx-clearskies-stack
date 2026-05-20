@@ -20,6 +20,7 @@ from weewx_clearskies_config.auth import (
     verify_password,
     write_secrets,
 )
+from weewx_clearskies_config.config.routes import create_config_router
 from weewx_clearskies_config.wizard.routes import create_wizard_router
 
 
@@ -82,6 +83,15 @@ def create_app(config: AppConfig) -> FastAPI:
         config_dir=config.config_dir,
     )
     app.include_router(wizard_router)
+
+    # Mount the config router.  create_config_router() injects shared objects
+    # (templates, session_manager, config_dir) that the router endpoints need.
+    config_router = create_config_router(
+        templates=templates,
+        session_manager=session_manager,
+        config_dir=config.config_dir,
+    )
+    app.include_router(config_router)
 
     @app.get("/health")
     async def health() -> JSONResponse:
