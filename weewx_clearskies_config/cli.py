@@ -78,6 +78,8 @@ def _print_banner(
 
     if bootstrap_token:
         first_addr = bind_addresses[0] if bind_addresses else "localhost"
+        if first_addr in ("::", "0.0.0.0"):
+            first_addr = "localhost"
         url = _format_url(scheme, first_addr, port)
         click.echo("")
         click.echo("  First-time setup: open this URL to set your admin password:")
