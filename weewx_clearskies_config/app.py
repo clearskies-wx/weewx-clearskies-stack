@@ -4,6 +4,7 @@ import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
@@ -94,6 +95,19 @@ def create_app(config: AppConfig) -> FastAPI:
     )
     app.include_router(config_router)
 
+    @app.exception_handler(401)
+    async def _on_401(request: Request, _exc: Exception) -> Response:
+        next_path = request.url.path
+        if request.url.query:
+            next_path = f"{next_path}?{request.url.query}"
+        login_url = f"/login?next={quote(next_path, safe='')}&reason=session_expired"
+        if request.headers.get("HX-Request"):
+            return Response(
+                status_code=200,
+                headers={"HX-Redirect": login_url},
+            )
+        return RedirectResponse(url=login_url, status_code=303)
+
     @app.get("/health")
     async def health() -> JSONResponse:
         return JSONResponse({"status": "ok"})
@@ -110,10 +124,12 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.get("/login", response_class=HTMLResponse)
     async def login_get(request: Request) -> HTMLResponse:
+        next_url = request.query_params.get("next", "")
+        reason = request.query_params.get("reason", "")
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": None},
+            context={"error": None, "next_url": next_url, "reason": reason},
         )
 
     @app.post("/login")
@@ -122,6 +138,7 @@ def create_app(config: AppConfig) -> FastAPI:
         form = await request.form()
         username = str(form.get("username", ""))
         password = str(form.get("password", ""))
+        next_raw = str(form.get("next", ""))
 
         stored = read_secrets()
         stored_username = stored.get("WEEWX_CLEARSKIES_ADMIN_USERNAME", "")
@@ -134,7 +151,18 @@ def create_app(config: AppConfig) -> FastAPI:
         ):
             rate_limiter.record_success(client_ip)
             session_id = session_manager.create(username)
-            response = RedirectResponse(url="/", status_code=303)
+            if (
+                next_raw.startswith("/")
+                and not next_raw.startswith("//")
+                and not next_raw.startswith("/\\")
+                and "://" not in next_raw
+            ):
+                redirect_url = next_raw
+            elif (config.config_dir / "api.conf").exists():
+                redirect_url = "/admin/config"
+            else:
+                redirect_url = "/wizard"
+            response = RedirectResponse(url=redirect_url, status_code=303)
             response.set_cookie(
                 **{k: v for k, v in session_manager.cookie_kwargs.items()},
                 value=session_id,
@@ -145,7 +173,7 @@ def create_app(config: AppConfig) -> FastAPI:
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": "Invalid username or password."},
+            context={"error": "Invalid username or password.", "next_url": next_raw, "reason": ""},
             status_code=401,
         )
 
@@ -232,6 +260,12 @@ def create_app(config: AppConfig) -> FastAPI:
         existing["WEEWX_CLEARSKIES_ADMIN_PASSWORD_HASH"] = hash_password(new_password)
         write_secrets(existing)
 
-        return RedirectResponse(url="/login", status_code=303)
+        session_id = session_manager.create(new_username)
+        response = RedirectResponse(url="/wizard", status_code=303)
+        response.set_cookie(
+            **{k: v for k, v in session_manager.cookie_kwargs.items()},
+            value=session_id,
+        )
+        return response
 
     return app

@@ -1,13 +1,14 @@
 """WizardState dataclass and in-memory session store.
 
 The wizard collects configuration across 8 steps. Data accumulates in a
-WizardState keyed by session ID. The store is in-memory (no persistence
-across restarts), which is acceptable for a setup wizard that runs once.
+WizardState keyed by session ID. The store is backed by disk so progress
+survives tool restarts.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from pathlib import Path
 
 
 @dataclass
@@ -57,19 +58,53 @@ class WizardState:
 
 _store: dict[str, WizardState] = {}
 
+# Set once at app startup via configure_state_persistence().
+_config_dir: Path | None = None
+
+
+def configure_state_persistence(config_dir: Path) -> None:
+    """Register the config directory used for disk persistence.
+
+    Called by create_wizard_router() so the module knows where to read/write
+    progress files without having to thread config_dir through every call site.
+    """
+    global _config_dir  # noqa: PLW0603
+    _config_dir = config_dir
+    from weewx_clearskies_config.wizard.state_persistence import cleanup_stale_progress
+    cleanup_stale_progress(config_dir)
+
 
 def get_wizard_state(session_id: str) -> WizardState:
-    """Return the WizardState for *session_id*, creating one if absent."""
-    if session_id not in _store:
-        _store[session_id] = WizardState()
+    """Return the WizardState for *session_id*.
+
+    Lookup order:
+      1. In-memory _store (fastest, already loaded this request).
+      2. Disk progress file (survives restarts).
+      3. Fresh WizardState (first visit).
+    """
+    if session_id in _store:
+        return _store[session_id]
+    if _config_dir is not None:
+        from weewx_clearskies_config.wizard.state_persistence import load_progress
+        loaded = load_progress(session_id, _config_dir)
+        if loaded is not None:
+            _store[session_id] = loaded
+            return loaded
+    _store[session_id] = WizardState()
     return _store[session_id]
 
 
 def save_wizard_state(session_id: str, state: WizardState) -> None:
-    """Persist *state* for *session_id*."""
+    """Persist *state* for *session_id* in memory and on disk."""
     _store[session_id] = state
+    if _config_dir is not None:
+        from weewx_clearskies_config.wizard.state_persistence import save_progress
+        save_progress(session_id, state, _config_dir)
 
 
 def clear_wizard_state(session_id: str) -> None:
     """Remove the WizardState for *session_id* (called after apply or cancel)."""
     _store.pop(session_id, None)
+    if _config_dir is not None:
+        from weewx_clearskies_config.wizard.state_persistence import delete_progress
+        delete_progress(session_id, _config_dir)

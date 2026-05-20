@@ -54,6 +54,7 @@ from weewx_clearskies_config.wizard.schema import introspect_schema
 from weewx_clearskies_config.wizard.state import (
     WizardState,
     clear_wizard_state,
+    configure_state_persistence,
     get_wizard_state,
     save_wizard_state,
 )
@@ -87,6 +88,7 @@ def create_wizard_router(
     _templates = templates
     _session_manager = session_manager
     _config_dir = config_dir
+    configure_state_persistence(config_dir)
     return router
 
 
@@ -171,6 +173,8 @@ async def wizard_index(request: Request) -> HTMLResponse:
 async def step1_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if state.db_host is None:
+        _merge_from_existing_config(state)
     return _render(
         request,
         "step_db.html",
@@ -277,6 +281,8 @@ async def step1_post(request: Request) -> HTMLResponse:
 async def step2_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.column_mapping:
+        _merge_from_existing_config(state)
 
     schema_data: dict[str, Any] | None = None
     error: str | None = None
@@ -347,6 +353,9 @@ async def step3_get(request: Request) -> HTMLResponse:
             except (FileNotFoundError, KeyError):
                 continue
 
+    if state.station_name is None:
+        _merge_from_existing_config(state)
+
     return _render(
         request,
         "step_station.html",
@@ -384,6 +393,8 @@ async def step3_post(request: Request) -> HTMLResponse:
 async def step4_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.providers:
+        _merge_from_existing_config(state)
 
     by_domain = providers_by_domain()
     recommendations: dict[str, str] = {}
@@ -429,6 +440,8 @@ async def step4_post(request: Request) -> HTMLResponse:
 async def step5_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.api_keys:
+        _merge_from_existing_config(state)
 
     # Collect providers that require credentials.
     keyed_providers = []
@@ -523,6 +536,8 @@ async def step5_post(request: Request) -> HTMLResponse:
 async def step6_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if state.proxy_secret is None:
+        _merge_from_existing_config(state)
     defaults = topology_defaults(same_host=(state.topology == "same-host"))
     return _render(
         request,
@@ -564,6 +579,8 @@ async def step6_post(request: Request) -> HTMLResponse:
 async def step7_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if state.api_bind_host == "127.0.0.1" and state.api_bind_port == 8765:
+        _merge_from_existing_config(state)
     return _render(
         request,
         "step_binds.html",
@@ -598,6 +615,8 @@ async def step7_post(request: Request) -> HTMLResponse:
 async def step8_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if state.db_host is None and state.station_name is None:
+        _merge_from_existing_config(state)
     return _render(
         request,
         "step_review.html",
@@ -673,3 +692,72 @@ def _weewx_conf_candidates() -> list[str]:
         "/home/weewx/weewx.conf",
         "/opt/weewx/weewx.conf",
     ]
+
+
+def _existing_configs_present() -> bool:
+    """Return True if api.conf exists in config_dir (wizard has run before)."""
+    if _config_dir is None:
+        return False
+    return (_config_dir / "api.conf").exists()
+
+
+def _merge_from_existing_config(state: WizardState) -> None:
+    """Merge fields from existing config files into *state* for any empty fields.
+
+    Only fills fields that are still at their default/empty values so user edits
+    made during the current wizard run are never overwritten.
+    """
+    if not _existing_configs_present():
+        return
+    from weewx_clearskies_config.wizard.state_persistence import populate_from_config
+    assert _config_dir is not None
+    try:
+        existing = populate_from_config(_config_dir)
+    except Exception:  # noqa: BLE001
+        logger.warning("populate_from_config failed; skipping pre-populate", exc_info=True)
+        return
+
+    if state.db_host is None and existing.db_host is not None:
+        state.db_host = existing.db_host
+    if state.db_port == 3306 and existing.db_port != 3306:
+        state.db_port = existing.db_port
+    if state.db_user is None and existing.db_user is not None:
+        state.db_user = existing.db_user
+    if state.db_password is None and existing.db_password is not None:
+        state.db_password = existing.db_password
+    if state.db_name == "weewx" and existing.db_name != "weewx":
+        state.db_name = existing.db_name
+
+    if not state.column_mapping and existing.column_mapping:
+        state.column_mapping = existing.column_mapping
+
+    if state.station_name is None and existing.station_name is not None:
+        state.station_name = existing.station_name
+    if state.latitude is None and existing.latitude is not None:
+        state.latitude = existing.latitude
+    if state.longitude is None and existing.longitude is not None:
+        state.longitude = existing.longitude
+    if state.altitude_meters is None and existing.altitude_meters is not None:
+        state.altitude_meters = existing.altitude_meters
+    if state.timezone is None and existing.timezone is not None:
+        state.timezone = existing.timezone
+
+    if not state.providers and existing.providers:
+        state.providers = existing.providers
+
+    if not state.api_keys and existing.api_keys:
+        state.api_keys = existing.api_keys
+
+    if state.topology == "same-host" and existing.topology != "same-host":
+        state.topology = existing.topology
+    if state.proxy_secret is None and existing.proxy_secret is not None:
+        state.proxy_secret = existing.proxy_secret
+
+    if state.api_bind_host == "127.0.0.1" and existing.api_bind_host != "127.0.0.1":
+        state.api_bind_host = existing.api_bind_host
+    if state.api_bind_port == 8765 and existing.api_bind_port != 8765:
+        state.api_bind_port = existing.api_bind_port
+    if state.realtime_bind_host == "127.0.0.1" and existing.realtime_bind_host != "127.0.0.1":
+        state.realtime_bind_host = existing.realtime_bind_host
+    if state.realtime_bind_port == 8766 and existing.realtime_bind_port != 8766:
+        state.realtime_bind_port = existing.realtime_bind_port

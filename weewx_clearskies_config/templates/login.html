@@ -8,6 +8,12 @@
     <h1>Clear Skies — Log in</h1>
   </header>
 
+  {% if reason == "session_expired" %}
+  <div role="alert" aria-live="polite">
+    <p class="error">Your session has expired. Please log in again.</p>
+  </div>
+  {% endif %}
+
   {% if error %}
   <div role="alert" aria-live="polite">
     <p class="error">{{ error }}</p>
@@ -15,6 +21,7 @@
   {% endif %}
 
   <form method="post" action="/login" novalidate>
+    <input type="hidden" name="next" value="{{ next_url }}">
     <div>
       <label for="username">Username</label>
       <input
@@ -22,6 +29,7 @@
         id="username"
         name="username"
         autocomplete="username"
+        autofocus
         required
         {% if error %}aria-invalid="true" aria-describedby="form-error"{% endif %}
       >

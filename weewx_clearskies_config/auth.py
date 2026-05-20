@@ -1,3 +1,5 @@
+import json
+import logging
 import os
 import secrets
 import time
@@ -6,6 +8,8 @@ from pathlib import Path
 
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
+
+_log = logging.getLogger(__name__)
 
 _hasher = PasswordHasher()
 
@@ -49,20 +53,67 @@ class BootstrapManager:
 
 
 class SessionManager:
-    def __init__(self, tls_enabled: bool = False) -> None:
-        self._sessions: dict[str, str] = {}
+    def __init__(
+        self,
+        tls_enabled: bool = False,
+        sessions_file: Path | None = None,
+        max_session_age: int = 604800,
+    ) -> None:
+        self._sessions: dict[str, dict] = {}
         self.tls_enabled = tls_enabled
+        self._max_age = max_session_age
+        self._sessions_file = sessions_file or (_config_dir() / "sessions.json")
+        self._load()
 
     def create(self, username: str) -> str:
         session_id = secrets.token_urlsafe(32)
-        self._sessions[session_id] = username
+        self._sessions[session_id] = {"username": username, "created_at": time.time()}
+        self._persist()
         return session_id
 
     def get_username(self, session_id: str) -> str | None:
-        return self._sessions.get(session_id)
+        entry = self._sessions.get(session_id)
+        if entry is None:
+            return None
+        if time.time() - entry["created_at"] > self._max_age:
+            del self._sessions[session_id]
+            self._persist()
+            return None
+        return entry["username"]
 
     def delete(self, session_id: str) -> None:
         self._sessions.pop(session_id, None)
+        self._persist()
+
+    def _persist(self) -> None:
+        try:
+            self._sessions_file.parent.mkdir(parents=True, exist_ok=True)
+            tmp = self._sessions_file.with_suffix(".json.tmp")
+            tmp.write_text(json.dumps(self._sessions), encoding="utf-8")
+            os.replace(tmp, self._sessions_file)
+        except OSError as exc:
+            _log.warning("Could not persist sessions file: %s", exc)
+
+    def _load(self) -> None:
+        if not self._sessions_file.exists():
+            return
+        try:
+            raw = json.loads(self._sessions_file.read_text(encoding="utf-8"))
+            if not isinstance(raw, dict):
+                raise ValueError("expected a JSON object")
+            now = time.time()
+            self._sessions = {
+                sid: entry
+                for sid, entry in raw.items()
+                if isinstance(entry, dict)
+                and "username" in entry
+                and "created_at" in entry
+                and isinstance(entry["created_at"], (int, float))
+                and now - entry["created_at"] <= self._max_age
+            }
+        except (OSError, ValueError, json.JSONDecodeError) as exc:
+            _log.warning("Could not load sessions file (starting fresh): %s", exc)
+            self._sessions = {}
 
     @property
     def cookie_kwargs(self) -> dict[str, object]:
