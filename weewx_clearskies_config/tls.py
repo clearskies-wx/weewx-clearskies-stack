@@ -70,7 +70,7 @@ def generate_self_signed_cert(
         .not_valid_before(now)
         .not_valid_after(now + datetime.timedelta(days=365))
         .add_extension(x509.SubjectAlternativeName(san_list), critical=False)
-        .add_extension(x509.BasicConstraints(ca=True, path_length=None), critical=True)
+        .add_extension(x509.BasicConstraints(ca=False, path_length=None), critical=True)
         .sign(private_key, hashes.SHA256())
     )
 
@@ -118,8 +118,8 @@ def load_or_generate_cert(
     bind_addresses: list[str],
     config_dir: Path,
 ) -> tuple[Path, Path]:
-    cert_path = config_dir / "tls.crt"
-    key_path = config_dir / "tls.key"
+    cert_path = config_dir / "ui-cert.pem"
+    key_path = config_dir / "ui-key.pem"
 
     if cert_path.exists() and key_path.exists() and _cert_san_matches(cert_path, bind_addresses):
         return cert_path, key_path

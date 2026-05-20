@@ -1,34 +1,12 @@
-"""Station identity extraction from DB or weewx.conf.
+"""Station identity extraction from weewx.conf.
 
 weewx stores station metadata in [Station] in weewx.conf, not in the archive
-DB table.  The DB path is provided for completeness but typically returns empty.
+DB table.
 """
 
 from __future__ import annotations
 
 from typing import Any
-
-
-def station_from_db(db_url: str) -> dict[str, Any]:
-    """Attempt to read station metadata from the archive DB.
-
-    weewx does not store station coordinates in the archive table — they live
-    in weewx.conf [Station].  This function is provided for completeness; it
-    will almost always return a dict with all-None values.
-
-    Returns a dict with keys: station_name, latitude, longitude,
-    altitude_meters, timezone (all None unless somehow stored in the DB).
-    """
-    # The weewx archive table does not carry station metadata columns.
-    # This is intentionally a no-op that returns empty — callers should prefer
-    # station_from_weewx_conf() for real data.
-    return {
-        "station_name": None,
-        "latitude": None,
-        "longitude": None,
-        "altitude_meters": None,
-        "timezone": None,
-    }
 
 
 def station_from_weewx_conf(conf_path: str) -> dict[str, Any]:

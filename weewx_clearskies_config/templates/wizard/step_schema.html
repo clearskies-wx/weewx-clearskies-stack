@@ -115,12 +115,14 @@
               </td>
               <td>
                 {% if col.suggested and col.confidence %}
-                  {% if col.confidence >= 0.8 %}
+                  {% if col.confidence == "high" %}
                   <span class="confidence-badge high">High</span>
-                  {% elif col.confidence >= 0.5 %}
+                  {% elif col.confidence == "medium" %}
                   <span class="confidence-badge medium">Medium</span>
-                  {% else %}
+                  {% elif col.confidence == "low" %}
                   <span class="confidence-badge low">Low</span>
+                  {% else %}
+                  <span class="confidence-badge">{{ col.confidence }}</span>
                   {% endif %}
                 {% elif col.suggested %}
                 <span class="confidence-badge medium">Suggested</span>

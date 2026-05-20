@@ -443,6 +443,12 @@ async def section_post(request: Request, component: str, section: str) -> HTMLRe
             env_key = _secrets_env_key(component, section, field_name)
             update_secrets(env_key, field_value, _config_dir)
 
+        # ADR-027: [ui] enabled is not flippable from the UI — remove it
+        # before writing so an operator cannot accidentally toggle it via the
+        # config form.
+        if component == "stack" and section == "ui":
+            conf_values.pop("enabled", None)
+
         # Merge non-secret values into the managed region
         if conf_values:
             update_managed_region(conf_path, section, conf_values)

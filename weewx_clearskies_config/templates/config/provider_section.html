@@ -154,7 +154,8 @@
     {% if meta.get("fields") %}
     <div id="provider-keys-{{ section }}-{{ pid }}"
          class="provider-keys-section {% if current_provider == pid %}active{% endif %}"
-         aria-hidden="{{ 'false' if current_provider == pid else 'true' }}">
+         aria-hidden="{{ 'false' if current_provider == pid else 'true' }}"
+         {% if current_provider != pid %}inert{% endif %}>
 
       <fieldset class="provider-key-fields">
         <legend>{{ meta.get("display", pid) }} — API credentials</legend>
@@ -180,13 +181,11 @@
                   class="secondary outline"
                   style="white-space:nowrap;margin-bottom:0;padding:0.4rem 0.75rem;font-size:0.85rem"
                   aria-label="Show value for {{ field_name | replace('_', ' ') | title }}"
-                  aria-pressed="false"
                   onclick="(function(btn){
                     var inp = document.getElementById('{{ key_field_id }}');
                     var showing = inp.type === 'text';
                     inp.type = showing ? 'password' : 'text';
                     btn.textContent = showing ? 'Show' : 'Hide';
-                    btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
                     btn.setAttribute('aria-label',
                       (showing ? 'Show' : 'Hide') + ' value for {{ field_name | replace("_", " ") | title }}');
                   })(this)">
@@ -268,10 +267,12 @@
       if (!el) return;
       if (pid === newValue) {
         el.classList.add("active");
-        el.setAttribute("aria-hidden", "false");
+        el.removeAttribute("aria-hidden");
+        el.removeAttribute("inert");
       } else {
         el.classList.remove("active");
         el.setAttribute("aria-hidden", "true");
+        el.setAttribute("inert", "");
       }
     });
   }

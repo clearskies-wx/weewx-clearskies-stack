@@ -113,10 +113,23 @@ def _config_dir() -> Path:
     return Path.home() / ".config" / "weewx-clearskies"
 
 
+# Module-level cache for read_secrets(): (mtime, parsed_dict)
+# Avoids re-reading and re-parsing the file on every request when it hasn't
+# changed.  The cache is invalidated whenever the file's mtime changes.
+_secrets_cache: tuple[float, dict[str, str]] | None = None
+
+
 def read_secrets() -> dict[str, str]:
+    global _secrets_cache  # noqa: PLW0603
     secrets_path = _config_dir() / "secrets.env"
     if not secrets_path.exists():
         return {}
+    try:
+        current_mtime = secrets_path.stat().st_mtime
+    except OSError:
+        return {}
+    if _secrets_cache is not None and _secrets_cache[0] == current_mtime:
+        return dict(_secrets_cache[1])
     result: dict[str, str] = {}
     for line in secrets_path.read_text().splitlines():
         line = line.strip()
@@ -124,7 +137,8 @@ def read_secrets() -> dict[str, str]:
             continue
         key, _, value = line.partition("=")
         result[key.strip()] = value.strip()
-    return result
+    _secrets_cache = (current_mtime, result)
+    return dict(result)
 
 
 def write_secrets(data: dict[str, str]) -> None:

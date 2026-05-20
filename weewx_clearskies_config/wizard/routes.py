@@ -126,7 +126,6 @@ def _render(
     template_name: str,
     context: dict[str, Any],
     *,
-    is_htmx: bool,  # kept for callers; both paths render the same fragment
     status_code: int = 200,
 ) -> HTMLResponse:
     """Render a wizard step fragment.
@@ -142,10 +141,6 @@ def _render(
         context=context,
         status_code=status_code,
     )
-
-
-def _is_htmx(request: Request) -> bool:
-    return request.headers.get("HX-Request") == "true"
 
 
 # ---------------------------------------------------------------------------
@@ -180,7 +175,6 @@ async def step1_get(request: Request) -> HTMLResponse:
         request,
         "step_db.html",
         {"step": 1, "state": state, "result": None, "error": None},
-        is_htmx=_is_htmx(request),
     )
 
 
@@ -223,8 +217,17 @@ async def step1_detect(request: Request) -> HTMLResponse:
     conf_path = str(form.get("conf_path", "/etc/weewx/weewx.conf")).strip()
 
     _ALLOWED_CONF_PREFIXES = ("/etc/weewx/", "/home/weewx/", "/usr/share/weewx/")
-    if not any(conf_path.startswith(p) for p in _ALLOWED_CONF_PREFIXES):
+    # Resolve symlinks and `../` traversal before checking the allowed-prefix
+    # list.  Without this, a path like `/etc/weewx/../../etc/shadow` passes the
+    # naive startswith check.
+    try:
+        resolved = str(Path(conf_path).resolve())
+    except (OSError, ValueError):
+        resolved = ""
+    if not any(resolved.startswith(p) for p in _ALLOWED_CONF_PREFIXES):
         conf_path = "/etc/weewx/weewx.conf"
+    else:
+        conf_path = resolved
 
     error: str | None = None
     detected: dict[str, Any] = {}
@@ -296,7 +299,6 @@ async def step2_get(request: Request) -> HTMLResponse:
         request,
         "step_schema.html",
         {"step": 2, "state": state, "schema": schema_data, "error": error},
-        is_htmx=_is_htmx(request),
     )
 
 
@@ -349,7 +351,6 @@ async def step3_get(request: Request) -> HTMLResponse:
         request,
         "step_station.html",
         {"step": 3, "state": state, "error": None},
-        is_htmx=_is_htmx(request),
     )
 
 
@@ -399,7 +400,6 @@ async def step4_get(request: Request) -> HTMLResponse:
             "recommendations": recommendations,
             "error": None,
         },
-        is_htmx=_is_htmx(request),
     )
 
 
@@ -449,7 +449,6 @@ async def step5_get(request: Request) -> HTMLResponse:
         request,
         "step_keys.html",
         {"step": 5, "state": state, "keyed_providers": unique_keyed, "error": None},
-        is_htmx=_is_htmx(request),
     )
 
 
@@ -529,7 +528,6 @@ async def step6_get(request: Request) -> HTMLResponse:
         request,
         "step_topology.html",
         {"step": 6, "state": state, "defaults": defaults, "error": None},
-        is_htmx=_is_htmx(request),
     )
 
 
@@ -570,7 +568,6 @@ async def step7_get(request: Request) -> HTMLResponse:
         request,
         "step_binds.html",
         {"step": 7, "state": state, "error": None},
-        is_htmx=_is_htmx(request),
     )
 
 
@@ -605,7 +602,6 @@ async def step8_get(request: Request) -> HTMLResponse:
         request,
         "step_review.html",
         {"step": 8, "state": state, "error": None},
-        is_htmx=_is_htmx(request),
     )
 
 

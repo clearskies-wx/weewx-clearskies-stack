@@ -88,13 +88,11 @@
                     class="secondary outline"
                     style="white-space:nowrap;margin-bottom:0;padding:0.4rem 0.75rem;font-size:0.85rem"
                     aria-label="Show password for {{ key | replace('_', ' ') | title }}"
-                    aria-pressed="false"
                     onclick="(function(btn){
                       var inp = document.getElementById('{{ field_id }}');
                       var showing = inp.type === 'text';
                       inp.type = showing ? 'password' : 'text';
                       btn.textContent = showing ? 'Show' : 'Hide';
-                      btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
                       btn.setAttribute('aria-label',
                         (showing ? 'Show' : 'Hide') + ' password for {{ key | replace("_", " ") | title }}');
                     })(this)">

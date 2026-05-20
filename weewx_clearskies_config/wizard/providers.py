@@ -182,6 +182,15 @@ def test_provider(
 
     from urllib.parse import quote
 
+    # Validate that every key in credentials is a declared auth field.
+    # Unexpected keys could indicate a caller mistake or an injection attempt.
+    unexpected = set(credentials) - set(provider.auth_fields)
+    if unexpected:
+        raise ValueError(
+            f"Unexpected credential fields for provider {provider.provider_id!r}: "
+            f"{sorted(unexpected)}"
+        )
+
     # Substitute credential placeholders into the test URL.
     # URL-encode values to prevent query-param injection via & or other metacharacters.
     url = provider.test_url

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import secrets
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -127,8 +128,8 @@ def create_app(config: AppConfig) -> FastAPI:
         stored_hash = stored.get("WEEWX_CLEARSKIES_ADMIN_PASSWORD_HASH", "")
 
         if (
-            username == stored_username
-            and stored_hash
+            stored_hash
+            and secrets.compare_digest(username, stored_username)
             and verify_password(password, stored_hash)
         ):
             rate_limiter.record_success(client_ip)

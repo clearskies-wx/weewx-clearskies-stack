@@ -219,6 +219,71 @@ def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
     return dest
 
 
+def write_bootstrap_summary(
+    state: WizardState,
+    result: dict[str, Any],
+    config_dir: Path,
+) -> Path:
+    """Write a human-readable bootstrap-summary.md next to the generated configs.
+
+    Contents:
+      - Date the wizard ran
+      - List of files written
+      - Proxy secret reminder (cross-host topology only)
+      - Copy-to-server instructions
+
+    Returns the path to the written file.
+    """
+    lines = [
+        "# Clear Skies — Bootstrap Summary\n",
+        "\n",
+        f"Generated: {_today()}\n",
+        "\n",
+        "## Files written\n",
+        "\n",
+    ]
+
+    for path in result.get("files_written", []):
+        lines.append(f"- `{path}`\n")
+    for path in result.get("secrets_written", []):
+        lines.append(f"- `{path}` (mode 0600 — secrets)\n")
+
+    if state.proxy_secret and state.topology == "cross-host":
+        lines += [
+            "\n",
+            "## Proxy secret (cross-host topology)\n",
+            "\n",
+            "A shared proxy secret was generated.  Copy it to both the API host and\n",
+            "the realtime host so the HMAC validation succeeds:\n",
+            "\n",
+            "```\n",
+            f"WEEWX_CLEARSKIES_PROXY_SECRET=<value in secrets.env>\n",
+            "```\n",
+            "\n",
+            "See `secrets.env` for the actual value.  Do not commit that file.\n",
+        ]
+
+    lines += [
+        "\n",
+        "## Copy instructions\n",
+        "\n",
+        "Copy the generated files to your server:\n",
+        "\n",
+        "```sh\n",
+        f"scp {config_dir}/api.conf user@server:/etc/weewx-clearskies/\n",
+        f"scp {config_dir}/realtime.conf user@server:/etc/weewx-clearskies/\n",
+        f"scp {config_dir}/stack.conf user@server:/etc/weewx-clearskies/\n",
+        f"scp {config_dir}/secrets.env user@server:/etc/weewx-clearskies/\n",
+        "```\n",
+        "\n",
+        "Ensure `secrets.env` is chmod 0600 on the target server.\n",
+    ]
+
+    dest = config_dir / "bootstrap-summary.md"
+    _write_file(dest, "".join(lines))
+    return dest
+
+
 def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
     """Write all config files and secrets.env from *state*.
 
@@ -226,6 +291,7 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
       {
         "files_written": [<path>, ...],
         "secrets_written": [<path>, ...],
+        "summary_path": "<path>",
       }
     """
     files_written = []
@@ -236,7 +302,12 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
     files_written.append(str(write_stack_conf(state, config_dir)))
     secrets_written.append(str(write_secrets_env(state, config_dir)))
 
-    return {
+    result: dict[str, Any] = {
         "files_written": files_written,
         "secrets_written": secrets_written,
     }
+
+    summary_path = write_bootstrap_summary(state, result, config_dir)
+    result["summary_path"] = str(summary_path)
+
+    return result

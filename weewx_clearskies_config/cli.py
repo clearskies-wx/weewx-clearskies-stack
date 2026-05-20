@@ -54,6 +54,8 @@ def _print_banner(
     tls: bool,
     bootstrap_token: str | None,
     fingerprint: str | None,
+    *,
+    localhost_requested: bool = False,
 ) -> None:
     scheme = _scheme(tls)
     click.echo("")
@@ -65,6 +67,14 @@ def _print_banner(
         click.echo(f"  Listening: {url}")
         if not _is_private_address(addr):
             non_private = True
+
+    # Uvicorn only binds one host at a time.  When --localhost is requested we
+    # bind 127.0.0.1 only; ::1 is not bound.
+    if localhost_requested and "127.0.0.1" in bind_addresses and "::1" not in bind_addresses:
+        click.echo(
+            "  Note: IPv6 loopback (::1) is not bound — uvicorn limitation. "
+            "Use --bind ::1 for IPv6-only."
+        )
 
     if non_private:
         click.echo("")
@@ -215,7 +225,14 @@ def cli(
 
     # --- Print startup banner ---
 
-    _print_banner(bind_addresses, port, tls_enabled, bootstrap_token, fingerprint)
+    _print_banner(
+        bind_addresses,
+        port,
+        tls_enabled,
+        bootstrap_token,
+        fingerprint,
+        localhost_requested=bind_localhost,
+    )
 
     # --- Build and launch the app ---
 
