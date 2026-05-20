@@ -1,7 +1,8 @@
 <article>
   <header>
     <h2>Step 1 of 8 — Database Connection</h2>
-    <p>Enter your weewx MariaDB/MySQL connection details. Use "Detect" to read them from weewx.conf automatically.</p>
+    <p>Enter your weewx MariaDB/MySQL connection details.
+       Use "Detect" to read them from <code>weewx.conf</code> automatically.</p>
   </header>
 
   {% if error %}
@@ -25,7 +26,8 @@
   <form id="db-detect-form"
         hx-post="/wizard/step/1/detect"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
     <fieldset>
       <legend>Auto-detect from weewx.conf</legend>
       <label for="conf_path">weewx.conf path</label>
@@ -43,29 +45,39 @@
   <form id="db-form"
         hx-post="/wizard/step/1"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
     <fieldset>
       <legend>Database connection settings</legend>
 
-      <label for="db_host">Host</label>
-      <input type="text"
-             id="db_host"
-             name="db_host"
-             value="{{ state.db_host or 'localhost' }}"
-             required
-             autocomplete="off"
-             {% if error and not state.db_host %}aria-invalid="true"{% endif %}>
+      <div class="grid">
+        <div>
+          <label for="db_host">Host <span aria-hidden="true">*</span></label>
+          <input type="text"
+                 id="db_host"
+                 name="db_host"
+                 value="{{ state.db_host or 'localhost' }}"
+                 required
+                 autocomplete="off"
+                 placeholder="localhost or IP address"
+                 {% if error and not state.db_host %}aria-invalid="true"{% endif %}>
+        </div>
+        <div>
+          <label for="db_port">Port <span aria-hidden="true">*</span></label>
+          <input type="number"
+                 id="db_port"
+                 name="db_port"
+                 value="{{ state.db_port or 3306 }}"
+                 min="1"
+                 max="65535"
+                 required
+                 pattern="\d+"
+                 aria-describedby="db-port-hint">
+          <small id="db-port-hint">Default: 3306</small>
+        </div>
+      </div>
 
-      <label for="db_port">Port</label>
-      <input type="number"
-             id="db_port"
-             name="db_port"
-             value="{{ state.db_port or 3306 }}"
-             min="1"
-             max="65535"
-             required>
-
-      <label for="db_user">Username</label>
+      <label for="db_user">Username <span aria-hidden="true">*</span></label>
       <input type="text"
              id="db_user"
              name="db_user"
@@ -74,18 +86,32 @@
              autocomplete="username">
 
       <label for="db_password">Password</label>
-      <input type="password"
-             id="db_password"
-             name="db_password"
-             value="{{ state.db_password or '' }}"
-             autocomplete="current-password">
+      <div class="password-field">
+        <input type="password"
+               id="db_password"
+               name="db_password"
+               value="{{ state.db_password or '' }}"
+               autocomplete="current-password">
+        <button type="button"
+                class="password-toggle"
+                aria-label="Show password"
+                aria-controls="db_password"
+                onclick="togglePassword(this)">
+          <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
 
-      <label for="db_name">Database name</label>
+      <label for="db_name">Database name <span aria-hidden="true">*</span></label>
       <input type="text"
              id="db_name"
              name="db_name"
              value="{{ state.db_name or 'weewx' }}"
-             required>
+             required
+             placeholder="weewx">
     </fieldset>
 
     <div role="group">
@@ -93,7 +119,8 @@
               hx-post="/wizard/step/1/test"
               hx-target="#wizard-content"
               hx-swap="innerHTML"
-              hx-include="#db-form">
+              hx-include="#db-form"
+              hx-indicator="#wizard-spinner">
         Test Connection
       </button>
       <button type="submit">Next: Column Mapping →</button>

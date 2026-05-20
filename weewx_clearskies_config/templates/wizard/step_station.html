@@ -13,7 +13,8 @@
 
   <form hx-post="/wizard/step/3"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
     <fieldset>
       <legend>Station information</legend>
 
@@ -23,31 +24,38 @@
              name="station_name"
              value="{{ state.station_name or '' }}"
              maxlength="100"
-             placeholder="My Home Weather Station">
+             placeholder="My Home Weather Station"
+             aria-describedby="station-name-hint">
+      <small id="station-name-hint">Shown in the dashboard header. Leave blank to use the default.</small>
 
-      <label for="latitude">Latitude</label>
-      <input type="number"
-             id="latitude"
-             name="latitude"
-             value="{{ state.latitude if state.latitude is not none else '' }}"
-             step="0.000001"
-             min="-90"
-             max="90"
-             placeholder="38.8894"
-             aria-describedby="lat-hint">
-      <small id="lat-hint">Decimal degrees, e.g. 38.8894 (North) or -33.8688 (South)</small>
-
-      <label for="longitude">Longitude</label>
-      <input type="number"
-             id="longitude"
-             name="longitude"
-             value="{{ state.longitude if state.longitude is not none else '' }}"
-             step="0.000001"
-             min="-180"
-             max="180"
-             placeholder="-77.0352"
-             aria-describedby="lon-hint">
-      <small id="lon-hint">Decimal degrees, e.g. -77.0352 (West) or 151.2093 (East)</small>
+      <div class="grid">
+        <div>
+          <label for="latitude">Latitude</label>
+          <input type="number"
+                 id="latitude"
+                 name="latitude"
+                 value="{{ state.latitude if state.latitude is not none else '' }}"
+                 step="0.000001"
+                 min="-90"
+                 max="90"
+                 placeholder="38.8894"
+                 aria-describedby="lat-hint">
+          <small id="lat-hint">Decimal degrees. North is positive (e.g. 38.8894); South is negative (e.g. -33.8688).</small>
+        </div>
+        <div>
+          <label for="longitude">Longitude</label>
+          <input type="number"
+                 id="longitude"
+                 name="longitude"
+                 value="{{ state.longitude if state.longitude is not none else '' }}"
+                 step="0.000001"
+                 min="-180"
+                 max="180"
+                 placeholder="-77.0352"
+                 aria-describedby="lon-hint">
+          <small id="lon-hint">Decimal degrees. West is negative (e.g. -77.0352); East is positive (e.g. 151.2093).</small>
+        </div>
+      </div>
 
       <label for="altitude_meters">Altitude (meters)</label>
       <input type="number"
@@ -57,7 +65,9 @@
              step="0.1"
              min="-500"
              max="9000"
-             placeholder="0">
+             placeholder="0"
+             aria-describedby="alt-hint">
+      <small id="alt-hint">Used for pressure calculations. Enter 0 if unknown.</small>
 
       <label for="timezone">Timezone</label>
       <input type="text"
@@ -66,15 +76,23 @@
              value="{{ state.timezone or '' }}"
              placeholder="America/New_York"
              aria-describedby="tz-hint">
-      <small id="tz-hint">IANA timezone name, e.g. America/New_York, Europe/London, Asia/Tokyo</small>
+      <small id="tz-hint">
+        IANA timezone name, e.g. <code>America/New_York</code>, <code>Europe/London</code>, <code>Asia/Tokyo</code>.
+        {% if state.latitude and state.longitude %}
+        <strong>Auto-detected from your coordinates.</strong> You can override it here if needed.
+        {% else %}
+        If you enter coordinates above, the timezone will be auto-detected when you proceed.
+        {% endif %}
+      </small>
     </fieldset>
 
     <div role="group">
       <button type="button"
               hx-get="/wizard/step/2"
               hx-target="#wizard-content"
-              hx-swap="innerHTML">
-        ← Back
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
       </button>
       <button type="submit">Next: Provider Selection →</button>
     </div>

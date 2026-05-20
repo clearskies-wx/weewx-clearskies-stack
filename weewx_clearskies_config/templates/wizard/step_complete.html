@@ -8,20 +8,22 @@
     <h3>Configuration failed</h3>
     <p>{{ error }}</p>
     <p>Check file permissions on the config directory and try again.</p>
-    <a href="/wizard/step/8"
+    <a href="#"
        hx-get="/wizard/step/8"
        hx-target="#wizard-content"
-       hx-swap="innerHTML">
+       hx-swap="innerHTML"
+       hx-indicator="#wizard-spinner">
       ← Back to Review
     </a>
   </div>
 
   {% else %}
   <div role="status" aria-live="polite">
-    <p>Configuration written successfully.</p>
+    <p>Configuration written successfully. Clear Skies is ready to start.</p>
   </div>
 
   {% if result %}
+  {# ---- Files written -------------------------------------------- #}
   <section aria-labelledby="files-written">
     <h3 id="files-written">Files written</h3>
     <ul>
@@ -31,9 +33,10 @@
     </ul>
   </section>
 
+  {# ---- Secrets written ------------------------------------------ #}
   {% if result.secrets_written %}
   <section aria-labelledby="secrets-written">
-    <h3 id="secrets-written">Secrets</h3>
+    <h3 id="secrets-written">Secret files</h3>
     <ul>
       {% for path in result.secrets_written %}
       <li><code>{{ path }}</code> (mode 0600)</li>
@@ -41,20 +44,74 @@
     </ul>
     <p>
       <strong>Keep these files secure.</strong>
-      They contain API keys and the database password.
+      They contain API keys, the database password,
+      and (for cross-host topology) the proxy shared secret (<code>WEEWX_CLEARSKIES_PROXY_SECRET</code>).
       Do not commit them to version control.
     </p>
   </section>
   {% endif %}
+
+  {# ---- Cross-host shared secret display ------------------------- #}
+  {# result.proxy_secret is only present if config_writer includes it; #}
+  {# otherwise the secret is in secrets.env only.                       #}
+  {% if result and result.proxy_secret %}
+  <section aria-labelledby="proxy-secret-section">
+    <h3 id="proxy-secret-section">Proxy shared secret</h3>
+    <p>
+      Because you chose <strong>cross-host</strong> topology, a shared secret was generated.
+      Copy this value to your dashboard host's environment as
+      <code>CLEARSKIES_PROXY_SECRET</code> before starting the dashboard.
+    </p>
+    <div class="shared-secret-box" aria-label="Proxy shared secret value">
+      <code>{{ result.proxy_secret }}</code>
+    </div>
+    <p>
+      <small>This value is also saved in <code>secrets.env</code> on this host.
+      You will not be able to retrieve it from this UI again.</small>
+    </p>
+  </section>
   {% endif %}
 
+  {% endif %}{# end if result #}
+
+  {# ---- Next steps ----------------------------------------------- #}
   <section aria-labelledby="next-steps">
     <h3 id="next-steps">Next steps</h3>
     <ol>
-      <li>Start the <code>clearskies-api</code> service pointing at the config directory.</li>
-      <li>Start the <code>clearskies-realtime</code> service.</li>
-      <li>Deploy the <code>clearskies-dashboard</code> front end.</li>
-      <li>Verify the dashboard loads at your configured address.</li>
+      <li>
+        <strong>Start the API service:</strong>
+        <br>
+        <code>clearskies-api --config-dir /path/to/config</code>
+        <br>
+        <small>Or use the <code>clearskies-stack up</code> command if you are using Docker Compose.</small>
+      </li>
+      <li>
+        <strong>Start the realtime service:</strong>
+        <br>
+        <code>clearskies-realtime --config-dir /path/to/config</code>
+      </li>
+      <li>
+        <strong>Deploy the dashboard:</strong>
+        <br>
+        Copy the <code>clearskies-dashboard</code> build output to your web server document root,
+        then configure it to proxy <code>/api</code> and <code>/realtime</code> to the running services.
+      </li>
+      {% if result and result.proxy_secret %}
+      <li>
+        <strong>Configure the proxy secret on the dashboard host:</strong>
+        <br>
+        Set <code>CLEARSKIES_PROXY_SECRET</code> in the dashboard host environment to the value
+        shown above (also saved in <code>secrets.env</code> on this host).
+      </li>
+      {% endif %}
+      <li>
+        <strong>Configure your reverse proxy</strong> (nginx, Caddy, Apache) to serve the dashboard
+        at your desired public address and proxy the API/realtime paths.
+        See the deployment documentation for example configurations.
+      </li>
+      <li>
+        <strong>Verify the dashboard</strong> loads at your configured address and shows live data.
+      </li>
     </ol>
   </section>
 

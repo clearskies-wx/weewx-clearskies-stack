@@ -27,23 +27,51 @@
   <form id="keys-form"
         hx-post="/wizard/step/5"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
 
     {% for provider in keyed_providers %}
     <fieldset>
       <legend>{{ provider.display_name }}</legend>
+
       {% for field_name in provider.auth_fields %}
-      <label for="{{ provider.provider_id }}_{{ field_name }}">
+      {% set input_id = provider.provider_id ~ "_" ~ field_name %}
+      {% set is_secret = ("secret" in field_name or "password" in field_name or "key" in field_name) %}
+
+      <label for="{{ input_id }}">
         {{ field_name | replace("_", " ") | title }}
+        {% if is_secret %}<span class="sr-only">(hidden by default)</span>{% endif %}
       </label>
-      <input type="{% if 'secret' in field_name or 'password' in field_name or 'key' in field_name %}password{% else %}text{% endif %}"
-             id="{{ provider.provider_id }}_{{ field_name }}"
+      {% if is_secret %}
+      <div class="password-field">
+        <input type="password"
+               id="{{ input_id }}"
+               name="{{ provider.provider_id }}_{{ field_name }}"
+               value="{{ state.api_keys.get(provider.provider_id, {}).get(field_name, '') }}"
+               autocomplete="off"
+               aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint">
+        <button type="button"
+                class="password-toggle"
+                aria-label="Show {{ field_name | replace('_', ' ') | title }}"
+                aria-controls="{{ input_id }}"
+                onclick="togglePassword(this)">
+          <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      {% else %}
+      <input type="text"
+             id="{{ input_id }}"
              name="{{ provider.provider_id }}_{{ field_name }}"
              value="{{ state.api_keys.get(provider.provider_id, {}).get(field_name, '') }}"
              autocomplete="off"
              aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint">
+      {% endif %}
       <small id="{{ provider.provider_id }}-{{ field_name }}-hint">
-        Required credential for {{ provider.display_name }}
+        Required credential for {{ provider.display_name }}.
       </small>
       {% endfor %}
 
@@ -52,8 +80,9 @@
               hx-target="#wizard-content"
               hx-swap="innerHTML"
               hx-include="#keys-form"
-              hx-vals='{"provider_id": "{{ provider.provider_id }}"}'>
-        Test {{ provider.display_name }}
+              hx-vals='{"provider_id": "{{ provider.provider_id }}"}'
+              hx-indicator="#wizard-spinner">
+        Test {{ provider.display_name }} connection
       </button>
     </fieldset>
     {% endfor %}
@@ -62,8 +91,9 @@
       <button type="button"
               hx-get="/wizard/step/4"
               hx-target="#wizard-content"
-              hx-swap="innerHTML">
-        ← Back
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
       </button>
       <button type="submit">Next: Deployment Topology →</button>
     </div>
@@ -73,13 +103,15 @@
   <p>No API keys required — all selected providers are keyless.</p>
   <form hx-post="/wizard/step/5"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
     <div role="group">
       <button type="button"
               hx-get="/wizard/step/4"
               hx-target="#wizard-content"
-              hx-swap="innerHTML">
-        ← Back
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
       </button>
       <button type="submit">Next: Deployment Topology →</button>
     </div>

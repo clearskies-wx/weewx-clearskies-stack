@@ -11,26 +11,64 @@
   </div>
   {% endif %}
 
+  {# Shared datalist of known canonical field names for autocomplete. #}
+  <datalist id="canonical-names">
+    <option value="outTemp">
+    <option value="inTemp">
+    <option value="outHumidity">
+    <option value="inHumidity">
+    <option value="barometer">
+    <option value="altimeter">
+    <option value="pressure">
+    <option value="windSpeed">
+    <option value="windDir">
+    <option value="windGust">
+    <option value="windGustDir">
+    <option value="rain">
+    <option value="rainRate">
+    <option value="ET">
+    <option value="radiation">
+    <option value="UV">
+    <option value="extraTemp1">
+    <option value="extraTemp2">
+    <option value="extraTemp3">
+    <option value="extraHumid1">
+    <option value="extraHumid2">
+    <option value="soilTemp1">
+    <option value="soilTemp2">
+    <option value="soilMoist1">
+    <option value="soilMoist2">
+    <option value="leafTemp1">
+    <option value="leafWet1">
+    <option value="lightning_strike_count">
+    <option value="lightning_distance">
+  </datalist>
+
   <form hx-post="/wizard/step/2"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
 
     {% if schema %}
       <p>
         Found <strong>{{ schema.total_columns }}</strong> columns:
-        {{ schema.stock_mapped }} auto-mapped,
-        {{ schema.unmapped_columns | length }} need review.
+        <span class="col-mapped">{{ schema.stock_mapped }} auto-mapped</span>{% if schema.unmapped_columns | length > 0 %},
+        <span class="col-unmapped">{{ schema.unmapped_columns | length }} need review</span>{% endif %}.
       </p>
 
       {% if schema.stock_columns %}
       <details>
-        <summary>Auto-mapped stock columns ({{ schema.stock_columns | length }})</summary>
+        <summary>
+          Auto-mapped stock columns ({{ schema.stock_columns | length }})
+          <span class="col-mapped" aria-hidden="true">✓</span>
+        </summary>
         <table>
           <caption class="sr-only">Stock columns automatically mapped to canonical names</caption>
           <thead>
             <tr>
               <th scope="col">DB column</th>
               <th scope="col">Canonical name</th>
+              <th scope="col">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -38,6 +76,9 @@
             <tr>
               <td><code>{{ col.db_name }}</code></td>
               <td><code>{{ col.canonical }}</code></td>
+              <td>
+                <span class="col-mapped" aria-label="Auto-mapped">✓ Auto</span>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -48,22 +89,65 @@
       {% if schema.unmapped_columns %}
       <fieldset>
         <legend>Custom columns — assign canonical names</legend>
-        {% for col in schema.unmapped_columns %}
-        <div>
-          <label for="col_{{ col.db_name }}">
-            <code>{{ col.db_name }}</code>
-            {% if col.suggested %}
-              <small>(suggested: {{ col.suggested }}, confidence: {{ col.confidence }})</small>
-            {% endif %}
-          </label>
-          <input type="text"
-                 id="col_{{ col.db_name }}"
-                 name="col_{{ col.db_name }}"
-                 value="{{ col.suggested or '' }}"
-                 placeholder="canonical name or leave blank to skip"
-                 autocomplete="off">
-        </div>
-        {% endfor %}
+        <p>
+          <small>
+            Type a canonical name (suggestions appear as you type), or leave blank to skip.
+            Columns with a suggested match are pre-filled — verify and adjust as needed.
+          </small>
+        </p>
+        <table>
+          <caption class="sr-only">Custom columns requiring canonical name assignment</caption>
+          <thead>
+            <tr>
+              <th scope="col">DB column</th>
+              <th scope="col">Confidence</th>
+              <th scope="col">
+                Canonical name
+                <span class="sr-only">(type or choose from suggestions; leave blank to skip)</span>
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for col in schema.unmapped_columns %}
+            <tr>
+              <td>
+                <code class="col-unmapped">{{ col.db_name }}</code>
+              </td>
+              <td>
+                {% if col.suggested and col.confidence %}
+                  {% if col.confidence >= 0.8 %}
+                  <span class="confidence-badge high">High</span>
+                  {% elif col.confidence >= 0.5 %}
+                  <span class="confidence-badge medium">Medium</span>
+                  {% else %}
+                  <span class="confidence-badge low">Low</span>
+                  {% endif %}
+                {% elif col.suggested %}
+                <span class="confidence-badge medium">Suggested</span>
+                {% else %}
+                <span class="pico-color-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <label for="col_{{ col.db_name }}" class="sr-only">
+                  Canonical name for {{ col.db_name }}
+                </label>
+                <input type="text"
+                       id="col_{{ col.db_name }}"
+                       name="col_{{ col.db_name }}"
+                       value="{{ col.suggested or '' }}"
+                       placeholder="canonical name or leave blank to skip"
+                       autocomplete="off"
+                       list="canonical-names"
+                       aria-describedby="col-hint-{{ col.db_name }}">
+                <small id="col-hint-{{ col.db_name }}" class="sr-only">
+                  Leave blank to exclude {{ col.db_name }} from the API output.
+                </small>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
       </fieldset>
       {% else %}
       <p>All columns are stock weewx columns — no custom mapping needed.</p>
@@ -77,8 +161,9 @@
       <button type="button"
               hx-get="/wizard/step/1"
               hx-target="#wizard-content"
-              hx-swap="innerHTML">
-        ← Back
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
       </button>
       <button type="submit">Next: Station Identity →</button>
     </div>

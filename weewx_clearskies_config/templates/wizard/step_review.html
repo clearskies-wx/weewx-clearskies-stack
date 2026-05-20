@@ -12,8 +12,23 @@
   </div>
   {% endif %}
 
+  {# ---------------------------------------------------------------- #}
+  {# Helper macro: mask an API key, showing first + last 4 chars.    #}
+  {# E.g. "abcdefgh12345678" → "abcd••••••••5678"                    #}
+  {# ---------------------------------------------------------------- #}
+
+  {# 1. Database ---------------------------------------------------- #}
   <section aria-labelledby="review-db">
-    <h3 id="review-db">Database</h3>
+    <h3 id="review-db">
+      Database
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/step/1"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit database settings">Edit</a>
+    </h3>
     <table>
       <caption class="sr-only">Database connection settings</caption>
       <tbody>
@@ -26,8 +41,18 @@
     </table>
   </section>
 
+  {# 2. Station ----------------------------------------------------- #}
   <section aria-labelledby="review-station">
-    <h3 id="review-station">Station</h3>
+    <h3 id="review-station">
+      Station
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/step/3"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit station settings">Edit</a>
+    </h3>
     <table>
       <caption class="sr-only">Station identity settings</caption>
       <tbody>
@@ -40,8 +65,18 @@
     </table>
   </section>
 
+  {# 3. Providers --------------------------------------------------- #}
   <section aria-labelledby="review-providers">
-    <h3 id="review-providers">Providers</h3>
+    <h3 id="review-providers">
+      Providers
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/step/4"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit provider selections">Edit</a>
+    </h3>
     {% if state.providers %}
     <table>
       <caption class="sr-only">Selected data providers</caption>
@@ -51,7 +86,7 @@
       <tbody>
         {% for domain, provider_id in state.providers.items() %}
         <tr>
-          <td>{{ domain }}</td>
+          <td>{{ domain | capitalize }}</td>
           <td>{{ provider_id }}</td>
         </tr>
         {% endfor %}
@@ -62,16 +97,90 @@
     {% endif %}
   </section>
 
+  {# 4. API Keys ---------------------------------------------------- #}
+  {% if state.api_keys %}
+  <section aria-labelledby="review-keys">
+    <h3 id="review-keys">
+      API Keys
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/step/5"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit API keys">Edit</a>
+    </h3>
+    <table>
+      <caption class="sr-only">API keys for selected providers (values masked)</caption>
+      <thead>
+        <tr><th scope="col">Provider</th><th scope="col">Field</th><th scope="col">Value</th></tr>
+      </thead>
+      <tbody>
+        {% for provider_id, fields in state.api_keys.items() %}
+        {% for field_name, value in fields.items() %}
+        <tr>
+          <td>{{ provider_id }}</td>
+          <td>{{ field_name | replace("_", " ") | title }}</td>
+          <td>
+            {% if value | length > 8 %}
+            {# Show first 4 + bullets + last 4 #}
+            <span class="masked-key" aria-label="API key, value masked">{{ value[:4] }}••••••••{{ value[-4:] }}</span>
+            {% elif value %}
+            <span class="masked-key" aria-label="API key set">••••••••</span>
+            {% else %}
+            <em>(not set)</em>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </section>
+  {% endif %}
+
+  {# 5. Topology & Bind Addresses ----------------------------------- #}
   <section aria-labelledby="review-topology">
-    <h3 id="review-topology">Topology &amp; Bind Addresses</h3>
+    <h3 id="review-topology">
+      Topology &amp; Bind Addresses
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/step/6"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit topology and bind address settings">Edit</a>
+    </h3>
     <table>
       <caption class="sr-only">Deployment topology and network settings</caption>
       <tbody>
         <tr><th scope="row">Topology</th><td>{{ state.topology }}</td></tr>
-        <tr><th scope="row">API</th><td>{{ state.api_bind_host }}:{{ state.api_bind_port }}</td></tr>
-        <tr><th scope="row">Realtime</th><td>{{ state.realtime_bind_host }}:{{ state.realtime_bind_port }}</td></tr>
+        <tr>
+          <th scope="row">API bind</th>
+          <td>
+            {% if ":" in (state.api_bind_host or "") and state.api_bind_host != "::" %}
+            {# IPv6 literal — wrap in brackets for clarity #}
+            <code>[{{ state.api_bind_host }}]:{{ state.api_bind_port }}</code>
+            {% else %}
+            <code>{{ state.api_bind_host }}:{{ state.api_bind_port }}</code>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Realtime bind</th>
+          <td>
+            {% if ":" in (state.realtime_bind_host or "") and state.realtime_bind_host != "::" %}
+            <code>[{{ state.realtime_bind_host }}]:{{ state.realtime_bind_port }}</code>
+            {% else %}
+            <code>{{ state.realtime_bind_host }}:{{ state.realtime_bind_port }}</code>
+            {% endif %}
+          </td>
+        </tr>
         {% if state.topology == "cross-host" %}
-        <tr><th scope="row">Proxy secret</th><td><em>generated — stored in secrets.env</em></td></tr>
+        <tr>
+          <th scope="row">Proxy secret</th>
+          <td><em>generated — stored in secrets.env</em></td>
+        </tr>
         {% endif %}
       </tbody>
     </table>
@@ -79,15 +188,17 @@
 
   <form hx-post="/wizard/apply"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
     <div role="group">
       <button type="button"
               hx-get="/wizard/step/7"
               hx-target="#wizard-content"
-              hx-swap="innerHTML">
-        ← Back
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
       </button>
-      <button type="submit" class="pico-background-primary">Apply Configuration</button>
+      <button type="submit">Apply Configuration</button>
     </div>
   </form>
 </article>

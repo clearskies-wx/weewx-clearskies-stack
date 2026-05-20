@@ -1,29 +1,286 @@
 {% extends "base.html" %}
-{% block title %}Clear Skies Setup Wizard{% endblock %}
+{% block title %}Clear Skies Setup Wizard — Step {{ step }} of 8{% endblock %}
 {% block content %}
+
+{# ------------------------------------------------------------------ #}
+{# Wizard-scoped styles                                                 #}
+{# Inline per the A4 brief: no external CSS file needed.               #}
+{# ------------------------------------------------------------------ #}
+<style>
+/* ----- Progress bar ------------------------------------------------ */
+.wizard-progress {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 2rem 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  counter-reset: wizard-step;
+}
+.wizard-progress li {
+  counter-increment: wizard-step;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: center;
+  font-size: 0.8rem;
+  line-height: 1.2;
+  padding: 0.5rem 0.25rem 0.4rem;
+  color: var(--pico-muted-color);
+  border-bottom: 3px solid var(--pico-muted-border-color);
+}
+.wizard-progress li::before {
+  content: counter(wizard-step);
+  display: block;
+  width: 1.75rem;
+  height: 1.75rem;
+  line-height: 1.75rem;
+  border-radius: 50%;
+  margin: 0 auto 0.25rem;
+  font-weight: 700;
+  font-size: 0.875rem;
+  background: var(--pico-muted-border-color);
+  color: var(--pico-muted-color);
+}
+.wizard-progress li.is-complete {
+  color: var(--pico-primary);
+  border-bottom-color: var(--pico-primary);
+}
+.wizard-progress li.is-complete::before {
+  content: "✓";
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+}
+.wizard-progress li[aria-current="step"] {
+  color: var(--pico-color);
+  border-bottom-color: var(--pico-primary);
+  font-weight: 600;
+}
+.wizard-progress li[aria-current="step"]::before {
+  content: counter(wizard-step);
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+  outline: 3px solid var(--pico-primary);
+  outline-offset: 2px;
+}
+@media (max-width: 36rem) {
+  .wizard-progress li .step-label { display: none; }
+}
+
+/* ----- Loading spinner --------------------------------------------- */
+#wizard-spinner {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  color: var(--pico-muted-color);
+  font-size: 0.875rem;
+}
+.htmx-request #wizard-spinner,
+.htmx-request#wizard-spinner { display: flex; }
+.spinner-ring {
+  display: inline-block;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 2px solid var(--pico-muted-border-color);
+  border-top-color: var(--pico-primary);
+  border-radius: 50%;
+  animation: cs-spin 0.7s linear infinite;
+  flex-shrink: 0;
+}
+@keyframes cs-spin { to { transform: rotate(360deg); } }
+
+/* ----- Password show/hide toggle ----------------------------------- */
+.password-field { position: relative; }
+.password-field input[type="password"],
+.password-field input[type="text"] { padding-inline-end: 3rem; }
+.password-toggle {
+  position: absolute;
+  inset-inline-end: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  padding: 0.25rem;
+  cursor: pointer;
+  color: var(--pico-muted-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: auto;
+  min-height: 0;
+  width: 2rem;
+}
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: var(--pico-primary);
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 2px;
+  border-radius: 0.25rem;
+}
+.password-toggle svg { pointer-events: none; }
+
+/* ----- Column mapping table ---------------------------------------- */
+.col-mapped   { color: var(--pico-ins-color, #1a7f37); font-weight: 600; }
+.col-unmapped { color: var(--pico-del-color, #cf222e); }
+.confidence-badge {
+  display: inline-block;
+  font-size: 0.75rem;
+  padding: 0.1em 0.4em;
+  border-radius: 0.25rem;
+  background: var(--pico-muted-border-color);
+  color: var(--pico-muted-color);
+  vertical-align: middle;
+  margin-inline-start: 0.25rem;
+}
+.confidence-badge.high   { background: #d3f8e2; color: #1a7f37; }
+.confidence-badge.medium { background: #fdf1c0; color: #7d4e17; }
+.confidence-badge.low    { background: #fce8e8; color: #cf222e; }
+@media (prefers-color-scheme: dark) {
+  .confidence-badge.high   { background: #1a3a24; color: #7ee2a8; }
+  .confidence-badge.medium { background: #3a2e08; color: #e6c166; }
+  .confidence-badge.low    { background: #3a1212; color: #e8a0a0; }
+}
+
+/* ----- Provider recommended badge ---------------------------------- */
+.provider-recommended {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 0.1em 0.5em;
+  border-radius: 0.75rem;
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+  font-weight: 600;
+  vertical-align: middle;
+  margin-inline-start: 0.4rem;
+}
+
+/* ----- Topology option cards --------------------------------------- */
+.topology-option {
+  border: 2px solid var(--pico-muted-border-color);
+  border-radius: 0.5rem;
+  padding: 1rem;
+  margin-block-end: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s ease;
+}
+.topology-option:has(input[type="radio"]:checked) {
+  border-color: var(--pico-primary);
+}
+.topology-option input[type="radio"] { margin-inline-end: 0.5rem; }
+
+/* ----- Review — masked keys & edit links --------------------------- */
+.masked-key { font-family: monospace; letter-spacing: 0.05em; }
+.review-edit-link {
+  font-size: 0.875rem;
+  margin-inline-start: 0.75rem;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+/* ----- Completion — shared secret box ------------------------------ */
+.shared-secret-box {
+  font-family: monospace;
+  background: var(--pico-code-background-color, var(--pico-muted-border-color));
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  word-break: break-all;
+}
+.shared-secret-box code { background: none; padding: 0; }
+
+/* ----- Screen-reader only helper ----------------------------------- */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
+}
+</style>
+
 <header>
   <h1>Clear Skies Setup Wizard</h1>
 </header>
 
+{# ------------------------------------------------------------------ #}
+{# Step progress bar                                                    #}
+{# aria-current="step" marks the current item for screen readers.     #}
+{# Completed items get class="is-complete" for the checkmark style.   #}
+{# ------------------------------------------------------------------ #}
+{% set step_names = [
+  "Database",
+  "Columns",
+  "Station",
+  "Providers",
+  "API Keys",
+  "Topology",
+  "Binds",
+  "Review"
+] %}
+
 <nav aria-label="Wizard progress">
-  <p aria-live="polite" id="wizard-progress">
-    <strong>Step {{ step }} of 8</strong>
-    {% set step_names = [
-      "Database Connection",
-      "Column Mapping",
-      "Station Identity",
-      "Provider Selection",
-      "API Keys",
-      "Deployment Topology",
-      "Bind Addresses",
-      "Review &amp; Apply"
-    ] %}
-    — {{ step_names[step - 1] }}
-  </p>
-  <progress value="{{ step }}" max="8" aria-label="Step {{ step }} of 8"></progress>
+  <ol class="wizard-progress" role="list">
+    {% for i in range(1, 9) %}
+    <li
+      {% if i == step %}aria-current="step"{% endif %}
+      {% if i < step %}class="is-complete"{% endif %}
+    >
+      <span class="step-label" aria-hidden="true">{{ step_names[i - 1] }}</span>
+      <span class="sr-only">
+        Step {{ i }}: {{ step_names[i - 1] }}
+        {%- if i < step %} (complete){% elif i == step %} (current){% endif %}
+      </span>
+    </li>
+    {% endfor %}
+  </ol>
 </nav>
 
-<section id="wizard-content" aria-live="polite">
+{# ------------------------------------------------------------------ #}
+{# Global loading indicator                                             #}
+{# Buttons use hx-indicator="#wizard-spinner".                        #}
+{# ------------------------------------------------------------------ #}
+<div id="wizard-spinner" role="status" aria-live="polite" aria-label="Loading, please wait">
+  <span class="spinner-ring" aria-hidden="true"></span>
+  <span>Working…</span>
+</div>
+
+{# ------------------------------------------------------------------ #}
+{# Main content region — HTMX swaps step fragments into here          #}
+{# ------------------------------------------------------------------ #}
+<section id="wizard-content" aria-live="polite" aria-atomic="false">
   {% include "wizard/step_db.html" %}
 </section>
+
+{# ------------------------------------------------------------------ #}
+{# Focus management after HTMX swap                                    #}
+{# Moves keyboard focus to the new step heading so screen-reader      #}
+{# users are oriented after each navigation.                           #}
+{# ------------------------------------------------------------------ #}
+<script>
+  /* Focus management after HTMX swap */
+  document.addEventListener("htmx:afterSwap", function (event) {
+    if (event.detail && event.detail.target && event.detail.target.id === "wizard-content") {
+      var heading = event.detail.target.querySelector("h2, h3");
+      if (heading) {
+        heading.setAttribute("tabindex", "-1");
+        heading.focus({ preventScroll: false });
+      }
+    }
+  });
+
+  /* Password show/hide toggle — used by step_db.html and step_keys.html.
+     Defined here (layout) so it is always available regardless of whether
+     HTMX evaluates scripts in swapped fragments. */
+  function togglePassword(btn) {
+    var inputId = btn.getAttribute("aria-controls");
+    var input = document.getElementById(inputId);
+    if (!input) return;
+    var isPassword = input.type === "password";
+    input.type = isPassword ? "text" : "password";
+    /* Update aria-label: replace "Show" with "Hide" or vice versa */
+    var label = btn.getAttribute("aria-label") || "";
+    if (isPassword) {
+      btn.setAttribute("aria-label", label.replace(/^Show\b/, "Hide"));
+    } else {
+      btn.setAttribute("aria-label", label.replace(/^Hide\b/, "Show"));
+    }
+  }
+</script>
 {% endblock %}

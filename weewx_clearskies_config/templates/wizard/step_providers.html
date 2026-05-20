@@ -1,8 +1,8 @@
 <article>
   <header>
     <h2>Step 4 of 8 — Provider Selection</h2>
-    <p>Choose data providers for each service domain.
-       Recommended providers for your location are pre-selected.</p>
+    <p>Choose a data provider for each service domain.
+       Providers recommended for your station location are pre-selected and marked.</p>
   </header>
 
   {% if error %}
@@ -13,32 +13,54 @@
 
   <form hx-post="/wizard/step/4"
         hx-target="#wizard-content"
-        hx-swap="innerHTML">
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
 
     {% set domain_labels = {
-      "forecast": "Forecast",
-      "alerts": "Weather Alerts",
-      "aqi": "Air Quality (AQI)",
+      "forecast":    "Forecast",
+      "alerts":      "Weather Alerts",
+      "aqi":         "Air Quality (AQI)",
       "earthquakes": "Earthquakes",
-      "radar": "Radar"
+      "radar":       "Radar"
+    } %}
+
+    {% set domain_descriptions = {
+      "forecast":    "Provides multi-day weather forecasts shown on the dashboard.",
+      "alerts":      "Provides severe weather warnings and watches for your area.",
+      "aqi":         "Provides current air quality index readings.",
+      "earthquakes": "Provides recent earthquake activity near your station.",
+      "radar":       "Provides radar imagery for the dashboard map tile."
     } %}
 
     {% for domain, providers in providers_by_domain.items() %}
     <fieldset>
       <legend>{{ domain_labels.get(domain, domain | capitalize) }}</legend>
+      {% if domain in domain_descriptions %}
+      <p><small>{{ domain_descriptions[domain] }}</small></p>
+      {% endif %}
+
       {% for provider in providers %}
+      {% set is_recommended = (recommendations.get(domain) == provider.provider_id) %}
       <label>
         <input type="radio"
                name="provider_{{ domain }}"
                value="{{ provider.provider_id }}"
                {% if state.providers.get(domain) == provider.provider_id
-                     or (not state.providers.get(domain) and recommendations.get(domain) == provider.provider_id) %}
+                     or (not state.providers.get(domain) and is_recommended) %}
                checked
-               {% endif %}>
+               {% endif %}
+               aria-describedby="provider-desc-{{ provider.provider_id }}">
         <strong>{{ provider.display_name }}</strong>
-        <small>({{ provider.geographic_coverage }}
-          {% if not provider.auth_fields %} — keyless{% endif %}
-          {% if provider.notes %} — {{ provider.notes }}{% endif %})</small>
+        {% if is_recommended %}
+        <span class="provider-recommended" aria-label="Recommended for your location">(Recommended)</span>
+        {% endif %}
+        <br>
+        <span id="provider-desc-{{ provider.provider_id }}">
+          <small>{{ provider.geographic_coverage }}
+            {%- if not provider.auth_fields %} — keyless (no API key required){% endif %}
+            {%- if provider.notes %} — {{ provider.notes }}{% endif %}
+          </small>
+        </span>
       </label>
       {% endfor %}
     </fieldset>
@@ -48,8 +70,9 @@
       <button type="button"
               hx-get="/wizard/step/3"
               hx-target="#wizard-content"
-              hx-swap="innerHTML">
-        ← Back
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
       </button>
       <button type="submit">Next: API Keys →</button>
     </div>
