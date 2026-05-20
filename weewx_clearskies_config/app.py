@@ -170,8 +170,8 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.post("/bootstrap")
     async def bootstrap_post(request: Request, token: str = "") -> Response:
-        # Validate and consume the token on POST only.
-        if not token or not bootstrap_manager.validate(token):
+        # Check token is present and correct, but don't consume yet.
+        if not token or not bootstrap_manager.check(token):
             return templates.TemplateResponse(
                 request=request,
                 name="bootstrap.html",
@@ -223,6 +223,9 @@ def create_app(config: AppConfig) -> FastAPI:
                 },
                 status_code=400,
             )
+
+        # All validation passed — now consume the token.
+        bootstrap_manager.validate(token)
 
         existing = read_secrets()
         existing["WEEWX_CLEARSKIES_ADMIN_USERNAME"] = new_username

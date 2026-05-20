@@ -36,14 +36,16 @@ class BootstrapManager:
         self._token = secrets.token_hex(32)
         return self._token
 
-    def validate(self, token: str) -> bool:
+    def check(self, token: str) -> bool:
         if self._token is None:
             return False
-        # constant-time compare to prevent timing attacks
-        result = secrets.compare_digest(token, self._token)
-        if result:
-            self._token = None
-        return result
+        return secrets.compare_digest(token, self._token)
+
+    def validate(self, token: str) -> bool:
+        if not self.check(token):
+            return False
+        self._token = None
+        return True
 
 
 class SessionManager:
