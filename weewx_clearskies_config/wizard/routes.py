@@ -13,6 +13,8 @@ Route summary:
   GET  /wizard/step/2           — introspect schema, render step 2 fragment
   POST /wizard/step/2           — save column mapping, return step 3 fragment
   GET  /wizard/step/3           — read station identity, render step 3 fragment
+  POST /wizard/step/3/timezone   — lookup timezone from lat/lon, return input fragment
+  POST /wizard/step/3/detect-weewx — detect station from local weewx.conf
   POST /wizard/step/3           — save station info, return step 4 fragment
   GET  /wizard/step/4           — provider selection + inline key entry, render step 4 fragment
   GET  /wizard/step/4/key-fields/{domain}/{provider_id} — inline key fields fragment
@@ -55,6 +57,7 @@ from weewx_clearskies_config.wizard.state import (
 )
 from weewx_clearskies_config.wizard.station import (
     lookup_timezone,
+    station_from_api,
     station_from_weewx_conf,
 )
 from weewx_clearskies_config.wizard.topology import generate_proxy_secret
@@ -186,22 +189,10 @@ async def step1_test(request: Request) -> HTMLResponse:
     db_name = str(form.get("db_name", "weewx")).strip()
 
     result = test_connection(host, port, user, password, db_name)
-    assert _templates is not None
-    return _templates.TemplateResponse(
-        request=request,
-        name="wizard/step_db.html",
-        context={
-            "step": 1,
-            "state": WizardState(
-                db_host=host,
-                db_port=port,
-                db_user=user,
-                db_password=password,
-                db_name=db_name,
-            ),
-            "result": result,
-            "error": None if result["success"] else result.get("error"),
-        },
+    return _render(
+        request,
+        "step_db_test_result.html",
+        {"result": result},
     )
 
 
@@ -338,7 +329,7 @@ async def step2_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_schema.html",
-        {"step": 2, "state": state, "schema": schema_data, "error": error},
+        {"step": 2, "state": state, "schema": schema_data, "error": error, "errors": {}},
     )
 
 
@@ -357,6 +348,36 @@ async def step2_post(request: Request) -> HTMLResponse:
             canonical = str(value).strip() or None
             mapping[db_col] = canonical
 
+    errors = _validate_column_mapping(mapping)
+    if errors:
+        schema_data: dict[str, Any] | None = None
+        schema_error: str | None = None
+        if state.db_host and state.db_user:
+            db_url = build_db_url(
+                state.db_host,
+                state.db_port,
+                state.db_user,
+                state.db_password or "",
+                state.db_name,
+            )
+            try:
+                schema_data = introspect_schema(db_url)
+            except Exception as exc:  # noqa: BLE001
+                schema_error = f"Schema introspection failed: {exc}"
+                logger.warning("Schema introspection error in step2_post: %s", exc)
+        return _render(
+            request,
+            "step_schema.html",
+            {
+                "step": 2,
+                "state": state,
+                "schema": schema_data,
+                "error": schema_error,
+                "errors": errors,
+            },
+            status_code=422,
+        )
+
     state.column_mapping = mapping
     save_wizard_state(session_id, state)
     return await step3_get(request)
@@ -372,20 +393,22 @@ async def step3_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
 
-    # Pre-fill from weewx.conf if station data not yet collected.
-    if state.station_name is None:
-        for conf_path in _weewx_conf_candidates():
-            try:
-                detected = station_from_weewx_conf(conf_path)
-                state.station_name = detected.get("station_name")
-                state.latitude = _to_float(detected.get("latitude"))
-                state.longitude = _to_float(detected.get("longitude"))
-                state.altitude_meters = _to_float(detected.get("altitude_meters"))
-                if state.latitude and state.longitude and not state.timezone:
-                    state.timezone = lookup_timezone(state.latitude, state.longitude)
-                break
-            except (FileNotFoundError, KeyError):
-                continue
+    # Try to pre-fill from the API only when station fields are empty.
+    if state.station_name is None and state.db_host:
+        api_data = station_from_api(state.db_host)
+        if api_data:
+            if state.station_name is None:
+                state.station_name = api_data.get("station_name")
+            if state.latitude is None:
+                state.latitude = _to_float(api_data.get("latitude"))
+            if state.longitude is None:
+                state.longitude = _to_float(api_data.get("longitude"))
+            if state.altitude_meters is None:
+                state.altitude_meters = _to_float(api_data.get("altitude_meters"))
+            if state.timezone is None and api_data.get("timezone"):
+                state.timezone = api_data["timezone"]
+            if state.latitude and state.longitude and not state.timezone:
+                state.timezone = lookup_timezone(state.latitude, state.longitude)
 
     if state.station_name is None:
         _merge_from_existing_config(state)
@@ -407,7 +430,16 @@ async def step3_post(request: Request) -> HTMLResponse:
     state.station_name = str(form.get("station_name", "")).strip() or None
     state.latitude = _to_float(form.get("latitude"))
     state.longitude = _to_float(form.get("longitude"))
-    state.altitude_meters = _to_float(form.get("altitude_meters"))
+
+    # Altitude is always stored in meters internally.  The form includes an
+    # altitude_unit field ("feet" or "meters") so we can convert as needed.
+    alt_raw = _to_float(form.get("altitude_meters"))
+    alt_unit = str(form.get("altitude_unit", "meters")).strip().lower()
+    if alt_raw is not None and ("foot" in alt_unit or "feet" in alt_unit or "ft" in alt_unit):
+        state.altitude_meters = alt_raw * 0.3048
+    else:
+        state.altitude_meters = alt_raw
+
     state.timezone = str(form.get("timezone", "")).strip() or None
 
     # Auto-lookup timezone if coordinates provided but timezone not set.
@@ -416,6 +448,77 @@ async def step3_post(request: Request) -> HTMLResponse:
 
     save_wizard_state(session_id, state)
     return await step4_get(request)
+
+
+@router.post("/step/3/timezone", response_class=HTMLResponse)
+async def step3_timezone(request: Request) -> HTMLResponse:
+    """Return a pre-filled timezone input fragment for the given lat/lon.
+
+    Called by HTMX when the user changes the latitude or longitude fields.
+    Responds with a replacement <input> element so HTMX can swap it directly
+    into the DOM.
+    """
+    _require_session(request)
+    form = await request.form()
+    lat = _to_float(form.get("latitude"))
+    lon = _to_float(form.get("longitude"))
+
+    tz: str = ""
+    if lat is not None and lon is not None:
+        detected = lookup_timezone(lat, lon)
+        if detected:
+            tz = detected
+
+    assert _templates is not None
+    return _templates.TemplateResponse(
+        request=request,
+        name="wizard/fragment_timezone_input.html",
+        context={"timezone": tz},
+    )
+
+
+@router.post("/step/3/detect-weewx", response_class=HTMLResponse)
+async def step3_detect_weewx(request: Request) -> HTMLResponse:
+    """Read weewx.conf from the local host and return a pre-filled step 3 fragment.
+
+    Only works when this tool runs on the weewx host.  On failure, returns the
+    step 3 template with an error message so the user can fill fields manually.
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+
+    error: str | None = None
+    for conf_path in _weewx_conf_candidates():
+        try:
+            detected = station_from_weewx_conf(conf_path)
+            state.station_name = detected.get("station_name") or state.station_name
+            lat = _to_float(detected.get("latitude"))
+            lon = _to_float(detected.get("longitude"))
+            alt = _to_float(detected.get("altitude_meters"))
+            if lat is not None:
+                state.latitude = lat
+            if lon is not None:
+                state.longitude = lon
+            if alt is not None:
+                state.altitude_meters = alt
+            if state.latitude and state.longitude and not state.timezone:
+                state.timezone = lookup_timezone(state.latitude, state.longitude)
+            error = None
+            break
+        except FileNotFoundError:
+            continue
+        except (KeyError, ValueError) as exc:
+            error = str(exc)
+            break
+
+    if error is None and state.station_name is None:
+        error = "weewx.conf not found in standard locations."
+
+    return _render(
+        request,
+        "step_station.html",
+        {"step": 3, "state": state, "error": error},
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -589,6 +692,50 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         context={"step": 5, "error": error, "result": result},
         status_code=500 if error else 200,
     )
+
+
+# ---------------------------------------------------------------------------
+# Column mapping validation
+# ---------------------------------------------------------------------------
+
+
+def _validate_column_mapping(mapping: dict[str, str | None]) -> dict[str, str]:
+    """Validate the column mapping submitted from step 2.
+
+    Checks:
+    - No two DB columns may map to the same canonical name (duplicate).
+    - Each non-blank canonical name must exist in the known field registry.
+
+    Returns a dict of ``{db_column_name: error_message}`` for each offending
+    column.  An empty dict means the mapping is valid.
+    """
+    try:
+        from weewx_clearskies_api.db.reflection import STOCK_COLUMN_MAP  # type: ignore[import-untyped]
+        valid_canonicals: set[str] = set(STOCK_COLUMN_MAP.values())
+    except Exception:  # noqa: BLE001
+        # If the API package is unavailable, skip canonical name validation
+        # so the wizard remains functional without it.
+        valid_canonicals = set()
+
+    errors: dict[str, str] = {}
+
+    # Duplicate-canonical check: build reverse map of canonical → [db_col, ...]
+    seen: dict[str, list[str]] = {}
+    for db_col, canonical in mapping.items():
+        if canonical:
+            seen.setdefault(canonical, []).append(db_col)
+    for canonical, db_cols in seen.items():
+        if len(db_cols) > 1:
+            for db_col in db_cols:
+                errors[db_col] = f'"{canonical}" is used by multiple columns — each canonical name must be unique.'
+
+    # Unknown canonical name check
+    if valid_canonicals:
+        for db_col, canonical in mapping.items():
+            if canonical and canonical not in valid_canonicals and db_col not in errors:
+                errors[db_col] = f'"{canonical}" is not a recognised canonical field name.'
+
+    return errors
 
 
 # ---------------------------------------------------------------------------

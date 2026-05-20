@@ -11,18 +11,6 @@
   </div>
   {% endif %}
 
-  {% if result %}
-    {% if result.success %}
-    <div role="status" aria-live="polite" class="pico-color-green-500">
-      Connection successful — server version: {{ result.server_version }}
-    </div>
-    {% else %}
-    <div role="alert" aria-live="polite" class="pico-color-red-500">
-      Connection failed: {{ result.error }}
-    </div>
-    {% endif %}
-  {% endif %}
-
   <form id="db-detect-form"
         hx-post="/wizard/step/1/detect"
         hx-target="#wizard-content"
@@ -117,7 +105,7 @@
     <div role="group">
       <button type="button"
               hx-post="/wizard/step/1/test"
-              hx-target="#wizard-content"
+              hx-target="#db-test-result"
               hx-swap="innerHTML"
               hx-include="#db-form"
               hx-indicator="#wizard-spinner">
@@ -125,5 +113,6 @@
       </button>
       <button type="submit">Next: Column Mapping →</button>
     </div>
+    <div id="db-test-result" aria-live="polite"></div>
   </form>
 </article>

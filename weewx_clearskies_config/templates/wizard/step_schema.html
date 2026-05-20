@@ -109,6 +109,7 @@
           </thead>
           <tbody>
             {% for col in schema.unmapped_columns %}
+            {% set col_error = errors.get(col.db_name) if errors else None %}
             <tr>
               <td>
                 <code class="col-unmapped">{{ col.db_name }}</code>
@@ -141,7 +142,11 @@
                        placeholder="canonical name or leave blank to skip"
                        autocomplete="off"
                        list="canonical-names"
-                       aria-describedby="col-hint-{{ col.db_name }}">
+                       aria-describedby="col-hint-{{ col.db_name }}{% if col_error %} col-err-{{ col.db_name }}{% endif %}"
+                       {% if col_error %}aria-invalid="true" class="input-error"{% endif %}>
+                {% if col_error %}
+                <span id="col-err-{{ col.db_name }}" class="error-text" role="alert">&#9888; {{ col_error }}</span>
+                {% endif %}
                 <small id="col-hint-{{ col.db_name }}" class="sr-only">
                   Leave blank to exclude {{ col.db_name }} from the API output.
                 </small>
@@ -170,4 +175,13 @@
       <button type="submit">Next: Station Identity →</button>
     </div>
   </form>
+
+{% if errors %}
+<script>
+  (function () {
+    var first = document.querySelector('.input-error');
+    if (first) { first.focus(); }
+  })();
+</script>
+{% endif %}
 </article>

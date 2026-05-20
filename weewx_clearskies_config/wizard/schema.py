@@ -11,6 +11,8 @@ from typing import Any
 
 from sqlalchemy import create_engine
 
+_DIAGNOSTIC_PATTERNS = ("battery", "link", "status", "signal", "check")
+
 
 def introspect_schema(db_url: str) -> dict[str, Any]:
     """Reflect the archive table schema and classify columns.
@@ -54,6 +56,9 @@ def introspect_schema(db_url: str) -> dict[str, Any]:
 
     unmapped_columns = []
     for info in registry.unmapped.values():
+        lower_name = info.db_name.lower()
+        if any(p in lower_name for p in _DIAGNOSTIC_PATTERNS):
+            continue
         suggested, confidence = suggest_canonical(info.db_name, canonical_field_names)
         unmapped_columns.append(
             {

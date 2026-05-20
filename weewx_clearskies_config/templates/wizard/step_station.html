@@ -11,10 +11,14 @@
   </div>
   {% endif %}
 
-  <form hx-post="/wizard/step/3"
+  <form id="station-form"
+        hx-post="/wizard/step/3"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
+
+    <input type="hidden" id="altitude_unit" name="altitude_unit" value="meters">
+
     <fieldset>
       <legend>Station information</legend>
 
@@ -39,7 +43,12 @@
                  min="-90"
                  max="90"
                  placeholder="38.8894"
-                 aria-describedby="lat-hint">
+                 aria-describedby="lat-hint"
+                 hx-post="/wizard/step/3/timezone"
+                 hx-trigger="change delay:500ms"
+                 hx-include="[name=latitude],[name=longitude]"
+                 hx-target="#timezone"
+                 hx-swap="outerHTML">
           <small id="lat-hint">Decimal degrees. North is positive (e.g. 38.8894); South is negative (e.g. -33.8688).</small>
         </div>
         <div>
@@ -52,39 +61,84 @@
                  min="-180"
                  max="180"
                  placeholder="-77.0352"
-                 aria-describedby="lon-hint">
+                 aria-describedby="lon-hint"
+                 hx-post="/wizard/step/3/timezone"
+                 hx-trigger="change delay:500ms"
+                 hx-include="[name=latitude],[name=longitude]"
+                 hx-target="#timezone"
+                 hx-swap="outerHTML">
           <small id="lon-hint">Decimal degrees. West is negative (e.g. -77.0352); East is positive (e.g. 151.2093).</small>
         </div>
       </div>
 
-      <label for="altitude_meters">Altitude (meters)</label>
-      <input type="number"
-             id="altitude_meters"
-             name="altitude_meters"
-             value="{{ state.altitude_meters if state.altitude_meters is not none else '' }}"
-             step="0.1"
-             min="-500"
-             max="9000"
-             placeholder="0"
-             aria-describedby="alt-hint">
-      <small id="alt-hint">Used for pressure calculations. Enter 0 if unknown.</small>
+      <button type="button"
+              onclick="useMyLocation()"
+              aria-label="Use browser location to fill latitude and longitude">
+        📍 Use my location
+      </button>
+      <div id="geolocation-status"
+           role="status"
+           aria-live="polite"
+           style="font-size:0.875rem; margin-top:0.25rem; min-height:1.25em;"></div>
+
+      <div class="grid" style="align-items:end;">
+        <div>
+          <label for="altitude_meters">Altitude</label>
+          <input type="number"
+                 id="altitude_meters"
+                 name="altitude_meters"
+                 value="{{ state.altitude_meters if state.altitude_meters is not none else '' }}"
+                 step="any"
+                 min="-500"
+                 max="30000"
+                 placeholder="0"
+                 aria-describedby="alt-hint">
+          <small id="alt-hint">Used for pressure calculations. Enter 0 if unknown.</small>
+        </div>
+        <div>
+          <label for="altitude_unit_select">Unit</label>
+          <select id="altitude_unit_select"
+                  onchange="onAltUnitChange(this.value)"
+                  aria-label="Altitude unit">
+            <option value="meters">meters</option>
+            <option value="feet">feet</option>
+          </select>
+        </div>
+      </div>
 
       <label for="timezone">Timezone</label>
-      <input type="text"
-             id="timezone"
-             name="timezone"
-             value="{{ state.timezone or '' }}"
-             placeholder="America/New_York"
-             aria-describedby="tz-hint">
+      <div aria-live="polite" id="timezone-live-region">
+        <input type="text"
+               id="timezone"
+               name="timezone"
+               value="{{ state.timezone or '' }}"
+               placeholder="America/New_York"
+               aria-describedby="tz-hint">
+      </div>
       <small id="tz-hint">
         IANA timezone name, e.g. <code>America/New_York</code>, <code>Europe/London</code>, <code>Asia/Tokyo</code>.
         {% if state.latitude and state.longitude %}
         <strong>Auto-detected from your coordinates.</strong> You can override it here if needed.
         {% else %}
-        If you enter coordinates above, the timezone will be auto-detected when you proceed.
+        If you enter coordinates above, the timezone will be auto-detected.
         {% endif %}
       </small>
     </fieldset>
+
+    <details style="margin-block-end:1rem;">
+      <summary>Detect from weewx.conf</summary>
+      <p style="font-size:0.875rem; margin-top:0.5rem;">
+        Only works when this tool runs on the weewx host.
+      </p>
+      <button type="button"
+              hx-post="/wizard/step/3/detect-weewx"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner"
+              aria-label="Read station settings from weewx.conf on the local host">
+        Read from weewx.conf
+      </button>
+    </details>
 
     <div role="group">
       <button type="button"
@@ -98,3 +152,64 @@
     </div>
   </form>
 </article>
+
+<script>
+(function () {
+  var FEET_TO_METERS = 0.3048;
+  var altInput = document.getElementById("altitude_meters");
+  var altUnitHidden = document.getElementById("altitude_unit");
+  var altUnitSelect = document.getElementById("altitude_unit_select");
+
+  function onAltUnitChange(newUnit) {
+    var prev = altUnitHidden.value;
+    if (prev === newUnit) return;
+    var raw = parseFloat(altInput.value);
+    if (!isNaN(raw)) {
+      if (newUnit === "feet" && prev === "meters") {
+        altInput.value = (raw / FEET_TO_METERS).toFixed(1);
+      } else if (newUnit === "meters" && prev === "feet") {
+        altInput.value = (raw * FEET_TO_METERS).toFixed(2);
+      }
+    }
+    altUnitHidden.value = newUnit;
+    altInput.setAttribute("min", newUnit === "feet" ? "-1640" : "-500");
+    altInput.setAttribute("max", newUnit === "feet" ? "98425" : "30000");
+    altInput.setAttribute("placeholder", newUnit === "feet" ? "0" : "0");
+    document.querySelector("label[for='altitude_meters']").textContent =
+      "Altitude (" + newUnit + ")";
+  }
+
+  window.onAltUnitChange = onAltUnitChange;
+
+  function useMyLocation() {
+    var status = document.getElementById("geolocation-status");
+    if (!navigator.geolocation) {
+      status.textContent = "Geolocation is not supported by this browser.";
+      return;
+    }
+    status.textContent = "Detecting location…";
+    navigator.geolocation.getCurrentPosition(
+      function (pos) {
+        var lat = pos.coords.latitude;
+        var lon = pos.coords.longitude;
+        document.getElementById("latitude").value = lat.toFixed(6);
+        document.getElementById("longitude").value = lon.toFixed(6);
+        status.textContent = "";
+        /* Trigger HTMX timezone re-detection by dispatching a change event
+           on the longitude field after filling both fields. */
+        document.getElementById("longitude").dispatchEvent(new Event("change", {bubbles: true}));
+      },
+      function (err) {
+        var messages = {
+          1: "Location access denied.",
+          2: "Location not available.",
+          3: "Location request timed out."
+        };
+        status.textContent = messages[err.code] || "Location not available.";
+      }
+    );
+  }
+
+  window.useMyLocation = useMyLocation;
+}());
+</script>
