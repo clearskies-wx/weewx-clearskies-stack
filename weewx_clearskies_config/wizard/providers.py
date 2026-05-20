@@ -24,6 +24,7 @@ class ProviderInfo:
     test_url: str  # URL to hit for the connectivity test
     test_method: str  # "get"
     notes: str = ""
+    signup_url: str = ""  # URL to provider's API key dashboard/signup
 
 
 PROVIDERS: list[ProviderInfo] = [
@@ -58,6 +59,7 @@ PROVIDERS: list[ProviderInfo] = [
         ("api_key",),
         "https://api.openweathermap.org/data/2.5/weather?q=London&appid={api_key}",
         "get",
+        signup_url="https://home.openweathermap.org/api_keys",
     ),
     ProviderInfo(
         "aeris",
@@ -67,6 +69,7 @@ PROVIDERS: list[ProviderInfo] = [
         ("client_id", "client_secret"),
         "https://api.aerisapi.com/conditions/washington,dc?client_id={client_id}&client_secret={client_secret}",
         "get",
+        signup_url="https://www.aerisweather.com/signup/",
     ),
     # ------------------------------------------------------------------
     # Alerts
@@ -85,6 +88,16 @@ PROVIDERS: list[ProviderInfo] = [
     # AQI
     # ------------------------------------------------------------------
     ProviderInfo(
+        "openmeteo_aqi",
+        "Open-Meteo AQI",
+        "aqi",
+        "Global",
+        (),
+        "https://air-quality-api.open-meteo.com/v1/air-quality?latitude=0&longitude=0&current=european_aqi",
+        "get",
+        "Free, no API key required",
+    ),
+    ProviderInfo(
         "iqair",
         "IQAir / AirVisual",
         "aqi",
@@ -92,6 +105,7 @@ PROVIDERS: list[ProviderInfo] = [
         ("api_key",),
         "https://api.airvisual.com/v2/nearest_city?lat=0&lon=0&key={api_key}",
         "get",
+        signup_url="https://www.iqair.com/dashboard/api",
     ),
     ProviderInfo(
         "openweathermap_aqi",
@@ -101,6 +115,7 @@ PROVIDERS: list[ProviderInfo] = [
         ("api_key",),
         "https://api.openweathermap.org/data/2.5/air_pollution?lat=0&lon=0&appid={api_key}",
         "get",
+        signup_url="https://home.openweathermap.org/api_keys",
     ),
     # ------------------------------------------------------------------
     # Earthquakes
@@ -144,14 +159,15 @@ def recommend_providers(latitude: float, longitude: float) -> dict[str, str]:
 
     US locations (approximately longitude between -130 and -60, latitude
     between 24 and 50) prefer NWS for forecast and alerts.  All other
-    locations prefer Open-Meteo for forecast.  Keyless defaults are used
-    for AQI, earthquakes, and radar.
+    locations prefer Open-Meteo for forecast and NWS alerts (the only
+    current alerts provider).  Open-Meteo AQI is the keyless default for
+    all locations; operators can upgrade to IQAir or OWM AQI later.
     """
     in_us = (-130.0 <= longitude <= -60.0) and (24.0 <= latitude <= 50.0)
     return {
         "forecast": "nws" if in_us else "openmeteo",
-        "alerts": "nws_alerts" if in_us else "nws_alerts",  # only one option
-        "aqi": "openweathermap_aqi",  # free tier requires key but has global coverage
+        "alerts": "nws_alerts",
+        "aqi": "openmeteo_aqi",
         "earthquakes": "usgs",
         "radar": "rainviewer",
     }

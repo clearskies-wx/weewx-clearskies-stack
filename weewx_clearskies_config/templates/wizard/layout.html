@@ -154,6 +154,30 @@
   margin-inline-start: 0.4rem;
 }
 
+/* ----- Provider "Key required" badge ------------------------------- */
+.badge-key-required {
+  display: inline-block;
+  font-size: 0.72rem;
+  padding: 0.1em 0.5em;
+  border-radius: 0.75rem;
+  background: var(--pico-muted-border-color);
+  color: var(--pico-color);
+  border: 1px solid currentColor;
+  font-weight: 600;
+  vertical-align: middle;
+  margin-inline-start: 0.4rem;
+}
+@media (prefers-color-scheme: dark) {
+  .badge-key-required { background: transparent; }
+}
+
+/* ----- Provider signup hint link ----------------------------------- */
+.provider-signup-hint {
+  margin-block-start: 0.5rem;
+  margin-block-end: 0.75rem;
+  font-size: 0.875rem;
+}
+
 /* ----- Topology option cards --------------------------------------- */
 .topology-option {
   border: 2px solid var(--pico-muted-border-color);

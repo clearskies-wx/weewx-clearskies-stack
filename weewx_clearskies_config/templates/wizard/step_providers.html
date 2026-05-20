@@ -43,6 +43,17 @@
 
       {% set selected_id = state.providers.get(domain) or recommendations.get(domain) %}
 
+      {% if providers | length == 1 and not providers[0].auth_fields %}
+      {# Single keyless provider: show as informational text, no radio button needed. #}
+      {% set provider = providers[0] %}
+      <p>
+        <strong>{{ provider.display_name }}</strong>
+        — {{ provider.geographic_coverage }}, keyless
+        {%- if provider.notes %} — {{ provider.notes }}{% endif %}
+      </p>
+      <input type="hidden" name="provider_{{ domain }}" value="{{ provider.provider_id }}">
+      {% else %}
+
       {% for provider in providers %}
       {% set is_recommended = (recommendations.get(domain) == provider.provider_id) %}
       {% set is_selected = (provider.provider_id == selected_id) %}
@@ -61,15 +72,19 @@
         {% if is_recommended %}
         <span class="provider-recommended" aria-label="Recommended for your location">(Recommended)</span>
         {% endif %}
+        {% if provider.auth_fields %}
+        <span class="badge-key-required" aria-label="API key required">Key required</span>
+        {% endif %}
         <br>
         <span id="provider-desc-{{ provider.provider_id }}">
           <small>{{ provider.geographic_coverage }}
-            {%- if not provider.auth_fields %} — keyless (no API key required){% endif %}
             {%- if provider.notes %} — {{ provider.notes }}{% endif %}
           </small>
         </span>
       </label>
       {% endfor %}
+
+      {% endif %}
 
       {# Inline key fields — swapped by HTMX when a keyed provider is selected.
          Pre-rendered on page load for the currently-selected provider if it requires keys. #}

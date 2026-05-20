@@ -1,4 +1,12 @@
 <div class="provider-key-fields" aria-label="API credentials for {{ provider.display_name }}">
+  {% if provider.signup_url %}
+  <p class="provider-signup-hint">
+    <a href="{{ provider.signup_url }}" target="_blank" rel="noopener noreferrer">
+      Get API key →<span class="sr-only"> (opens in new tab)</span>
+    </a>
+  </p>
+  {% endif %}
+
   {% for field_name in provider.auth_fields %}
   {% set input_id = provider.provider_id ~ "_" ~ field_name %}
   {% set is_secret = ("secret" in field_name or "password" in field_name or "key" in field_name) %}
