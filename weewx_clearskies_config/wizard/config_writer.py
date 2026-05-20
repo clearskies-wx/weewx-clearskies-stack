@@ -40,7 +40,7 @@ def _wrap_with_managed_region(cfg: ConfigObj) -> str:
     import io
 
     buf = io.StringIO()
-    cfg.write(fileobject=buf)
+    cfg.write(outfile=buf)
     content = buf.getvalue()
 
     lines = [

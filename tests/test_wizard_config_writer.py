@@ -1,14 +1,6 @@
 """Tests for weewx_clearskies_config.wizard.config_writer — config file generation.
 
 All tests use tmp_path and a minimal WizardState.  No DB or HTTP required.
-
-BUG (A7): config_writer.py:43 calls cfg.write(fileobject=buf) but configobj 5.0.9
-uses outfile=.  write_api_conf, write_realtime_conf, write_stack_conf, and apply_wizard
-all call _wrap_with_managed_region which hits the bug.  Those tests are marked
-xfail(strict=True) until fixed.  write_secrets_env is pure string concatenation —
-no configobj involved — so those tests pass cleanly.
-Fix: change `cfg.write(fileobject=buf)` to `cfg.write(outfile=buf)` in config_writer.py:43
-and updater.py:41.
 """
 
 from __future__ import annotations
@@ -29,17 +21,6 @@ from weewx_clearskies_config.wizard.state import WizardState
 
 _MANAGED_BEGIN = "# MANAGED REGION BEGIN"
 _MANAGED_END = "# MANAGED REGION END"
-
-# Decorator for all tests that call write_api_conf / write_realtime_conf /
-# write_stack_conf / apply_wizard.  These all call _wrap_with_managed_region
-# which invokes cfg.write(fileobject=buf) — wrong kwarg in configobj 5.0.9.
-_configobj_write_bug = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "BUG A7: config_writer.py:43 calls cfg.write(fileobject=buf) but configobj 5.0.9 "
-        "uses outfile=.  Fix: change fileobject= to outfile= in config_writer.py and updater.py."
-    ),
-)
 
 
 def _minimal_state(**overrides) -> WizardState:
@@ -79,27 +60,27 @@ def _minimal_state(**overrides) -> WizardState:
 # ---------------------------------------------------------------------------
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_creates_api_conf_file(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     assert (tmp_path / "api.conf").exists()
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_includes_managed_region_begin_marker(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
     assert _MANAGED_BEGIN in content
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_includes_managed_region_end_marker(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
     assert _MANAGED_END in content
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_writes_server_section_with_bind_host_and_port(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
@@ -107,7 +88,7 @@ def test_write_api_conf_writes_server_section_with_bind_host_and_port(tmp_path: 
     assert "bind_port = 8765" in content
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_writes_database_section_without_password(tmp_path: Path):
     """DB password must NEVER appear in the .conf file — it lives in secrets.env."""
     state = _minimal_state(db_password="should_not_be_here")
@@ -116,7 +97,7 @@ def test_write_api_conf_writes_database_section_without_password(tmp_path: Path)
     assert "should_not_be_here" not in content
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_writes_column_mapping_section(tmp_path: Path):
     state = _minimal_state(
         column_mapping={"outTemp": "outdoor_temperature", "rain": "precipitation"}
@@ -127,7 +108,7 @@ def test_write_api_conf_writes_column_mapping_section(tmp_path: Path):
     assert "rain = precipitation" in content
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_writes_all_five_provider_domain_sections(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
@@ -135,7 +116,7 @@ def test_write_api_conf_writes_all_five_provider_domain_sections(tmp_path: Path)
         assert f"[{domain}]" in content
 
 
-@_configobj_write_bug
+
 def test_write_api_conf_returns_path_to_written_file(tmp_path: Path):
     result = write_api_conf(_minimal_state(), tmp_path)
     assert result == tmp_path / "api.conf"
@@ -146,13 +127,13 @@ def test_write_api_conf_returns_path_to_written_file(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-@_configobj_write_bug
+
 def test_write_realtime_conf_creates_realtime_conf_file(tmp_path: Path):
     write_realtime_conf(_minimal_state(), tmp_path)
     assert (tmp_path / "realtime.conf").exists()
 
 
-@_configobj_write_bug
+
 def test_write_realtime_conf_includes_managed_region_markers(tmp_path: Path):
     write_realtime_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
@@ -160,7 +141,7 @@ def test_write_realtime_conf_includes_managed_region_markers(tmp_path: Path):
     assert _MANAGED_END in content
 
 
-@_configobj_write_bug
+
 def test_write_realtime_conf_writes_server_bind_address_and_port(tmp_path: Path):
     state = _minimal_state(realtime_bind_host="127.0.0.1", realtime_bind_port=8766)
     write_realtime_conf(state, tmp_path)
@@ -174,13 +155,13 @@ def test_write_realtime_conf_writes_server_bind_address_and_port(tmp_path: Path)
 # ---------------------------------------------------------------------------
 
 
-@_configobj_write_bug
+
 def test_write_stack_conf_creates_stack_conf_file(tmp_path: Path):
     write_stack_conf(_minimal_state(), tmp_path)
     assert (tmp_path / "stack.conf").exists()
 
 
-@_configobj_write_bug
+
 def test_write_stack_conf_includes_managed_region_markers(tmp_path: Path):
     write_stack_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "stack.conf").read_text(encoding="utf-8")
@@ -188,7 +169,7 @@ def test_write_stack_conf_includes_managed_region_markers(tmp_path: Path):
     assert _MANAGED_END in content
 
 
-@_configobj_write_bug
+
 def test_write_stack_conf_writes_station_name_and_coordinates(tmp_path: Path):
     state = _minimal_state(
         station_name="My Station",
@@ -252,7 +233,7 @@ def test_write_secrets_env_returns_path_to_written_file(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-@_configobj_write_bug
+
 def test_apply_wizard_writes_all_expected_conf_files(tmp_path: Path):
     result = apply_wizard(_minimal_state(), tmp_path)
     files = [Path(p).name for p in result["files_written"]]
@@ -261,21 +242,21 @@ def test_apply_wizard_writes_all_expected_conf_files(tmp_path: Path):
     assert "stack.conf" in files
 
 
-@_configobj_write_bug
+
 def test_apply_wizard_writes_secrets_env(tmp_path: Path):
     result = apply_wizard(_minimal_state(), tmp_path)
     assert len(result["secrets_written"]) == 1
     assert Path(result["secrets_written"][0]).name == "secrets.env"
 
 
-@_configobj_write_bug
+
 def test_apply_wizard_all_written_files_exist_on_disk(tmp_path: Path):
     result = apply_wizard(_minimal_state(), tmp_path)
     for p in result["files_written"] + result["secrets_written"]:
         assert Path(p).exists(), f"Expected file missing: {p}"
 
 
-@_configobj_write_bug
+
 def test_apply_wizard_api_conf_does_not_contain_db_password(tmp_path: Path):
     state = _minimal_state(db_password="never_in_conf")
     apply_wizard(state, tmp_path)

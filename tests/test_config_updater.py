@@ -2,13 +2,6 @@
 
 Critical correctness guarantee: the free-form region below MANAGED REGION END
 must survive any number of update passes untouched.
-
-BUG (A7): ConfigObj.write() in configobj 5.0.9 uses `outfile=` not `fileobject=`.
-Both updater.py:41 and config_writer.py:43 call `cfg.write(fileobject=buf)`.
-Tests that exercise the write path are marked xfail(strict=True) until the
-production code is fixed to use `cfg.write(outfile=buf)`.
-Fix required in: weewx_clearskies_config/config/updater.py:41
-                  weewx_clearskies_config/wizard/config_writer.py:43
 """
 
 from __future__ import annotations
@@ -44,23 +37,13 @@ my_flag = true
 # operator note: do not remove
 """
 
-# Marker applied to all tests that invoke update_managed_region or update_column_mapping.
-# These exercise the ConfigObj.write() call in updater.py which uses the wrong kwarg.
-_configobj_write_bug = pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "BUG A7: updater.py:41 calls cfg.write(fileobject=buf) but configobj 5.0.9 "
-        "uses outfile=. Fix: change fileobject= to outfile= in updater.py and config_writer.py."
-    ),
-)
-
 
 # ---------------------------------------------------------------------------
 # update_managed_region — basic behaviour
 # ---------------------------------------------------------------------------
 
 
-@_configobj_write_bug
+
 def test_update_managed_region_updates_existing_key_in_section(tmp_path: Path):
     conf = tmp_path / "api.conf"
     conf.write_text(_FULL_CONF, encoding="utf-8")
@@ -69,7 +52,7 @@ def test_update_managed_region_updates_existing_key_in_section(tmp_path: Path):
     assert "bind_port = 9000" in result
 
 
-@_configobj_write_bug
+
 def test_update_managed_region_adds_new_key_to_existing_section(tmp_path: Path):
     conf = tmp_path / "api.conf"
     conf.write_text(_FULL_CONF, encoding="utf-8")
@@ -78,7 +61,7 @@ def test_update_managed_region_adds_new_key_to_existing_section(tmp_path: Path):
     assert "tls_enabled = true" in result
 
 
-@_configobj_write_bug
+
 def test_update_managed_region_creates_new_section_when_absent(tmp_path: Path):
     conf = tmp_path / "api.conf"
     conf.write_text(_FULL_CONF, encoding="utf-8")
@@ -88,7 +71,7 @@ def test_update_managed_region_creates_new_section_when_absent(tmp_path: Path):
     assert "provider = openmeteo" in result
 
 
-@_configobj_write_bug
+
 def test_update_managed_region_preserves_managed_region_markers(tmp_path: Path):
     conf = tmp_path / "api.conf"
     conf.write_text(_FULL_CONF, encoding="utf-8")
@@ -98,7 +81,7 @@ def test_update_managed_region_preserves_managed_region_markers(tmp_path: Path):
     assert MANAGED_END in result
 
 
-@_configobj_write_bug
+
 def test_update_managed_region_preserves_free_form_region_after_end_marker(tmp_path: Path):
     """The operator's hand-written config below MANAGED REGION END must survive."""
     conf = tmp_path / "api.conf"
@@ -110,7 +93,7 @@ def test_update_managed_region_preserves_free_form_region_after_end_marker(tmp_p
     assert "operator note: do not remove" in result
 
 
-@_configobj_write_bug
+
 def test_update_managed_region_preserves_free_form_region_after_multiple_updates(tmp_path: Path):
     conf = tmp_path / "api.conf"
     conf.write_text(_FULL_CONF, encoding="utf-8")
@@ -122,7 +105,7 @@ def test_update_managed_region_preserves_free_form_region_after_multiple_updates
     assert "operator note: do not remove" in result
 
 
-@_configobj_write_bug
+
 def test_update_managed_region_no_markers_treats_entire_file_as_managed(tmp_path: Path):
     """A hand-written config without markers should be updated in-place with markers added."""
     no_markers = "[server]\nbind_host = 127.0.0.1\nbind_port = 8765\n"
@@ -156,7 +139,7 @@ def test_update_managed_region_raises_when_file_not_found(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-@_configobj_write_bug
+
 def test_round_trip_write_read_update_read_via_real_modules(tmp_path: Path):
     """Write with config_writer, read via reader, update via updater, re-read."""
     from weewx_clearskies_config.wizard.state import WizardState
@@ -244,7 +227,7 @@ def test_update_secrets_creates_config_dir_when_absent(tmp_path: Path):
 # ---------------------------------------------------------------------------
 
 
-@_configobj_write_bug
+
 def test_update_column_mapping_writes_to_api_conf(tmp_path: Path):
     (tmp_path / "api.conf").write_text(
         f"{MANAGED_BEGIN}\n[server]\nbind_host = 127.0.0.1\n{MANAGED_END}\n",
@@ -258,7 +241,7 @@ def test_update_column_mapping_writes_to_api_conf(tmp_path: Path):
     assert result["rain"] == "precipitation"
 
 
-@_configobj_write_bug
+
 def test_update_column_mapping_omits_none_valued_entries(tmp_path: Path):
     (tmp_path / "api.conf").write_text(
         f"{MANAGED_BEGIN}\n[column_mapping]\noutTemp = outdoor_temperature\n{MANAGED_END}\n",

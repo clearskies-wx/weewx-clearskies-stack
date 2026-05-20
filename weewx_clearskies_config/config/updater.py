@@ -38,7 +38,7 @@ def _today() -> str:
 def _serialize_configobj(cfg: ConfigObj) -> str:
     """Serialize a ConfigObj to a string."""
     buf = io.StringIO()
-    cfg.write(fileobject=buf)
+    cfg.write(outfile=buf)
     return buf.getvalue()
 
 
