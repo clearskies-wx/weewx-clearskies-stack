@@ -123,8 +123,8 @@ def detect_from_weewx_conf(conf_path: str) -> dict[str, Any]:
 
 def _sanitize_error(message: str) -> str:
     """Strip DB passwords from SQLAlchemy error messages before surfacing to the UI."""
-    # SQLAlchemy embeds the full connection URL (including password) in some errors.
-    # Replace the password segment between ":" and "@" in a pymysql URL.
     import re
 
-    return re.sub(r":(//[^:@]*:)[^@]+(@)", r":\1***\2", message)
+    # SQLAlchemy embeds the full URL: mysql+pymysql://user:password@host/db
+    # Password may contain @ so we match greedily up to the LAST @ before the host.
+    return re.sub(r"(://[^:]*:)[^@]+@", r"\1***@", message)

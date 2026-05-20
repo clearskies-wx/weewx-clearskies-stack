@@ -222,6 +222,10 @@ async def step1_detect(request: Request) -> HTMLResponse:
     form = await request.form()
     conf_path = str(form.get("conf_path", "/etc/weewx/weewx.conf")).strip()
 
+    _ALLOWED_CONF_PREFIXES = ("/etc/weewx/", "/home/weewx/", "/usr/share/weewx/")
+    if not any(conf_path.startswith(p) for p in _ALLOWED_CONF_PREFIXES):
+        conf_path = "/etc/weewx/weewx.conf"
+
     error: str | None = None
     detected: dict[str, Any] = {}
     try:

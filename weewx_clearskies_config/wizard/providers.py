@@ -180,10 +180,13 @@ def test_provider(
     """
     import httpx
 
+    from urllib.parse import quote
+
     # Substitute credential placeholders into the test URL.
+    # URL-encode values to prevent query-param injection via & or other metacharacters.
     url = provider.test_url
     for field_name, value in credentials.items():
-        url = url.replace(f"{{{field_name}}}", value)
+        url = url.replace(f"{{{field_name}}}", quote(value, safe=""))
 
     headers = {
         # NWS requires a User-Agent header; use a descriptive one.
