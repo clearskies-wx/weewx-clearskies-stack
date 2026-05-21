@@ -1,0 +1,17 @@
+[Unit]
+Description=weewx-clearskies-realtime
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+ExecStart=/home/ubuntu/repos/weewx-clearskies-realtime/.venv/bin/weewx-clearskies-realtime
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

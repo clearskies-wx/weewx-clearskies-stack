@@ -1,0 +1,21 @@
+[Unit]
+Description=weewx-clearskies-config UI
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+ExecStart=/home/ubuntu/repos/weewx-clearskies-stack/.venv/bin/weewx-clearskies-config --bind 0.0.0.0 --port 9876
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+# Required so the bootstrap POST can write the generated secrets.env file.
+# ProtectSystem=strict makes the filesystem read-only by default; this
+# exemption grants write access to the config directory only.
+ReadWritePaths=/etc/weewx-clearskies
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

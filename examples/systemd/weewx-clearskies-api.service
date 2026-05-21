@@ -1,0 +1,21 @@
+[Unit]
+Description=weewx-clearskies-api
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+ExecStart=/home/ubuntu/repos/weewx-clearskies-api/.venv/bin/weewx-clearskies-api
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+# The API caches processed weather data under ~/.cache/weewx-clearskies.
+# This exemption allows writes to that directory while keeping the rest of
+# the filesystem read-only under ProtectSystem=strict.
+ReadWritePaths=/home/ubuntu/.cache/weewx-clearskies
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
