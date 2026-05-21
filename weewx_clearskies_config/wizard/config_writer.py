@@ -113,7 +113,11 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
 
     Sections written:
       [server]  — bind address and port for the realtime WebSocket service
-      [mqtt]    — placeholder for future MQTT configuration
+      [input]   — input mode; if mqtt, includes nested [[mqtt]] subsection
+
+    The MQTT password is never written here — only the env var name
+    (WEEWX_CLEARSKIES_MQTT_PASSWORD) is stored, and the password itself
+    goes into secrets.env.
 
     Returns the path to the written file.
     """
@@ -124,13 +128,23 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
         "bind_port": str(state.realtime_bind_port),
     }
 
-    # Placeholder MQTT section — operators may need to configure this manually.
-    cfg["mqtt"] = {
-        "enabled": "false",
-        "broker": "",
-        "port": "1883",
-        "topic": "weather/clearskies",
-    }
+    if state.input_mode == "mqtt":
+        cfg["input"] = {"mode": "mqtt"}
+        cfg["input"]["mqtt"] = {
+            "broker_host": state.mqtt_broker_host,
+            "broker_port": str(state.mqtt_broker_port),
+            "topic": state.mqtt_topic,
+            "client_id": state.mqtt_client_id,
+            "username": state.mqtt_username,
+            # Store the env var name, never the password value.
+            "password_env": "WEEWX_CLEARSKIES_MQTT_PASSWORD",
+            "tls": "true" if state.mqtt_tls else "false",
+            "ca_file": "",
+            "qos": str(state.mqtt_qos),
+            "keepalive": str(state.mqtt_keepalive),
+        }
+    else:
+        cfg["input"] = {"mode": "direct"}
 
     content = _wrap_with_managed_region(cfg)
     dest = config_dir / "realtime.conf"
@@ -187,6 +201,10 @@ def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
     # Proxy secret (cross-host topology only)
     if state.proxy_secret:
         lines.append(f"WEEWX_CLEARSKIES_PROXY_SECRET={state.proxy_secret}\n")
+
+    # MQTT password — written only when mqtt mode is active and a password is set.
+    if state.input_mode == "mqtt" and state.mqtt_password:
+        lines.append(f"WEEWX_CLEARSKIES_MQTT_PASSWORD={state.mqtt_password}\n")
 
     # Provider API keys: WEEWX_CLEARSKIES_<DOMAIN>_<PROVIDER>_<FIELD>=<value>
     for domain, provider_id in state.providers.items():

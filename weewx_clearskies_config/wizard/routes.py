@@ -1,4 +1,4 @@
-"""FastAPI router for the 5-step setup wizard.
+"""FastAPI router for the 6-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -13,14 +13,17 @@ Route summary:
   GET  /wizard/step/2           — introspect schema, render step 2 fragment
   POST /wizard/step/2           — save column mapping, return step 3 fragment
   GET  /wizard/step/3           — read station identity, render step 3 fragment
-  POST /wizard/step/3/timezone   — lookup timezone from lat/lon, return input fragment
+  POST /wizard/step/3/timezone  — lookup timezone from lat/lon, return input fragment
   POST /wizard/step/3/detect-weewx — detect station from local weewx.conf
   POST /wizard/step/3           — save station info, return step 4 fragment
-  GET  /wizard/step/4           — provider selection + inline key entry, render step 4 fragment
-  GET  /wizard/step/4/key-fields/{domain}/{provider_id} — inline key fields fragment
-  POST /wizard/step/4/test-key/{provider_id}            — test one provider's key, return result fragment
-  POST /wizard/step/4           — save provider choices + keys, return step 5 fragment
-  GET  /wizard/step/5           — review summary, render step 5 fragment
+  GET  /wizard/step/4           — data pipeline / MQTT, render step 4 fragment
+  POST /wizard/step/4/test      — test MQTT broker connection, return result fragment
+  POST /wizard/step/4           — save input mode + MQTT settings, return step 5 fragment
+  GET  /wizard/step/5           — provider selection + inline key entry, render step 5 fragment
+  GET  /wizard/step/5/key-fields/{domain}/{provider_id} — inline key fields fragment
+  POST /wizard/step/5/test-key/{provider_id}            — test one provider's key, return result fragment
+  POST /wizard/step/5           — save provider choices + keys, return step 6 fragment
+  GET  /wizard/step/6           — review summary, render step 6 fragment
   POST /wizard/apply            — write config files, render completion page
 """
 
@@ -298,6 +301,82 @@ async def step1_post(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
+# Step 4: Data Pipeline (input mode / MQTT)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/step/4", response_class=HTMLResponse)
+async def step4_get(request: Request) -> HTMLResponse:
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(
+        request,
+        "step_mqtt.html",
+        {"step": 4, "state": state, "error": None, "test_result": None},
+    )
+
+
+@router.post("/step/4/test", response_class=HTMLResponse)
+async def step4_mqtt_test(request: Request) -> HTMLResponse:
+    """Test MQTT broker reachability without saving; return a result fragment."""
+    _require_session(request)
+    form = await request.form()
+    host = str(form.get("mqtt_broker_host", "")).strip()
+    port = _parse_int(str(form.get("mqtt_broker_port", "1883")), default=1883)
+    username = str(form.get("mqtt_username", "")).strip()
+    password = str(form.get("mqtt_password", ""))
+    tls = str(form.get("mqtt_tls", "false")).lower() in ("true", "on", "1", "yes")
+
+    result = _test_mqtt_connection(host, port, username, password, tls)
+    return _render(
+        request,
+        "step_mqtt_test_result.html",
+        {"result": result},
+    )
+
+
+@router.post("/step/4", response_class=HTMLResponse)
+async def step4_post(request: Request) -> HTMLResponse:
+    """Save input mode + MQTT settings and advance to step 5 (providers)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    state.input_mode = str(form.get("input_mode", "direct")).strip()
+    if state.input_mode not in ("direct", "mqtt"):
+        state.input_mode = "direct"
+
+    if state.input_mode == "mqtt":
+        state.mqtt_broker_host = str(form.get("mqtt_broker_host", "")).strip()
+        port_raw = _parse_int(str(form.get("mqtt_broker_port", "1883")), default=1883)
+        state.mqtt_broker_port = max(1, min(65535, port_raw))
+        state.mqtt_topic = str(form.get("mqtt_topic", "weewx/loop")).strip() or "weewx/loop"
+        state.mqtt_client_id = (
+            str(form.get("mqtt_client_id", "weewx-clearskies-realtime")).strip()
+            or "weewx-clearskies-realtime"
+        )
+        state.mqtt_username = str(form.get("mqtt_username", "")).strip()
+        state.mqtt_password = str(form.get("mqtt_password", ""))
+        state.mqtt_tls = str(form.get("mqtt_tls", "false")).lower() in ("true", "on", "1", "yes")
+        qos_raw = _parse_int(str(form.get("mqtt_qos", "0")), default=0)
+        state.mqtt_qos = qos_raw if qos_raw in (0, 1, 2) else 0
+        keepalive_raw = _parse_int(str(form.get("mqtt_keepalive", "60")), default=60)
+        state.mqtt_keepalive = max(1, keepalive_raw)
+
+        errors = _validate_mqtt_settings(state)
+        if errors:
+            return _render(
+                request,
+                "step_mqtt.html",
+                {"step": 4, "state": state, "error": "; ".join(errors.values()), "test_result": None},
+                status_code=422,
+            )
+
+    save_wizard_state(session_id, state)
+    return await step5_get(request)
+
+
+# ---------------------------------------------------------------------------
 # Step 2: Schema + Column Mapping
 # ---------------------------------------------------------------------------
 
@@ -522,12 +601,12 @@ async def step3_detect_weewx(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 4: Provider Selection + Inline API Key Entry
+# Step 5: Provider Selection + Inline API Key Entry
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/4", response_class=HTMLResponse)
-async def step4_get(request: Request) -> HTMLResponse:
+@router.get("/step/5", response_class=HTMLResponse)
+async def step5_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if not state.providers:
@@ -542,7 +621,7 @@ async def step4_get(request: Request) -> HTMLResponse:
         request,
         "step_providers.html",
         {
-            "step": 4,
+            "step": 5,
             "state": state,
             "providers_by_domain": by_domain,
             "recommendations": recommendations,
@@ -551,8 +630,8 @@ async def step4_get(request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/step/4/key-fields/{domain}/{provider_id}", response_class=HTMLResponse)
-async def step4_key_fields(request: Request, domain: str, provider_id: str) -> HTMLResponse:
+@router.get("/step/5/key-fields/{domain}/{provider_id}", response_class=HTMLResponse)
+async def step5_key_fields(request: Request, domain: str, provider_id: str) -> HTMLResponse:
     """Return inline key input fields for a provider that requires credentials."""
     session_id = _require_session(request)
     info = get_provider(provider_id)
@@ -569,8 +648,8 @@ async def step4_key_fields(request: Request, domain: str, provider_id: str) -> H
     )
 
 
-@router.post("/step/4/test-key/{provider_id}", response_class=HTMLResponse)
-async def step4_test_key(request: Request, provider_id: str) -> HTMLResponse:
+@router.post("/step/5/test-key/{provider_id}", response_class=HTMLResponse)
+async def step5_test_key(request: Request, provider_id: str) -> HTMLResponse:
     """Test one provider's API key; return a result fragment."""
     _require_session(request)
     form = await request.form()
@@ -603,9 +682,9 @@ async def step4_test_key(request: Request, provider_id: str) -> HTMLResponse:
     )
 
 
-@router.post("/step/4", response_class=HTMLResponse)
-async def step4_post(request: Request) -> HTMLResponse:
-    """Save provider selections and inline API keys, advance to step 5."""
+@router.post("/step/5", response_class=HTMLResponse)
+async def step5_post(request: Request) -> HTMLResponse:
+    """Save provider selections and inline API keys, advance to step 6."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -633,16 +712,16 @@ async def step4_post(request: Request) -> HTMLResponse:
     state.api_keys = api_keys
 
     save_wizard_state(session_id, state)
-    return await step5_get(request)
+    return await step6_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 5: Review + Apply
+# Step 6: Review + Apply
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/5", response_class=HTMLResponse)
-async def step5_get(request: Request) -> HTMLResponse:
+@router.get("/step/6", response_class=HTMLResponse)
+async def step6_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if state.db_host is None and state.station_name is None:
@@ -650,7 +729,7 @@ async def step5_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 5, "state": state, "error": None},
+        {"step": 6, "state": state, "error": None},
     )
 
 
@@ -666,7 +745,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 5,
+                "step": 6,
                 "error": "Config directory is not configured. Cannot write files.",
                 "result": None,
             },
@@ -689,7 +768,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     return _templates.TemplateResponse(
         request=request,
         name="wizard/step_complete.html",
-        context={"step": 5, "error": error, "result": result},
+        context={"step": 6, "error": error, "result": result},
         status_code=500 if error else 200,
     )
 
@@ -835,3 +914,76 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.realtime_bind_host = existing.realtime_bind_host
     if state.realtime_bind_port == 8766 and existing.realtime_bind_port != 8766:
         state.realtime_bind_port = existing.realtime_bind_port
+
+    if state.input_mode == "direct" and existing.input_mode != "direct":
+        state.input_mode = existing.input_mode
+    if not state.mqtt_broker_host and existing.mqtt_broker_host:
+        state.mqtt_broker_host = existing.mqtt_broker_host
+    if state.mqtt_broker_port == 1883 and existing.mqtt_broker_port != 1883:
+        state.mqtt_broker_port = existing.mqtt_broker_port
+    if state.mqtt_topic == "weewx/loop" and existing.mqtt_topic != "weewx/loop":
+        state.mqtt_topic = existing.mqtt_topic
+    if state.mqtt_client_id == "weewx-clearskies-realtime" and existing.mqtt_client_id != "weewx-clearskies-realtime":
+        state.mqtt_client_id = existing.mqtt_client_id
+    if not state.mqtt_username and existing.mqtt_username:
+        state.mqtt_username = existing.mqtt_username
+    if not state.mqtt_password and existing.mqtt_password:
+        state.mqtt_password = existing.mqtt_password
+    if not state.mqtt_tls and existing.mqtt_tls:
+        state.mqtt_tls = existing.mqtt_tls
+
+
+def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:
+    """Validate MQTT fields when input_mode is 'mqtt'.
+
+    Returns a dict of {field_name: error_message}.  Empty dict = valid.
+    """
+    errors: dict[str, str] = {}
+    if not state.mqtt_broker_host:
+        errors["mqtt_broker_host"] = "Broker host is required when MQTT mode is selected."
+    if not (1 <= state.mqtt_broker_port <= 65535):
+        errors["mqtt_broker_port"] = "Broker port must be between 1 and 65535."
+    if state.mqtt_qos not in (0, 1, 2):
+        errors["mqtt_qos"] = "QoS must be 0, 1, or 2."
+    return errors
+
+
+def _test_mqtt_connection(
+    host: str,
+    port: int,
+    username: str,
+    password: str,
+    tls: bool,
+) -> dict[str, Any]:
+    """Attempt a socket-level connection to the MQTT broker.
+
+    Uses a raw TCP connect rather than importing paho-mqtt so we don't
+    depend on the broker package being present in the config tool's venv.
+    A successful TCP handshake proves the host:port is reachable; full MQTT
+    auth is not verified here (that would require paho or similar).
+
+    Returns: {"success": bool, "error": str | None, "note": str | None}
+    """
+    import socket
+
+    if not host:
+        return {"success": False, "error": "Broker host is required.", "note": None}
+
+    # Resolve to all address families so IPv6 brokers work too.
+    try:
+        addr_infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
+    except OSError as exc:
+        return {"success": False, "error": f"DNS resolution failed: {exc}", "note": None}
+
+    last_error: str = "No addresses resolved."
+    for family, sock_type, proto, _canonname, sockaddr in addr_infos:
+        try:
+            with socket.socket(family, sock_type, proto) as sock:
+                sock.settimeout(5)
+                sock.connect(sockaddr)
+            note = "TCP connection succeeded. MQTT credentials are not verified here."
+            return {"success": True, "error": None, "note": note}
+        except OSError as exc:
+            last_error = str(exc)
+
+    return {"success": False, "error": f"Connection refused or timed out: {last_error}", "note": None}

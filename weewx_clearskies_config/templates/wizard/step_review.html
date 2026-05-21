@@ -1,6 +1,6 @@
 <article>
   <header>
-    <h2>Step 5 of 5 — Review &amp; Apply</h2>
+    <h2>Step 6 of 6 — Review &amp; Apply</h2>
     <p>Review your configuration before writing config files.
        Applying will write <code>api.conf</code>, <code>realtime.conf</code>,
        <code>stack.conf</code>, and <code>secrets.env</code> to the config directory.</p>
@@ -60,13 +60,44 @@
     </table>
   </section>
 
-  {# 3. Providers --------------------------------------------------- #}
+  {# 3. Data Pipeline ----------------------------------------------- #}
+  <section aria-labelledby="review-mqtt">
+    <h3 id="review-mqtt">
+      Data Pipeline
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/step/4"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit data pipeline settings">Edit</a>
+    </h3>
+    <table>
+      <caption class="sr-only">Data pipeline / input mode settings</caption>
+      <tbody>
+        <tr><th scope="row">Input mode</th><td>{{ state.input_mode }}</td></tr>
+        {% if state.input_mode == "mqtt" %}
+        <tr><th scope="row">Broker host</th><td>{{ state.mqtt_broker_host or '(not set)' }}</td></tr>
+        <tr><th scope="row">Broker port</th><td>{{ state.mqtt_broker_port }}</td></tr>
+        <tr><th scope="row">Topic</th><td>{{ state.mqtt_topic }}</td></tr>
+        <tr><th scope="row">Client ID</th><td>{{ state.mqtt_client_id }}</td></tr>
+        <tr><th scope="row">Username</th><td>{{ state.mqtt_username or '(none)' }}</td></tr>
+        <tr><th scope="row">Password</th><td><em>stored in secrets.env</em></td></tr>
+        <tr><th scope="row">TLS</th><td>{{ "enabled" if state.mqtt_tls else "disabled" }}</td></tr>
+        <tr><th scope="row">QoS</th><td>{{ state.mqtt_qos }}</td></tr>
+        <tr><th scope="row">Keepalive</th><td>{{ state.mqtt_keepalive }}s</td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </section>
+
+  {# 4. Providers --------------------------------------------------- #}
   <section aria-labelledby="review-providers">
     <h3 id="review-providers">
       Providers
       <a class="review-edit-link"
          href="#"
-         hx-get="/wizard/step/4"
+         hx-get="/wizard/step/5"
          hx-target="#wizard-content"
          hx-swap="innerHTML"
          hx-indicator="#wizard-spinner"
@@ -99,7 +130,7 @@
       API Keys
       <a class="review-edit-link"
          href="#"
-         hx-get="/wizard/step/4"
+         hx-get="/wizard/step/5"
          hx-target="#wizard-content"
          hx-swap="innerHTML"
          hx-indicator="#wizard-spinner"
@@ -178,7 +209,7 @@
         hx-indicator="#wizard-spinner">
     <div role="group">
       <button type="button"
-              hx-get="/wizard/step/4"
+              hx-get="/wizard/step/5"
               hx-target="#wizard-content"
               hx-swap="innerHTML"
               hx-indicator="#wizard-spinner">

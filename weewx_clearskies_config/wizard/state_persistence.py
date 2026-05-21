@@ -67,6 +67,10 @@ def save_progress(session_id: str, state: WizardState, config_dir: Path) -> None
     if raw.get("proxy_secret") is not None:
         raw["proxy_secret"] = _SECRET_SENTINEL
 
+    # mqtt_password is a secret — never write it to the progress file.
+    if raw.get("mqtt_password"):
+        raw["mqtt_password"] = _SECRET_SENTINEL
+
     raw["_saved_at"] = time.time()
 
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -111,6 +115,9 @@ def load_progress(session_id: str, config_dir: Path) -> WizardState | None:
 
     if raw.get("proxy_secret") == _SECRET_SENTINEL:
         raw["proxy_secret"] = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
+
+    if raw.get("mqtt_password") == _SECRET_SENTINEL:
+        raw["mqtt_password"] = secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
 
     providers: dict[str, str] = raw.get("providers", {}) if isinstance(raw.get("providers"), dict) else {}
     api_keys: dict[str, dict[str, str]] = {}
@@ -264,6 +271,45 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 except (ValueError, TypeError):
                     pass
 
+        input_section = realtime_cfg.get("input", {})
+        if isinstance(input_section, dict):
+            mode = str(input_section.get("mode", "direct")).strip()
+            if mode in ("direct", "mqtt"):
+                state.input_mode = mode
+            mqtt_section = input_section.get("mqtt", {})
+            if isinstance(mqtt_section, dict):
+                if mqtt_section.get("broker_host"):
+                    state.mqtt_broker_host = str(mqtt_section["broker_host"])
+                if mqtt_section.get("broker_port"):
+                    try:
+                        state.mqtt_broker_port = int(mqtt_section["broker_port"])
+                    except (ValueError, TypeError):
+                        pass
+                if mqtt_section.get("topic"):
+                    state.mqtt_topic = str(mqtt_section["topic"])
+                if mqtt_section.get("client_id"):
+                    state.mqtt_client_id = str(mqtt_section["client_id"])
+                if mqtt_section.get("username"):
+                    state.mqtt_username = str(mqtt_section["username"])
+                tls_val = str(mqtt_section.get("tls", "false")).lower()
+                state.mqtt_tls = tls_val in ("true", "1", "yes")
+                if mqtt_section.get("qos"):
+                    try:
+                        qos = int(mqtt_section["qos"])
+                        if qos in (0, 1, 2):
+                            state.mqtt_qos = qos
+                    except (ValueError, TypeError):
+                        pass
+                if mqtt_section.get("keepalive"):
+                    try:
+                        state.mqtt_keepalive = int(mqtt_section["keepalive"])
+                    except (ValueError, TypeError):
+                        pass
+        # MQTT password comes from secrets.env (stored as env var).
+        mqtt_password = secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
+        if mqtt_password:
+            state.mqtt_password = mqtt_password
+
     state.proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
 
     if state.providers:
@@ -299,19 +345,28 @@ def _domain_for_provider(provider_id: str, providers: dict[str, str]) -> str | N
 
 def _state_from_dict(raw: dict[str, Any]) -> WizardState:
     """Construct a WizardState from a plain dict, validating types."""
+    _INT_FIELDS = {"db_port", "api_bind_port", "realtime_bind_port", "mqtt_broker_port", "mqtt_qos", "mqtt_keepalive"}
+    _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters"}
+    _BOOL_FIELDS = {"mqtt_tls"}
+
     kwargs: dict[str, Any] = {}
     for f in dataclasses.fields(WizardState):
         if f.name not in raw:
             continue
         val = raw[f.name]
         if val is None:
-            if f.name not in ("db_port", "api_bind_port", "realtime_bind_port"):
+            if f.name not in _INT_FIELDS:
                 kwargs[f.name] = None
             continue
-        elif f.name in ("db_port", "api_bind_port", "realtime_bind_port"):
+        elif f.name in _INT_FIELDS:
             kwargs[f.name] = int(val)
-        elif f.name in ("latitude", "longitude", "altitude_meters"):
+        elif f.name in _FLOAT_FIELDS:
             kwargs[f.name] = float(val) if val is not None else None
+        elif f.name in _BOOL_FIELDS:
+            if isinstance(val, bool):
+                kwargs[f.name] = val
+            else:
+                kwargs[f.name] = str(val).lower() in ("true", "1", "yes")
         elif f.name == "column_mapping":
             if isinstance(val, dict):
                 kwargs[f.name] = {str(k): (str(v) if v is not None else None) for k, v in val.items()}
