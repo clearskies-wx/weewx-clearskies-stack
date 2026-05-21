@@ -933,33 +933,37 @@ async def step5_get(request: Request) -> HTMLResponse:
         _merge_from_existing_config(state)
 
     # Auto-detect the recommended live-update mode from what the wizard already knows.
-    # Only override if the user has not already made an explicit choice.
+    # Skip the auto-detect when existing config files are present — in re-run mode
+    # _merge_from_existing_config already set state.input_mode from realtime.conf, and
+    # overwriting that here would replace the user's configured value with the topology
+    # heuristic (which might differ, e.g. a remote API host that uses direct-pipe mode).
     #
     # The relevant question is whether the API (weewx / loop-packet source) is on
     # the same physical machine as the config UI / realtime service (weather-dev).
     # The DB host is irrelevant — it may co-locate with the API on a completely
     # different machine and still require MQTT.
     #
-    # Decision rule:
+    # Decision rule (first-run only):
     #   API host is loopback (localhost / 127.0.0.1 / ::1)
     #     → the API is on the same machine as the config UI → direct is possible
     #   API host is any non-loopback address
     #     → the API is on a remote machine → MQTT is required
     pipeline_hint: str | None = None
-    api_host = _extract_host_from_url(state.api_address or "").lower()
-    if api_host:
-        if _is_loopback(api_host):
-            state.input_mode = "direct"
-            pipeline_hint = (
-                "The Clear Skies API is on the same server as the config UI, "
-                "so live updates can connect directly."
-            )
-        else:
-            state.input_mode = "mqtt"
-            pipeline_hint = (
-                "The Clear Skies API is on a different server than the config UI, "
-                "so live updates need an MQTT message broker to bridge them."
-            )
+    if not _existing_configs_present():
+        api_host = _extract_host_from_url(state.api_address or "").lower()
+        if api_host:
+            if _is_loopback(api_host):
+                state.input_mode = "direct"
+                pipeline_hint = (
+                    "The Clear Skies API is on the same server as the config UI, "
+                    "so live updates can connect directly."
+                )
+            else:
+                state.input_mode = "mqtt"
+                pipeline_hint = (
+                    "The Clear Skies API is on a different server than the config UI, "
+                    "so live updates need an MQTT message broker to bridge them."
+                )
 
     return _render(
         request,
@@ -1196,8 +1200,10 @@ async def step4_get(request: Request) -> HTMLResponse:
                     # is always in meters (matching the field name and step4_post logic).
                     if raw_alt is not None and ("foot" in alt_unit or "feet" in alt_unit or alt_unit == "ft"):
                         state.altitude_meters = raw_alt * 0.3048
+                        state.altitude_unit = "feet"
                     else:
                         state.altitude_meters = raw_alt
+                        state.altitude_unit = "meters"
                 if state.timezone is None and api_data.get("timezone"):
                     state.timezone = str(api_data["timezone"])
                 if state.latitude and state.longitude and not state.timezone:
@@ -1244,8 +1250,10 @@ async def step4_post(request: Request) -> HTMLResponse:
     alt_unit = str(form.get("altitude_unit", "meters")).strip().lower()
     if alt_raw is not None and ("foot" in alt_unit or "feet" in alt_unit or "ft" in alt_unit):
         state.altitude_meters = alt_raw * 0.3048
+        state.altitude_unit = "feet"
     else:
         state.altitude_meters = alt_raw
+        state.altitude_unit = "meters"
 
     state.timezone = str(form.get("timezone", "")).strip() or None
 
@@ -1749,6 +1757,8 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.longitude = existing.longitude
     if state.altitude_meters is None and existing.altitude_meters is not None:
         state.altitude_meters = existing.altitude_meters
+    if state.altitude_unit == "meters" and existing.altitude_unit != "meters":
+        state.altitude_unit = existing.altitude_unit
     if state.timezone is None and existing.timezone is not None:
         state.timezone = existing.timezone
 

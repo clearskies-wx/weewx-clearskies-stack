@@ -112,3 +112,7 @@
     <div id="db-test-result" aria-live="polite"></div>
   </form>
 </article>
+
+{# OOB: update the progress bar to reflect the current step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

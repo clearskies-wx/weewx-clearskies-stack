@@ -158,7 +158,15 @@
         <tr><th scope="row">Name</th><td>{{ state.station_name or '(not set)' }}</td></tr>
         <tr><th scope="row">Latitude</th><td>{{ state.latitude if state.latitude is not none else '(not set)' }}</td></tr>
         <tr><th scope="row">Longitude</th><td>{{ state.longitude if state.longitude is not none else '(not set)' }}</td></tr>
-        <tr><th scope="row">Altitude (m)</th><td>{{ state.altitude_meters if state.altitude_meters is not none else '(not set)' }}</td></tr>
+        {% if state.altitude_meters is not none %}
+        {% if state.altitude_unit == "feet" %}
+        <tr><th scope="row">Altitude (ft)</th><td>{{ (state.altitude_meters / 0.3048) | round(1) }}</td></tr>
+        {% else %}
+        <tr><th scope="row">Altitude (m)</th><td>{{ state.altitude_meters | round(3) }}</td></tr>
+        {% endif %}
+        {% else %}
+        <tr><th scope="row">Altitude</th><td>(not set)</td></tr>
+        {% endif %}
         <tr><th scope="row">Timezone</th><td>{{ state.timezone or '(not set)' }}</td></tr>
       </tbody>
     </table>
@@ -289,3 +297,7 @@
     </div>
   </form>
 </article>
+
+{# OOB: update the progress bar to reflect the current step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

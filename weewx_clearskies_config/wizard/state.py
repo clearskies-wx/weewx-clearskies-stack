@@ -41,6 +41,9 @@ class WizardState:
     latitude: float | None = None
     longitude: float | None = None
     altitude_meters: float | None = None
+    # Unit the operator used when entering altitude ("meters" or "feet").
+    # Stored so the review page can display altitude in the same unit the user chose.
+    altitude_unit: str = "meters"
     timezone: str | None = None
 
     # Provider selections — key=domain (forecast/alerts/aqi/earthquakes/radar), value=provider_id

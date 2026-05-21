@@ -352,44 +352,8 @@
 {# aria-current="step" marks the current item for screen readers.     #}
 {# Completed items get class="is-complete" for the checkmark style.   #}
 {# ------------------------------------------------------------------ #}
-{% set step_names = [
-  "API Connection",
-  "Database",
-  "Columns",
-  "Station",
-  "Live Updates",
-  "Providers",
-  "Review"
-] %}
-
-<nav id="wizard-nav" aria-label="Wizard progress">
-  <ol class="wizard-progress" role="list">
-    {% for i in range(1, 8) %}
-    <li
-      {% if i == step and step <= 7 %}aria-current="step"{% endif %}
-      {% if i < step or step > 7 %}class="is-complete"{% endif %}
-    >
-      {% if i < step %}
-      <a href="#"
-         hx-get="/wizard/step/{{ i }}"
-         hx-target="#wizard-content"
-         hx-swap="innerHTML show:window:top"
-         hx-indicator="#wizard-spinner"
-         aria-label="Go back to Step {{ i }}: {{ step_names[i - 1] }}">
-        <span class="step-label" aria-hidden="true">{{ step_names[i - 1] }}</span>
-        <span class="sr-only">Step {{ i }}: {{ step_names[i - 1] }} (complete)</span>
-      </a>
-      {% else %}
-      <span class="step-label" aria-hidden="true">{{ step_names[i - 1] }}</span>
-      <span class="sr-only">
-        Step {{ i }}: {{ step_names[i - 1] }}
-        {%- if i == step %} (current){% endif %}
-      </span>
-      {% endif %}
-    </li>
-    {% endfor %}
-  </ol>
-</nav>
+{% set oob = false %}
+{% include "wizard/_progress_bar.html" %}
 
 {# ------------------------------------------------------------------ #}
 {# Global loading indicator                                             #}
@@ -402,7 +366,11 @@
 
 {# ------------------------------------------------------------------ #}
 {# Main content region — HTMX swaps step fragments into here          #}
+{# _in_layout tells step_api.html not to emit the OOB progress bar    #}
+{# fragment — on initial page load the nav is already correct from    #}
+{# the include above; OOB is only needed for HTMX fragment responses. #}
 {# ------------------------------------------------------------------ #}
+{% set _in_layout = true %}
 <section id="wizard-content" aria-atomic="false">
   {% include "wizard/step_api.html" %}
 </section>

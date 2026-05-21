@@ -1,0 +1,37 @@
+{% set step_names = [
+  "API Connection",
+  "Database",
+  "Columns",
+  "Station",
+  "Live Updates",
+  "Providers",
+  "Review"
+] %}
+<nav id="wizard-nav" aria-label="Wizard progress"{% if oob %} hx-swap-oob="true"{% endif %}>
+  <ol class="wizard-progress" role="list">
+    {% for i in range(1, 8) %}
+    <li
+      {% if i == step and step <= 7 %}aria-current="step"{% endif %}
+      {% if i < step or step > 7 %}class="is-complete"{% endif %}
+    >
+      {% if i < step %}
+      <a href="#"
+         hx-get="/wizard/step/{{ i }}"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML show:window:top"
+         hx-indicator="#wizard-spinner"
+         aria-label="Go back to Step {{ i }}: {{ step_names[i - 1] }}">
+        <span class="step-label" aria-hidden="true">{{ step_names[i - 1] }}</span>
+        <span class="sr-only">Step {{ i }}: {{ step_names[i - 1] }} (complete)</span>
+      </a>
+      {% else %}
+      <span class="step-label" aria-hidden="true">{{ step_names[i - 1] }}</span>
+      <span class="sr-only">
+        Step {{ i }}: {{ step_names[i - 1] }}
+        {%- if i == step %} (current){% endif %}
+      </span>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+</nav>
