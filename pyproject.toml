@@ -24,11 +24,13 @@ dependencies = [
     "weewx-clearskies-api>=0.1.0",
     "sqlalchemy>=2.0.0",
     "pymysql>=1.1.0",
+    "timezonefinder>=6.5.0",
 ]
 
 [project.optional-dependencies]
 wizard = [
-    "timezonefinder>=6.5.0",
+    # timezonefinder is now a core dependency; this group is kept for
+    # backwards compatibility with install docs that reference [wizard].
 ]
 dev = [
     "pytest>=8.0",

@@ -15,7 +15,8 @@
         hx-post="/wizard/step/2"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
-        hx-indicator="#wizard-spinner">
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
     <fieldset>
       <legend>Database connection settings</legend>
 
@@ -52,7 +53,7 @@
              name="db_user"
              value="{{ state.db_user or '' }}"
              required
-             autocomplete="username">
+             autocomplete="off">
 
       <label for="db_password">Password
         <span class="sr-only">(stored in secrets.env, never in config files)</span>
@@ -66,7 +67,7 @@
         <input type="password"
                id="db_password"
                name="db_password"
-               autocomplete="current-password"
+               autocomplete="off"
                oninput="document.getElementById('db_password_unchanged').value='0'">
         <button type="button"
                 class="password-toggle"

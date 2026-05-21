@@ -1,6 +1,10 @@
 <article>
   <header>
-    <h2>Setup Complete</h2>
+    {% if error %}
+    <h2>Setup failed</h2>
+    {% else %}
+    <h2>Setup complete!</h2>
+    {% endif %}
   </header>
 
   {% if error %}
@@ -18,7 +22,15 @@
 
   {% else %}
   <div role="status" aria-live="polite">
-    <p>Configuration applied successfully. Restart the services below to load the new configuration.</p>
+    <p>
+      Your weather dashboard is being configured.
+      The API will restart automatically to load the new settings — this may take a moment.
+    </p>
+    <p>
+      Your dashboard will be available at the address you configured.
+      If you are accessing it on your local network, open a browser and enter the
+      IP address or hostname of your weather server.
+    </p>
   </div>
 
   {% if result %}
@@ -74,46 +86,40 @@
 
   {% endif %}{# end if result #}
 
-  {# ---- Next steps ----------------------------------------------- #}
-  <section aria-labelledby="next-steps">
-    <h3 id="next-steps">Next steps</h3>
+  {# ---- Troubleshooting / manual steps -------------------------------- #}
+  <details>
+    <summary>Troubleshooting — manual steps if needed</summary>
+    <p>
+      If the dashboard does not load or shows stale data after a minute or two,
+      you can restart the services manually on your weewx host:
+    </p>
     <ol>
       <li>
-        <strong>Restart the API on the weewx host</strong> to load the configuration just applied:
+        <strong>Restart the API</strong> to load the new configuration:
         <br>
         <code>systemctl restart clearskies-api</code>
         <br>
-        <small>Or use the <code>clearskies-stack restart api</code> command if you are using Docker Compose.</small>
+        <small>Or: <code>clearskies-stack restart api</code> if you are using Docker Compose.</small>
       </li>
       <li>
         <strong>Restart the realtime service</strong> to apply <code>realtime.conf</code>:
         <br>
         <code>systemctl restart clearskies-realtime</code>
       </li>
-      <li>
-        <strong>Deploy the dashboard:</strong>
-        <br>
-        Copy the <code>clearskies-dashboard</code> build output to your web server document root,
-        then configure it to proxy <code>/api</code> and <code>/realtime</code> to the running services.
-      </li>
-      {% if result and result.proxy_secret %}
-      <li>
-        <strong>Configure the proxy secret on the dashboard host:</strong>
-        <br>
-        Set <code>CLEARSKIES_PROXY_SECRET</code> in the dashboard host environment to the value
-        shown above (also saved in <code>secrets.env</code> on this host).
-      </li>
-      {% endif %}
-      <li>
-        <strong>Configure your reverse proxy</strong> (nginx, Caddy, Apache) to serve the dashboard
-        at your desired public address and proxy the API/realtime paths.
-        See the deployment documentation for example configurations.
-      </li>
-      <li>
-        <strong>Verify the dashboard</strong> loads at your configured address and shows live data.
-      </li>
     </ol>
-  </section>
+    {% if result and result.proxy_secret %}
+    <p>
+      If you are using <strong>cross-host</strong> topology, also set
+      <code>CLEARSKIES_PROXY_SECRET</code> on the dashboard host to the value
+      shown above before starting the dashboard container.
+    </p>
+    {% endif %}
+    <p>
+      For full deployment instructions including Docker Compose, reverse proxy examples,
+      and TLS setup, see the
+      <a href="https://github.com/weewx-clearskies/weewx-clearskies-stack" target="_blank" rel="noopener">deployment documentation</a>.
+    </p>
+  </details>
 
   <a href="/">Return to home</a>
   {% endif %}

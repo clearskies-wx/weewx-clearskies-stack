@@ -40,7 +40,7 @@ from fastapi.templating import Jinja2Templates
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
 from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
 from weewx_clearskies_config.wizard.config_writer import apply_wizard
-from weewx_clearskies_config.wizard.known_apis import verify_or_pin_fingerprint
+from weewx_clearskies_config.wizard.known_apis import load_known_apis, verify_or_pin_fingerprint
 from weewx_clearskies_config.wizard.providers import (
     get_provider,
     providers_by_domain,
@@ -346,6 +346,23 @@ async def wizard_index(request: Request) -> HTMLResponse:
     """Render the full wizard page with step 1 (API connection) loaded."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+
+    # Fresh-browser case: the session is new so state.api_address is empty, but
+    # setup may have been completed in a previous session.  Check known_apis.json
+    # (fingerprint store) and wizard_progress_*.json files — either file existing
+    # means at least step 1 was completed before.  Pre-populate api_address from
+    # the first pinned API so the template renders it pre-filled.
+    if not state.api_address and _config_dir is not None:
+        known = load_known_apis(_config_dir)
+        if known:
+            # Use the first (typically only) pinned API URL.
+            state.api_address = next(iter(known))
+            save_wizard_state(session_id, state)
+        elif list(_config_dir.glob("wizard_progress_*.json")):
+            # Progress file exists but no pinned API — still signal re-run mode
+            # so the UI does not show first-run messaging.
+            pass  # api_address stays empty; rerun computed below handles this
+
     api_host, api_port = _split_api_address(state.api_address or "")
     rerun = _is_rerun_mode(state.api_address)
     assert _templates is not None
@@ -847,32 +864,34 @@ async def step5_get(request: Request) -> HTMLResponse:
 
     # Auto-detect the recommended live-update mode from what the wizard already knows.
     # Only override if the user has not already made an explicit choice.
+    #
+    # The relevant question is whether the API (weewx / loop-packet source) is on
+    # the same physical machine as the config UI / realtime service (weather-dev).
+    # The DB host is irrelevant — it may co-locate with the API on a completely
+    # different machine and still require MQTT.
+    #
+    # Decision rule:
+    #   API host is loopback (localhost / 127.0.0.1 / ::1)
+    #     → the API is on the same machine as the config UI → direct is possible
+    #   API host is any non-loopback address
+    #     → the API is on a remote machine → MQTT is required
     pipeline_hint: str | None = None
     if state.input_mode not in ("direct", "mqtt") or not state.mqtt_broker_host:
-        db_host = (state.db_host or "").strip().lower()
         api_host = _extract_host_from_url(state.api_address or "").lower()
-        if _is_loopback(db_host) and _is_loopback(api_host):
-            # Both endpoints are local — direct mode will work.
+        if api_host and _is_loopback(api_host):
+            # API is on the same machine as the config UI — direct mode will work.
             if state.input_mode != "mqtt":
                 state.input_mode = "direct"
             pipeline_hint = (
-                "Your weather station database and the API are on the same server, "
+                "The Clear Skies API is on the same server as the config UI, "
                 "so live updates can connect directly."
             )
-        elif db_host and api_host and db_host == api_host:
-            # Same non-loopback host — direct mode works.
-            if state.input_mode != "mqtt":
-                state.input_mode = "direct"
-            pipeline_hint = (
-                "Your weather station database and the API are on the same server, "
-                "so live updates can connect directly."
-            )
-        elif db_host and api_host:
-            # Different hosts — MQTT is needed.
+        elif api_host:
+            # API is on a different machine — MQTT is required to bridge loop packets.
             if state.input_mode != "direct":
                 state.input_mode = "mqtt"
             pipeline_hint = (
-                "Your weather station is on a different server than the dashboard, "
+                "The Clear Skies API is on a different server than the config UI, "
                 "so live updates need an MQTT message broker to bridge them."
             )
 
@@ -1231,7 +1250,7 @@ async def step6_key_fields(request: Request, domain: str, provider_id: str) -> H
 @router.post("/step/6/test-key/{provider_id}", response_class=HTMLResponse)
 async def step6_test_key(request: Request, provider_id: str) -> HTMLResponse:
     """Test one provider's API key; return a result fragment."""
-    _require_session(request)
+    session_id = _require_session(request)
     form = await request.form()
     info = get_provider(provider_id)
 
@@ -1250,7 +1269,13 @@ async def step6_test_key(request: Request, provider_id: str) -> HTMLResponse:
     for field_name in info.auth_fields:
         credentials[field_name] = str(form.get(f"{provider_id}_{field_name}", "")).strip()
 
-    result = test_provider(info, credentials)
+    # Pass station coordinates from wizard state so location-dependent providers
+    # (IQAir, OpenWeatherMap AQI) use a real location instead of 0,0 (Gulf of Guinea).
+    state = get_wizard_state(session_id)
+    lat = state.latitude if state.latitude is not None else 0
+    lon = state.longitude if state.longitude is not None else 0
+
+    result = test_provider(info, credentials, latitude=lat, longitude=lon)
     return _render(
         request,
         "step_provider_test_result.html",

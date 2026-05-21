@@ -20,7 +20,8 @@
         hx-post="/wizard/step/5"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
-        hx-indicator="#wizard-spinner">
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
 
     <fieldset>
       <legend>How live data reaches your dashboard</legend>
@@ -150,7 +151,7 @@
                    id="mqtt_username"
                    name="mqtt_username"
                    value="{{ state.mqtt_username }}"
-                   autocomplete="username"
+                   autocomplete="off"
                    placeholder="(optional)">
           </div>
           <div>
@@ -167,7 +168,7 @@
               <input type="password"
                      id="mqtt_password"
                      name="mqtt_password"
-                     autocomplete="new-password"
+                     autocomplete="off"
                      aria-describedby="mqtt-password-hint"
                      oninput="document.getElementById('password_unchanged').value='0'">
               <button type="button"

@@ -14,7 +14,8 @@
   <form hx-post="/wizard/step/3"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
-        hx-indicator="#wizard-spinner">
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
 
     {% if schema %}
       <p>

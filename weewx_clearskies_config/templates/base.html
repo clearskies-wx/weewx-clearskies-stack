@@ -18,6 +18,38 @@
       --pico-form-element-spacing-horizontal: 0.75rem;
       --pico-typography-spacing-vertical: 0.75rem;
     }
+    body {
+      background: url("/static/sky.jpg") no-repeat center center fixed;
+      background-size: cover;
+    }
+    main.container {
+      background: rgba(255, 255, 255, 0.93);
+      border-radius: 0.5rem;
+      padding: 2rem;
+      margin-top: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.15);
+    }
+    main.container > header {
+      background: linear-gradient(135deg, #1a5276, #2980b9);
+      color: #fff;
+      margin: -2rem -2rem 1.5rem -2rem;
+      padding: 1.5rem 2rem;
+      border-radius: 0.5rem 0.5rem 0 0;
+    }
+    main.container > header h1 {
+      color: #fff;
+      margin: 0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    }
+    @media (prefers-color-scheme: dark) {
+      main.container {
+        background: rgba(30, 30, 30, 0.93);
+      }
+      main.container > header {
+        background: linear-gradient(135deg, #0d2137, #1a5276);
+      }
+    }
     .skip-link {
       position: absolute;
       top: -3rem;

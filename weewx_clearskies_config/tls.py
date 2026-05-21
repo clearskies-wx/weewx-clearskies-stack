@@ -133,5 +133,5 @@ def get_cert_fingerprint(cert_path: Path) -> str:
     cert = x509.load_pem_x509_certificate(cert_path.read_bytes())
     der = cert.public_bytes(serialization.Encoding.DER)
     digest = hashlib.sha256(der).hexdigest()
-    # Format as colon-separated pairs for readability
-    return ":".join(digest[i : i + 2].upper() for i in range(0, len(digest), 2))
+    hex_pairs = ":".join(digest[i : i + 2].upper() for i in range(0, len(digest), 2))
+    return f"SHA-256:{hex_pairs}"

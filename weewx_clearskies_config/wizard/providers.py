@@ -103,7 +103,7 @@ PROVIDERS: list[ProviderInfo] = [
         "aqi",
         "Global",
         ("api_key",),
-        "https://api.airvisual.com/v2/nearest_city?lat=0&lon=0&key={api_key}",
+        "https://api.airvisual.com/v2/nearest_city?lat={latitude}&lon={longitude}&key={api_key}",
         "get",
         signup_url="https://www.iqair.com/dashboard/api",
     ),
@@ -113,7 +113,7 @@ PROVIDERS: list[ProviderInfo] = [
         "aqi",
         "Global",
         ("api_key",),
-        "https://api.openweathermap.org/data/2.5/air_pollution?lat=0&lon=0&appid={api_key}",
+        "https://api.openweathermap.org/data/2.5/air_pollution?lat={latitude}&lon={longitude}&appid={api_key}",
         "get",
         signup_url="https://home.openweathermap.org/api_keys",
     ),
@@ -208,11 +208,16 @@ _QUERY_PARAM_KEY_PROVIDERS: dict[str, str] = {
 def test_provider(
     provider: ProviderInfo,
     credentials: dict[str, str],
+    latitude: float | str | None = None,
+    longitude: float | str | None = None,
 ) -> dict[str, Any]:
     """Make an HTTP GET to the provider's test URL with credential substitution.
 
     Credentials are substituted into ``{field_name}`` placeholders in
-    ``provider.test_url`` before the request.
+    ``provider.test_url`` before the request.  ``{latitude}`` and
+    ``{longitude}`` are also substituted when the caller supplies coordinates
+    (used by IQAir and OpenWeatherMap AQI, which require a real location to
+    return a meaningful result).
 
     Returns ``{"success": True, "response_time_ms": NNN}`` on HTTP 2xx or
     ``{"success": False, "error": "...", "status_code": NNN}`` on failure.
@@ -231,9 +236,14 @@ def test_provider(
             f"{sorted(unexpected)}"
         )
 
+    # Substitute latitude/longitude BEFORE credential placeholders so that a
+    # maliciously-crafted API key cannot expand into a coordinate placeholder.
+    lat_str = str(latitude) if latitude is not None else "0"
+    lon_str = str(longitude) if longitude is not None else "0"
+    url = provider.test_url.replace("{latitude}", lat_str).replace("{longitude}", lon_str)
+
     # Substitute credential placeholders into the test URL.
     # URL-encode values to prevent query-param injection via & or other metacharacters.
-    url = provider.test_url
     for field_name, value in credentials.items():
         url = url.replace(f"{{{field_name}}}", quote(value, safe=""))
 

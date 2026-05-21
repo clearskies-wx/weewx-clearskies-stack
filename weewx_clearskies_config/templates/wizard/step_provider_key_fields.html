@@ -25,7 +25,7 @@
            id="{{ provider.provider_id }}_{{ field_name }}_unchanged"
            name="{{ provider.provider_id }}_{{ field_name }}_unchanged"
            value="1">
-    <input type="password"
+    <input type="text"
            id="{{ input_id }}"
            name="{{ provider.provider_id }}_{{ field_name }}"
            autocomplete="off"
@@ -33,7 +33,7 @@
            oninput="document.getElementById('{{ provider.provider_id }}_{{ field_name }}_unchanged').value='0'">
     <button type="button"
             class="password-toggle"
-            aria-label="Show {{ field_name | replace('_', ' ') | title }}"
+            aria-label="Hide {{ field_name | replace('_', ' ') | title }}"
             aria-controls="{{ input_id }}"
             onclick="togglePassword(this)">
       <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
