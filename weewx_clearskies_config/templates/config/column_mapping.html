@@ -103,19 +103,18 @@
 
           <tr>
             <th scope="row" style="font-weight:600">
-              <label for="{{ field_id }}" class="sr-only">
-                Canonical name for database column {{ db_col }}
-              </label>
               <code>{{ db_col }}</code>
             </th>
             <td>
+              <label for="{{ field_id }}" class="sr-only">
+                Canonical name for database column {{ db_col }}
+              </label>
               <input type="text"
                      id="{{ field_id }}"
                      name="{{ field_id }}"
                      value="{{ canonical or '' }}"
                      list="canonical-fields-list"
                      autocomplete="off"
-                     aria-label="Canonical name for {{ db_col }}"
                      aria-describedby="{{ field_id }}-status"
                      placeholder="e.g. outTemp">
             </td>

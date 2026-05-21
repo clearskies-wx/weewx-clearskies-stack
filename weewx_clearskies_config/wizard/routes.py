@@ -252,7 +252,17 @@ async def step1_post(request: Request) -> HTMLResponse:
     state.db_host = str(form.get("db_host", "")).strip() or None
     state.db_port = _parse_int(str(form.get("db_port", "3306")), default=3306)
     state.db_user = str(form.get("db_user", "")).strip() or None
-    state.db_password = str(form.get("db_password", ""))
+    # Password handling: the template sends db_password_unchanged=1 and an empty
+    # password field when the user has not re-typed a password on re-render.
+    # Only overwrite the stored secret when the user actually supplies a value.
+    submitted_db_password = str(form.get("db_password", ""))
+    db_password_unchanged = str(form.get("db_password_unchanged", "0")).strip() == "1"
+    if submitted_db_password:
+        state.db_password = submitted_db_password
+    elif not db_password_unchanged:
+        # Explicit blank entry with the flag cleared — user cleared the password.
+        state.db_password = ""
+    # else: flag is set and field is empty — keep existing state.db_password.
     state.db_name = str(form.get("db_name", "weewx")).strip() or "weewx"
 
     # Auto-detect topology from DB host: loopback → same-host, anything else → cross-host.
@@ -720,15 +730,29 @@ async def step5_post(request: Request) -> HTMLResponse:
 
     # Collect inline API keys submitted alongside the provider selection.
     # Form fields are namespaced "{provider_id}_{field_name}".
+    # Secret fields also send a "{provider_id}_{field_name}_unchanged" sentinel
+    # when the user has not re-typed the key on re-render — keep the existing
+    # stored value in that case rather than overwriting with an empty string.
+    existing_api_keys = state.api_keys or {}
     api_keys: dict[str, dict[str, str]] = {}
     for provider_id in state.providers.values():
         info = get_provider(provider_id)
         if info and info.auth_fields:
             creds: dict[str, str] = {}
             for field_name in info.auth_fields:
-                value = str(form.get(f"{provider_id}_{field_name}", "")).strip()
-                if value:
-                    creds[field_name] = value
+                is_secret = "secret" in field_name or "password" in field_name or "key" in field_name
+                submitted_value = str(form.get(f"{provider_id}_{field_name}", "")).strip()
+                if submitted_value:
+                    creds[field_name] = submitted_value
+                elif is_secret:
+                    # Check the sentinel: if unchanged=1 and field is empty, keep existing.
+                    sentinel_name = f"{provider_id}_{field_name}_unchanged"
+                    key_unchanged = str(form.get(sentinel_name, "0")).strip() == "1"
+                    if key_unchanged:
+                        existing_value = existing_api_keys.get(provider_id, {}).get(field_name, "")
+                        if existing_value:
+                            creds[field_name] = existing_value
+                    # else: flag cleared and field empty — user intentionally cleared the key.
             if creds:
                 api_keys[provider_id] = creds
     state.api_keys = api_keys

@@ -112,7 +112,7 @@
             {% set col_error = errors.get(col.db_name) if errors else None %}
             <tr>
               <td>
-                <code class="col-unmapped">{{ col.db_name }}</code>
+                <code class="col-unmapped" aria-label="{{ col.db_name }} (unmapped)">{{ col.db_name }}</code>
               </td>
               <td>
                 {% if col.suggested and col.confidence %}

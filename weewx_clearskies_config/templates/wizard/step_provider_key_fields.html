@@ -17,12 +17,20 @@
   </label>
   {% if is_secret %}
   <div class="password-field">
+    {# Do not pre-fill secret values — avoids exposing API keys in HTML source.
+       The hidden sentinel field signals "user did not re-type"; the POST handler
+       keeps the existing key when this flag arrives alongside an empty field.
+       JS clears the flag the moment the user types. #}
+    <input type="hidden"
+           id="{{ provider.provider_id }}_{{ field_name }}_unchanged"
+           name="{{ provider.provider_id }}_{{ field_name }}_unchanged"
+           value="1">
     <input type="password"
            id="{{ input_id }}"
            name="{{ provider.provider_id }}_{{ field_name }}"
-           value="{{ state.api_keys.get(provider.provider_id, {}).get(field_name, '') }}"
            autocomplete="off"
-           aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint">
+           aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint"
+           oninput="document.getElementById('{{ provider.provider_id }}_{{ field_name }}_unchanged').value='0'">
     <button type="button"
             class="password-toggle"
             aria-label="Show {{ field_name | replace('_', ' ') | title }}"

@@ -46,7 +46,8 @@
         <span id="mode-direct-desc">
           <small>weewx and the realtime service share the same host.
             The realtime service reads loop packets directly from weewx's
-            local data feed. No broker required.</small>
+            local data feed. No broker required.
+            {% if not suggested_mqtt %} Recommended for your topology.{% endif %}</small>
         </span>
       </label>
 
@@ -67,7 +68,8 @@
         <span id="mode-mqtt-desc">
           <small>weewx and the realtime service run on different hosts.
             weewx publishes loop packets to an MQTT broker; the realtime
-            service subscribes and receives them over the network.</small>
+            service subscribes and receives them over the network.
+            {% if suggested_mqtt %} Recommended for your topology.{% endif %}</small>
         </span>
       </label>
     </fieldset>
