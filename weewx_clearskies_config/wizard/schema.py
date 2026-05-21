@@ -13,6 +13,26 @@ from sqlalchemy import create_engine
 
 _DIAGNOSTIC_PATTERNS = ("battery", "link", "status", "signal", "check")
 
+# Explicit mappings for common weewx extension columns whose canonical names
+# don't match via substring/prefix heuristics.
+_KNOWN_EXTENSION_MAPPINGS: dict[str, str] = {
+    "main_pollutant": "aqiMainPollutant",
+    "aqi_level": "aqiCategory",
+    "aqi_location": "aqiLocation",
+    "ow_aqi": "aqi",
+    "ow_cloud_cover": "cloudcover",
+    "ow_co": "pollutantCO",
+    "ow_nh3": "nh3",
+    "ow_no": "no",
+    "ow_no2": "pollutantNO2",
+    "ow_ozone": "pollutantO3",
+    "ow_pm10": "pollutantPM10",
+    "ow_pm25": "pollutantPM25",
+    "ow_so2": "pollutantSO2",
+    "ow_visibility": "visibility",
+    "snowMoisture": "snowMoisture",
+}
+
 
 def introspect_schema(db_url: str) -> dict[str, Any]:
     """Reflect the archive table schema and classify columns.
@@ -43,7 +63,9 @@ def introspect_schema(db_url: str) -> dict[str, Any]:
     finally:
         engine.dispose()
 
-    canonical_field_names = list(STOCK_COLUMN_MAP.values())
+    from weewx_clearskies_config.wizard.routes import _ALL_CANONICAL_NAMES
+
+    canonical_field_names = list(_ALL_CANONICAL_NAMES | set(STOCK_COLUMN_MAP.values()))
 
     stock_columns = [
         {
@@ -88,6 +110,10 @@ def suggest_canonical(
     ``"none"`` (no match found).
     """
     lower_col = db_column.lower()
+
+    # Known extension mapping (highest priority)
+    if db_column in _KNOWN_EXTENSION_MAPPINGS:
+        return _KNOWN_EXTENSION_MAPPINGS[db_column], "high"
 
     # Exact match (case-insensitive)
     for canonical in canonical_fields:
