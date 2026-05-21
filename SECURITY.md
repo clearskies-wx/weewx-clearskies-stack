@@ -68,7 +68,7 @@ The default Docker Compose configuration exposes only port 80 and 443 (Caddy) to
 
 For single-host bare-metal deployments:
 - `clearskies-api` binds to `127.0.0.1:8765` and `::1:8765` (loopback only).
-- `clearskies-realtime` binds to `0.0.0.0:8766` by default; restrict to `127.0.0.1` for single-host deploys.
+- `clearskies-realtime` binds to `:::8766` (dual-stack) by default; restrict to `127.0.0.1` for single-host deploys.
 - Health check ports (`8081`, `8082`) are loopback-only.
 
 ---
