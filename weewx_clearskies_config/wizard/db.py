@@ -56,9 +56,9 @@ def test_connection(
         engine.dispose()
         return {"success": True, "server_version": version}
     except OperationalError as exc:
-        return {"success": False, "error": _sanitize_error(str(exc))}
+        return {"success": False, "error": _friendly_db_error(str(exc))}
     except SQLAlchemyError as exc:
-        return {"success": False, "error": _sanitize_error(str(exc))}
+        return {"success": False, "error": _friendly_db_error(str(exc))}
 
 
 def detect_from_weewx_conf(conf_path: str) -> dict[str, Any]:
@@ -121,10 +121,29 @@ def detect_from_weewx_conf(conf_path: str) -> dict[str, Any]:
     }
 
 
-def _sanitize_error(message: str) -> str:
-    """Strip DB passwords from SQLAlchemy error messages before surfacing to the UI."""
+def _friendly_db_error(message: str) -> str:
+    """Return a user-friendly error message for a DB connection failure.
+
+    Maps common error patterns to plain-English explanations.  Always strips
+    credentials from the raw SQLAlchemy message before logging or displaying.
+    """
     import re
 
-    # SQLAlchemy embeds the full URL: mysql+pymysql://user:password@host/db
-    # Password may contain @ so we match greedily up to the LAST @ before the host.
-    return re.sub(r"(://[^:]*:)[^@]+@", r"\1***@", message)
+    # Strip credentials from the URL embedded in SQLAlchemy messages so we can
+    # safely include the sanitised message in operator logs without leaking passwords.
+    sanitised = re.sub(r"(://[^:]*:)[^@]+@", r"\1***@", message)
+
+    msg_lower = sanitised.lower()
+
+    if "access denied" in msg_lower or "1045" in sanitised:
+        return "Could not connect to the database — the username or password is incorrect."
+    if "unknown database" in msg_lower or "1049" in sanitised:
+        return "Could not connect to the database — the database name was not found. Check the database name field."
+    if "connection refused" in msg_lower or "2003" in sanitised:
+        return "Could not reach the database server — check that the hostname and port are correct and that MariaDB/MySQL is running."
+    if "timed out" in msg_lower or "2013" in sanitised:
+        return "The database connection timed out — check that the hostname is correct and the server is reachable."
+    if "name or service not known" in msg_lower or "nodename nor servname" in msg_lower:
+        return "Could not find a database server at that hostname — check that the hostname is spelled correctly."
+
+    return "Could not connect to the database — check your hostname, port, username, and password and try again."

@@ -224,9 +224,9 @@ async def step1_detect(request: Request) -> HTMLResponse:
     try:
         detected = detect_from_weewx_conf(conf_path)
     except FileNotFoundError:
-        error = f"weewx.conf not found at: {conf_path}"
-    except (KeyError, ValueError) as exc:
-        error = str(exc)
+        error = "Could not find weewx.conf — check that the path is correct and that the file exists."
+    except (KeyError, ValueError):
+        error = "Could not read database settings from weewx.conf — the file may be in an unexpected format. Enter the settings manually below."
 
     assert _templates is not None
     state = WizardState(
@@ -434,7 +434,7 @@ async def step2_get(request: Request) -> HTMLResponse:
         try:
             schema_data = introspect_schema(db_url)
         except Exception as exc:  # noqa: BLE001
-            error = f"Schema introspection failed: {exc}"
+            error = "Could not read the database schema — check your connection settings in step 1 and try again."
             logger.warning("Schema introspection error: %s", exc)
 
     return _render(
@@ -474,7 +474,7 @@ async def step2_post(request: Request) -> HTMLResponse:
             try:
                 schema_data = introspect_schema(db_url)
             except Exception as exc:  # noqa: BLE001
-                schema_error = f"Schema introspection failed: {exc}"
+                schema_error = "Could not read the database schema — check your connection settings in step 1 and try again."
                 logger.warning("Schema introspection error in step2_post: %s", exc)
         return _render(
             request,
@@ -618,12 +618,12 @@ async def step3_detect_weewx(request: Request) -> HTMLResponse:
             break
         except FileNotFoundError:
             continue
-        except (KeyError, ValueError) as exc:
-            error = str(exc)
+        except (KeyError, ValueError):
+            error = "Could not read station settings from weewx.conf — the file may be in an unexpected format. Enter the settings manually below."
             break
 
     if error is None and state.station_name is None:
-        error = "weewx.conf not found in standard locations."
+        error = "Could not find weewx.conf in any of the standard locations. Enter your station details manually below."
 
     return _render(
         request,
@@ -692,9 +692,9 @@ async def step5_test_key(request: Request, provider_id: str) -> HTMLResponse:
             request,
             "step_provider_test_result.html",
             {
-                "test_result": {"success": False, "error": f"Unknown provider: {provider_id}"},
+                "test_result": {"success": False, "error": "This provider is not available. Please go back and choose a different provider."},
                 "test_provider_id": provider_id,
-                "test_provider_name": provider_id,
+                "test_provider_name": "Unknown provider",
             },
         )
 
@@ -792,7 +792,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             name="wizard/step_complete.html",
             context={
                 "step": 6,
-                "error": "Config directory is not configured. Cannot write files.",
+                "error": "The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option.",
                 "result": None,
             },
             status_code=500,
@@ -804,10 +804,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         result = apply_wizard(state, _config_dir)
         clear_wizard_state(session_id)
     except OSError as exc:
-        error = f"Failed to write config files: {exc}"
+        error = "Could not write the configuration files — check that the config directory exists and is writable, then try again."
         logger.error("apply_wizard OSError: %s", exc)
     except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error during config write: {exc}"
+        error = "Something went wrong while writing the configuration. Check the server log for details, then try again."
         logger.exception("apply_wizard unexpected error")
 
     assert _templates is not None
@@ -852,13 +852,13 @@ def _validate_column_mapping(mapping: dict[str, str | None]) -> dict[str, str]:
     for canonical, db_cols in seen.items():
         if len(db_cols) > 1:
             for db_col in db_cols:
-                errors[db_col] = f'"{canonical}" is used by multiple columns — each canonical name must be unique.'
+                errors[db_col] = f'"{canonical}" is already used by another column — each column must have a unique name.'
 
     # Unknown canonical name check
     if valid_canonicals:
         for db_col, canonical in mapping.items():
             if canonical and canonical not in valid_canonicals and db_col not in errors:
-                errors[db_col] = f'"{canonical}" is not a recognised canonical field name.'
+                errors[db_col] = f'"{canonical}" is not a recognised weewx field name. Check the spelling or leave blank to skip this column.'
 
     return errors
 
@@ -986,11 +986,11 @@ def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:
     """
     errors: dict[str, str] = {}
     if not state.mqtt_broker_host:
-        errors["mqtt_broker_host"] = "Broker host is required when MQTT mode is selected."
+        errors["mqtt_broker_host"] = "Please enter a broker hostname or IP address."
     if not (1 <= state.mqtt_broker_port <= 65535):
-        errors["mqtt_broker_port"] = "Broker port must be between 1 and 65535."
+        errors["mqtt_broker_port"] = "Please enter a valid port number between 1 and 65535."
     if state.mqtt_qos not in (0, 1, 2):
-        errors["mqtt_qos"] = "QoS must be 0, 1, or 2."
+        errors["mqtt_qos"] = "Quality of Service level must be 0, 1, or 2."
     return errors
 
 
@@ -1013,13 +1013,13 @@ def _test_mqtt_connection(
     import socket
 
     if not host:
-        return {"success": False, "error": "Broker host is required.", "note": None}
+        return {"success": False, "error": "Please enter a broker hostname or IP address.", "note": None}
 
     # Resolve to all address families so IPv6 brokers work too.
     try:
         addr_infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-    except OSError as exc:
-        return {"success": False, "error": f"DNS resolution failed: {exc}", "note": None}
+    except OSError:
+        return {"success": False, "error": f"Could not find a broker at '{host}' — check that the hostname or IP address is correct.", "note": None}
 
     last_error: str = "No addresses resolved."
     for family, sock_type, proto, _canonname, sockaddr in addr_infos:
@@ -1032,4 +1032,4 @@ def _test_mqtt_connection(
         except OSError as exc:
             last_error = str(exc)
 
-    return {"success": False, "error": f"Connection refused or timed out: {last_error}", "note": None}
+    return {"success": False, "error": f"Could not connect to the broker at '{host}:{port}' — check that the host and port are correct and the broker is running.", "note": None}

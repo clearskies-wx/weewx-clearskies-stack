@@ -287,6 +287,16 @@
 {# users are oriented after each navigation.                           #}
 {# ------------------------------------------------------------------ #}
 <script>
+  /* Tell HTMX 2.x to swap content for 422 (validation error) responses in
+     addition to the default 2xx/3xx.  Without this, HTMX silently discards
+     4xx responses and the user sees no feedback when a step fails validation. */
+  htmx.config.responseHandling = [
+    {code: "204", swap: false},
+    {code: "[23]..", swap: true},
+    {code: "422", swap: true},
+    {code: "[45]..", swap: false, error: true}
+  ];
+
   /* Focus management after HTMX swap */
   document.addEventListener("htmx:afterSwap", function (event) {
     if (event.detail && event.detail.target && event.detail.target.id === "wizard-content") {
