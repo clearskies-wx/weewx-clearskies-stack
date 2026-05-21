@@ -394,15 +394,18 @@
   /* Scroll to top on initial page load */
   window.scrollTo({ top: 0, behavior: "instant" });
 
-  /* Focus management after HTMX swap */
-  document.addEventListener("htmx:afterSwap", function (event) {
+  /* Scroll to top + focus management after HTMX settles (afterSettle
+     fires after all HTMX processing including its own scroll behavior) */
+  document.addEventListener("htmx:afterSettle", function (event) {
     if (event.detail && event.detail.target && event.detail.target.id === "wizard-content") {
-      window.scrollTo({ top: 0, behavior: "instant" });
-      var heading = event.detail.target.querySelector("h2, h3");
-      if (heading) {
-        heading.setAttribute("tabindex", "-1");
-        heading.focus({ preventScroll: true });
-      }
+      setTimeout(function () {
+        window.scrollTo({ top: 0, behavior: "instant" });
+        var heading = document.querySelector("#wizard-content h2, #wizard-content h3");
+        if (heading) {
+          heading.setAttribute("tabindex", "-1");
+          heading.focus({ preventScroll: true });
+        }
+      }, 0);
     }
   });
 
