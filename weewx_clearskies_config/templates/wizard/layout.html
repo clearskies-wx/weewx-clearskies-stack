@@ -391,6 +391,9 @@
     {code: "[45]..", swap: false, error: true}
   ];
 
+  /* Scroll to top on initial page load */
+  window.scrollTo({ top: 0, behavior: "instant" });
+
   /* Focus management after HTMX swap */
   document.addEventListener("htmx:afterSwap", function (event) {
     if (event.detail && event.detail.target && event.detail.target.id === "wizard-content") {
