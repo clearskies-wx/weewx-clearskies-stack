@@ -880,20 +880,16 @@ async def step5_get(request: Request) -> HTMLResponse:
     #   API host is any non-loopback address
     #     → the API is on a remote machine → MQTT is required
     pipeline_hint: str | None = None
-    if state.input_mode not in ("direct", "mqtt") or not state.mqtt_broker_host:
-        api_host = _extract_host_from_url(state.api_address or "").lower()
-        if api_host and _is_loopback(api_host):
-            # API is on the same machine as the config UI — direct mode will work.
-            if state.input_mode != "mqtt":
-                state.input_mode = "direct"
+    api_host = _extract_host_from_url(state.api_address or "").lower()
+    if api_host:
+        if _is_loopback(api_host):
+            state.input_mode = "direct"
             pipeline_hint = (
                 "The Clear Skies API is on the same server as the config UI, "
                 "so live updates can connect directly."
             )
-        elif api_host:
-            # API is on a different machine — MQTT is required to bridge loop packets.
-            if state.input_mode != "direct":
-                state.input_mode = "mqtt"
+        else:
+            state.input_mode = "mqtt"
             pipeline_hint = (
                 "The Clear Skies API is on a different server than the config UI, "
                 "so live updates need an MQTT message broker to bridge them."
