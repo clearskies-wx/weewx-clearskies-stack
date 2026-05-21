@@ -100,12 +100,15 @@ def create_app(config: AppConfig) -> FastAPI:
         # First-run: if no admin credentials exist yet, bootstrap is the only
         # useful destination — /login has nothing to log in to.
         if "WEEWX_CLEARSKIES_ADMIN_USERNAME" not in read_secrets():
+            bootstrap_url = "/bootstrap"
+            if bootstrap_manager and bootstrap_manager._token:
+                bootstrap_url = f"/bootstrap?token={bootstrap_manager._token}"
             if request.headers.get("HX-Request"):
                 return Response(
                     status_code=200,
-                    headers={"HX-Redirect": "/bootstrap"},
+                    headers={"HX-Redirect": bootstrap_url},
                 )
-            return RedirectResponse(url="/bootstrap", status_code=303)
+            return RedirectResponse(url=bootstrap_url, status_code=303)
         next_path = request.url.path
         if request.url.query:
             next_path = f"{next_path}?{request.url.query}"
@@ -125,7 +128,10 @@ def create_app(config: AppConfig) -> FastAPI:
     async def root() -> RedirectResponse:
         secrets = read_secrets()
         if "WEEWX_CLEARSKIES_ADMIN_USERNAME" not in secrets:
-            return RedirectResponse(url="/bootstrap", status_code=302)
+            bootstrap_url = "/bootstrap"
+            if bootstrap_manager and bootstrap_manager._token:
+                bootstrap_url = f"/bootstrap?token={bootstrap_manager._token}"
+            return RedirectResponse(url=bootstrap_url, status_code=302)
         # If no api.conf exists yet, redirect to the setup wizard.
         if not (config.config_dir / "api.conf").exists():
             return RedirectResponse(url="/wizard", status_code=302)
