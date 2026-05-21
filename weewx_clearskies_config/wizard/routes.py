@@ -211,17 +211,21 @@ def _get_api_client(state: WizardState) -> ApiClient:
 
 
 def _is_rerun_mode(api_address: str | None) -> bool:
-    """Return True if *api_address* has a stored fingerprint in known_apis.json.
+    """Return True if *api_address* has a stored fingerprint AND the proxy secret exists.
 
-    A stored fingerprint means the wizard has connected to this API before
-    (i.e. setup was already completed at some point) and we are in re-run mode.
-    In re-run mode the trust token is not required — the API accepts the shared
-    proxy secret on its setup endpoints.
+    Both conditions are required: a stored fingerprint means step 1 was completed
+    before, and the proxy secret means the full wizard completed (Apply wrote it
+    to secrets.env).  Without the proxy secret, we fall back to first-run mode
+    so the operator can use a trust token instead.
     """
     if not api_address or _config_dir is None:
         return False
     from weewx_clearskies_config.wizard.known_apis import get_known_fingerprint
-    return get_known_fingerprint(_config_dir, api_address) is not None
+    if get_known_fingerprint(_config_dir, api_address) is None:
+        return False
+    from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
+    secrets = _read_secrets_env(_config_dir)
+    return bool(secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET"))
 
 
 def _api_error_message(exc: ApiClientError) -> str:
