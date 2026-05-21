@@ -1,15 +1,19 @@
 <article>
   <header>
-    <h2>Step 5 of 7 — Data Pipeline</h2>
-    <p>Choose how the realtime service receives live weather data from weewx.
-       Use <strong>Direct</strong> when weewx and the realtime service run on the same host.
-       Use <strong>MQTT</strong> when they run on different hosts.</p>
+    <h2>Step 5 of 7 — Live Updates</h2>
+    <p>Choose how the dashboard receives live weather data from weewx.
+       Use <strong>Direct connection</strong> when weewx and the dashboard run on the same server.
+       Use <strong>MQTT</strong> when they run on different servers.</p>
   </header>
 
   {% if error %}
   <div role="alert" class="pico-color-red-500">
     <strong>Error:</strong> {{ error }}
   </div>
+  {% endif %}
+
+  {% if pipeline_hint %}
+  <p><em>{{ pipeline_hint }}</em></p>
   {% endif %}
 
   <form id="mqtt-form"
@@ -19,14 +23,11 @@
         hx-indicator="#wizard-spinner">
 
     <fieldset>
-      <legend>Input mode</legend>
+      <legend>How live data reaches your dashboard</legend>
 
-      {# Suggest mode based on topology detected in step 2.
-         Same-host topology defaults to direct; cross-host defaults to mqtt. #}
-      {% set suggested_mqtt = (state.topology == "cross-host") %}
-      {% set mode_is_mqtt = (state.input_mode == "mqtt") or (state.input_mode == "direct" and suggested_mqtt and not state.mqtt_broker_host == "") %}
       {# Canonical determination: if the user already picked a mode, honour it.
          Otherwise, suggest based on topology. #}
+      {% set suggested_mqtt = (state.topology == "cross-host") %}
       {% set effective_mode = state.input_mode if state.input_mode in ("direct", "mqtt") else ("mqtt" if suggested_mqtt else "direct") %}
 
       <label class="topology-option">
@@ -37,17 +38,11 @@
                {% if effective_mode == "direct" %}checked{% endif %}
                aria-describedby="mode-direct-desc"
                onchange="onModeChange(this.value)">
-        <strong>Direct</strong>
-        <span class="provider-recommended"
-              {% if suggested_mqtt %}style="display:none"{% endif %}>
-          Recommended
-        </span>
+        <strong>Direct connection</strong>
         <br>
         <span id="mode-direct-desc">
-          <small>weewx and the realtime service share the same host.
-            The realtime service reads loop packets directly from weewx's
-            local data feed. No broker required.
-            {% if not suggested_mqtt %} Recommended for your topology.{% endif %}</small>
+          <small>weewx and the dashboard are on the same server.
+            Live data flows directly from weewx — no additional software required.</small>
         </span>
       </label>
 
@@ -60,16 +55,11 @@
                aria-describedby="mode-mqtt-desc"
                onchange="onModeChange(this.value)">
         <strong>MQTT</strong>
-        <span class="provider-recommended"
-              {% if not suggested_mqtt %}style="display:none"{% endif %}>
-          Recommended
-        </span>
         <br>
         <span id="mode-mqtt-desc">
-          <small>weewx and the realtime service run on different hosts.
-            weewx publishes loop packets to an MQTT broker; the realtime
-            service subscribes and receives them over the network.
-            {% if suggested_mqtt %} Recommended for your topology.{% endif %}</small>
+          <small>weewx and the dashboard are on different servers.
+            weewx sends loop packets to an MQTT message broker; the dashboard
+            receives them over the network.</small>
         </span>
       </label>
     </fieldset>
@@ -80,6 +70,18 @@
        avoids a round-trip for what is a purely client-side interaction. #}
     <div id="mqtt-fields"
          {% if effective_mode != "mqtt" %}hidden{% endif %}>
+
+      <details>
+        <summary>How to set up MQTT</summary>
+        <p>MQTT requires three things:</p>
+        <ol>
+          <li><strong>A message broker</strong> (like EMQX or Mosquitto) running on your network</li>
+          <li><strong>weewx configured to publish</strong> — add the weewx-mqtt extension to your weewx installation and configure it to publish loop packets to the broker</li>
+          <li><strong>The connection details below</strong> — enter your broker's address, credentials, and the topic weewx publishes to</li>
+        </ol>
+        <p>If you already have weewx publishing to MQTT (e.g., for the Belchertown skin), enter the same broker and credentials below.</p>
+      </details>
+
       <fieldset>
         <legend>MQTT broker settings</legend>
 

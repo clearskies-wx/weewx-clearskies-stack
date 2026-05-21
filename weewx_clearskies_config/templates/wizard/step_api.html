@@ -1,12 +1,36 @@
 <article>
   <header>
+    {% if rerun_mode %}
+    <h2>Step 1 of 7 — API Connection</h2>
+    <p>The API is already configured. Verify the address below and click <strong>Reconnect</strong> to continue.</p>
+    {% else %}
     <h2>Step 1 of 7 — API Connection</h2>
     <p>Enter the connection details shown in your API's startup banner.</p>
+    {% endif %}
   </header>
 
   {% if error %}
   <div role="alert" class="pico-color-red-500">
     <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if success %}
+  <div role="status" aria-live="polite" class="pico-color-green-500">
+    {% if rerun_mode %}
+    <strong>Reconnected to API successfully.</strong>
+    The proxy secret was accepted and a re-run session is open.
+    {% else %}
+    <strong>Connected to API successfully.</strong>
+    The trust token has been exchanged and a setup session is open.
+    {% endif %}
+  </div>
+  {% endif %}
+
+  {% if rerun_mode and not success %}
+  <div role="note" class="pico-color-azure-500">
+    <strong>Re-run mode:</strong> This API was configured previously. The trust token is not required.
+    Confirm the address and port, then click <strong>Reconnect</strong> to load existing settings.
   </div>
   {% endif %}
 
@@ -16,20 +40,37 @@
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
 
-    <fieldset>
+    <fieldset {% if success %}disabled{% endif %}>
       <legend>API connection settings</legend>
 
-      <label for="api_address">API address <span aria-hidden="true">*</span></label>
-      <input type="url"
-             id="api_address"
-             name="api_address"
-             value="{{ state.api_address or '' }}"
-             required
-             placeholder="https://192.168.7.20:8765"
-             autocomplete="url"
-             aria-describedby="api-address-hint">
-      <small id="api-address-hint">The address shown in the API startup banner.</small>
+      <div class="grid">
+        <label for="api_host">
+          API host <span aria-hidden="true">*</span>
+          <input type="text"
+                 id="api_host"
+                 name="api_host"
+                 value="{{ api_host or '' }}"
+                 required
+                 placeholder="192.168.7.20 or weewx.example.com"
+                 autocomplete="off"
+                 aria-describedby="api-host-hint">
+          <small id="api-host-hint">IP address or hostname of the server running the Clear Skies API.</small>
+        </label>
 
+        <label for="api_port">
+          Port
+          <input type="number"
+                 id="api_port"
+                 name="api_port"
+                 value="{{ api_port or '8765' }}"
+                 min="1"
+                 max="65535"
+                 aria-describedby="api-port-hint">
+          <small id="api-port-hint">Default: 8765</small>
+        </label>
+      </div>
+
+      {% if not rerun_mode %}
       <label for="trust_token">Trust token <span aria-hidden="true">*</span></label>
       <div class="password-field">
         <input type="password"
@@ -69,10 +110,24 @@
         SHA-256 fingerprint shown in the API startup banner. Used to verify the server's
         identity before sending the trust token.
       </small>
+      {% endif %}
     </fieldset>
 
     <div class="wizard-nav" role="group">
+      {% if success %}
+      <a href="#"
+         hx-get="/wizard/step/2"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         role="button">
+        Continue →
+      </a>
+      {% elif rerun_mode %}
+      <button type="submit" hx-indicator="#wizard-spinner">Reconnect →</button>
+      {% else %}
       <button type="submit" hx-indicator="#wizard-spinner">Connect →</button>
+      {% endif %}
     </div>
   </form>
 </article>

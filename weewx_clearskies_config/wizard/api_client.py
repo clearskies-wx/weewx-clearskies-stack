@@ -49,17 +49,38 @@ class ApiClient:
     level via known_apis.py before a session is established; subsequent calls
     rely on the already-verified session_id rather than re-checking the cert on
     every request.
+
+    Two authentication modes are supported:
+
+    - **First-run mode** (``session_id`` set): the wizard exchanged a one-time
+      trust token for a setup session ID during step 1.  Requests carry
+      ``Authorization: Bearer <session_id>``.
+
+    - **Re-run mode** (``proxy_secret`` set): setup is already complete.  The
+      API accepts ``X-Clearskies-Proxy-Auth: <proxy_secret>`` on its setup
+      endpoints so the wizard can read current configuration without needing a
+      new trust token.  Only one of the two should be provided; if both are
+      given, ``session_id`` takes precedence.
     """
 
-    def __init__(self, api_url: str, session_id: str | None = None) -> None:
+    def __init__(
+        self,
+        api_url: str,
+        session_id: str | None = None,
+        proxy_secret: str | None = None,
+    ) -> None:
         """
         Args:
             api_url: Base URL of the Clear Skies API, e.g. "https://192.168.7.20:8765".
             session_id: An already-established session ID, if one exists from a
                 prior handshake.  Pass None before calling handshake().
+            proxy_secret: The shared proxy secret from secrets.env, used for
+                re-run mode when setup is already complete.  Ignored when
+                session_id is also provided.
         """
         self._api_url = api_url.rstrip("/")
         self._session_id = session_id
+        self._proxy_secret = proxy_secret
 
     # ------------------------------------------------------------------
     # Fingerprint acquisition
@@ -289,10 +310,16 @@ class ApiClient:
         headers: dict[str, str] = {"Content-Type": "application/json"} if json is not None else {}
 
         if include_auth:
-            if self._session_id is None:
+            if self._session_id is not None:
+                # First-run mode: Bearer token from handshake.
+                # Deliberately not logging the session_id value.
+                headers["Authorization"] = f"Bearer {self._session_id}"
+            elif self._proxy_secret is not None:
+                # Re-run mode: shared proxy secret accepted by setup endpoints
+                # once setup is already complete (ADR-038).
+                headers["X-Clearskies-Proxy-Auth"] = self._proxy_secret
+            else:
                 raise ApiClientError(401, "No session established — call handshake() first")
-            # Deliberately not logging the session_id value.
-            headers["Authorization"] = f"Bearer {self._session_id}"
 
         with httpx.Client(verify=False, timeout=timeout) as client:  # noqa: S501
             response = client.request(method, url, headers=headers, json=json)

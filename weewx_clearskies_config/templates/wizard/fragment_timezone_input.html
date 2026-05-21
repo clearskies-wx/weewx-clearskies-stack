@@ -1,6 +1,25 @@
+{% if timezones %}
+<select id="timezone"
+        name="timezone"
+        aria-describedby="tz-hint">
+  <option value="">— select a timezone —</option>
+  {% for region, zone_list in timezones %}
+  <optgroup label="{{ region }}">
+    {% for tz in zone_list %}
+    <option value="{{ tz }}"
+            {% if tz == timezone %}selected{% endif %}>
+      {{ tz }}
+    </option>
+    {% endfor %}
+  </optgroup>
+  {% endfor %}
+</select>
+{% else %}
+{# Fallback when zoneinfo is unavailable (Python < 3.9). #}
 <input type="text"
        id="timezone"
        name="timezone"
        value="{{ timezone }}"
        placeholder="America/New_York"
        aria-describedby="tz-hint">
+{% endif %}

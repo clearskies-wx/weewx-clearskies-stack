@@ -108,17 +108,36 @@
 
       <label for="timezone">Timezone</label>
       <div aria-live="polite" id="timezone-live-region">
+        {% if timezones %}
+        <select id="timezone"
+                name="timezone"
+                aria-describedby="tz-hint">
+          <option value="">— select a timezone —</option>
+          {% for region, zone_list in timezones %}
+          <optgroup label="{{ region }}">
+            {% for tz in zone_list %}
+            <option value="{{ tz }}"
+                    {% if tz == (state.timezone or '') %}selected{% endif %}>
+              {{ tz }}
+            </option>
+            {% endfor %}
+          </optgroup>
+          {% endfor %}
+        </select>
+        {% else %}
+        {# Fallback when zoneinfo is unavailable (Python < 3.9). #}
         <input type="text"
                id="timezone"
                name="timezone"
                value="{{ state.timezone or '' }}"
                placeholder="America/New_York"
                aria-describedby="tz-hint">
+        {% endif %}
       </div>
       <small id="tz-hint">
         IANA timezone name, e.g. <code>America/New_York</code>, <code>Europe/London</code>, <code>Asia/Tokyo</code>.
         {% if state.latitude and state.longitude %}
-        <strong>Auto-detected from your coordinates.</strong> You can override it here if needed.
+        <strong>Auto-detected from your coordinates.</strong> You can change it using the dropdown if needed.
         {% else %}
         If you enter coordinates above, the timezone will be auto-detected.
         {% endif %}
@@ -143,7 +162,7 @@
         ← Previous
       </button>
       {% endif %}
-      <button type="submit">Next: Data Pipeline →</button>
+      <button type="submit">Next: Live Updates →</button>
     </div>
   </form>
 </article>

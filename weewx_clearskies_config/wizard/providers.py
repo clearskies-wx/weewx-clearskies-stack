@@ -181,6 +181,30 @@ def get_provider(provider_id: str) -> ProviderInfo | None:
     return None
 
 
+# Plain-English messages for common HTTP status codes returned by provider APIs.
+_PROVIDER_ERROR_MAP: dict[int, str] = {
+    400: "Invalid request — check that your API key format is correct",
+    401: "API key rejected — check the key and try again",
+    403: "Access denied — your API key may be expired or disabled",
+    429: "Rate limit exceeded — try again in a few minutes",
+}
+
+# Providers that send credentials as query parameters rather than as part of
+# the URL template or as a header.  The test URL for these providers must NOT
+# include the key placeholder in the URL string; instead the key is appended
+# as a query parameter named by the value here.
+#
+# IQAir / AirVisual: the correct test URL is
+#   https://api.airvisual.com/v2/nearest_city?key={api_key}
+# The test_url already includes ?key={api_key} in the PROVIDERS list, so the
+# placeholder substitution below handles it correctly.  This dict is kept as
+# an explicit record of providers whose key goes in a query param (not a
+# header), so future maintainers do not accidentally move their keys to headers.
+_QUERY_PARAM_KEY_PROVIDERS: dict[str, str] = {
+    "iqair": "key",  # key= query parameter, not a bearer header
+}
+
+
 def test_provider(
     provider: ProviderInfo,
     credentials: dict[str, str],
@@ -227,17 +251,22 @@ def test_provider(
         if response.is_success:
             return {"success": True, "response_time_ms": elapsed_ms}
 
+        status = response.status_code
+        friendly = _PROVIDER_ERROR_MAP.get(
+            status,
+            f"Provider returned an error (code {status}). Verify your API key is correct.",
+        )
         return {
             "success": False,
-            "error": f"HTTP {response.status_code}",
-            "status_code": response.status_code,
+            "error": friendly,
+            "status_code": status,
             "response_time_ms": elapsed_ms,
         }
     except httpx.TimeoutException:
         elapsed_ms = int((time.monotonic() - start) * 1000)
         return {
             "success": False,
-            "error": "Request timed out after 5 seconds",
+            "error": "Could not reach the provider — check your internet connection",
             "response_time_ms": elapsed_ms,
         }
     except httpx.RequestError as exc:

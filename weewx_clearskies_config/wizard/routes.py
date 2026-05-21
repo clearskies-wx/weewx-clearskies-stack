@@ -62,6 +62,125 @@ from weewx_clearskies_config.wizard.state import (
 from weewx_clearskies_config.wizard.station import lookup_timezone
 from weewx_clearskies_config.wizard.topology import generate_proxy_secret
 
+# ---------------------------------------------------------------------------
+# Timezone list helper
+# ---------------------------------------------------------------------------
+
+# Prefixes to exclude from the dropdown — these are deprecated or
+# system-specific zones that are not useful to operators.
+_TZ_EXCLUDE_PREFIXES = (
+    "Etc/",
+    "SystemV/",
+    "US/",    # aliases; operators should use America/*
+    "Canada/",
+    "Mexico/",
+    "Brazil/",
+    "Chile/",
+    "Cuba",
+    "Egypt",
+    "Eire",
+    "Factory",
+    "GB",
+    "Greenwich",
+    "Hongkong",
+    "Iceland",
+    "Iran",
+    "Israel",
+    "Jamaica",
+    "Japan",
+    "Kwajalein",
+    "Libya",
+    "MET",
+    "MST",
+    "MST7MDT",
+    "NZ",
+    "Navajo",
+    "Poland",
+    "Portugal",
+    "ROC",
+    "ROK",
+    "Singapore",
+    "Turkey",
+    "UCT",
+    "UTC",
+    "Universal",
+    "W-SU",
+    "Zulu",
+    "WET",
+    "CET",
+    "EET",
+    "EST",
+    "EST5EDT",
+    "CST6CDT",
+    "PST8PDT",
+    "HST",
+    "posix/",
+    "right/",
+)
+
+# Preferred region ordering for the optgroups.
+_REGION_ORDER = [
+    "Africa",
+    "America",
+    "Antarctica",
+    "Arctic",
+    "Asia",
+    "Atlantic",
+    "Australia",
+    "Europe",
+    "Indian",
+    "Pacific",
+]
+
+
+def _build_timezone_list() -> list[tuple[str, list[str]]]:
+    """Return a sorted list of (region, [timezone_name, ...]) tuples.
+
+    Uses ``zoneinfo.available_timezones()`` (Python 3.9+ stdlib) to enumerate
+    all IANA zone names.  Deprecated and system aliases are filtered out.
+    Regions appear in the preferred order defined by ``_REGION_ORDER``; any
+    remaining regions follow alphabetically.
+    """
+    try:
+        from zoneinfo import available_timezones
+    except ImportError:
+        # Python < 3.9: fall back to an empty list; the template will render
+        # a plain-text input as a fallback.
+        return []
+
+    all_zones = sorted(available_timezones())
+    grouped: dict[str, list[str]] = {}
+
+    for tz in all_zones:
+        # Filter out deprecated / non-operator zones.
+        skip = False
+        for prefix in _TZ_EXCLUDE_PREFIXES:
+            if tz == prefix.rstrip("/") or tz.startswith(prefix):
+                skip = True
+                break
+        if skip:
+            continue
+
+        # Group by the part before the first slash; zones with no slash go
+        # into "Other" (e.g. "UTC" if not filtered, "WET" etc.)
+        region = tz.split("/", 1)[0] if "/" in tz else "Other"
+        grouped.setdefault(region, []).append(tz)
+
+    # Sort zones within each region.
+    for region in grouped:
+        grouped[region].sort()
+
+    # Order regions: preferred list first, then alphabetically.
+    ordered_regions = [r for r in _REGION_ORDER if r in grouped]
+    remaining = sorted(r for r in grouped if r not in _REGION_ORDER)
+    ordered_regions.extend(remaining)
+
+    return [(region, grouped[region]) for region in ordered_regions]
+
+
+# Build once at module load; the list is static.
+_TIMEZONE_LIST: list[tuple[str, list[str]]] = _build_timezone_list()
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wizard", tags=["wizard"])
@@ -70,12 +189,39 @@ router = APIRouter(prefix="/wizard", tags=["wizard"])
 def _get_api_client(state: WizardState) -> ApiClient:
     """Create an API client from wizard state.
 
+    Supports two authentication modes:
+
+    - **Session mode** (first run): uses ``state.api_session_id`` acquired from
+      the handshake call in step 1.
+    - **Proxy-auth mode** (re-run): uses ``state.proxy_secret`` from the local
+      secrets.env when setup is already complete and no session has been
+      established.
+
     Raises:
-        ValueError: If the API has not been connected yet (step 1 incomplete).
+        ValueError: If neither api_address nor a valid auth credential is
+            available (step 1 has not been completed in either mode).
     """
-    if not state.api_address or not state.api_session_id:
+    if not state.api_address:
         raise ValueError("API not connected")
-    return ApiClient(state.api_address, session_id=state.api_session_id)
+    if state.api_session_id:
+        return ApiClient(state.api_address, session_id=state.api_session_id)
+    if state.proxy_secret:
+        return ApiClient(state.api_address, proxy_secret=state.proxy_secret)
+    raise ValueError("API not connected")
+
+
+def _is_rerun_mode(api_address: str | None) -> bool:
+    """Return True if *api_address* has a stored fingerprint in known_apis.json.
+
+    A stored fingerprint means the wizard has connected to this API before
+    (i.e. setup was already completed at some point) and we are in re-run mode.
+    In re-run mode the trust token is not required — the API accepts the shared
+    proxy secret on its setup endpoints.
+    """
+    if not api_address or _config_dir is None:
+        return False
+    from weewx_clearskies_config.wizard.known_apis import get_known_fingerprint
+    return get_known_fingerprint(_config_dir, api_address) is not None
 
 
 def _api_error_message(exc: ApiClientError) -> str:
@@ -167,17 +313,53 @@ def _render(
 # ---------------------------------------------------------------------------
 
 
+def _split_api_address(api_address: str) -> tuple[str, str]:
+    """Split a stored ``https://{host}:{port}`` URL back into (host, port) strings.
+
+    Returns ("", "8765") if the address is blank or cannot be parsed.
+    """
+    if not api_address:
+        return "", "8765"
+    # Strip the scheme prefix produced by step1_api_post.
+    addr = api_address
+    if addr.startswith("https://"):
+        addr = addr[len("https://"):]
+    # The host may be a bare IPv6 literal ("[::1]") or a host:port pair.
+    if addr.startswith("["):
+        # IPv6 bracketed literal — find the closing bracket.
+        close = addr.find("]")
+        if close != -1:
+            host = addr[1:close]
+            rest = addr[close + 1:]
+            port = rest.lstrip(":") or "8765"
+            return host, port
+    # Plain host or host:port.
+    if ":" in addr:
+        host, _, port = addr.rpartition(":")
+        return host, port or "8765"
+    return addr, "8765"
+
+
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def wizard_index(request: Request) -> HTMLResponse:
     """Render the full wizard page with step 1 (API connection) loaded."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    api_host, api_port = _split_api_address(state.api_address or "")
+    rerun = _is_rerun_mode(state.api_address)
     assert _templates is not None
     return _templates.TemplateResponse(
         request=request,
         name="wizard/layout.html",
-        context={"step": 1, "state": state},
+        context={
+            "step": 1,
+            "state": state,
+            "success": False,
+            "api_host": api_host,
+            "api_port": api_port,
+            "rerun_mode": rerun,
+        },
     )
 
 
@@ -191,41 +373,190 @@ async def step1_api_get(request: Request) -> HTMLResponse:
     """Step 1: Connect to API — show the connection form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    api_host, api_port = _split_api_address(state.api_address or "")
+    rerun = _is_rerun_mode(state.api_address)
     return _render(
         request,
         "step_api.html",
-        {"step": 1, "state": state, "error": None},
+        {"step": 1, "state": state, "error": None, "success": False,
+         "api_host": api_host, "api_port": api_port, "rerun_mode": rerun},
     )
 
 
 @router.post("/step/1", response_class=HTMLResponse)
 async def step1_api_post(request: Request) -> HTMLResponse:
-    """Step 1: Connect to API — verify fingerprint + handshake, advance to step 2."""
+    """Step 1: Connect to API — verify fingerprint + handshake, show success feedback.
+
+    Two modes:
+
+    - **First run**: operator provides a trust token and certificate fingerprint.
+      The wizard exchanges the token for a setup session ID (handshake) and
+      pins the fingerprint in known_apis.json.
+
+    - **Re-run**: setup was completed before; the fingerprint is already stored
+      in known_apis.json and the proxy secret is in secrets.env.  The trust
+      token is not required.  The wizard verifies the live fingerprint still
+      matches the stored pin, then uses X-Clearskies-Proxy-Auth for all
+      subsequent API calls.
+    """
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
 
-    api_address = str(form.get("api_address", "")).strip()
+    host = str(form.get("api_host", "")).strip()
+    port_raw = str(form.get("api_port", "8765")).strip() or "8765"
     trust_token = str(form.get("trust_token", "")).strip()
     cert_fingerprint = str(form.get("cert_fingerprint", "")).strip()
 
-    # Validate required fields.
-    if not api_address or not trust_token or not cert_fingerprint:
+    # Validate host is always required.
+    if not host:
         return _render(
             request,
             "step_api.html",
-            {"step": 1, "state": state, "error": "All fields are required."},
+            {"step": 1, "state": state,
+             "error": "API host is required.",
+             "success": False, "api_host": host, "api_port": port_raw,
+             "rerun_mode": _is_rerun_mode(state.api_address)},
+            status_code=422,
+        )
+
+    # Normalise port — must be an integer in 1–65535.
+    port = _parse_int(port_raw, default=8765)
+    if not (1 <= port <= 65535):
+        return _render(
+            request,
+            "step_api.html",
+            {"step": 1, "state": state, "error": "Port must be between 1 and 65535.",
+             "success": False, "api_host": host, "api_port": port_raw,
+             "rerun_mode": _is_rerun_mode(state.api_address)},
+            status_code=422,
+        )
+
+    api_address = f"https://{host}:{port}"
+    assert _config_dir is not None, "config_dir not set — wizard router not initialised"
+
+    # Detect which mode we are in before doing anything else.
+    rerun = _is_rerun_mode(api_address)
+
+    if rerun:
+        # Re-run mode: verify the fingerprint is still pinned (no operator input
+        # needed for the fingerprint itself — we compare live vs. stored).
+        # Fetch the proxy secret from secrets.env for auth.
+        from weewx_clearskies_config.wizard.known_apis import get_known_fingerprint
+        stored_fp = get_known_fingerprint(_config_dir, api_address) or ""
+        ok, err_msg = verify_or_pin_fingerprint(_config_dir, api_address, stored_fp)
+        if not ok:
+            return _render(
+                request,
+                "step_api.html",
+                {"step": 1, "state": state, "error": err_msg,
+                 "success": False, "api_host": host, "api_port": str(port),
+                 "rerun_mode": True},
+                status_code=422,
+            )
+
+        # Load the proxy secret from secrets.env so subsequent API calls can use
+        # X-Clearskies-Proxy-Auth.  If the secret is absent (edge case: operator
+        # deleted secrets.env), fall back gracefully with a clear error.
+        from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
+        secrets = _read_secrets_env(_config_dir)
+        proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET") or state.proxy_secret
+        if not proxy_secret:
+            return _render(
+                request,
+                "step_api.html",
+                {
+                    "step": 1,
+                    "state": state,
+                    "error": (
+                        "Re-run failed: the proxy secret is not in secrets.env. "
+                        "If you deleted secrets.env, re-run the installer to regenerate it, "
+                        "or restart the API with --reset to start a fresh setup."
+                    ),
+                    "success": False,
+                    "api_host": host,
+                    "api_port": str(port),
+                    "rerun_mode": True,
+                },
+                status_code=422,
+            )
+
+        # Verify the proxy secret works by probing the API health endpoint.
+        try:
+            client = ApiClient(api_address, proxy_secret=proxy_secret)
+            client.get_db_defaults()  # Any authenticated endpoint will do.
+        except ApiClientError as exc:
+            if exc.status_code == 401:
+                error_msg = (
+                    "The API did not accept the proxy secret. "
+                    "Check that secrets.env contains the correct WEEWX_CLEARSKIES_PROXY_SECRET "
+                    "and that the API is running with the same value."
+                )
+            else:
+                error_msg = f"Could not verify the API connection: {_api_error_message(exc)}"
+            return _render(
+                request,
+                "step_api.html",
+                {"step": 1, "state": state, "error": error_msg,
+                 "success": False, "api_host": host, "api_port": str(port),
+                 "rerun_mode": True},
+                status_code=422,
+            )
+        except Exception:  # noqa: BLE001
+            return _render(
+                request,
+                "step_api.html",
+                {"step": 1, "state": state,
+                 "error": "Could not reach the API. Check the address and try again.",
+                 "success": False, "api_host": host, "api_port": str(port),
+                 "rerun_mode": True},
+                status_code=422,
+            )
+
+        # Success — store address and proxy secret; leave api_session_id unset so
+        # _get_api_client() uses proxy-auth mode for all subsequent steps.
+        state.api_address = api_address
+        state.proxy_secret = proxy_secret
+        # api_session_id is intentionally left as-is (may be None or stale —
+        # _get_api_client prefers session_id when set, so clear it).
+        state.api_session_id = None
+        save_wizard_state(session_id, state)
+        return _render(
+            request,
+            "step_api.html",
+            {
+                "step": 1,
+                "state": state,
+                "error": None,
+                "success": True,
+                "api_host": host,
+                "api_port": str(port),
+                "rerun_mode": True,
+            },
+        )
+
+    # ------------------------------------------------------------------
+    # First-run mode: trust token + fingerprint required.
+    # ------------------------------------------------------------------
+    if not trust_token or not cert_fingerprint:
+        return _render(
+            request,
+            "step_api.html",
+            {"step": 1, "state": state, "error": "All fields are required.",
+             "success": False, "api_host": host, "api_port": port_raw,
+             "rerun_mode": False},
             status_code=422,
         )
 
     # Verify fingerprint (TOFU) — fetch the live cert and compare.
-    assert _config_dir is not None, "config_dir not set — wizard router not initialised"
     ok, err_msg = verify_or_pin_fingerprint(_config_dir, api_address, cert_fingerprint)
     if not ok:
         return _render(
             request,
             "step_api.html",
-            {"step": 1, "state": state, "error": err_msg},
+            {"step": 1, "state": state, "error": err_msg,
+             "success": False, "api_host": host, "api_port": str(port),
+             "rerun_mode": False},
             status_code=422,
         )
 
@@ -243,23 +574,42 @@ async def step1_api_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_api.html",
-            {"step": 1, "state": state, "error": error_msg},
+            {"step": 1, "state": state, "error": error_msg,
+             "success": False, "api_host": host, "api_port": str(port),
+             "rerun_mode": False},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
         return _render(
             request,
             "step_api.html",
-            {"step": 1, "state": state, "error": "Could not reach the API. Check the address and try again."},
+            {"step": 1, "state": state,
+             "error": "Could not reach the API. Check the address and try again.",
+             "success": False, "api_host": host, "api_port": str(port),
+             "rerun_mode": False},
             status_code=422,
         )
 
-    # Success — store in wizard state and advance to step 2 (DB connection).
+    # Success — store in wizard state and re-render step 1 with success feedback.
+    # The operator sees a green confirmation and a "Continue" button.  This gives
+    # clear evidence that the handshake worked before advancing to step 2.
     state.api_address = api_address
     state.api_session_id = api_session_id
     state.cert_fingerprint = cert_fingerprint
     save_wizard_state(session_id, state)
-    return await step2_db_get(request)
+    return _render(
+        request,
+        "step_api.html",
+        {
+            "step": 1,
+            "state": state,
+            "error": None,
+            "success": True,
+            "api_host": host,
+            "api_port": str(port),
+            "rerun_mode": False,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -461,14 +811,76 @@ async def step2_db_post(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------
 
 
+def _is_loopback(host: str) -> bool:
+    """Return True if *host* refers to the local machine."""
+    _LOOPBACK = {"localhost", "127.0.0.1", "::1", ""}
+    return host.strip().lower() in _LOOPBACK
+
+
+def _extract_host_from_url(url: str) -> str:
+    """Extract the bare hostname from a ``https://host:port`` URL.
+
+    Returns an empty string if the URL cannot be parsed.
+    """
+    addr = url or ""
+    if addr.startswith("https://"):
+        addr = addr[len("https://"):]
+    if addr.startswith("["):
+        close = addr.find("]")
+        if close != -1:
+            return addr[1:close]
+        return ""
+    host = addr.split(":")[0] if ":" in addr else addr
+    return host.strip()
+
+
 @router.get("/step/5", response_class=HTMLResponse)
 async def step5_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+
+    # On re-run, pre-populate MQTT settings from the existing realtime.conf if
+    # the state does not already have them.  _merge_from_existing_config only
+    # fills fields that are still at their defaults, so user edits are safe.
+    if not state.mqtt_broker_host:
+        _merge_from_existing_config(state)
+
+    # Auto-detect the recommended live-update mode from what the wizard already knows.
+    # Only override if the user has not already made an explicit choice.
+    pipeline_hint: str | None = None
+    if state.input_mode not in ("direct", "mqtt") or not state.mqtt_broker_host:
+        db_host = (state.db_host or "").strip().lower()
+        api_host = _extract_host_from_url(state.api_address or "").lower()
+        if _is_loopback(db_host) and _is_loopback(api_host):
+            # Both endpoints are local — direct mode will work.
+            if state.input_mode != "mqtt":
+                state.input_mode = "direct"
+            pipeline_hint = (
+                "Your weather station database and the API are on the same server, "
+                "so live updates can connect directly."
+            )
+        elif db_host and api_host and db_host == api_host:
+            # Same non-loopback host — direct mode works.
+            if state.input_mode != "mqtt":
+                state.input_mode = "direct"
+            pipeline_hint = (
+                "Your weather station database and the API are on the same server, "
+                "so live updates can connect directly."
+            )
+        elif db_host and api_host:
+            # Different hosts — MQTT is needed.
+            if state.input_mode != "direct":
+                state.input_mode = "mqtt"
+            pipeline_hint = (
+                "Your weather station is on a different server than the dashboard, "
+                "so live updates need an MQTT message broker to bridge them."
+            )
+
     return _render(
         request,
         "step_mqtt.html",
-        {"step": 5, "state": state, "error": None, "test_result": None},
+        {"step": 5, "state": state, "error": None, "test_result": None,
+         "pipeline_hint": pipeline_hint},
     )
 
 
@@ -534,7 +946,8 @@ async def step5_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_mqtt.html",
-                {"step": 5, "state": state, "error": "; ".join(errors.values()), "test_result": None},
+                {"step": 5, "state": state, "error": "; ".join(errors.values()),
+                 "test_result": None, "pipeline_hint": None},
                 status_code=422,
             )
     else:
@@ -663,6 +1076,10 @@ async def step4_get(request: Request) -> HTMLResponse:
         # Try existing config files first (wizard re-run).
         _merge_from_existing_config(state)
 
+        # If the config merge gave us lat/lon but no timezone, auto-detect now.
+        if state.latitude and state.longitude and not state.timezone:
+            state.timezone = lookup_timezone(state.latitude, state.longitude)
+
     if state.station_name is None:
         # Ask the API to read weewx.conf server-side.
         try:
@@ -696,7 +1113,13 @@ async def step4_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_station.html",
-        {"step": 4, "state": state, "error": error, "schema_skipped": state.schema_skipped},
+        {
+            "step": 4,
+            "state": state,
+            "error": error,
+            "schema_skipped": state.schema_skipped,
+            "timezones": _TIMEZONE_LIST,
+        },
     )
 
 
@@ -753,7 +1176,7 @@ async def step4_timezone(request: Request) -> HTMLResponse:
     return _templates.TemplateResponse(
         request=request,
         name="wizard/fragment_timezone_input.html",
-        context={"timezone": tz},
+        context={"timezone": tz, "timezones": _TIMEZONE_LIST},
     )
 
 
@@ -904,6 +1327,15 @@ async def step7_get(request: Request) -> HTMLResponse:
     )
 
 
+# Map wizard-internal provider IDs to the names expected by the API.
+# The wizard stores user-facing identifiers (e.g. "nws_alerts") but the API
+# schema uses shorter canonical names (e.g. "nws").  Add entries here as new
+# providers are discovered to have a mismatch.
+_PROVIDER_NAME_MAP: dict[str, str] = {
+    "nws_alerts": "nws",
+}
+
+
 @router.post("/apply", response_class=HTMLResponse)
 async def wizard_apply(request: Request) -> HTMLResponse:
     """Send config to the API, write local config files, display the completion page.
@@ -953,7 +1385,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     api_providers: dict[str, Any] = {}
     for domain, provider_id in state.providers.items():
         creds = state.api_keys.get(provider_id, {})
-        provider_entry: dict[str, Any] = {"provider": provider_id}
+        # Normalise the provider name: the wizard may store an internal ID that
+        # differs from the short name the API expects (e.g. "nws_alerts" → "nws").
+        api_provider_name = _PROVIDER_NAME_MAP.get(provider_id, provider_id)
+        provider_entry: dict[str, Any] = {"provider": api_provider_name}
         if creds.get("api_key"):
             provider_entry["api_key"] = creds["api_key"]
         if creds.get("api_secret"):
@@ -1034,26 +1469,51 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     # ------------------------------------------------------------------
     # Step 2: Write local config files (realtime.conf, stack.conf,
     # secrets.env with local secrets only).
+    #
+    # If this step fails, the API side is already done — its config was
+    # consumed by the apply call above.  We return the *review page* (not
+    # the completion page) so the operator can click Apply again after
+    # fixing the permissions issue.  On retry the API may return 200
+    # (idempotent) or 410 (already set up) — either way we can proceed to
+    # the local write without re-doing the API call.
     # ------------------------------------------------------------------
 
-    error: str | None = None
-    result: dict[str, Any] | None = None
     try:
         result = apply_wizard(state, _config_dir)
         clear_wizard_state(session_id)
     except OSError as exc:
-        error = "The API configuration was applied successfully. However, writing the local config files failed — check that the config directory exists and is writable, then try again."
+        local_error = (
+            f"API configuration saved successfully. "
+            f"Local config write failed: {exc}. "
+            f"Fix the permissions and click Apply again."
+        )
         logger.error("apply_wizard OSError: %s", exc)
+        return _render(
+            request,
+            "step_review.html",
+            {"step": 7, "state": state, "error": local_error},
+            status_code=422,
+        )
     except Exception:  # noqa: BLE001
-        error = "The API configuration was applied successfully. However, something went wrong writing the local config files. Check the server log for details, then try again."
+        local_error = (
+            "API configuration saved successfully. "
+            "Something went wrong writing the local config files — "
+            "check the server log for details, fix the issue, and click Apply again."
+        )
         logger.exception("apply_wizard unexpected error")
+        return _render(
+            request,
+            "step_review.html",
+            {"step": 7, "state": state, "error": local_error},
+            status_code=422,
+        )
 
     assert _templates is not None
     return _templates.TemplateResponse(
         request=request,
         name="wizard/step_complete.html",
-        context={"step": 7, "error": error, "result": result},
-        status_code=500 if error else 200,
+        context={"step": 7, "error": None, "result": result},
+        status_code=200,
     )
 
 
