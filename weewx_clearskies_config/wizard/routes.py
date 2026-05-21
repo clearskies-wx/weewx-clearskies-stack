@@ -437,11 +437,11 @@ async def step2_get(request: Request) -> HTMLResponse:
             error = "Could not read the database schema — check your connection settings in step 1 and try again."
             logger.warning("Schema introspection error: %s", exc)
 
-    canonical_names = _get_canonical_field_names()
+    canonical_groups = _get_canonical_field_groups()
     return _render(
         request,
         "step_schema.html",
-        {"step": 2, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_names": canonical_names},
+        {"step": 2, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_groups": canonical_groups},
     )
 
 
@@ -477,7 +477,7 @@ async def step2_post(request: Request) -> HTMLResponse:
             except Exception as exc:  # noqa: BLE001
                 schema_error = "Could not read the database schema — check your connection settings in step 1 and try again."
                 logger.warning("Schema introspection error in step2_post: %s", exc)
-        canonical_names = _get_canonical_field_names()
+        canonical_groups = _get_canonical_field_groups()
         return _render(
             request,
             "step_schema.html",
@@ -487,7 +487,7 @@ async def step2_post(request: Request) -> HTMLResponse:
                 "schema": schema_data,
                 "error": schema_error,
                 "errors": errors,
-                "canonical_names": canonical_names,
+                "canonical_groups": canonical_groups,
             },
             status_code=422,
         )
@@ -837,13 +837,17 @@ def _validate_column_mapping(mapping: dict[str, str | None]) -> dict[str, str]:
     Returns a dict of ``{db_column_name: error_message}`` for each offending
     column.  An empty dict means the mapping is valid.
     """
+    # Use the module-level comprehensive registry as the primary source.
+    # Fall back to STOCK_COLUMN_MAP from the API package if loaded (adds any
+    # newly promoted columns not yet reflected here), but the registry already
+    # covers all canonical entities so the API import is supplementary only.
+    valid_canonicals: set[str] = set(_ALL_CANONICAL_NAMES)
     try:
         from weewx_clearskies_api.db.reflection import STOCK_COLUMN_MAP  # type: ignore[import-untyped]
-        valid_canonicals: set[str] = set(STOCK_COLUMN_MAP.values())
+        valid_canonicals |= set(STOCK_COLUMN_MAP.values())
     except Exception:  # noqa: BLE001
-        # If the API package is unavailable, skip canonical name validation
-        # so the wizard remains functional without it.
-        valid_canonicals = set()
+        # API package unavailable — the module-level registry is sufficient.
+        pass
 
     errors: dict[str, str] = {}
 
@@ -871,17 +875,255 @@ def _validate_column_mapping(mapping: dict[str, str | None]) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-def _get_canonical_field_names() -> list[str]:
-    """Return a sorted list of all valid canonical field names from STOCK_COLUMN_MAP.
+# ---------------------------------------------------------------------------
+# Comprehensive canonical field registry — grouped for the Step 2 dropdown
+#
+# Source: docs/contracts/canonical-data-model.md (all entities §3.1–§3.9)
+#         + weewx_clearskies_api/db/reflection.py STOCK_COLUMN_MAP
+#         + §2.1 unit-group members that name canonical fields
+#
+# Every canonical field appears in exactly one group.
+# Fields within each group are sorted alphabetically.
+# ---------------------------------------------------------------------------
 
-    Used to populate the Step 2 dropdown so operators can only select known names.
-    Falls back to an empty list if the API package is unavailable.
+CANONICAL_FIELD_GROUPS: list[tuple[str, list[str]]] = [
+    (
+        "Temperature",
+        sorted([
+            "appTemp",        # apparent / feels-like temperature
+            "dewpoint",
+            "dewpoint1",      # expansion-slot dewpoint
+            "extraTemp1", "extraTemp2", "extraTemp3",
+            "extraTemp4", "extraTemp5", "extraTemp6",
+            "extraTemp7", "extraTemp8",
+            "heatindex",
+            "heatingTemp",    # heating system supply temperature
+            "humidex",        # Canadian humidex index
+            "inTemp",
+            "outTemp",
+            "tempMax",        # daily forecast high
+            "tempMin",        # daily forecast low
+            "THSW",           # Temperature-Humidity-Sun-Wind (Davis VP series)
+            "windchill",
+        ]),
+    ),
+    (
+        "Humidity",
+        sorted([
+            "extraHumid1", "extraHumid2", "extraHumid3",
+            "extraHumid4", "extraHumid5", "extraHumid6",
+            "extraHumid7", "extraHumid8",
+            "inHumidity",
+            "outHumidity",
+            "snowMoisture",   # snow moisture percentage
+        ]),
+    ),
+    (
+        "Wind",
+        sorted([
+            "gustdir",        # direction of peak gust
+            "rms",            # root-mean-square wind speed
+            "vecavg",         # vector-mean wind speed
+            "vecdir",         # vector-mean wind direction
+            "wind",           # scalar wind (composite)
+            "windDir",
+            "windGust",
+            "windGustDir",
+            "windGustMax",    # daily forecast peak gust
+            "windgustvec",    # wind gust vector
+            "windrun",        # wind run = sum(windSpeed × interval)
+            "windSpeed",
+            "windSpeedMax",   # daily forecast max wind speed
+            "windvec",        # wind vector
+        ]),
+    ),
+    (
+        "Pressure",
+        sorted([
+            "altimeter",
+            "altimeterRate",  # rate of change of altimeter pressure
+            "barometer",
+            "barometerRate",  # rate of change of barometer pressure
+            "pressure",
+            "pressureRate",   # rate of change of station pressure
+        ]),
+    ),
+    (
+        "Rain & Snow",
+        sorted([
+            "ET",             # evapotranspiration
+            "hail",           # per-interval hail accumulation
+            "hailRate",
+            "pop",            # probability of precipitation (operator-supplied)
+            "precipAmount",   # forecast precipitation accumulation
+            "precipProbability",      # hourly forecast precip probability
+            "precipProbabilityMax",   # daily forecast max precip probability
+            "precipType",     # rain / snow / sleet / freezing-rain / hail / none
+            "rain",
+            "rainDur",        # duration of rainfall within interval
+            "rainRate",
+            "snow",
+            "snowDepth",
+            "snowRate",
+        ]),
+    ),
+    (
+        "Solar & UV",
+        sorted([
+            "cloudbase",      # estimated cloud base altitude
+            "cloudCover",     # forecast cloud cover (0–100)
+            "cloudcover",     # archive cloud cover (wview_extended)
+            "daySunshineDur", # day-to-date cumulative sunshine duration
+            "illuminance",    # light level in lux
+            "maxSolarRad",    # theoretical clear-sky solar radiation
+            "radiation",
+            "sunshineDur",    # sunshine duration within interval
+            "sunshineDurDoc", # documentation alias for sunshineDur
+            "UV",
+            "uvIndexMax",     # daily forecast UV index maximum
+        ]),
+    ),
+    (
+        "Air Quality (AQI)",
+        sorted([
+            "aqi",
+            "aqiCategory",
+            "aqiLocation",
+            "aqiMainPollutant",
+            "co",             # carbon monoxide (weewx extension)
+            "co2",            # carbon dioxide (weewx extension)
+            "nh3",            # ammonia (weewx extension)
+            "no2",            # nitrogen dioxide (weewx extension)
+            "o3",             # ozone (weewx extension)
+            "pb",             # lead (weewx extension)
+            "pm1_0",          # PM1.0 concentration (weewx extension)
+            "pm2_5",          # PM2.5 concentration (weewx extension)
+            "pm10_0",         # PM10 concentration (weewx extension)
+            "pollutantCO",
+            "pollutantNO2",
+            "pollutantO3",
+            "pollutantPM10",
+            "pollutantPM25",
+            "pollutantSO2",
+            "so2",            # sulfur dioxide (weewx extension)
+        ]),
+    ),
+    (
+        "Soil & Leaf",
+        sorted([
+            "leafTemp1", "leafTemp2",
+            "leafWet1", "leafWet2",
+            "soilMoist1", "soilMoist2", "soilMoist3", "soilMoist4",
+            "soilTemp1", "soilTemp2", "soilTemp3", "soilTemp4",
+        ]),
+    ),
+    (
+        "Lightning",
+        sorted([
+            "lightning_distance",
+            "lightning_disturber_count",
+            "lightning_noise_count",
+            "lightning_strike_count",
+        ]),
+    ),
+    (
+        "System & Battery",
+        sorted([
+            "consBatteryVoltage",
+            "heatingVoltage",
+            "noise",            # sound level in dB
+            "referenceVoltage",
+            "rxCheckPercent",
+            "supplyVoltage",
+            "txBatteryStatus",  # transmitter battery status flag
+        ]),
+    ),
+    (
+        "Degree Days",
+        sorted([
+            "cooldeg",
+            "growdeg",
+            "heatdeg",
+        ]),
+    ),
+    (
+        "Forecast",
+        sorted([
+            "narrative",        # multi-sentence daily forecast summary
+            "sunrise",
+            "sunset",
+            "validDate",        # daily forecast date (YYYY-MM-DD)
+            "validTime",        # hourly forecast valid time (UTC ISO-8601)
+            "weatherCode",      # provider weather code (WMO / OWM / etc.)
+            "weatherText",      # short weather label
+        ]),
+    ),
+    (
+        "Earthquake",
+        sorted([
+            "alert",            # USGS PAGER alert level
+            "depth",            # kilometers below surface
+            "felt",             # count of 'did you feel it' reports
+            "latitude",
+            "longitude",
+            "magnitude",
+            "magnitudeType",    # mw / ml / md / mb etc.
+            "mmi",              # Modified Mercalli Intensity
+            "place",            # human-readable location description
+            "status",           # automatic / reviewed / deleted / etc.
+            "tsunami",          # tsunami flag
+            "url",              # event detail page URL
+        ]),
+    ),
+    (
+        "Station Metadata",
+        sorted([
+            "altitude",               # above mean sea level
+            "firstRecord",            # oldest archive timestamp
+            "hardware",               # weewx station hardware type
+            "lastRecord",             # newest archive timestamp
+            "name",                   # station human-readable name
+            "stationId",
+            "timezone",               # IANA TZ identifier
+            "timezoneOffsetMinutes",
+            "unitSystem",             # US / METRIC / METRICWX
+        ]),
+    ),
+    (
+        "Archive / Meta",
+        sorted([
+            "interval",     # archive interval length in minutes
+            "observedAt",   # AQI observation timestamp
+            "timestamp",    # observation timestamp (from dateTime epoch)
+            "usUnits",      # weewx unit system identifier
+        ]),
+    ),
+]
+
+# Flat set of all canonical field names across all groups — used for
+# validation in _validate_column_mapping without importing the API package.
+_ALL_CANONICAL_NAMES: frozenset[str] = frozenset(
+    name
+    for _label, fields in CANONICAL_FIELD_GROUPS
+    for name in fields
+)
+
+
+def _get_canonical_field_names() -> list[str]:
+    """Return a sorted list of all valid canonical field names (all entities).
+
+    Kept for any legacy call sites; prefer _get_canonical_field_groups().
     """
-    try:
-        from weewx_clearskies_api.db.reflection import STOCK_COLUMN_MAP  # type: ignore[import-untyped]
-        return sorted(set(STOCK_COLUMN_MAP.values()))
-    except Exception:  # noqa: BLE001
-        return []
+    return sorted(_ALL_CANONICAL_NAMES)
+
+
+def _get_canonical_field_groups() -> list[tuple[str, list[str]]]:
+    """Return the canonical field registry as a list of (group_label, [field, ...]) tuples.
+
+    Used to populate the Step 2 grouped <optgroup> dropdown.
+    Groups and fields within each group are pre-sorted at module level.
+    """
+    return CANONICAL_FIELD_GROUPS
 
 
 def _parse_int(value: str, *, default: int) -> int:

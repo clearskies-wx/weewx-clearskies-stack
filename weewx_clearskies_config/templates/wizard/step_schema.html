@@ -107,8 +107,12 @@
                         aria-describedby="col-hint-{{ col.db_name }}{% if col_error %} col-err-{{ col.db_name }}{% endif %}"
                         {% if col_error %}aria-invalid="true" class="input-error"{% endif %}>
                   <option value="">— leave blank to skip —</option>
-                  {% for name in canonical_names %}
-                  <option value="{{ name }}"{% if col.suggested == name %} selected{% endif %}>{{ name }}</option>
+                  {% for group_label, fields in canonical_groups %}
+                  <optgroup label="{{ group_label }}">
+                    {% for name in fields %}
+                    <option value="{{ name }}"{% if col.suggested == name %} selected{% endif %}>{{ name }}</option>
+                    {% endfor %}
+                  </optgroup>
                   {% endfor %}
                 </select>
                 {% if col_error %}
