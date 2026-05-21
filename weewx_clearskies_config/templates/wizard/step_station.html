@@ -155,7 +155,6 @@
 
 <script>
 (function () {
-  var FEET_TO_METERS = 0.3048;
   var altInput = document.getElementById("altitude_meters");
   var altUnitHidden = document.getElementById("altitude_unit");
   var altUnitSelect = document.getElementById("altitude_unit_select");
@@ -163,18 +162,9 @@
   function onAltUnitChange(newUnit) {
     var prev = altUnitHidden.value;
     if (prev === newUnit) return;
-    var raw = parseFloat(altInput.value);
-    if (!isNaN(raw)) {
-      if (newUnit === "feet" && prev === "meters") {
-        altInput.value = (raw / FEET_TO_METERS).toFixed(1);
-      } else if (newUnit === "meters" && prev === "feet") {
-        altInput.value = (raw * FEET_TO_METERS).toFixed(2);
-      }
-    }
     altUnitHidden.value = newUnit;
     altInput.setAttribute("min", newUnit === "feet" ? "-1640" : "-500");
     altInput.setAttribute("max", newUnit === "feet" ? "98425" : "30000");
-    altInput.setAttribute("placeholder", newUnit === "feet" ? "0" : "0");
     document.querySelector("label[for='altitude_meters']").textContent =
       "Altitude (" + newUnit + ")";
   }
