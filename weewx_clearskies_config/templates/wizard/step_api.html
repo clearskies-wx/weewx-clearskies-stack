@@ -75,7 +75,7 @@
       {% if not rerun_mode %}
       <label for="trust_token">Trust token <span aria-hidden="true">*</span></label>
       <div class="password-field">
-        <input type="text"
+        <input type="password"
                id="trust_token"
                name="trust_token"
                required
@@ -84,7 +84,7 @@
                aria-describedby="trust-token-hint">
         <button type="button"
                 class="password-toggle"
-                aria-label="Hide trust token"
+                aria-label="Show trust token"
                 aria-controls="trust_token"
                 onclick="togglePassword(this)">
           <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
