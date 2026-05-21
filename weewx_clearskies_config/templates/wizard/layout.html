@@ -426,10 +426,11 @@
   /* Focus management after HTMX swap */
   document.addEventListener("htmx:afterSwap", function (event) {
     if (event.detail && event.detail.target && event.detail.target.id === "wizard-content") {
+      window.scrollTo({ top: 0, behavior: "instant" });
       var heading = event.detail.target.querySelector("h2, h3");
       if (heading) {
         heading.setAttribute("tabindex", "-1");
-        heading.focus({ preventScroll: false });
+        heading.focus({ preventScroll: true });
       }
     }
   });
