@@ -76,6 +76,7 @@ def create_app(config: AppConfig) -> FastAPI:
 
     app.add_middleware(_RateLimitMiddleware, rate_limiter=rate_limiter)
     app.mount("/static", StaticFiles(directory=str(_static_dir())), name="static")
+    app.mount("/wizard/static", StaticFiles(directory=str(_static_dir())), name="wizard-static")
 
     # Mount the wizard router.  create_wizard_router() injects shared objects
     # (templates, session_manager, config_dir) that the router endpoints need.
