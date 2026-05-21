@@ -11,39 +11,6 @@
   </div>
   {% endif %}
 
-  {# Shared datalist of known canonical field names for autocomplete. #}
-  <datalist id="canonical-names">
-    <option value="outTemp">
-    <option value="inTemp">
-    <option value="outHumidity">
-    <option value="inHumidity">
-    <option value="barometer">
-    <option value="altimeter">
-    <option value="pressure">
-    <option value="windSpeed">
-    <option value="windDir">
-    <option value="windGust">
-    <option value="windGustDir">
-    <option value="rain">
-    <option value="rainRate">
-    <option value="ET">
-    <option value="radiation">
-    <option value="UV">
-    <option value="extraTemp1">
-    <option value="extraTemp2">
-    <option value="extraTemp3">
-    <option value="extraHumid1">
-    <option value="extraHumid2">
-    <option value="soilTemp1">
-    <option value="soilTemp2">
-    <option value="soilMoist1">
-    <option value="soilMoist2">
-    <option value="leafTemp1">
-    <option value="leafWet1">
-    <option value="lightning_strike_count">
-    <option value="lightning_distance">
-  </datalist>
-
   <form hx-post="/wizard/step/2"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
@@ -91,8 +58,8 @@
         <legend>Custom columns — assign canonical names</legend>
         <p>
           <small>
-            Type a canonical name (suggestions appear as you type), or leave blank to skip.
-            Columns with a suggested match are pre-filled — verify and adjust as needed.
+            Select a canonical name from the dropdown, or leave blank to skip.
+            Columns with a suggested match are pre-selected — verify and adjust as needed.
           </small>
         </p>
         <table>
@@ -103,7 +70,7 @@
               <th scope="col">Confidence</th>
               <th scope="col">
                 Canonical name
-                <span class="sr-only">(type or choose from suggestions; leave blank to skip)</span>
+                <span class="sr-only">(choose from dropdown; leave blank to skip)</span>
               </th>
             </tr>
           </thead>
@@ -135,15 +102,15 @@
                 <label for="col_{{ col.db_name }}" class="sr-only">
                   Canonical name for {{ col.db_name }}
                 </label>
-                <input type="text"
-                       id="col_{{ col.db_name }}"
-                       name="col_{{ col.db_name }}"
-                       value="{{ col.suggested or '' }}"
-                       placeholder="canonical name or leave blank to skip"
-                       autocomplete="off"
-                       list="canonical-names"
-                       aria-describedby="col-hint-{{ col.db_name }}{% if col_error %} col-err-{{ col.db_name }}{% endif %}"
-                       {% if col_error %}aria-invalid="true" class="input-error"{% endif %}>
+                <select id="col_{{ col.db_name }}"
+                        name="col_{{ col.db_name }}"
+                        aria-describedby="col-hint-{{ col.db_name }}{% if col_error %} col-err-{{ col.db_name }}{% endif %}"
+                        {% if col_error %}aria-invalid="true" class="input-error"{% endif %}>
+                  <option value="">— leave blank to skip —</option>
+                  {% for name in canonical_names %}
+                  <option value="{{ name }}"{% if col.suggested == name %} selected{% endif %}>{{ name }}</option>
+                  {% endfor %}
+                </select>
                 {% if col_error %}
                 <span id="col-err-{{ col.db_name }}" class="error-text" role="alert">&#9888; {{ col_error }}</span>
                 {% endif %}

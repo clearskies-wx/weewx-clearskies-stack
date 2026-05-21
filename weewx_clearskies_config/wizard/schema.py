@@ -94,7 +94,12 @@ def suggest_canonical(
         if canonical.lower() == lower_col:
             return canonical, "high"
 
-    # Substring match: db_column contained in canonical or canonical in db_column
+    # Substring match: db_column contained in canonical or canonical in db_column.
+    # Skip for very short column names (≤3 chars) to avoid false positives such as
+    # "co" (carbon monoxide) matching "cooldeg".
+    if len(db_column) <= 3:
+        return None, "none"
+
     substring_matches = [
         c for c in canonical_fields
         if lower_col in c.lower() or c.lower() in lower_col

@@ -437,10 +437,11 @@ async def step2_get(request: Request) -> HTMLResponse:
             error = "Could not read the database schema — check your connection settings in step 1 and try again."
             logger.warning("Schema introspection error: %s", exc)
 
+    canonical_names = _get_canonical_field_names()
     return _render(
         request,
         "step_schema.html",
-        {"step": 2, "state": state, "schema": schema_data, "error": error, "errors": {}},
+        {"step": 2, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_names": canonical_names},
     )
 
 
@@ -476,6 +477,7 @@ async def step2_post(request: Request) -> HTMLResponse:
             except Exception as exc:  # noqa: BLE001
                 schema_error = "Could not read the database schema — check your connection settings in step 1 and try again."
                 logger.warning("Schema introspection error in step2_post: %s", exc)
+        canonical_names = _get_canonical_field_names()
         return _render(
             request,
             "step_schema.html",
@@ -485,6 +487,7 @@ async def step2_post(request: Request) -> HTMLResponse:
                 "schema": schema_data,
                 "error": schema_error,
                 "errors": errors,
+                "canonical_names": canonical_names,
             },
             status_code=422,
         )
@@ -866,6 +869,19 @@ def _validate_column_mapping(mapping: dict[str, str | None]) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 # Utility helpers
 # ---------------------------------------------------------------------------
+
+
+def _get_canonical_field_names() -> list[str]:
+    """Return a sorted list of all valid canonical field names from STOCK_COLUMN_MAP.
+
+    Used to populate the Step 2 dropdown so operators can only select known names.
+    Falls back to an empty list if the API package is unavailable.
+    """
+    try:
+        from weewx_clearskies_api.db.reflection import STOCK_COLUMN_MAP  # type: ignore[import-untyped]
+        return sorted(set(STOCK_COLUMN_MAP.values()))
+    except Exception:  # noqa: BLE001
+        return []
 
 
 def _parse_int(value: str, *, default: int) -> int:
