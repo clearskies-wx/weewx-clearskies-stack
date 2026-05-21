@@ -76,6 +76,14 @@ def introspect_schema(db_url: str) -> dict[str, Any]:
         for info in registry.stock.values()
     ]
 
+    _CONFIDENCE_RANK = {"high": 3, "medium": 2, "low": 1, "none": 0}
+
+    # Canonical names already claimed by stock columns.
+    claimed: dict[str, tuple[int, str]] = {
+        info.canonical_name: (99, info.db_name)
+        for info in registry.stock.values()
+    }
+
     unmapped_columns = []
     for info in registry.unmapped.values():
         lower_name = info.db_name.lower()
@@ -89,6 +97,17 @@ def introspect_schema(db_url: str) -> dict[str, Any]:
                 "confidence": confidence,
             }
         )
+        if suggested:
+            rank = _CONFIDENCE_RANK.get(confidence, 0)
+            prev_rank, _ = claimed.get(suggested, (-1, ""))
+            if rank > prev_rank:
+                claimed[suggested] = (rank, info.db_name)
+
+    # Dedup: only the highest-confidence column keeps each suggestion.
+    for col in unmapped_columns:
+        if col["suggested"] and claimed.get(col["suggested"], (0, ""))[1] != col["db_name"]:
+            col["suggested"] = None
+            col["confidence"] = "none"
 
     return {
         "stock_columns": stock_columns,
