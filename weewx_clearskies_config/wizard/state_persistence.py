@@ -42,7 +42,10 @@ def _read_secrets_env(config_dir: Path) -> dict[str, str]:
             if not line or line.startswith("#") or "=" not in line:
                 continue
             key, _, value = line.partition("=")
-            result[key.strip()] = value.strip()
+            value = value.strip()
+            if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+                value = value[1:-1]
+            result[key.strip()] = value
     except OSError:
         pass
     return result
