@@ -1,9 +1,9 @@
 {% if result.success %}
-<span class="pico-color-green-500">
-  &#10003; Connected{% if result.version %} — server version: {{ result.version }}{% endif %}
-</span>
+<div class="alert-success">
+  Connected{% if result.version %} — server version: {{ result.version }}{% endif %}
+</div>
 {% else %}
-<span class="pico-color-red-500">
-  &#10007; {{ result.error }}
-</span>
+<div class="alert-error">
+  {{ result.error }}
+</div>
 {% endif %}

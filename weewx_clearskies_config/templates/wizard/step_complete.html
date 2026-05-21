@@ -8,13 +8,13 @@
   </header>
 
   {% if error %}
-  <div role="alert" aria-live="assertive" class="pico-color-red-500">
+  <div role="alert" aria-live="assertive" class="alert-error">
     <h3>Configuration failed</h3>
     <p>{{ error }}</p>
     <a href="#"
        hx-get="/wizard/step/7"
        hx-target="#wizard-content"
-       hx-swap="innerHTML"
+       hx-swap="innerHTML show:window:top"
        hx-indicator="#wizard-spinner">
       ← Back to Review
     </a>
@@ -87,7 +87,7 @@
   {% endif %}{# end if result #}
 
   {# ---- Troubleshooting / manual steps -------------------------------- #}
-  <details>
+  <details class="wizard-details">
     <summary>Troubleshooting — manual steps if needed</summary>
     <p>
       If the dashboard does not load or shows stale data after a minute or two,
@@ -124,3 +124,19 @@
   <a href="/">Return to home</a>
   {% endif %}
 </article>
+
+{# ------------------------------------------------------------------ #}
+{# OOB: replace the progress bar nav so all 7 steps show as complete. #}
+{# hx-swap-oob="true" targets the element with matching id="wizard-nav". #}
+{# ------------------------------------------------------------------ #}
+<nav id="wizard-nav" aria-label="Wizard progress" hx-swap-oob="true">
+  <ol class="wizard-progress" role="list">
+    <li class="is-complete"><span class="step-label" aria-hidden="true">API Connection</span><span class="sr-only">Step 1: API Connection (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Database</span><span class="sr-only">Step 2: Database (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Columns</span><span class="sr-only">Step 3: Columns (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Station</span><span class="sr-only">Step 4: Station (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Live Updates</span><span class="sr-only">Step 5: Live Updates (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Providers</span><span class="sr-only">Step 6: Providers (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Review</span><span class="sr-only">Step 7: Review (complete)</span></li>
+  </ol>
+</nav>

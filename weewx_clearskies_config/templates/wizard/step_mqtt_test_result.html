@@ -1,10 +1,10 @@
 {% if result.success %}
-<span class="pico-color-green-500">
-  &#10003; TCP connection succeeded.
+<div class="alert-success">
+  TCP connection succeeded.
   {% if result.note %}<br><small>{{ result.note }}</small>{% endif %}
-</span>
+</div>
 {% else %}
-<span class="pico-color-red-500">
-  &#10007; {{ result.error }}
-</span>
+<div class="alert-error">
+  {{ result.error }}
+</div>
 {% endif %}

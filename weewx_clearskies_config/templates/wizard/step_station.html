@@ -6,7 +6,7 @@
   </header>
 
   {% if error %}
-  <div role="alert" class="pico-color-red-500">
+  <div role="alert" class="alert-error">
     <strong>Error:</strong> {{ error }}
   </div>
   {% endif %}
@@ -14,7 +14,7 @@
   <form id="station-form"
         hx-post="/wizard/step/4"
         hx-target="#wizard-content"
-        hx-swap="innerHTML"
+        hx-swap="innerHTML show:window:top"
         hx-indicator="#wizard-spinner"
         autocomplete="off">
 
@@ -82,7 +82,7 @@
            aria-live="polite"
            style="font-size:0.875rem; margin-top:0.25rem; min-height:1.25em;"></div>
 
-      <div class="grid" style="align-items:end;">
+      <div class="grid" style="align-items:start;">
         <div>
           <label for="altitude_meters">Altitude</label>
           <input type="number"
@@ -150,7 +150,7 @@
       <button type="button"
               hx-get="/wizard/step/2"
               hx-target="#wizard-content"
-              hx-swap="innerHTML"
+              hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
         ← Previous
       </button>
@@ -158,7 +158,7 @@
       <button type="button"
               hx-get="/wizard/step/3"
               hx-target="#wizard-content"
-              hx-swap="innerHTML"
+              hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
         ← Previous
       </button>

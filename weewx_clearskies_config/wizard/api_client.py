@@ -250,7 +250,10 @@ class ApiClient:
 
         Returns:
             Dict with keys such as "station_name", "latitude", "longitude",
-            "altitude_meters", "timezone".
+            "altitude_meters", "altitude_unit" ("foot" or "meter"), "timezone".
+            Note: altitude_meters carries the raw numeric value from weewx.conf
+            without unit conversion; altitude_unit indicates the unit so callers
+            can convert to meters when needed.
         """
         _log.info("Fetching station identity from API")
         response = self._request("GET", "/setup/station", timeout=_DEFAULT_TIMEOUT)

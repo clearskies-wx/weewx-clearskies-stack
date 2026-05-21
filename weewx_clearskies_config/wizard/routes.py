@@ -351,21 +351,87 @@ async def wizard_index(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
 
-    # Fresh-browser case: the session is new so state.api_address is empty, but
-    # setup may have been completed in a previous session.  Check known_apis.json
-    # (fingerprint store) and wizard_progress_*.json files — either file existing
-    # means at least step 1 was completed before.  Pre-populate api_address from
-    # the first pinned API so the template renders it pre-filled.
+    # Fresh-browser case: the session is new so state fields are blank, but a
+    # previous session may have made progress.  Two recovery paths:
+    #
+    # 1. wizard_progress_*.json exists — merge its data into the current session so
+    #    API credentials, DB settings, column mappings, and station info are
+    #    restored.  Only fills fields that are still at their defaults (never
+    #    overwrites data the user has already typed in the new session).
+    # 2. known_apis.json exists but no progress file — pre-populate api_address
+    #    from the pinned fingerprint store alone.
     if not state.api_address and _config_dir is not None:
-        known = load_known_apis(_config_dir)
-        if known:
-            # Use the first (typically only) pinned API URL.
-            state.api_address = next(iter(known))
+        from weewx_clearskies_config.wizard.state_persistence import load_most_recent_progress
+        prior = load_most_recent_progress(_config_dir)
+        if prior is not None:
+            # Merge: only fill blank fields in state from the prior session.
+            # api_session_id is intentionally excluded — it expires with the old session.
+            if not state.api_address and prior.api_address:
+                state.api_address = prior.api_address
+            if not state.cert_fingerprint and prior.cert_fingerprint:
+                state.cert_fingerprint = prior.cert_fingerprint
+            if state.db_host is None and prior.db_host is not None:
+                state.db_host = prior.db_host
+            if state.db_port == 3306 and prior.db_port != 3306:
+                state.db_port = prior.db_port
+            if state.db_user is None and prior.db_user is not None:
+                state.db_user = prior.db_user
+            if state.db_password is None and prior.db_password is not None:
+                state.db_password = prior.db_password
+            if state.db_name == "weewx" and prior.db_name != "weewx":
+                state.db_name = prior.db_name
+            if not state.column_mapping and prior.column_mapping:
+                state.column_mapping = prior.column_mapping
+            if state.station_name is None and prior.station_name is not None:
+                state.station_name = prior.station_name
+            if state.latitude is None and prior.latitude is not None:
+                state.latitude = prior.latitude
+            if state.longitude is None and prior.longitude is not None:
+                state.longitude = prior.longitude
+            if state.altitude_meters is None and prior.altitude_meters is not None:
+                state.altitude_meters = prior.altitude_meters
+            if state.timezone is None and prior.timezone is not None:
+                state.timezone = prior.timezone
+            if not state.providers and prior.providers:
+                state.providers = prior.providers
+            if not state.api_keys and prior.api_keys:
+                state.api_keys = prior.api_keys
+            if state.input_mode == "direct" and prior.input_mode != "direct":
+                state.input_mode = prior.input_mode
+            if not state.mqtt_broker_host and prior.mqtt_broker_host:
+                state.mqtt_broker_host = prior.mqtt_broker_host
+            if state.mqtt_broker_port == 1883 and prior.mqtt_broker_port != 1883:
+                state.mqtt_broker_port = prior.mqtt_broker_port
+            if state.mqtt_topic == "weewx/loop" and prior.mqtt_topic != "weewx/loop":
+                state.mqtt_topic = prior.mqtt_topic
+            if state.mqtt_client_id == "weewx-clearskies-realtime" and prior.mqtt_client_id != "weewx-clearskies-realtime":
+                state.mqtt_client_id = prior.mqtt_client_id
+            if not state.mqtt_username and prior.mqtt_username:
+                state.mqtt_username = prior.mqtt_username
+            if not state.mqtt_password and prior.mqtt_password:
+                state.mqtt_password = prior.mqtt_password
+            if not state.mqtt_tls and prior.mqtt_tls:
+                state.mqtt_tls = prior.mqtt_tls
+            if state.topology == "same-host" and prior.topology != "same-host":
+                state.topology = prior.topology
+            if state.proxy_secret is None and prior.proxy_secret is not None:
+                state.proxy_secret = prior.proxy_secret
+            if state.api_bind_host == "127.0.0.1" and prior.api_bind_host != "127.0.0.1":
+                state.api_bind_host = prior.api_bind_host
+            if state.api_bind_port == 8765 and prior.api_bind_port != 8765:
+                state.api_bind_port = prior.api_bind_port
+            if state.realtime_bind_host == "127.0.0.1" and prior.realtime_bind_host != "127.0.0.1":
+                state.realtime_bind_host = prior.realtime_bind_host
+            if state.realtime_bind_port == 8766 and prior.realtime_bind_port != 8766:
+                state.realtime_bind_port = prior.realtime_bind_port
             save_wizard_state(session_id, state)
-        elif list(_config_dir.glob("wizard_progress_*.json")):
-            # Progress file exists but no pinned API — still signal re-run mode
-            # so the UI does not show first-run messaging.
-            pass  # api_address stays empty; rerun computed below handles this
+            logger.info("Restored wizard progress from prior session into session %s", session_id[:8])
+        else:
+            known = load_known_apis(_config_dir)
+            if known:
+                # Use the first (typically only) pinned API URL.
+                state.api_address = next(iter(known))
+                save_wizard_state(session_id, state)
 
     api_host, api_port = _split_api_address(state.api_address or "")
     rerun = _is_rerun_mode(state.api_address)
@@ -1021,6 +1087,17 @@ async def step3_get(request: Request) -> HTMLResponse:
             error = "Could not reach the API to fetch the database schema. Check that the API is running and try again."
             logger.warning("get_schema network error in step3_get", exc_info=True)
 
+    # If the user has previously saved column mappings (e.g. they advanced to step 4
+    # then clicked Previous), overlay those choices onto the schema's suggested values
+    # so the dropdowns pre-select what they chose rather than the heuristic suggestion.
+    if schema_data is not None and state.column_mapping:
+        for col in schema_data.get("unmapped_columns", []):
+            saved = state.column_mapping.get(col["db_name"])
+            if saved is not None:
+                # saved may be "" (skip) or a canonical name — use it as the selection.
+                col["suggested"] = saved or None
+                col["confidence"] = "saved"
+
     return _render(
         request,
         "step_schema.html",
@@ -1112,7 +1189,15 @@ async def step4_get(request: Request) -> HTMLResponse:
                 if state.longitude is None:
                     state.longitude = _to_float(api_data.get("longitude"))
                 if state.altitude_meters is None:
-                    state.altitude_meters = _to_float(api_data.get("altitude_meters"))
+                    raw_alt = _to_float(api_data.get("altitude_meters"))
+                    alt_unit = str(api_data.get("altitude_unit", "meter")).strip().lower()
+                    # The API returns the raw numeric value from weewx.conf without
+                    # converting units.  Convert feet → meters so state.altitude_meters
+                    # is always in meters (matching the field name and step4_post logic).
+                    if raw_alt is not None and ("foot" in alt_unit or "feet" in alt_unit or alt_unit == "ft"):
+                        state.altitude_meters = raw_alt * 0.3048
+                    else:
+                        state.altitude_meters = raw_alt
                 if state.timezone is None and api_data.get("timezone"):
                     state.timezone = str(api_data["timezone"])
                 if state.latitude and state.longitude and not state.timezone:

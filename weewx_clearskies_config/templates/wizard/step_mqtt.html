@@ -7,7 +7,7 @@
   </header>
 
   {% if error %}
-  <div role="alert" class="pico-color-red-500">
+  <div role="alert" class="alert-error">
     <strong>Error:</strong> {{ error }}
   </div>
   {% endif %}
@@ -19,7 +19,7 @@
   <form id="mqtt-form"
         hx-post="/wizard/step/5"
         hx-target="#wizard-content"
-        hx-swap="innerHTML"
+        hx-swap="innerHTML show:window:top"
         hx-indicator="#wizard-spinner"
         autocomplete="off">
 
@@ -262,7 +262,7 @@
       <button type="button"
               hx-get="/wizard/step/4"
               hx-target="#wizard-content"
-              hx-swap="innerHTML"
+              hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
         ← Previous
       </button>

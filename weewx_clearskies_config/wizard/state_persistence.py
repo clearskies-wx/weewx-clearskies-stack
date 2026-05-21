@@ -164,6 +164,97 @@ def delete_progress(session_id: str, config_dir: Path) -> None:
         logger.warning("Could not delete wizard progress file %s: %s", path.name, exc)
 
 
+def load_most_recent_progress(config_dir: Path) -> WizardState | None:
+    """Load the most recently saved wizard progress file, regardless of session_id.
+
+    Used when a new session starts with blank state but a progress file from a
+    previous session exists on disk (e.g. after a service restart or browser
+    close).  The file is identified by its ``_saved_at`` timestamp; the
+    session_id embedded in the filename is ignored.
+
+    Returns the deserialized WizardState on success, or None if no suitable
+    progress file is found.
+    """
+    best_path: Path | None = None
+    best_saved_at: float = -1.0
+
+    try:
+        candidates = list(config_dir.glob("wizard_progress_*.json"))
+    except OSError as exc:
+        logger.warning("Could not scan config_dir for progress files: %s", exc)
+        return None
+
+    for path in candidates:
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            saved_at = raw.get("_saved_at", 0)
+            if isinstance(saved_at, (int, float)) and saved_at > best_saved_at:
+                best_saved_at = float(saved_at)
+                best_path = path
+        except (OSError, json.JSONDecodeError):
+            pass
+
+    if best_path is None:
+        return None
+
+    try:
+        raw = json.loads(best_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Corrupt wizard progress file %s: %s", best_path.name, exc)
+        return None
+
+    if not isinstance(raw, dict):
+        return None
+
+    raw.pop("_saved_at", None)
+
+    secrets = _read_secrets_env(config_dir)
+
+    if raw.get("db_password") == _SECRET_SENTINEL:
+        raw["db_password"] = secrets.get("WEEWX_CLEARSKIES_DB_PASSWORD")
+
+    if raw.get("proxy_secret") == _SECRET_SENTINEL:
+        raw["proxy_secret"] = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
+
+    if raw.get("mqtt_password") == _SECRET_SENTINEL:
+        raw["mqtt_password"] = secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
+
+    providers: dict[str, str] = raw.get("providers", {}) if isinstance(raw.get("providers"), dict) else {}
+    api_keys: dict[str, dict[str, str]] = {}
+    raw_api_keys = raw.get("api_keys", {})
+    if isinstance(raw_api_keys, dict):
+        for provider_id, creds in raw_api_keys.items():
+            if not isinstance(creds, dict):
+                continue
+            restored: dict[str, str] = {}
+            for field_name, val in creds.items():
+                if val == _SECRET_SENTINEL:
+                    domain = _domain_for_provider(provider_id, providers)
+                    if domain:
+                        env_key = (
+                            f"WEEWX_CLEARSKIES"
+                            f"_{domain.upper()}"
+                            f"_{provider_id.upper()}"
+                            f"_{field_name.upper()}"
+                        )
+                        restored[field_name] = secrets.get(env_key, "")
+                    else:
+                        restored[field_name] = ""
+                elif isinstance(val, str):
+                    restored[field_name] = val
+            api_keys[provider_id] = restored
+    raw["api_keys"] = api_keys
+
+    # api_session_id is never persisted — always starts blank in a new session.
+    raw.pop("api_session_id", None)
+
+    try:
+        return _state_from_dict(raw)
+    except (TypeError, ValueError, KeyError) as exc:
+        logger.warning("Could not reconstruct WizardState from %s: %s", best_path.name, exc)
+        return None
+
+
 def cleanup_stale_progress(config_dir: Path, max_age_hours: int = 72) -> None:
     """Remove progress files older than *max_age_hours*."""
     cutoff = time.time() - max_age_hours * 3600
