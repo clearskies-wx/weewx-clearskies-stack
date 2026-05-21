@@ -54,7 +54,6 @@ from weewx_clearskies_config.wizard.schema import (
 )
 from weewx_clearskies_config.wizard.state import (
     WizardState,
-    clear_wizard_state,
     configure_state_persistence,
     get_wizard_state,
     save_wizard_state,
@@ -607,6 +606,20 @@ async def step1_api_post(request: Request) -> HTMLResponse:
         # api_session_id is intentionally left as-is (may be None or stale —
         # _get_api_client prefers session_id when set, so clear it).
         state.api_session_id = None
+
+        # Pre-populate all fields from the API's current config so the operator
+        # doesn't have to re-enter every password and API key on re-run.
+        _merge_from_api_current_config(client, state)
+
+        # Also read MQTT password from the local secrets.env (it lives here, not
+        # on the API side, because the realtime service is on weather-dev).
+        if not state.mqtt_password and _config_dir is not None:
+            from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
+            local_secrets = _read_secrets_env(_config_dir)
+            mqtt_pw = local_secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
+            if mqtt_pw:
+                state.mqtt_password = mqtt_pw
+
         save_wizard_state(session_id, state)
         return _render(
             request,
@@ -1598,7 +1611,11 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
     try:
         result = apply_wizard(state, _config_dir)
-        clear_wizard_state(session_id)
+        # Save the final state rather than deleting it.  The progress file
+        # (mode 0600) serves as a backup for session recovery and pre-populates
+        # the wizard on the next re-run.  clear_wizard_state is intentionally not
+        # called here so the operator's passwords and API keys survive a restart.
+        save_wizard_state(session_id, state)
     except OSError as exc:
         local_error = (
             f"API configuration saved successfully. "
@@ -1798,6 +1815,109 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.mqtt_password = existing.mqtt_password
     if not state.mqtt_tls and existing.mqtt_tls:
         state.mqtt_tls = existing.mqtt_tls
+
+
+def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> None:
+    """Call GET /setup/current-config and merge the response into *state*.
+
+    Only used in re-run mode (proxy auth available).  The API response is
+    authoritative for values it provides — it overwrites state fields that are
+    still at their defaults.  Fields that the user has already filled in during
+    this wizard session are not overwritten.
+
+    Failures are caught and logged; a failed fetch does not abort the re-run —
+    the wizard falls back to the existing per-step config-file reads.
+    """
+    try:
+        config = client.get_current_config()
+    except ApiClientError as exc:
+        logger.warning("get_current_config failed (%s): %s", exc.status_code, exc.detail)
+        return
+    except Exception:  # noqa: BLE001
+        logger.warning("get_current_config network error", exc_info=True)
+        return
+
+    if not isinstance(config, dict):
+        logger.warning("get_current_config returned unexpected type: %s", type(config).__name__)
+        return
+
+    # --- Database ---
+    db = config.get("database", {})
+    if isinstance(db, dict):
+        if state.db_host is None and db.get("host"):
+            state.db_host = str(db["host"])
+        if state.db_port == 3306 and db.get("port"):
+            try:
+                state.db_port = int(db["port"])
+            except (ValueError, TypeError):
+                pass
+        if state.db_user is None and db.get("user"):
+            state.db_user = str(db["user"])
+        if state.db_password is None and db.get("password"):
+            state.db_password = str(db["password"])
+        if state.db_name == "weewx" and db.get("name") and db["name"] != "weewx":
+            state.db_name = str(db["name"])
+
+    # --- Providers + API keys ---
+    # Response: {"forecast": {"provider": "nws", "credentials": {...}}, ...}
+    api_providers = config.get("providers", {})
+    if isinstance(api_providers, dict):
+        merged_providers: dict[str, str] = dict(state.providers)
+        merged_keys: dict[str, dict[str, str]] = dict(state.api_keys)
+        for domain, pd in api_providers.items():
+            if not isinstance(pd, dict):
+                continue
+            provider_id = str(pd.get("provider", "")).strip()
+            if not provider_id:
+                continue
+            # Only fill if the domain has no provider set yet in state.
+            if domain not in merged_providers:
+                merged_providers[domain] = provider_id
+            # Merge credentials — map from the API response fields to the
+            # wizard's internal api_keys format {provider_id: {field: value}}.
+            creds_raw = pd.get("credentials", {})
+            if isinstance(creds_raw, dict):
+                existing_creds = dict(merged_keys.get(provider_id, {}))
+                # API response uses field names that match the keys in
+                # CurrentConfigProviderCredentials; map them to the wizard's
+                # auth_fields naming (api_key, api_secret, pws_station_id, etc.)
+                _FIELD_REMAP: dict[str, str] = {
+                    "client_id": "api_key",      # Aeris primary key
+                    "client_secret": "api_secret",  # Aeris secondary key
+                    "appid": "api_key",           # OpenWeatherMap
+                    "api_key": "api_key",         # Wunderground primary
+                    "pws_station_id": "pws_station_id",
+                    "key": "api_key",             # IQAir
+                }
+                for resp_field, wizard_field in _FIELD_REMAP.items():
+                    val = creds_raw.get(resp_field)
+                    if val and not existing_creds.get(wizard_field):
+                        existing_creds[wizard_field] = str(val)
+                if existing_creds:
+                    merged_keys[provider_id] = existing_creds
+        state.providers = merged_providers
+        state.api_keys = merged_keys
+
+    # --- Station ---
+    station = config.get("station", {})
+    if isinstance(station, dict):
+        if state.station_name is None and station.get("name"):
+            state.station_name = str(station["name"])
+        if state.latitude is None and station.get("latitude") is not None:
+            state.latitude = _to_float(station["latitude"])
+        if state.longitude is None and station.get("longitude") is not None:
+            state.longitude = _to_float(station["longitude"])
+        if state.altitude_meters is None and station.get("altitude_meters") is not None:
+            raw_alt = _to_float(station["altitude_meters"])
+            alt_unit = str(station.get("altitude_unit", "meter")).strip().lower()
+            if raw_alt is not None and ("foot" in alt_unit or "feet" in alt_unit or alt_unit == "ft"):
+                state.altitude_meters = raw_alt * 0.3048
+                state.altitude_unit = "feet"
+            else:
+                state.altitude_meters = raw_alt
+                state.altitude_unit = "meters"
+        if state.timezone is None and station.get("timezone"):
+            state.timezone = str(station["timezone"])
 
 
 def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:

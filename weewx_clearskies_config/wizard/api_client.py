@@ -260,6 +260,24 @@ class ApiClient:
         result: dict[str, Any] = response.json()
         return result
 
+    def get_current_config(self) -> dict[str, Any]:
+        """GET /setup/current-config — fetch current config including secrets.
+
+        Only valid in re-run mode (requires proxy auth).  Returns a dict with
+        keys "database", "providers", and "station".
+
+        Returns:
+            Dict with the full current configuration, including DB credentials
+            and provider API keys, as written by a prior /setup/apply call.
+
+        Raises:
+            ApiClientError: If the API returns a non-2xx response.
+        """
+        _log.info("Fetching current config from API (re-run pre-populate)")
+        response = self._request("GET", "/setup/current-config", timeout=_DEFAULT_TIMEOUT)
+        result: dict[str, Any] = response.json()
+        return result
+
     def apply(self, config: dict[str, Any]) -> dict[str, Any]:
         """POST /setup/apply — send the final wizard config to the API.
 
