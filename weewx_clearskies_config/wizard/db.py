@@ -3,6 +3,11 @@
 Uses SQLAlchemy + pymysql for connection tests.  Uses configobj directly
 (not the API's load_weewx_conf) to avoid a circular dependency in the wizard
 bootstrap path where the API may not yet be installed.
+
+Note: the web wizard (routes.py) no longer calls these functions — it uses
+ApiClient.test_db() and ApiClient.get_db_defaults() instead (ADR-038).
+These functions are retained for use by the CLI wizard (cli_wizard.py) which
+runs without an established API session.
 """
 
 from __future__ import annotations

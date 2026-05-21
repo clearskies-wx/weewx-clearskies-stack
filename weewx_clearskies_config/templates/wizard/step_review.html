@@ -1,16 +1,57 @@
 <article>
   <header>
-    <h2>Step 6 of 6 — Review &amp; Apply</h2>
-    <p>Review your configuration before writing config files.
-       Applying will write <code>api.conf</code>, <code>realtime.conf</code>,
-       <code>stack.conf</code>, and <code>secrets.env</code> to the config directory.</p>
+    <h2>Step 7 of 7 — Review &amp; Apply</h2>
+    <p>Review your configuration before applying.
+       Applying will send the API configuration to the remote API, then write
+       <code>realtime.conf</code>, <code>stack.conf</code>, and <code>secrets.env</code>
+       to the local config directory.</p>
   </header>
 
   {% if error %}
-  <div role="alert" aria-live="polite" class="pico-color-red-500">
+  <div role="alert" class="pico-color-red-500">
     <strong>Error:</strong> {{ error }}
   </div>
   {% endif %}
+
+  {# 0. API Connection ---------------------------------------------- #}
+  <section aria-labelledby="review-api">
+    <h3 id="review-api">
+      API Connection
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/step/1"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit API connection settings">Edit</a>
+    </h3>
+    <table>
+      <caption class="sr-only">API connection settings</caption>
+      <tbody>
+        <tr><th scope="row">API address</th><td>{{ state.api_address or '(not set)' }}</td></tr>
+        <tr>
+          <th scope="row">Connection</th>
+          <td>
+            {% if state.api_session_id %}
+            <span aria-label="Connected">&#10003; Connected</span>
+            {% else %}
+            <span class="pico-color-red-500">Not connected — go back to step 1</span>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Certificate fingerprint</th>
+          <td>
+            {% if state.cert_fingerprint %}
+            <code>{{ state.cert_fingerprint }}</code>
+            {% else %}
+            <em>(not verified)</em>
+            {% endif %}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
 
   {# 1. Database ---------------------------------------------------- #}
   <section aria-labelledby="review-db">
@@ -18,7 +59,7 @@
       Database
       <a class="review-edit-link"
          href="#"
-         hx-get="/wizard/step/1"
+         hx-get="/wizard/step/2"
          hx-target="#wizard-content"
          hx-swap="innerHTML"
          hx-indicator="#wizard-spinner"
@@ -42,7 +83,7 @@
       Station
       <a class="review-edit-link"
          href="#"
-         hx-get="/wizard/step/3"
+         hx-get="/wizard/step/4"
          hx-target="#wizard-content"
          hx-swap="innerHTML"
          hx-indicator="#wizard-spinner"
@@ -66,7 +107,7 @@
       Data Pipeline
       <a class="review-edit-link"
          href="#"
-         hx-get="/wizard/step/4"
+         hx-get="/wizard/step/5"
          hx-target="#wizard-content"
          hx-swap="innerHTML"
          hx-indicator="#wizard-spinner"
@@ -97,7 +138,7 @@
       Providers
       <a class="review-edit-link"
          href="#"
-         hx-get="/wizard/step/5"
+         hx-get="/wizard/step/6"
          hx-target="#wizard-content"
          hx-swap="innerHTML"
          hx-indicator="#wizard-spinner"
@@ -123,14 +164,14 @@
     {% endif %}
   </section>
 
-  {# 4. API Keys ---------------------------------------------------- #}
+  {# 5. API Keys ---------------------------------------------------- #}
   {% if state.api_keys %}
   <section aria-labelledby="review-keys">
     <h3 id="review-keys">
       API Keys
       <a class="review-edit-link"
          href="#"
-         hx-get="/wizard/step/5"
+         hx-get="/wizard/step/6"
          hx-target="#wizard-content"
          hx-swap="innerHTML"
          hx-indicator="#wizard-spinner"
@@ -165,7 +206,7 @@
   </section>
   {% endif %}
 
-  {# 5. Topology & Bind Addresses (auto-configured, no edit link needed) #}
+  {# 6. Topology & Bind Addresses (auto-configured, no edit link needed) #}
   <section aria-labelledby="review-topology">
     <h3 id="review-topology">Topology &amp; Bind Addresses</h3>
     <table>
@@ -209,7 +250,7 @@
         hx-indicator="#wizard-spinner">
     <div role="group">
       <button type="button"
-              hx-get="/wizard/step/5"
+              hx-get="/wizard/step/6"
               hx-target="#wizard-content"
               hx-swap="innerHTML"
               hx-indicator="#wizard-spinner">

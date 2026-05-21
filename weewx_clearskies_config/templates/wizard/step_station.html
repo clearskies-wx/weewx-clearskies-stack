@@ -1,18 +1,18 @@
 <article>
   <header>
-    <h2>Step 3 of 6 — Station Identity</h2>
+    <h2>Step 4 of 7 — Station Identity</h2>
     <p>Confirm your weather station's location and display name.
        These are used for provider geo-routing and the dashboard header.</p>
   </header>
 
   {% if error %}
-  <div role="alert" aria-live="polite" class="pico-color-red-500">
+  <div role="alert" class="pico-color-red-500">
     <strong>Error:</strong> {{ error }}
   </div>
   {% endif %}
 
   <form id="station-form"
-        hx-post="/wizard/step/3"
+        hx-post="/wizard/step/4"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
@@ -44,7 +44,7 @@
                  max="90"
                  placeholder="38.8894"
                  aria-describedby="lat-hint"
-                 hx-post="/wizard/step/3/timezone"
+                 hx-post="/wizard/step/4/timezone"
                  hx-trigger="change delay:500ms"
                  hx-include="[name=latitude],[name=longitude]"
                  hx-target="#timezone"
@@ -62,7 +62,7 @@
                  max="180"
                  placeholder="-77.0352"
                  aria-describedby="lon-hint"
-                 hx-post="/wizard/step/3/timezone"
+                 hx-post="/wizard/step/4/timezone"
                  hx-trigger="change delay:500ms"
                  hx-include="[name=latitude],[name=longitude]"
                  hx-target="#timezone"
@@ -125,22 +125,8 @@
       </small>
     </fieldset>
 
-    <details style="margin-block-end:1rem;">
-      <summary>Detect from weewx.conf</summary>
-      <p style="font-size:0.875rem; margin-top:0.5rem;">
-        Only works when this tool runs on the weewx host.
-      </p>
-      <button type="button"
-              hx-post="/wizard/step/3/detect-weewx"
-              hx-target="#wizard-content"
-              hx-swap="innerHTML"
-              hx-indicator="#wizard-spinner"
-              aria-label="Read station settings from weewx.conf on the local host">
-        Read from weewx.conf
-      </button>
-    </details>
-
     <div role="group">
+      {% if schema_skipped %}
       <button type="button"
               hx-get="/wizard/step/2"
               hx-target="#wizard-content"
@@ -148,6 +134,15 @@
               hx-indicator="#wizard-spinner">
         ← Previous
       </button>
+      {% else %}
+      <button type="button"
+              hx-get="/wizard/step/3"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
+      </button>
+      {% endif %}
       <button type="submit">Next: Data Pipeline →</button>
     </div>
   </form>

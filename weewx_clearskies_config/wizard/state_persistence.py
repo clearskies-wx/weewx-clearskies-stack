@@ -71,6 +71,9 @@ def save_progress(session_id: str, state: WizardState, config_dir: Path) -> None
     if raw.get("mqtt_password"):
         raw["mqtt_password"] = _SECRET_SENTINEL
 
+    # api_session_id grants access to all setup API endpoints — never persist it.
+    raw["api_session_id"] = None
+
     raw["_saved_at"] = time.time()
 
     config_dir.mkdir(parents=True, exist_ok=True)
@@ -347,7 +350,7 @@ def _state_from_dict(raw: dict[str, Any]) -> WizardState:
     """Construct a WizardState from a plain dict, validating types."""
     _INT_FIELDS = {"db_port", "api_bind_port", "realtime_bind_port", "mqtt_broker_port", "mqtt_qos", "mqtt_keepalive"}
     _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters"}
-    _BOOL_FIELDS = {"mqtt_tls"}
+    _BOOL_FIELDS = {"mqtt_tls", "schema_skipped"}
 
     kwargs: dict[str, Any] = {}
     for f in dataclasses.fields(WizardState):

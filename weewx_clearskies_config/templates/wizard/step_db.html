@@ -1,37 +1,18 @@
 <article>
   <header>
-    <h2>Step 1 of 6 — Database Connection</h2>
+    <h2>Step 2 of 7 — Database Connection</h2>
     <p>Enter your weewx MariaDB/MySQL connection details.
-       Use "Detect" to read them from <code>weewx.conf</code> automatically.</p>
+       Fields are pre-filled from the API's weewx.conf where available.</p>
   </header>
 
   {% if error %}
-  <div role="alert" aria-live="polite" class="pico-color-red-500">
-    <strong>Error:</strong> {{ error }}
+  <div role="alert" class="pico-color-red-500">
+    <strong>Warning:</strong> {{ error }}
   </div>
   {% endif %}
 
-  <form id="db-detect-form"
-        hx-post="/wizard/step/1/detect"
-        hx-target="#wizard-content"
-        hx-swap="innerHTML"
-        hx-indicator="#wizard-spinner">
-    <fieldset>
-      <legend>Auto-detect from weewx.conf</legend>
-      <label for="conf_path">weewx.conf path</label>
-      <input type="text"
-             id="conf_path"
-             name="conf_path"
-             value="/etc/weewx/weewx.conf"
-             placeholder="/etc/weewx/weewx.conf"
-             aria-describedby="conf-path-hint">
-      <small id="conf-path-hint">Common paths: /etc/weewx/weewx.conf, /home/weewx/weewx.conf</small>
-      <button type="submit">Detect from weewx.conf</button>
-    </fieldset>
-  </form>
-
   <form id="db-form"
-        hx-post="/wizard/step/1"
+        hx-post="/wizard/step/2"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
@@ -111,7 +92,14 @@
 
     <div role="group">
       <button type="button"
-              hx-post="/wizard/step/1/test"
+              hx-get="/wizard/step/1"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        ← Previous
+      </button>
+      <button type="button"
+              hx-post="/wizard/step/2/test"
               hx-target="#db-test-result"
               hx-swap="innerHTML"
               hx-include="#db-form"

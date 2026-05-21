@@ -1,6 +1,6 @@
 """WizardState dataclass and in-memory session store.
 
-The wizard collects configuration across 8 steps. Data accumulates in a
+The wizard collects configuration across 7 steps. Data accumulates in a
 WizardState keyed by session ID. The store is backed by disk so progress
 survives tool restarts.
 """
@@ -9,11 +9,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 
 @dataclass
 class WizardState:
     """Accumulated configuration across all wizard steps."""
+
+    # Step 1: API connection (ADR-038)
+    api_address: str | None = None
+    api_session_id: str | None = None
+    cert_fingerprint: str | None = None
 
     # Database connection
     db_host: str | None = None
@@ -24,6 +30,11 @@ class WizardState:
 
     # Column mapping — key=db_column_name, value=canonical_name or None (unmapped/skip)
     column_mapping: dict[str, str | None] = field(default_factory=dict)
+
+    # Processed schema data cached between step 2 POST and step 3 GET.
+    # Shape: {"stock_columns": [...], "unmapped_columns": [...], "total_columns": int, "stock_mapped": int}
+    # Set by step 2 POST after calling ApiClient.get_schema(); cleared after step 3 advances.
+    schema_data: dict[str, Any] | None = None
 
     # Station identity
     station_name: str | None = None
@@ -60,6 +71,10 @@ class WizardState:
     api_bind_port: int = 8765
     realtime_bind_host: str = "127.0.0.1"
     realtime_bind_port: int = 8766
+
+    # Navigation: True when step 3 (schema) was skipped due to all-stock columns.
+    # Used by step 4 to render the correct Previous button target.
+    schema_skipped: bool = False
 
 
 # ---------------------------------------------------------------------------

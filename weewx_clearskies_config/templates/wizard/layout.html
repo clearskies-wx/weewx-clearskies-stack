@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Clear Skies Setup Wizard — Step {{ step }} of 6{% endblock %}
+{% block title %}Clear Skies Setup Wizard — Step {{ step }} of 7{% endblock %}
 {% block content %}
 
 {# ------------------------------------------------------------------ #}
@@ -240,6 +240,7 @@
 {# Completed items get class="is-complete" for the checkmark style.   #}
 {# ------------------------------------------------------------------ #}
 {% set step_names = [
+  "API Connection",
   "Database",
   "Columns",
   "Station",
@@ -250,7 +251,7 @@
 
 <nav aria-label="Wizard progress">
   <ol class="wizard-progress" role="list">
-    {% for i in range(1, 7) %}
+    {% for i in range(1, 8) %}
     <li
       {% if i == step %}aria-current="step"{% endif %}
       {% if i < step %}class="is-complete"{% endif %}
@@ -278,7 +279,7 @@
 {# Main content region — HTMX swaps step fragments into here          #}
 {# ------------------------------------------------------------------ #}
 <section id="wizard-content" aria-atomic="false">
-  {% include "wizard/step_db.html" %}
+  {% include "wizard/step_api.html" %}
 </section>
 
 {# ------------------------------------------------------------------ #}

@@ -1,19 +1,19 @@
 <article>
   <header>
-    <h2>Step 4 of 6 — Data Pipeline</h2>
+    <h2>Step 5 of 7 — Data Pipeline</h2>
     <p>Choose how the realtime service receives live weather data from weewx.
        Use <strong>Direct</strong> when weewx and the realtime service run on the same host.
        Use <strong>MQTT</strong> when they run on different hosts.</p>
   </header>
 
   {% if error %}
-  <div role="alert" aria-live="polite" class="pico-color-red-500">
+  <div role="alert" class="pico-color-red-500">
     <strong>Error:</strong> {{ error }}
   </div>
   {% endif %}
 
   <form id="mqtt-form"
-        hx-post="/wizard/step/4"
+        hx-post="/wizard/step/5"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
@@ -21,7 +21,7 @@
     <fieldset>
       <legend>Input mode</legend>
 
-      {# Suggest mode based on topology detected in step 1.
+      {# Suggest mode based on topology detected in step 2.
          Same-host topology defaults to direct; cross-host defaults to mqtt. #}
       {% set suggested_mqtt = (state.topology == "cross-host") %}
       {% set mode_is_mqtt = (state.input_mode == "mqtt") or (state.input_mode == "direct" and suggested_mqtt and not state.mqtt_broker_host == "") %}
@@ -241,7 +241,7 @@
         {# Test connection button — TCP-level only; see route comment for detail. #}
         <div style="margin-block-start:1rem;">
           <button type="button"
-                  hx-post="/wizard/step/4/test"
+                  hx-post="/wizard/step/5/test"
                   hx-target="#mqtt-test-result"
                   hx-swap="innerHTML"
                   hx-include="#mqtt-form"
@@ -257,7 +257,7 @@
 
     <div role="group" style="margin-block-start:1.5rem;">
       <button type="button"
-              hx-get="/wizard/step/3"
+              hx-get="/wizard/step/4"
               hx-target="#wizard-content"
               hx-swap="innerHTML"
               hx-indicator="#wizard-spinner">

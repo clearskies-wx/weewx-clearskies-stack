@@ -7,9 +7,8 @@
   <div role="alert" aria-live="assertive" class="pico-color-red-500">
     <h3>Configuration failed</h3>
     <p>{{ error }}</p>
-    <p>Check file permissions on the config directory and try again.</p>
     <a href="#"
-       hx-get="/wizard/step/6"
+       hx-get="/wizard/step/7"
        hx-target="#wizard-content"
        hx-swap="innerHTML"
        hx-indicator="#wizard-spinner">
@@ -19,7 +18,7 @@
 
   {% else %}
   <div role="status" aria-live="polite">
-    <p>Configuration written successfully. Clear Skies is ready to start.</p>
+    <p>Configuration applied successfully. Restart the services below to load the new configuration.</p>
   </div>
 
   {% if result %}
@@ -44,9 +43,10 @@
     </ul>
     <p>
       <strong>Keep these files secure.</strong>
-      They contain API keys, the database password,
-      and (for cross-host topology) the proxy shared secret (<code>WEEWX_CLEARSKIES_PROXY_SECRET</code>).
-      Do not commit them to version control.
+      They contain the proxy shared secret (<code>WEEWX_CLEARSKIES_PROXY_SECRET</code>)
+      and (if MQTT is enabled) the MQTT password.
+      The database password and provider API keys are stored in the API's own secrets file on the weewx host.
+      Do not commit any secrets file to version control.
     </p>
   </section>
   {% endif %}
@@ -79,16 +79,16 @@
     <h3 id="next-steps">Next steps</h3>
     <ol>
       <li>
-        <strong>Start the API service:</strong>
+        <strong>Restart the API on the weewx host</strong> to load the configuration just applied:
         <br>
-        <code>clearskies-api --config-dir /path/to/config</code>
+        <code>systemctl restart clearskies-api</code>
         <br>
-        <small>Or use the <code>clearskies-stack up</code> command if you are using Docker Compose.</small>
+        <small>Or use the <code>clearskies-stack restart api</code> command if you are using Docker Compose.</small>
       </li>
       <li>
-        <strong>Start the realtime service:</strong>
+        <strong>Restart the realtime service</strong> to apply <code>realtime.conf</code>:
         <br>
-        <code>clearskies-realtime --config-dir /path/to/config</code>
+        <code>systemctl restart clearskies-realtime</code>
       </li>
       <li>
         <strong>Deploy the dashboard:</strong>

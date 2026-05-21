@@ -1,17 +1,17 @@
 <article>
   <header>
-    <h2>Step 2 of 6 — Column Mapping</h2>
+    <h2>Step 3 of 7 — Column Mapping</h2>
     <p>Review your archive table schema. Stock weewx columns are auto-mapped.
        Assign canonical names to any custom columns, or leave them blank to skip.</p>
   </header>
 
   {% if error %}
-  <div role="alert" aria-live="polite" class="pico-color-red-500">
+  <div role="alert" class="pico-color-red-500">
     <strong>Error:</strong> {{ error }}
   </div>
   {% endif %}
 
-  <form hx-post="/wizard/step/2"
+  <form hx-post="/wizard/step/3"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
@@ -132,12 +132,12 @@
       {% endif %}
 
     {% else %}
-      <p>No schema data available. Check your database connection in step 1.</p>
+      <p>No schema data available. Check your database connection in step 2.</p>
     {% endif %}
 
     <div role="group">
       <button type="button"
-              hx-get="/wizard/step/1"
+              hx-get="/wizard/step/2"
               hx-target="#wizard-content"
               hx-swap="innerHTML"
               hx-indicator="#wizard-spinner">

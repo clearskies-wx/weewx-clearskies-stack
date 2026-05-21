@@ -1,4 +1,4 @@
-"""FastAPI router for the 6-step setup wizard.
+"""FastAPI router for the 7-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -6,25 +6,25 @@ routes return HTML fragments when the HX-Request header is present.
 
 Route summary:
   GET  /wizard                  — full wizard page (step 1)
-  GET  /wizard/step/1           — step 1 fragment
-  POST /wizard/step/1/test      — test DB connection, return result fragment
-  POST /wizard/step/1/detect    — auto-detect from weewx.conf, return filled form
-  POST /wizard/step/1           — save DB settings, return step 2 or 3 fragment
-  GET  /wizard/step/2           — introspect schema, render step 2 fragment
-  POST /wizard/step/2           — save column mapping, return step 3 fragment
-  GET  /wizard/step/3           — read station identity, render step 3 fragment
-  POST /wizard/step/3/timezone  — lookup timezone from lat/lon, return input fragment
-  POST /wizard/step/3/detect-weewx — detect station from local weewx.conf
-  POST /wizard/step/3           — save station info, return step 4 fragment
-  GET  /wizard/step/4           — data pipeline / MQTT, render step 4 fragment
-  POST /wizard/step/4/test      — test MQTT broker connection, return result fragment
-  POST /wizard/step/4           — save input mode + MQTT settings, return step 5 fragment
-  GET  /wizard/step/5           — provider selection + inline key entry, render step 5 fragment
-  GET  /wizard/step/5/key-fields/{domain}/{provider_id} — inline key fields fragment
-  POST /wizard/step/5/test-key/{provider_id}            — test one provider's key, return result fragment
-  POST /wizard/step/5           — save provider choices + keys, return step 6 fragment
-  GET  /wizard/step/6           — review summary, render step 6 fragment
-  POST /wizard/apply            — write config files, render completion page
+  GET  /wizard/step/1           — step 1 fragment (API connection)
+  POST /wizard/step/1           — verify fingerprint + handshake, return step 2 fragment
+  GET  /wizard/step/2           — step 2 fragment (DB connection); pre-fills from API defaults
+  POST /wizard/step/2/test      — test DB connection via API, return result fragment
+  POST /wizard/step/2           — save DB settings, fetch schema via API, return step 3 or 4 fragment
+  GET  /wizard/step/3           — render column mapping form using schema from state or API
+  POST /wizard/step/3           — save column mapping, return step 4 fragment
+  GET  /wizard/step/4           — read station identity from API, render step 4 fragment
+  POST /wizard/step/4/timezone  — lookup timezone from lat/lon, return input fragment
+  POST /wizard/step/4           — save station info, return step 5 fragment
+  GET  /wizard/step/5           — data pipeline / MQTT, render step 5 fragment
+  POST /wizard/step/5/test      — test MQTT broker connection, return result fragment
+  POST /wizard/step/5           — save input mode + MQTT settings, return step 6 fragment
+  GET  /wizard/step/6           — provider selection + inline key entry, render step 6 fragment
+  GET  /wizard/step/6/key-fields/{domain}/{provider_id} — inline key fields fragment
+  POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
+  POST /wizard/step/6           — save provider choices + keys, return step 7 fragment
+  GET  /wizard/step/7           — review summary, render step 7 fragment
+  POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
 from __future__ import annotations
@@ -38,19 +38,20 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
+from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
 from weewx_clearskies_config.wizard.config_writer import apply_wizard
-from weewx_clearskies_config.wizard.db import (
-    build_db_url,
-    detect_from_weewx_conf,
-    test_connection,
-)
+from weewx_clearskies_config.wizard.known_apis import verify_or_pin_fingerprint
 from weewx_clearskies_config.wizard.providers import (
     get_provider,
     providers_by_domain,
     recommend_providers,
     test_provider,
 )
-from weewx_clearskies_config.wizard.schema import introspect_schema
+from weewx_clearskies_config.wizard.schema import (
+    _ALL_CANONICAL_NAMES,
+    canonical_groups,
+    process_api_schema,
+)
 from weewx_clearskies_config.wizard.state import (
     WizardState,
     clear_wizard_state,
@@ -58,16 +59,34 @@ from weewx_clearskies_config.wizard.state import (
     get_wizard_state,
     save_wizard_state,
 )
-from weewx_clearskies_config.wizard.station import (
-    lookup_timezone,
-    station_from_api,
-    station_from_weewx_conf,
-)
+from weewx_clearskies_config.wizard.station import lookup_timezone
 from weewx_clearskies_config.wizard.topology import generate_proxy_secret
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wizard", tags=["wizard"])
+
+
+def _get_api_client(state: WizardState) -> ApiClient:
+    """Create an API client from wizard state.
+
+    Raises:
+        ValueError: If the API has not been connected yet (step 1 incomplete).
+    """
+    if not state.api_address or not state.api_session_id:
+        raise ValueError("API not connected")
+    return ApiClient(state.api_address, session_id=state.api_session_id)
+
+
+def _api_error_message(exc: ApiClientError) -> str:
+    """Map an ApiClientError to a user-friendly plain-English message."""
+    if exc.status_code == 401:
+        return "Your setup session has expired. Go back to step 1 and reconnect to the API."
+    if exc.status_code == 410:
+        return "This API has already been set up. If you need to reconfigure it, restart the API with the --reset flag."
+    if exc.status_code == 503:
+        return "The API is temporarily unavailable. Wait a moment and try again."
+    return f"The API returned an error ({exc.status_code}). Check the API server log and try again."
 
 # Templates are resolved at router creation time; the Jinja2Templates instance
 # is set by create_wizard_router() so the caller can pass the correct path.
@@ -151,7 +170,7 @@ def _render(
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
 async def wizard_index(request: Request) -> HTMLResponse:
-    """Render the full wizard page with step 1 loaded."""
+    """Render the full wizard page with step 1 (API connection) loaded."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     assert _templates is not None
@@ -163,27 +182,141 @@ async def wizard_index(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 1: DB connection
+# Step 1: API Connection
 # ---------------------------------------------------------------------------
 
 
 @router.get("/step/1", response_class=HTMLResponse)
-async def step1_get(request: Request) -> HTMLResponse:
+async def step1_api_get(request: Request) -> HTMLResponse:
+    """Step 1: Connect to API — show the connection form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
-    if state.db_host is None:
-        _merge_from_existing_config(state)
     return _render(
         request,
-        "step_db.html",
-        {"step": 1, "state": state, "result": None, "error": None},
+        "step_api.html",
+        {"step": 1, "state": state, "error": None},
     )
 
 
-@router.post("/step/1/test", response_class=HTMLResponse)
-async def step1_test(request: Request) -> HTMLResponse:
-    """Test the DB connection without saving; return a result fragment."""
-    _require_session(request)
+@router.post("/step/1", response_class=HTMLResponse)
+async def step1_api_post(request: Request) -> HTMLResponse:
+    """Step 1: Connect to API — verify fingerprint + handshake, advance to step 2."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    api_address = str(form.get("api_address", "")).strip()
+    trust_token = str(form.get("trust_token", "")).strip()
+    cert_fingerprint = str(form.get("cert_fingerprint", "")).strip()
+
+    # Validate required fields.
+    if not api_address or not trust_token or not cert_fingerprint:
+        return _render(
+            request,
+            "step_api.html",
+            {"step": 1, "state": state, "error": "All fields are required."},
+            status_code=422,
+        )
+
+    # Verify fingerprint (TOFU) — fetch the live cert and compare.
+    assert _config_dir is not None, "config_dir not set — wizard router not initialised"
+    ok, err_msg = verify_or_pin_fingerprint(_config_dir, api_address, cert_fingerprint)
+    if not ok:
+        return _render(
+            request,
+            "step_api.html",
+            {"step": 1, "state": state, "error": err_msg},
+            status_code=422,
+        )
+
+    # Handshake — exchange the one-time trust token for a setup session ID.
+    try:
+        client = ApiClient(api_address)
+        api_session_id = client.handshake(trust_token)
+    except ApiClientError as exc:
+        if exc.status_code == 401:
+            error_msg = "Invalid trust token. Check the token printed in the API terminal and try again."
+        elif exc.status_code == 410:
+            error_msg = "This API has already been set up. If you need to reconfigure it, restart the API with the --reset flag."
+        else:
+            error_msg = "Could not connect to the API. Check the address and try again."
+        return _render(
+            request,
+            "step_api.html",
+            {"step": 1, "state": state, "error": error_msg},
+            status_code=422,
+        )
+    except Exception:  # noqa: BLE001
+        return _render(
+            request,
+            "step_api.html",
+            {"step": 1, "state": state, "error": "Could not reach the API. Check the address and try again."},
+            status_code=422,
+        )
+
+    # Success — store in wizard state and advance to step 2 (DB connection).
+    state.api_address = api_address
+    state.api_session_id = api_session_id
+    state.cert_fingerprint = cert_fingerprint
+    save_wizard_state(session_id, state)
+    return await step2_db_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Step 2: DB connection
+# ---------------------------------------------------------------------------
+
+
+@router.get("/step/2", response_class=HTMLResponse)
+async def step2_db_get(request: Request) -> HTMLResponse:
+    """Step 2: DB connection — pre-fill form from API defaults or saved state."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+
+    # Merge from existing config files (e.g. wizard re-run).
+    if state.db_host is None:
+        _merge_from_existing_config(state)
+
+    # If still no DB info, ask the API for defaults from its weewx.conf.
+    api_warning: str | None = None
+    if state.db_host is None:
+        try:
+            client = _get_api_client(state)
+            defaults = client.get_db_defaults()
+            state.db_host = str(defaults.get("host", "localhost")) or "localhost"
+            if defaults.get("port"):
+                state.db_port = int(defaults["port"])
+            if defaults.get("user"):
+                state.db_user = str(defaults["user"])
+            if defaults.get("db_name"):
+                state.db_name = str(defaults["db_name"])
+            # Never pre-fill the password from the API response — the operator
+            # must enter it explicitly (the API doesn't transmit passwords).
+        except ValueError:
+            # API not connected yet — user navigated directly to step 2.
+            pass
+        except ApiClientError as exc:
+            if exc.status_code == 401:
+                # Session expired — redirect to step 1.
+                return await step1_api_get(request)
+            api_warning = "Could not fetch database defaults from the API. Enter the settings below."
+            logger.warning("get_db_defaults failed: %s", exc)
+        except Exception:  # noqa: BLE001
+            api_warning = "Could not reach the API to fetch database defaults. Enter the settings below."
+            logger.warning("get_db_defaults network error", exc_info=True)
+
+    return _render(
+        request,
+        "step_db.html",
+        {"step": 2, "state": state, "result": None, "error": api_warning},
+    )
+
+
+@router.post("/step/2/test", response_class=HTMLResponse)
+async def step2_db_test(request: Request) -> HTMLResponse:
+    """Test the DB connection via the API without saving; return a result fragment."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
     form = await request.form()
     host = str(form.get("db_host", "localhost")).strip()
     port = _parse_int(str(form.get("db_port", "3306")), default=3306)
@@ -191,7 +324,20 @@ async def step1_test(request: Request) -> HTMLResponse:
     password = str(form.get("db_password", ""))
     db_name = str(form.get("db_name", "weewx")).strip()
 
-    result = test_connection(host, port, user, password, db_name)
+    result: dict[str, Any]
+    try:
+        client = _get_api_client(state)
+        result = client.test_db(host, port, user, password, db_name)
+    except ValueError:
+        result = {"success": False, "error": "API not connected. Go back to step 1 and reconnect.", "version": None}
+    except ApiClientError as exc:
+        if exc.status_code == 401:
+            result = {"success": False, "error": "Your setup session has expired. Go back to step 1 to reconnect.", "version": None}
+        else:
+            result = {"success": False, "error": _api_error_message(exc), "version": None}
+    except Exception:  # noqa: BLE001
+        result = {"success": False, "error": "Could not reach the API to test the connection. Check that the API is running and try again.", "version": None}
+
     return _render(
         request,
         "step_db_test_result.html",
@@ -199,53 +345,9 @@ async def step1_test(request: Request) -> HTMLResponse:
     )
 
 
-@router.post("/step/1/detect", response_class=HTMLResponse)
-async def step1_detect(request: Request) -> HTMLResponse:
-    """Auto-detect DB settings from weewx.conf; return populated form."""
-    _require_session(request)
-    form = await request.form()
-    conf_path = str(form.get("conf_path", "/etc/weewx/weewx.conf")).strip()
-
-    _ALLOWED_CONF_PREFIXES = ("/etc/weewx/", "/home/weewx/", "/usr/share/weewx/")
-    # Resolve symlinks and `../` traversal before checking the allowed-prefix
-    # list.  Without this, a path like `/etc/weewx/../../etc/shadow` passes the
-    # naive startswith check.
-    try:
-        resolved = str(Path(conf_path).resolve())
-    except (OSError, ValueError):
-        resolved = ""
-    if not any(resolved.startswith(p) for p in _ALLOWED_CONF_PREFIXES):
-        conf_path = "/etc/weewx/weewx.conf"
-    else:
-        conf_path = resolved
-
-    error: str | None = None
-    detected: dict[str, Any] = {}
-    try:
-        detected = detect_from_weewx_conf(conf_path)
-    except FileNotFoundError:
-        error = "Could not find weewx.conf — check that the path is correct and that the file exists."
-    except (KeyError, ValueError):
-        error = "Could not read database settings from weewx.conf — the file may be in an unexpected format. Enter the settings manually below."
-
-    assert _templates is not None
-    state = WizardState(
-        db_host=detected.get("host") or None,
-        db_port=int(detected.get("port", 3306)),
-        db_user=detected.get("user") or None,
-        db_password=detected.get("password") or None,
-        db_name=detected.get("db_name", "weewx"),
-    )
-    return _templates.TemplateResponse(
-        request=request,
-        name="wizard/step_db.html",
-        context={"step": 1, "state": state, "result": None, "error": error},
-    )
-
-
-@router.post("/step/1", response_class=HTMLResponse)
-async def step1_post(request: Request) -> HTMLResponse:
-    """Save DB settings, auto-detect topology/binds/schema, advance to step 2 or 3."""
+@router.post("/step/2", response_class=HTMLResponse)
+async def step2_db_post(request: Request) -> HTMLResponse:
+    """Save DB settings, fetch schema via API, advance to step 3 or 4."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -280,54 +382,98 @@ async def step1_post(request: Request) -> HTMLResponse:
     state.api_bind_port = 8765
     state.realtime_bind_port = 8766
 
-    # Introspect schema now so we can skip step 2 if there are no unmapped columns.
-    skip_schema = False
-    if state.db_host and state.db_user:
-        db_url = build_db_url(
-            state.db_host,
+    # Persist the DB fields entered by the user so partial progress survives even
+    # if the connection test or schema fetch fails (user can adjust and retry).
+    save_wizard_state(session_id, state)
+
+    # Test the connection via API before proceeding.
+    try:
+        client = _get_api_client(state)
+        test_result = client.test_db(
+            state.db_host or "",
             state.db_port,
-            state.db_user,
+            state.db_user or "",
             state.db_password or "",
             state.db_name,
         )
-        try:
-            schema_data = introspect_schema(db_url)
-            if not schema_data.get("unmapped_columns"):
-                # All columns are stock; auto-save the stock mapping and skip step 2.
-                state.column_mapping = {
-                    col["db_name"]: col["canonical"]
-                    for col in schema_data.get("stock_columns", [])
-                }
-                skip_schema = True
-        except Exception:  # noqa: BLE001
-            # If introspection fails, fall through to show step 2 so the user
-            # can address the connection issue or review manually.
-            logger.warning("Schema introspection failed in step1_post; showing step 2", exc_info=True)
+        if not test_result.get("success"):
+            error_msg = f"Connection test failed: {test_result.get('error', 'unknown error')}"
+            return _render(
+                request,
+                "step_db.html",
+                {"step": 2, "state": state, "result": None, "error": error_msg},
+                status_code=422,
+            )
+    except ValueError:
+        return _render(
+            request,
+            "step_db.html",
+            {"step": 2, "state": state, "result": None, "error": "API not connected. Go back to step 1 and reconnect."},
+            status_code=422,
+        )
+    except ApiClientError as exc:
+        if exc.status_code == 401:
+            return await step1_api_get(request)
+        return _render(
+            request,
+            "step_db.html",
+            {"step": 2, "state": state, "result": None, "error": _api_error_message(exc)},
+            status_code=422,
+        )
+    except Exception:  # noqa: BLE001
+        return _render(
+            request,
+            "step_db.html",
+            {"step": 2, "state": state, "result": None, "error": "Could not reach the API to test the connection. Check that the API is running and try again."},
+            status_code=422,
+        )
 
+    # Fetch schema via API and process it.
+    skip_schema = False
+    try:
+        api_schema = client.get_schema()
+        schema_data = process_api_schema(api_schema)
+        state.schema_data = schema_data
+        if not schema_data.get("unmapped_columns"):
+            # All columns are stock — auto-save the stock mapping and skip step 3.
+            state.column_mapping = {
+                col["db_name"]: col["canonical"]
+                for col in schema_data.get("stock_columns", [])
+            }
+            skip_schema = True
+    except ApiClientError as exc:
+        # Schema fetch failed — fall through to step 3 so the user can review.
+        logger.warning("get_schema failed in step2_db_post (%s): %s", exc.status_code, exc.detail)
+        state.schema_data = None
+    except Exception:  # noqa: BLE001
+        logger.warning("get_schema network error in step2_db_post", exc_info=True)
+        state.schema_data = None
+
+    state.schema_skipped = skip_schema
     save_wizard_state(session_id, state)
     if skip_schema:
-        return await step3_get(request)
-    return await step2_get(request)
+        return await step4_get(request)
+    return await step3_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 4: Data Pipeline (input mode / MQTT)
+# Step 5: Data Pipeline (input mode / MQTT)
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/4", response_class=HTMLResponse)
-async def step4_get(request: Request) -> HTMLResponse:
+@router.get("/step/5", response_class=HTMLResponse)
+async def step5_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     return _render(
         request,
         "step_mqtt.html",
-        {"step": 4, "state": state, "error": None, "test_result": None},
+        {"step": 5, "state": state, "error": None, "test_result": None},
     )
 
 
-@router.post("/step/4/test", response_class=HTMLResponse)
-async def step4_mqtt_test(request: Request) -> HTMLResponse:
+@router.post("/step/5/test", response_class=HTMLResponse)
+async def step5_mqtt_test(request: Request) -> HTMLResponse:
     """Test MQTT broker reachability without saving; return a result fragment."""
     _require_session(request)
     form = await request.form()
@@ -345,9 +491,9 @@ async def step4_mqtt_test(request: Request) -> HTMLResponse:
     )
 
 
-@router.post("/step/4", response_class=HTMLResponse)
-async def step4_post(request: Request) -> HTMLResponse:
-    """Save input mode + MQTT settings and advance to step 5 (providers)."""
+@router.post("/step/5", response_class=HTMLResponse)
+async def step5_post(request: Request) -> HTMLResponse:
+    """Save input mode + MQTT settings and advance to step 6 (providers)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -388,7 +534,7 @@ async def step4_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_mqtt.html",
-                {"step": 4, "state": state, "error": "; ".join(errors.values()), "test_result": None},
+                {"step": 5, "state": state, "error": "; ".join(errors.values()), "test_result": None},
                 status_code=422,
             )
     else:
@@ -405,49 +551,54 @@ async def step4_post(request: Request) -> HTMLResponse:
         state.mqtt_keepalive = 60
 
     save_wizard_state(session_id, state)
-    return await step5_get(request)
+    return await step6_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 2: Schema + Column Mapping
+# Step 3: Schema + Column Mapping
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/2", response_class=HTMLResponse)
-async def step2_get(request: Request) -> HTMLResponse:
+@router.get("/step/3", response_class=HTMLResponse)
+async def step3_get(request: Request) -> HTMLResponse:
+    """Step 3: Column mapping — use schema cached in state or re-fetch from API."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if not state.column_mapping:
         _merge_from_existing_config(state)
 
-    schema_data: dict[str, Any] | None = None
+    schema_data: dict[str, Any] | None = state.schema_data
     error: str | None = None
 
-    if state.db_host and state.db_user:
-        db_url = build_db_url(
-            state.db_host,
-            state.db_port,
-            state.db_user,
-            state.db_password or "",
-            state.db_name,
-        )
+    # If schema wasn't cached (e.g. user navigated directly to step 3), fetch it.
+    if schema_data is None:
         try:
-            schema_data = introspect_schema(db_url)
-        except Exception as exc:  # noqa: BLE001
-            error = "Could not read the database schema — check your connection settings in step 1 and try again."
-            logger.warning("Schema introspection error: %s", exc)
+            client = _get_api_client(state)
+            api_schema = client.get_schema()
+            schema_data = process_api_schema(api_schema)
+            state.schema_data = schema_data
+            save_wizard_state(session_id, state)
+        except ValueError:
+            error = "API not connected. Go back to step 1 and reconnect."
+        except ApiClientError as exc:
+            if exc.status_code == 401:
+                return await step1_api_get(request)
+            error = "Could not fetch the database schema from the API — check your connection settings in step 2 and try again."
+            logger.warning("get_schema failed in step3_get: %s", exc)
+        except Exception:  # noqa: BLE001
+            error = "Could not reach the API to fetch the database schema. Check that the API is running and try again."
+            logger.warning("get_schema network error in step3_get", exc_info=True)
 
-    canonical_groups = _get_canonical_field_groups()
     return _render(
         request,
         "step_schema.html",
-        {"step": 2, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_groups": canonical_groups},
+        {"step": 3, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_groups": canonical_groups},
     )
 
 
-@router.post("/step/2", response_class=HTMLResponse)
-async def step2_post(request: Request) -> HTMLResponse:
-    """Save column mapping choices and advance to step 3."""
+@router.post("/step/3", response_class=HTMLResponse)
+async def step3_post(request: Request) -> HTMLResponse:
+    """Save column mapping choices and advance to step 4."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -462,27 +613,23 @@ async def step2_post(request: Request) -> HTMLResponse:
 
     errors = _validate_column_mapping(mapping)
     if errors:
-        schema_data: dict[str, Any] | None = None
+        # Re-use schema data from state; fall back to API if not cached.
+        schema_data: dict[str, Any] | None = state.schema_data
         schema_error: str | None = None
-        if state.db_host and state.db_user:
-            db_url = build_db_url(
-                state.db_host,
-                state.db_port,
-                state.db_user,
-                state.db_password or "",
-                state.db_name,
-            )
+        if schema_data is None:
             try:
-                schema_data = introspect_schema(db_url)
+                client = _get_api_client(state)
+                api_schema = client.get_schema()
+                schema_data = process_api_schema(api_schema)
+                state.schema_data = schema_data
             except Exception as exc:  # noqa: BLE001
-                schema_error = "Could not read the database schema — check your connection settings in step 1 and try again."
-                logger.warning("Schema introspection error in step2_post: %s", exc)
-        canonical_groups = _get_canonical_field_groups()
+                schema_error = "Could not read the database schema — check your connection settings in step 2 and try again."
+                logger.warning("get_schema error in step3_post: %s", exc)
         return _render(
             request,
             "step_schema.html",
             {
-                "step": 2,
+                "step": 3,
                 "state": state,
                 "schema": schema_data,
                 "error": schema_error,
@@ -493,50 +640,69 @@ async def step2_post(request: Request) -> HTMLResponse:
         )
 
     state.column_mapping = mapping
+    state.schema_data = None  # Clear cached schema data — no longer needed.
     save_wizard_state(session_id, state)
-    return await step3_get(request)
+    return await step4_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 3: Station Identity
+# Step 4: Station Identity
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/3", response_class=HTMLResponse)
-async def step3_get(request: Request) -> HTMLResponse:
+@router.get("/step/4", response_class=HTMLResponse)
+async def step4_get(request: Request) -> HTMLResponse:
+    """Step 4: Station identity — pre-fill from API (reads weewx.conf server-side)."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
 
-    # Try to pre-fill from the API only when station fields are empty.
-    if state.station_name is None and state.db_host:
-        api_data = station_from_api(state.db_host)
-        if api_data:
-            if state.station_name is None:
-                state.station_name = api_data.get("station_name")
-            if state.latitude is None:
-                state.latitude = _to_float(api_data.get("latitude"))
-            if state.longitude is None:
-                state.longitude = _to_float(api_data.get("longitude"))
-            if state.altitude_meters is None:
-                state.altitude_meters = _to_float(api_data.get("altitude_meters"))
-            if state.timezone is None and api_data.get("timezone"):
-                state.timezone = api_data["timezone"]
-            if state.latitude and state.longitude and not state.timezone:
-                state.timezone = lookup_timezone(state.latitude, state.longitude)
+    error: str | None = None
+
+    # Pre-fill from API only when station fields are still empty.
+    if state.station_name is None:
+        # Try existing config files first (wizard re-run).
+        _merge_from_existing_config(state)
 
     if state.station_name is None:
-        _merge_from_existing_config(state)
+        # Ask the API to read weewx.conf server-side.
+        try:
+            client = _get_api_client(state)
+            api_data = client.get_station()
+            if api_data:
+                if state.station_name is None:
+                    state.station_name = api_data.get("station_name") or None
+                if state.latitude is None:
+                    state.latitude = _to_float(api_data.get("latitude"))
+                if state.longitude is None:
+                    state.longitude = _to_float(api_data.get("longitude"))
+                if state.altitude_meters is None:
+                    state.altitude_meters = _to_float(api_data.get("altitude_meters"))
+                if state.timezone is None and api_data.get("timezone"):
+                    state.timezone = str(api_data["timezone"])
+                if state.latitude and state.longitude and not state.timezone:
+                    state.timezone = lookup_timezone(state.latitude, state.longitude)
+        except ValueError:
+            # API not connected — show blank form (user navigated directly).
+            pass
+        except ApiClientError as exc:
+            if exc.status_code == 401:
+                return await step1_api_get(request)
+            error = "Could not fetch station details from the API. Fill in the fields below manually."
+            logger.warning("get_station failed in step4_get: %s", exc)
+        except Exception:  # noqa: BLE001
+            error = "Could not reach the API to fetch station details. Fill in the fields below manually."
+            logger.warning("get_station network error in step4_get", exc_info=True)
 
     return _render(
         request,
         "step_station.html",
-        {"step": 3, "state": state, "error": None},
+        {"step": 4, "state": state, "error": error, "schema_skipped": state.schema_skipped},
     )
 
 
-@router.post("/step/3", response_class=HTMLResponse)
-async def step3_post(request: Request) -> HTMLResponse:
-    """Save station identity and advance to step 4."""
+@router.post("/step/4", response_class=HTMLResponse)
+async def step4_post(request: Request) -> HTMLResponse:
+    """Save station identity and advance to step 5."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -561,11 +727,11 @@ async def step3_post(request: Request) -> HTMLResponse:
         state.timezone = lookup_timezone(state.latitude, state.longitude)
 
     save_wizard_state(session_id, state)
-    return await step4_get(request)
+    return await step5_get(request)
 
 
-@router.post("/step/3/timezone", response_class=HTMLResponse)
-async def step3_timezone(request: Request) -> HTMLResponse:
+@router.post("/step/4/timezone", response_class=HTMLResponse)
+async def step4_timezone(request: Request) -> HTMLResponse:
     """Return a pre-filled timezone input fragment for the given lat/lon.
 
     Called by HTMX when the user changes the latitude or longitude fields.
@@ -591,57 +757,13 @@ async def step3_timezone(request: Request) -> HTMLResponse:
     )
 
 
-@router.post("/step/3/detect-weewx", response_class=HTMLResponse)
-async def step3_detect_weewx(request: Request) -> HTMLResponse:
-    """Read weewx.conf from the local host and return a pre-filled step 3 fragment.
-
-    Only works when this tool runs on the weewx host.  On failure, returns the
-    step 3 template with an error message so the user can fill fields manually.
-    """
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-
-    error: str | None = None
-    for conf_path in _weewx_conf_candidates():
-        try:
-            detected = station_from_weewx_conf(conf_path)
-            state.station_name = detected.get("station_name") or state.station_name
-            lat = _to_float(detected.get("latitude"))
-            lon = _to_float(detected.get("longitude"))
-            alt = _to_float(detected.get("altitude_meters"))
-            if lat is not None:
-                state.latitude = lat
-            if lon is not None:
-                state.longitude = lon
-            if alt is not None:
-                state.altitude_meters = alt
-            if state.latitude and state.longitude and not state.timezone:
-                state.timezone = lookup_timezone(state.latitude, state.longitude)
-            error = None
-            break
-        except FileNotFoundError:
-            continue
-        except (KeyError, ValueError):
-            error = "Could not read station settings from weewx.conf — the file may be in an unexpected format. Enter the settings manually below."
-            break
-
-    if error is None and state.station_name is None:
-        error = "Could not find weewx.conf in any of the standard locations. Enter your station details manually below."
-
-    return _render(
-        request,
-        "step_station.html",
-        {"step": 3, "state": state, "error": error},
-    )
-
-
 # ---------------------------------------------------------------------------
-# Step 5: Provider Selection + Inline API Key Entry
+# Step 6: Provider Selection + Inline API Key Entry
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/5", response_class=HTMLResponse)
-async def step5_get(request: Request) -> HTMLResponse:
+@router.get("/step/6", response_class=HTMLResponse)
+async def step6_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if not state.providers:
@@ -656,7 +778,7 @@ async def step5_get(request: Request) -> HTMLResponse:
         request,
         "step_providers.html",
         {
-            "step": 5,
+            "step": 6,
             "state": state,
             "providers_by_domain": by_domain,
             "recommendations": recommendations,
@@ -665,8 +787,8 @@ async def step5_get(request: Request) -> HTMLResponse:
     )
 
 
-@router.get("/step/5/key-fields/{domain}/{provider_id}", response_class=HTMLResponse)
-async def step5_key_fields(request: Request, domain: str, provider_id: str) -> HTMLResponse:
+@router.get("/step/6/key-fields/{domain}/{provider_id}", response_class=HTMLResponse)
+async def step6_key_fields(request: Request, domain: str, provider_id: str) -> HTMLResponse:
     """Return inline key input fields for a provider that requires credentials."""
     session_id = _require_session(request)
     info = get_provider(provider_id)
@@ -683,8 +805,8 @@ async def step5_key_fields(request: Request, domain: str, provider_id: str) -> H
     )
 
 
-@router.post("/step/5/test-key/{provider_id}", response_class=HTMLResponse)
-async def step5_test_key(request: Request, provider_id: str) -> HTMLResponse:
+@router.post("/step/6/test-key/{provider_id}", response_class=HTMLResponse)
+async def step6_test_key(request: Request, provider_id: str) -> HTMLResponse:
     """Test one provider's API key; return a result fragment."""
     _require_session(request)
     form = await request.form()
@@ -717,9 +839,9 @@ async def step5_test_key(request: Request, provider_id: str) -> HTMLResponse:
     )
 
 
-@router.post("/step/5", response_class=HTMLResponse)
-async def step5_post(request: Request) -> HTMLResponse:
-    """Save provider selections and inline API keys, advance to step 6."""
+@router.post("/step/6", response_class=HTMLResponse)
+async def step6_post(request: Request) -> HTMLResponse:
+    """Save provider selections and inline API keys, advance to step 7."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -761,16 +883,16 @@ async def step5_post(request: Request) -> HTMLResponse:
     state.api_keys = api_keys
 
     save_wizard_state(session_id, state)
-    return await step6_get(request)
+    return await step7_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 6: Review + Apply
+# Step 7: Review + Apply
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/6", response_class=HTMLResponse)
-async def step6_get(request: Request) -> HTMLResponse:
+@router.get("/step/7", response_class=HTMLResponse)
+async def step7_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if state.db_host is None and state.station_name is None:
@@ -778,13 +900,23 @@ async def step6_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 6, "state": state, "error": None},
+        {"step": 7, "state": state, "error": None},
     )
 
 
 @router.post("/apply", response_class=HTMLResponse)
 async def wizard_apply(request: Request) -> HTMLResponse:
-    """Write config files and display the completion page."""
+    """Send config to the API, write local config files, display the completion page.
+
+    Flow (ADR-038):
+      1. Build the ApplyRequest payload from wizard state and POST it to the API.
+         The API writes its own api.conf and secrets.env (DB password, provider
+         API keys).  If this step fails, render the review page with the error so
+         the operator can retry without re-entering all settings.
+      2. Write local config files (realtime.conf, stack.conf, secrets.env with
+         local secrets only — proxy secret and MQTT password).
+      3. Clear wizard state and render the completion page.
+    """
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
 
@@ -794,12 +926,115 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 6,
+                "step": 7,
                 "error": "The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option.",
                 "result": None,
             },
             status_code=500,
         )
+
+    # ------------------------------------------------------------------
+    # Step 1: Send configuration to the API (POST /setup/apply).
+    # The API writes its own api.conf and stores DB password / provider keys
+    # in its own secrets.env.  Fail early and show the review page on error.
+    # ------------------------------------------------------------------
+
+    # Build the column_mapping for the API: canonical → db_col (inverted from
+    # state which stores db_col → canonical).  Skip unmapped columns (None value).
+    api_column_mapping: dict[str, str] = {
+        canonical: db_col
+        for db_col, canonical in state.column_mapping.items()
+        if canonical is not None
+    }
+
+    # Build providers dict: domain → ProviderConfig-shaped dict.
+    # state.providers maps domain → provider_id.
+    # state.api_keys maps provider_id → {field_name → value}.
+    api_providers: dict[str, Any] = {}
+    for domain, provider_id in state.providers.items():
+        creds = state.api_keys.get(provider_id, {})
+        provider_entry: dict[str, Any] = {"provider": provider_id}
+        if creds.get("api_key"):
+            provider_entry["api_key"] = creds["api_key"]
+        if creds.get("api_secret"):
+            provider_entry["api_secret"] = creds["api_secret"]
+        if creds.get("pws_station_id"):
+            provider_entry["pws_station_id"] = creds["pws_station_id"]
+        if creds.get("nws_user_agent_contact"):
+            provider_entry["nws_user_agent_contact"] = creds["nws_user_agent_contact"]
+        if creds.get("iframe_url"):
+            provider_entry["iframe_url"] = creds["iframe_url"]
+        api_providers[domain] = provider_entry
+
+    api_payload: dict[str, Any] = {
+        "database": {
+            "host": state.db_host or "",
+            "port": state.db_port,
+            "user": state.db_user or "",
+            "password": state.db_password or "",
+            "name": state.db_name,
+        },
+        "column_mapping": api_column_mapping,
+        "station": {
+            "name": state.station_name,
+            "latitude": state.latitude,
+            "longitude": state.longitude,
+            "altitude_meters": state.altitude_meters,
+            "timezone": state.timezone,
+        },
+    }
+
+    if api_providers:
+        api_payload["providers"] = api_providers
+
+    if state.proxy_secret:
+        api_payload["proxy_secret"] = state.proxy_secret
+
+    try:
+        client = _get_api_client(state)
+        client.apply(api_payload)
+    except ValueError:
+        # API not connected — state.api_address or api_session_id is missing.
+        return _render(
+            request,
+            "step_review.html",
+            {
+                "step": 7,
+                "state": state,
+                "error": "API not connected. Go back to step 1 and reconnect before applying.",
+            },
+            status_code=422,
+        )
+    except ApiClientError as exc:
+        error_msg = _api_error_message(exc)
+        logger.error("wizard_apply: API apply call failed (%s): %s", exc.status_code, exc.detail)
+        return _render(
+            request,
+            "step_review.html",
+            {
+                "step": 7,
+                "state": state,
+                "error": f"Failed to apply API configuration: {error_msg}",
+            },
+            status_code=422,
+        )
+    except Exception:  # noqa: BLE001
+        logger.exception("wizard_apply: unexpected error calling API apply")
+        return _render(
+            request,
+            "step_review.html",
+            {
+                "step": 7,
+                "state": state,
+                "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
+            },
+            status_code=422,
+        )
+
+    # ------------------------------------------------------------------
+    # Step 2: Write local config files (realtime.conf, stack.conf,
+    # secrets.env with local secrets only).
+    # ------------------------------------------------------------------
 
     error: str | None = None
     result: dict[str, Any] | None = None
@@ -807,17 +1042,17 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         result = apply_wizard(state, _config_dir)
         clear_wizard_state(session_id)
     except OSError as exc:
-        error = "Could not write the configuration files — check that the config directory exists and is writable, then try again."
+        error = "The API configuration was applied successfully. However, writing the local config files failed — check that the config directory exists and is writable, then try again."
         logger.error("apply_wizard OSError: %s", exc)
-    except Exception as exc:  # noqa: BLE001
-        error = "Something went wrong while writing the configuration. Check the server log for details, then try again."
+    except Exception:  # noqa: BLE001
+        error = "The API configuration was applied successfully. However, something went wrong writing the local config files. Check the server log for details, then try again."
         logger.exception("apply_wizard unexpected error")
 
     assert _templates is not None
     return _templates.TemplateResponse(
         request=request,
         name="wizard/step_complete.html",
-        context={"step": 6, "error": error, "result": result},
+        context={"step": 7, "error": error, "result": result},
         status_code=500 if error else 200,
     )
 
@@ -875,255 +1110,9 @@ def _validate_column_mapping(mapping: dict[str, str | None]) -> dict[str, str]:
 # ---------------------------------------------------------------------------
 
 
-# ---------------------------------------------------------------------------
-# Comprehensive canonical field registry — grouped for the Step 2 dropdown
-#
-# Source: docs/contracts/canonical-data-model.md (all entities §3.1–§3.9)
-#         + weewx_clearskies_api/db/reflection.py STOCK_COLUMN_MAP
-#         + §2.1 unit-group members that name canonical fields
-#
-# Every canonical field appears in exactly one group.
-# Fields within each group are sorted alphabetically.
-# ---------------------------------------------------------------------------
-
-CANONICAL_FIELD_GROUPS: list[tuple[str, list[str]]] = [
-    (
-        "Temperature",
-        sorted([
-            "appTemp",        # apparent / feels-like temperature
-            "dewpoint",
-            "dewpoint1",      # expansion-slot dewpoint
-            "extraTemp1", "extraTemp2", "extraTemp3",
-            "extraTemp4", "extraTemp5", "extraTemp6",
-            "extraTemp7", "extraTemp8",
-            "heatindex",
-            "heatingTemp",    # heating system supply temperature
-            "humidex",        # Canadian humidex index
-            "inTemp",
-            "outTemp",
-            "tempMax",        # daily forecast high
-            "tempMin",        # daily forecast low
-            "THSW",           # Temperature-Humidity-Sun-Wind (Davis VP series)
-            "windchill",
-        ]),
-    ),
-    (
-        "Humidity",
-        sorted([
-            "extraHumid1", "extraHumid2", "extraHumid3",
-            "extraHumid4", "extraHumid5", "extraHumid6",
-            "extraHumid7", "extraHumid8",
-            "inHumidity",
-            "outHumidity",
-            "snowMoisture",   # snow moisture percentage
-        ]),
-    ),
-    (
-        "Wind",
-        sorted([
-            "gustdir",        # direction of peak gust
-            "rms",            # root-mean-square wind speed
-            "vecavg",         # vector-mean wind speed
-            "vecdir",         # vector-mean wind direction
-            "wind",           # scalar wind (composite)
-            "windDir",
-            "windGust",
-            "windGustDir",
-            "windGustMax",    # daily forecast peak gust
-            "windgustvec",    # wind gust vector
-            "windrun",        # wind run = sum(windSpeed × interval)
-            "windSpeed",
-            "windSpeedMax",   # daily forecast max wind speed
-            "windvec",        # wind vector
-        ]),
-    ),
-    (
-        "Pressure",
-        sorted([
-            "altimeter",
-            "altimeterRate",  # rate of change of altimeter pressure
-            "barometer",
-            "barometerRate",  # rate of change of barometer pressure
-            "pressure",
-            "pressureRate",   # rate of change of station pressure
-        ]),
-    ),
-    (
-        "Rain & Snow",
-        sorted([
-            "ET",             # evapotranspiration
-            "hail",           # per-interval hail accumulation
-            "hailRate",
-            "pop",            # probability of precipitation (operator-supplied)
-            "precipAmount",   # forecast precipitation accumulation
-            "precipProbability",      # hourly forecast precip probability
-            "precipProbabilityMax",   # daily forecast max precip probability
-            "precipType",     # rain / snow / sleet / freezing-rain / hail / none
-            "rain",
-            "rainDur",        # duration of rainfall within interval
-            "rainRate",
-            "snow",
-            "snowDepth",
-            "snowRate",
-        ]),
-    ),
-    (
-        "Solar & UV",
-        sorted([
-            "cloudbase",      # estimated cloud base altitude
-            "cloudCover",     # forecast cloud cover (0–100)
-            "cloudcover",     # archive cloud cover (wview_extended)
-            "daySunshineDur", # day-to-date cumulative sunshine duration
-            "illuminance",    # light level in lux
-            "maxSolarRad",    # theoretical clear-sky solar radiation
-            "radiation",
-            "sunshineDur",    # sunshine duration within interval
-            "sunshineDurDoc", # documentation alias for sunshineDur
-            "UV",
-            "uvIndexMax",     # daily forecast UV index maximum
-        ]),
-    ),
-    (
-        "Air Quality (AQI)",
-        sorted([
-            "aqi",
-            "aqiCategory",
-            "aqiLocation",
-            "aqiMainPollutant",
-            "co",             # carbon monoxide (weewx extension)
-            "co2",            # carbon dioxide (weewx extension)
-            "nh3",            # ammonia (weewx extension)
-            "no2",            # nitrogen dioxide (weewx extension)
-            "o3",             # ozone (weewx extension)
-            "pb",             # lead (weewx extension)
-            "pm1_0",          # PM1.0 concentration (weewx extension)
-            "pm2_5",          # PM2.5 concentration (weewx extension)
-            "pm10_0",         # PM10 concentration (weewx extension)
-            "pollutantCO",
-            "pollutantNO2",
-            "pollutantO3",
-            "pollutantPM10",
-            "pollutantPM25",
-            "pollutantSO2",
-            "so2",            # sulfur dioxide (weewx extension)
-        ]),
-    ),
-    (
-        "Soil & Leaf",
-        sorted([
-            "leafTemp1", "leafTemp2",
-            "leafWet1", "leafWet2",
-            "soilMoist1", "soilMoist2", "soilMoist3", "soilMoist4",
-            "soilTemp1", "soilTemp2", "soilTemp3", "soilTemp4",
-        ]),
-    ),
-    (
-        "Lightning",
-        sorted([
-            "lightning_distance",
-            "lightning_disturber_count",
-            "lightning_noise_count",
-            "lightning_strike_count",
-        ]),
-    ),
-    (
-        "System & Battery",
-        sorted([
-            "consBatteryVoltage",
-            "heatingVoltage",
-            "noise",            # sound level in dB
-            "referenceVoltage",
-            "rxCheckPercent",
-            "supplyVoltage",
-            "txBatteryStatus",  # transmitter battery status flag
-        ]),
-    ),
-    (
-        "Degree Days",
-        sorted([
-            "cooldeg",
-            "growdeg",
-            "heatdeg",
-        ]),
-    ),
-    (
-        "Forecast",
-        sorted([
-            "narrative",        # multi-sentence daily forecast summary
-            "sunrise",
-            "sunset",
-            "validDate",        # daily forecast date (YYYY-MM-DD)
-            "validTime",        # hourly forecast valid time (UTC ISO-8601)
-            "weatherCode",      # provider weather code (WMO / OWM / etc.)
-            "weatherText",      # short weather label
-        ]),
-    ),
-    (
-        "Earthquake",
-        sorted([
-            "alert",            # USGS PAGER alert level
-            "depth",            # kilometers below surface
-            "felt",             # count of 'did you feel it' reports
-            "latitude",
-            "longitude",
-            "magnitude",
-            "magnitudeType",    # mw / ml / md / mb etc.
-            "mmi",              # Modified Mercalli Intensity
-            "place",            # human-readable location description
-            "status",           # automatic / reviewed / deleted / etc.
-            "tsunami",          # tsunami flag
-            "url",              # event detail page URL
-        ]),
-    ),
-    (
-        "Station Metadata",
-        sorted([
-            "altitude",               # above mean sea level
-            "firstRecord",            # oldest archive timestamp
-            "hardware",               # weewx station hardware type
-            "lastRecord",             # newest archive timestamp
-            "name",                   # station human-readable name
-            "stationId",
-            "timezone",               # IANA TZ identifier
-            "timezoneOffsetMinutes",
-            "unitSystem",             # US / METRIC / METRICWX
-        ]),
-    ),
-    (
-        "Archive / Meta",
-        sorted([
-            "interval",     # archive interval length in minutes
-            "observedAt",   # AQI observation timestamp
-            "timestamp",    # observation timestamp (from dateTime epoch)
-            "usUnits",      # weewx unit system identifier
-        ]),
-    ),
-]
-
-# Flat set of all canonical field names across all groups — used for
-# validation in _validate_column_mapping without importing the API package.
-_ALL_CANONICAL_NAMES: frozenset[str] = frozenset(
-    name
-    for _label, fields in CANONICAL_FIELD_GROUPS
-    for name in fields
-)
-
-
-def _get_canonical_field_names() -> list[str]:
-    """Return a sorted list of all valid canonical field names (all entities).
-
-    Kept for any legacy call sites; prefer _get_canonical_field_groups().
-    """
-    return sorted(_ALL_CANONICAL_NAMES)
-
-
-def _get_canonical_field_groups() -> list[tuple[str, list[str]]]:
-    """Return the canonical field registry as a list of (group_label, [field, ...]) tuples.
-
-    Used to populate the Step 2 grouped <optgroup> dropdown.
-    Groups and fields within each group are pre-sorted at module level.
-    """
-    return CANONICAL_FIELD_GROUPS
+# Note: CANONICAL_FIELD_GROUPS, canonical_groups, and _ALL_CANONICAL_NAMES
+# are defined in wizard/schema.py and imported at the top of this module.
+# _validate_column_mapping uses _ALL_CANONICAL_NAMES imported from schema.
 
 
 def _parse_int(value: str, *, default: int) -> int:
@@ -1142,20 +1131,14 @@ def _to_float(value: Any) -> float | None:
         return None
 
 
-def _weewx_conf_candidates() -> list[str]:
-    """Return common weewx.conf paths to probe for auto-detection."""
-    return [
-        "/etc/weewx/weewx.conf",
-        "/home/weewx/weewx.conf",
-        "/opt/weewx/weewx.conf",
-    ]
-
-
 def _existing_configs_present() -> bool:
-    """Return True if api.conf exists in config_dir (wizard has run before)."""
+    """Return True if realtime.conf or stack.conf exists in config_dir (wizard has run before).
+
+    api.conf is written by the API itself (ADR-038) and is not a reliable sentinel.
+    """
     if _config_dir is None:
         return False
-    return (_config_dir / "api.conf").exists()
+    return (_config_dir / "realtime.conf").exists() or (_config_dir / "stack.conf").exists()
 
 
 def _merge_from_existing_config(state: WizardState) -> None:

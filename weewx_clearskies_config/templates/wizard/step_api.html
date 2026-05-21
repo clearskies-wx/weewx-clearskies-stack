@@ -1,0 +1,78 @@
+<article>
+  <header>
+    <h2>Step 1 of 7 — API Connection</h2>
+    <p>Enter the connection details shown in your API's startup banner.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" class="pico-color-red-500">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <form id="api-form"
+        hx-post="/wizard/step/1"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML"
+        hx-indicator="#wizard-spinner">
+
+    <fieldset>
+      <legend>API connection settings</legend>
+
+      <label for="api_address">API address <span aria-hidden="true">*</span></label>
+      <input type="url"
+             id="api_address"
+             name="api_address"
+             value="{{ state.api_address or '' }}"
+             required
+             placeholder="https://192.168.7.20:8765"
+             autocomplete="url"
+             aria-describedby="api-address-hint">
+      <small id="api-address-hint">The address shown in the API startup banner.</small>
+
+      <label for="trust_token">Trust token <span aria-hidden="true">*</span></label>
+      <div class="password-field">
+        <input type="password"
+               id="trust_token"
+               name="trust_token"
+               required
+               placeholder="Paste the trust token from the API terminal"
+               autocomplete="off"
+               aria-describedby="trust-token-hint">
+        <button type="button"
+                class="password-toggle"
+                aria-label="Show trust token"
+                aria-controls="trust_token"
+                onclick="togglePassword(this)">
+          <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      <small id="trust-token-hint">
+        Single-use token printed when the API first starts. It cannot be re-used — if you
+        need a new token, restart the API with <code>--reset</code>.
+      </small>
+
+      <label for="cert_fingerprint">Certificate fingerprint <span aria-hidden="true">*</span></label>
+      <input type="text"
+             id="cert_fingerprint"
+             name="cert_fingerprint"
+             value="{{ state.cert_fingerprint or '' }}"
+             required
+             placeholder="SHA-256:AB:CD:EF:..."
+             autocomplete="off"
+             aria-describedby="cert-fingerprint-hint">
+      <small id="cert-fingerprint-hint">
+        SHA-256 fingerprint shown in the API startup banner. Used to verify the server's
+        identity before sending the trust token.
+      </small>
+    </fieldset>
+
+    <div class="wizard-nav" role="group">
+      <button type="submit" hx-indicator="#wizard-spinner">Connect →</button>
+    </div>
+  </form>
+</article>

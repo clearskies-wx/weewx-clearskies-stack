@@ -1,60 +1,19 @@
-"""Station identity extraction from weewx.conf and the Clear Skies API.
+"""Station identity utilities for the Clear Skies wizard.
 
-weewx stores station metadata in [Station] in weewx.conf, not in the archive
-DB table.
+The plain HTTP fallback (station_from_api) has been removed.  The web wizard
+(routes.py) now fetches station identity via the secure API channel:
+ApiClient.get_station().
+
+station_from_weewx_conf() is retained for the CLI wizard (cli_wizard.py)
+which runs without an established API session.
+
+lookup_timezone() is a pure coordinate-to-timezone lookup with no DB or file
+dependencies and is called from both the web wizard and CLI wizard.
 """
 
 from __future__ import annotations
 
 from typing import Any
-
-
-def station_from_api(api_host: str, api_port: int = 8765) -> dict[str, Any] | None:
-    """Fetch station identity from the Clear Skies API. Returns None on failure.
-
-    Hits http://{api_host}:{api_port}/api/v1/station with a 3-second timeout.
-    On any network error, HTTP error, or parse error, returns None so the
-    caller can fall through to manual entry.
-    """
-    import httpx
-
-    url = f"http://{api_host}:{api_port}/api/v1/station"
-    try:
-        with httpx.Client(timeout=3.0) as client:
-            response = client.get(url)
-        if response.status_code != 200:
-            return None
-        data = response.json()
-    except (httpx.RequestError, httpx.HTTPStatusError, ValueError):
-        return None
-
-    result: dict[str, Any] = {}
-
-    station_name = data.get("station_name") or data.get("name")
-    if station_name:
-        result["station_name"] = str(station_name)
-
-    lat = _parse_float(data.get("latitude") or data.get("lat"))
-    if lat is not None:
-        result["latitude"] = lat
-
-    lon = _parse_float(data.get("longitude") or data.get("lon"))
-    if lon is not None:
-        result["longitude"] = lon
-
-    # API may return altitude in meters directly, or with a unit field.
-    alt = _parse_float(data.get("altitude_meters") or data.get("altitude"))
-    alt_unit = str(data.get("altitude_unit", "meter")).lower()
-    if alt is not None:
-        if "foot" in alt_unit or "feet" in alt_unit or "ft" in alt_unit:
-            alt = alt * 0.3048
-        result["altitude_meters"] = alt
-
-    tz = data.get("timezone") or data.get("time_zone")
-    if tz:
-        result["timezone"] = str(tz)
-
-    return result or None
 
 
 def station_from_weewx_conf(conf_path: str) -> dict[str, Any]:
@@ -65,6 +24,9 @@ def station_from_weewx_conf(conf_path: str) -> dict[str, Any]:
 
     Raises:
         FileNotFoundError: *conf_path* does not exist.
+
+    Note: This function is used by the CLI wizard only.  The web wizard
+    uses ApiClient.get_station() instead.
     """
     import os
 

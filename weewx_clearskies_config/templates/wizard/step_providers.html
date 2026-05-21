@@ -1,19 +1,19 @@
 <article>
   <header>
-    <h2>Step 5 of 6 — Providers &amp; API Keys</h2>
+    <h2>Step 6 of 7 — Providers &amp; API Keys</h2>
     <p>Choose a data provider for each service domain.
        Providers recommended for your station location are pre-selected and marked.
        For providers that require an API key, the key fields appear inline when you select them.</p>
   </header>
 
   {% if error %}
-  <div role="alert" aria-live="polite" class="pico-color-red-500">
+  <div role="alert" class="pico-color-red-500">
     <strong>Error:</strong> {{ error }}
   </div>
   {% endif %}
 
   <form id="providers-form"
-        hx-post="/wizard/step/5"
+        hx-post="/wizard/step/6"
         hx-target="#wizard-content"
         hx-swap="innerHTML"
         hx-indicator="#wizard-spinner">
@@ -63,7 +63,7 @@
                value="{{ provider.provider_id }}"
                {% if is_selected %}checked{% endif %}
                aria-describedby="provider-desc-{{ provider.provider_id }}"
-               hx-get="/wizard/step/5/key-fields/{{ domain }}/{{ provider.provider_id }}"
+               hx-get="/wizard/step/6/key-fields/{{ domain }}/{{ provider.provider_id }}"
                hx-target="#key-fields-{{ domain }}"
                hx-swap="innerHTML"
                hx-trigger="change"
@@ -100,7 +100,7 @@
 
     <div role="group">
       <button type="button"
-              hx-get="/wizard/step/4"
+              hx-get="/wizard/step/5"
               hx-target="#wizard-content"
               hx-swap="innerHTML"
               hx-indicator="#wizard-spinner">
