@@ -206,7 +206,8 @@ def test_write_secrets_env_includes_db_password(tmp_path: Path):
     state = _minimal_state(db_password="my_db_password!")
     write_secrets_env(state, tmp_path)
     content = (tmp_path / "secrets.env").read_text(encoding="utf-8")
-    assert "WEEWX_CLEARSKIES_DB_PASSWORD=my_db_password!" in content
+    # Values are single-quoted for safe shell sourcing (Finding 4).
+    assert "WEEWX_CLEARSKIES_DB_PASSWORD='my_db_password!'" in content
 
 
 def test_write_secrets_env_includes_provider_api_keys(tmp_path: Path):

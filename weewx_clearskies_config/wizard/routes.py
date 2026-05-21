@@ -356,7 +356,17 @@ async def step4_post(request: Request) -> HTMLResponse:
             or "weewx-clearskies-realtime"
         )
         state.mqtt_username = str(form.get("mqtt_username", "")).strip()
-        state.mqtt_password = str(form.get("mqtt_password", ""))
+        # Password handling: the template sends password_unchanged=1 and an empty
+        # password field when the user has not re-typed a password on re-render.
+        # Only overwrite the stored secret when the user actually supplies a value.
+        submitted_password = str(form.get("mqtt_password", ""))
+        password_unchanged = str(form.get("password_unchanged", "0")).strip() == "1"
+        if submitted_password:
+            state.mqtt_password = submitted_password
+        elif not password_unchanged:
+            # Explicit blank entry with the flag cleared — user cleared the password.
+            state.mqtt_password = ""
+        # else: flag is set and field is empty — keep existing state.mqtt_password.
         state.mqtt_tls = str(form.get("mqtt_tls", "false")).lower() in ("true", "on", "1", "yes")
         qos_raw = _parse_int(str(form.get("mqtt_qos", "0")), default=0)
         state.mqtt_qos = qos_raw if qos_raw in (0, 1, 2) else 0
@@ -371,6 +381,18 @@ async def step4_post(request: Request) -> HTMLResponse:
                 {"step": 4, "state": state, "error": "; ".join(errors.values()), "test_result": None},
                 status_code=422,
             )
+    else:
+        # Direct mode: reset all MQTT fields to defaults so stale values do not
+        # bleed into the generated config if the user switches back to MQTT later.
+        state.mqtt_broker_host = ""
+        state.mqtt_broker_port = 1883
+        state.mqtt_topic = "weewx/loop"
+        state.mqtt_client_id = "weewx-clearskies-realtime"
+        state.mqtt_username = ""
+        state.mqtt_password = ""
+        state.mqtt_tls = False
+        state.mqtt_qos = 0
+        state.mqtt_keepalive = 60
 
     save_wizard_state(session_id, state)
     return await step5_get(request)

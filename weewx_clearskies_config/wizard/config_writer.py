@@ -179,10 +179,23 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
     return dest
 
 
+def _shell_quote_value(value: str) -> str:
+    """Wrap *value* in single quotes for safe use in a POSIX shell env file.
+
+    Single-quoting is the safest quoting style for values that may contain
+    spaces, dollar signs, backslashes, or other shell-special characters.
+    The only character that cannot appear inside single quotes is a literal
+    single quote; we escape it via the '' sequence (end quote, literal
+    apostrophe, re-open quote).
+    """
+    return "'" + value.replace("'", "'\\''") + "'"
+
+
 def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
     """Write secrets.env with provider API keys and the proxy secret.
 
-    Format: ``WEEWX_CLEARSKIES_<DOMAIN>_<PROVIDER>_<FIELD>=<value>``
+    Format: ``WEEWX_CLEARSKIES_<DOMAIN>_<PROVIDER>_<FIELD>='<value>'``
+    All values are single-quoted so shell special characters are safe.
     The DB password is also written here.
 
     The file is written with mode 0600 (owner read/write only).
@@ -196,17 +209,17 @@ def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
 
     # DB password
     if state.db_password:
-        lines.append(f"WEEWX_CLEARSKIES_DB_PASSWORD={state.db_password}\n")
+        lines.append(f"WEEWX_CLEARSKIES_DB_PASSWORD={_shell_quote_value(state.db_password)}\n")
 
     # Proxy secret (cross-host topology only)
     if state.proxy_secret:
-        lines.append(f"WEEWX_CLEARSKIES_PROXY_SECRET={state.proxy_secret}\n")
+        lines.append(f"WEEWX_CLEARSKIES_PROXY_SECRET={_shell_quote_value(state.proxy_secret)}\n")
 
     # MQTT password — written only when mqtt mode is active and a password is set.
     if state.input_mode == "mqtt" and state.mqtt_password:
-        lines.append(f"WEEWX_CLEARSKIES_MQTT_PASSWORD={state.mqtt_password}\n")
+        lines.append(f"WEEWX_CLEARSKIES_MQTT_PASSWORD={_shell_quote_value(state.mqtt_password)}\n")
 
-    # Provider API keys: WEEWX_CLEARSKIES_<DOMAIN>_<PROVIDER>_<FIELD>=<value>
+    # Provider API keys: WEEWX_CLEARSKIES_<DOMAIN>_<PROVIDER>_<FIELD>='<value>'
     for domain, provider_id in state.providers.items():
         creds = state.api_keys.get(provider_id, {})
         for field_name, value in creds.items():
@@ -216,7 +229,7 @@ def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
                 f"_{provider_id.upper()}"
                 f"_{field_name.upper()}"
             )
-            lines.append(f"{env_key}={value}\n")
+            lines.append(f"{env_key}={_shell_quote_value(value)}\n")
 
     content = "".join(lines)
     dest = config_dir / "secrets.env"

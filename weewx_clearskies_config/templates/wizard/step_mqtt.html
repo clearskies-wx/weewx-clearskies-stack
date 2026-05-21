@@ -39,7 +39,7 @@
                onchange="onModeChange(this.value)">
         <strong>Direct</strong>
         <span class="provider-recommended"
-              {% if not suggested_mqtt %}aria-label="Recommended for your topology"{% else %}style="display:none"{% endif %}>
+              {% if suggested_mqtt %}style="display:none"{% endif %}>
           Recommended
         </span>
         <br>
@@ -60,7 +60,7 @@
                onchange="onModeChange(this.value)">
         <strong>MQTT</strong>
         <span class="provider-recommended"
-              {% if suggested_mqtt %}aria-label="Recommended for your topology"{% else %}style="display:none"{% endif %}>
+              {% if not suggested_mqtt %}style="display:none"{% endif %}>
           Recommended
         </span>
         <br>
@@ -77,8 +77,7 @@
        HTMX is not needed here — plain JS show/hide is sufficient and
        avoids a round-trip for what is a purely client-side interaction. #}
     <div id="mqtt-fields"
-         {% if effective_mode != "mqtt" %}hidden{% endif %}
-         aria-live="polite">
+         {% if effective_mode != "mqtt" %}hidden{% endif %}>
       <fieldset>
         <legend>MQTT broker settings</legend>
 
@@ -156,12 +155,17 @@
               <span class="sr-only">(stored in secrets.env, never in config files)</span>
             </label>
             <div class="password-field">
+              {# Do not pre-fill the password value — avoids exposing it in HTML source.
+                 The hidden field signals "user did not re-type a password"; the POST
+                 handler keeps the existing secret when this flag arrives alongside an
+                 empty password field. JS clears the flag the moment the user types. #}
+              <input type="hidden" id="password_unchanged" name="password_unchanged" value="1">
               <input type="password"
                      id="mqtt_password"
                      name="mqtt_password"
-                     value="{{ state.mqtt_password }}"
                      autocomplete="new-password"
-                     aria-describedby="mqtt-password-hint">
+                     aria-describedby="mqtt-password-hint"
+                     oninput="document.getElementById('password_unchanged').value='0'">
               <button type="button"
                       class="password-toggle"
                       aria-label="Show MQTT password"
@@ -274,6 +278,11 @@
     var hostInput = document.getElementById("mqtt_broker_host");
     if (hostInput) {
       hostInput.required = isMqtt;
+      /* Move focus to the first MQTT field when the panel becomes visible so
+         keyboard and AT users land in the right place without extra navigation. */
+      if (isMqtt) {
+        hostInput.focus();
+      }
     }
   }
 

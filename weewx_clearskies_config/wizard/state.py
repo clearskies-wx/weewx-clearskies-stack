@@ -15,33 +15,30 @@ from pathlib import Path
 class WizardState:
     """Accumulated configuration across all wizard steps."""
 
-    # Step 1: DB connection
+    # Database connection
     db_host: str | None = None
     db_port: int = 3306
     db_user: str | None = None
     db_password: str | None = None
     db_name: str = "weewx"
 
-    # Step 2: Column mapping
-    # key=db_column_name, value=canonical_name or None (unmapped/skip)
+    # Column mapping — key=db_column_name, value=canonical_name or None (unmapped/skip)
     column_mapping: dict[str, str | None] = field(default_factory=dict)
 
-    # Step 3: Station identity
+    # Station identity
     station_name: str | None = None
     latitude: float | None = None
     longitude: float | None = None
     altitude_meters: float | None = None
     timezone: str | None = None
 
-    # Step 4: Provider selections
-    # key=domain (forecast/alerts/aqi/earthquakes/radar), value=provider_id
+    # Provider selections — key=domain (forecast/alerts/aqi/earthquakes/radar), value=provider_id
     providers: dict[str, str] = field(default_factory=dict)
 
-    # Step 5: API keys
-    # key=provider_id, value=dict of credential field names → values
+    # API keys — key=provider_id, value=dict of credential field names → values
     api_keys: dict[str, dict[str, str]] = field(default_factory=dict)
 
-    # Step 4: Data pipeline / MQTT
+    # MQTT / data pipeline
     input_mode: str = "direct"  # "direct" or "mqtt"
     mqtt_broker_host: str = ""
     mqtt_broker_port: int = 1883
@@ -54,11 +51,11 @@ class WizardState:
     mqtt_qos: int = 0
     mqtt_keepalive: int = 60
 
-    # Step 6: Topology
+    # Topology
     topology: str = "same-host"  # "same-host" or "cross-host"
     proxy_secret: str | None = None
 
-    # Step 7: Bind addresses
+    # Bind addresses
     api_bind_host: str = "127.0.0.1"
     api_bind_port: int = 8765
     realtime_bind_host: str = "127.0.0.1"
