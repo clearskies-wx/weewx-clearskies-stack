@@ -54,25 +54,11 @@ def _read_secrets_env(config_dir: Path) -> dict[str, str]:
 def save_progress(session_id: str, state: WizardState, config_dir: Path) -> None:
     """Serialize WizardState to a JSON progress file. Atomic write.
 
-    db_password and api_keys values are replaced with _SECRET_SENTINEL so
-    secrets are never written to disk outside of secrets.env.
+    The progress file is written with mode 0600 so only the service user
+    can read it.  Secrets (db_password, api_keys, mqtt_password, proxy_secret)
+    are stored as-is to allow session recovery without re-entry.
     """
     raw = dataclasses.asdict(state)
-
-    if raw.get("db_password") is not None:
-        raw["db_password"] = _SECRET_SENTINEL
-
-    scrubbed_api_keys: dict[str, dict[str, str]] = {}
-    for provider_id, creds in raw.get("api_keys", {}).items():
-        scrubbed_api_keys[provider_id] = {k: _SECRET_SENTINEL for k in creds}
-    raw["api_keys"] = scrubbed_api_keys
-
-    if raw.get("proxy_secret") is not None:
-        raw["proxy_secret"] = _SECRET_SENTINEL
-
-    # mqtt_password is a secret — never write it to the progress file.
-    if raw.get("mqtt_password"):
-        raw["mqtt_password"] = _SECRET_SENTINEL
 
     # api_session_id grants access to all setup API endpoints — never persist it.
     raw["api_session_id"] = None
@@ -85,6 +71,10 @@ def save_progress(session_id: str, state: WizardState, config_dir: Path) -> None
     try:
         tmp.write_text(json.dumps(raw), encoding="utf-8")
         os.replace(tmp, dest)
+        try:
+            os.chmod(dest, 0o600)
+        except OSError:
+            pass
     except OSError as exc:
         logger.warning("Could not save wizard progress: %s", exc)
         try:
