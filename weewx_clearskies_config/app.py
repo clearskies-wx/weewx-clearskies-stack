@@ -97,6 +97,15 @@ def create_app(config: AppConfig) -> FastAPI:
 
     @app.exception_handler(401)
     async def _on_401(request: Request, _exc: Exception) -> Response:
+        # First-run: if no admin credentials exist yet, bootstrap is the only
+        # useful destination — /login has nothing to log in to.
+        if "WEEWX_CLEARSKIES_ADMIN_USERNAME" not in read_secrets():
+            if request.headers.get("HX-Request"):
+                return Response(
+                    status_code=200,
+                    headers={"HX-Redirect": "/bootstrap"},
+                )
+            return RedirectResponse(url="/bootstrap", status_code=303)
         next_path = request.url.path
         if request.url.query:
             next_path = f"{next_path}?{request.url.query}"
