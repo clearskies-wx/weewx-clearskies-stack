@@ -74,6 +74,15 @@ def create_app(config: AppConfig) -> FastAPI:
     session_manager = SessionManager(tls_enabled=config.tls_enabled)
     bootstrap_manager = config.bootstrap_manager or BootstrapManager()
 
+    @app.middleware("http")
+    async def _no_cache_html(request: Request, call_next: Callable) -> Response:
+        response = await call_next(request)
+        content_type = response.headers.get("content-type", "")
+        if "text/html" in content_type:
+            response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+            response.headers["Pragma"] = "no-cache"
+        return response
+
     app.add_middleware(_RateLimitMiddleware, rate_limiter=rate_limiter)
     app.mount("/static", StaticFiles(directory=str(_static_dir())), name="static")
     app.mount("/wizard/static", StaticFiles(directory=str(_static_dir())), name="wizard-static")
