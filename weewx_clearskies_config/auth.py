@@ -32,9 +32,42 @@ def verify_password(password: str, hash_str: str) -> bool:
         return False
 
 
+_BOOTSTRAP_TOKEN_KEY = "WEEWX_CLEARSKIES_BOOTSTRAP_TOKEN"
+
+
 class BootstrapManager:
-    def __init__(self) -> None:
+    def __init__(self, secrets_path: Path | None = None) -> None:
         self._token: str | None = None
+        self._secrets_path = secrets_path
+        if secrets_path is not None:
+            self._token = self._load_or_generate(secrets_path)
+
+    def _load_or_generate(self, secrets_path: Path) -> str:
+        """Return the persisted bootstrap token, or generate and persist a new one."""
+        existing: dict[str, str] = {}
+        if secrets_path.exists():
+            for line in secrets_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                existing[key.strip()] = value.strip()
+        if _BOOTSTRAP_TOKEN_KEY in existing:
+            return existing[_BOOTSTRAP_TOKEN_KEY]
+        token = secrets.token_hex(32)
+        existing[_BOOTSTRAP_TOKEN_KEY] = token
+        self._write(secrets_path, existing)
+        return token
+
+    @staticmethod
+    def _write(secrets_path: Path, data: dict[str, str]) -> None:
+        secrets_path.parent.mkdir(parents=True, exist_ok=True)
+        lines = [f"{k}={v}\n" for k, v in data.items()]
+        secrets_path.write_text("".join(lines), encoding="utf-8")
+        try:
+            secrets_path.chmod(0o600)
+        except NotImplementedError:
+            pass  # Windows does not support POSIX chmod
 
     def generate(self) -> str:
         self._token = secrets.token_hex(32)
@@ -49,6 +82,16 @@ class BootstrapManager:
         if not self.check(token):
             return False
         self._token = None
+        if self._secrets_path is not None and self._secrets_path.exists():
+            existing: dict[str, str] = {}
+            for line in self._secrets_path.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if not line or line.startswith("#") or "=" not in line:
+                    continue
+                key, _, value = line.partition("=")
+                existing[key.strip()] = value.strip()
+            existing.pop(_BOOTSTRAP_TOKEN_KEY, None)
+            self._write(self._secrets_path, existing)
         return True
 
 

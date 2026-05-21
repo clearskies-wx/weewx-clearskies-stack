@@ -220,8 +220,9 @@ def cli(
     bootstrap_token: str | None = None
 
     if "WEEWX_CLEARSKIES_ADMIN_USERNAME" not in stored:
-        bootstrap_manager = BootstrapManager()
-        bootstrap_token = bootstrap_manager.generate()
+        secrets_path = _config_dir() / "secrets.env"
+        bootstrap_manager = BootstrapManager(secrets_path=secrets_path)
+        bootstrap_token = bootstrap_manager._token
 
     # --- Print startup banner ---
 
