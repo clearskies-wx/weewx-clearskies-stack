@@ -63,7 +63,7 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     """Write realtime.conf from *state*.
 
     Sections written:
-      [server]  — bind address and port for the realtime WebSocket service
+      [sse]     — bind address and port for the realtime SSE service
       [input]   — input mode; if mqtt, includes nested [[mqtt]] subsection
 
     The MQTT password is never written here — only the env var name
@@ -74,7 +74,7 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     """
     cfg = ConfigObj()
 
-    cfg["server"] = {
+    cfg["sse"] = {
         "bind_host": state.realtime_bind_host,
         "bind_port": str(state.realtime_bind_port),
     }
