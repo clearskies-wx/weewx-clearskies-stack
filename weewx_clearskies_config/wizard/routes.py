@@ -1233,6 +1233,20 @@ async def step4_get(request: Request) -> HTMLResponse:
             error = "Could not reach the API to fetch station details. Fill in the fields below manually."
             logger.warning("get_station network error in step4_get", exc_info=True)
 
+    # On re-run, altitude_meters may already be set (from old progress file)
+    # but altitude_unit stuck at the default "meters".  Fetch the actual unit
+    # from the API so the template shows the station's native unit.
+    if state.altitude_meters is not None and state.altitude_unit == "meters":
+        try:
+            client = _get_api_client(state)
+            api_data = client.get_station()
+            if api_data:
+                alt_unit = str(api_data.get("altitude_unit", "meter")).strip().lower()
+                if "foot" in alt_unit or "feet" in alt_unit or alt_unit == "ft":
+                    state.altitude_unit = "feet"
+        except Exception:  # noqa: BLE001
+            pass
+
     return _render(
         request,
         "step_station.html",
