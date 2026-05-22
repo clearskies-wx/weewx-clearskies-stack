@@ -160,14 +160,11 @@
               <span class="sr-only">(stored in secrets.env, never in config files)</span>
             </label>
             <div class="password-field">
-              {# Do not pre-fill the password value — avoids exposing it in HTML source.
-                 The hidden field signals "user did not re-type a password"; the POST
-                 handler keeps the existing secret when this flag arrives alongside an
-                 empty password field. JS clears the flag the moment the user types. #}
               <input type="hidden" id="password_unchanged" name="password_unchanged" value="1">
               <input type="password"
                      id="mqtt_password"
                      name="mqtt_password"
+                     value="{{ state.mqtt_password or '' }}"
                      autocomplete="off"
                      aria-describedby="mqtt-password-hint"
                      oninput="document.getElementById('password_unchanged').value='0'">
