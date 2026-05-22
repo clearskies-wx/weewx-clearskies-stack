@@ -1,7 +1,6 @@
 {% if result.success %}
 <div class="alert-success">
-  TCP connection succeeded.
-  {% if result.note %}<br><small>{{ result.note }}</small>{% endif %}
+  {{ result.note or "Connection succeeded." }}
 </div>
 {% else %}
 <div class="alert-error">

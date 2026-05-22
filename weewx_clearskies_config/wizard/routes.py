@@ -2102,35 +2102,74 @@ def _test_mqtt_connection(
     password: str,
     tls: bool,
 ) -> dict[str, Any]:
-    """Attempt a socket-level connection to the MQTT broker.
+    """Attempt a full MQTT CONNECT handshake to verify credentials.
 
-    Uses a raw TCP connect rather than importing paho-mqtt so we don't
-    depend on the broker package being present in the config tool's venv.
-    A successful TCP handshake proves the host:port is reachable; full MQTT
-    auth is not verified here (that would require paho or similar).
+    Uses paho-mqtt (v2 API) to perform a real MQTT connection including
+    authentication so that bad credentials are detected, not just TCP
+    reachability.
 
     Returns: {"success": bool, "error": str | None, "note": str | None}
     """
     import socket
+    import threading
+    import uuid
+
+    import paho.mqtt.client as mqtt_client
 
     if not host:
         return {"success": False, "error": "Please enter a broker hostname or IP address.", "note": None}
 
-    # Resolve to all address families so IPv6 brokers work too.
+    connected_event = threading.Event()
+    connect_result: dict[str, Any] = {"rc": None}
+
+    def on_connect(client: Any, userdata: Any, flags: Any, reason_code: Any, properties: Any) -> None:  # noqa: ANN401
+        connect_result["rc"] = reason_code
+        connected_event.set()
+
+    client_id = f"clearskies-test-{uuid.uuid4().hex[:8]}"
+    client = mqtt_client.Client(
+        client_id=client_id,
+        callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
+    )
+    client.on_connect = on_connect
+
+    if username:
+        client.username_pw_set(username, password or None)
+
+    if tls:
+        client.tls_set()
+
     try:
-        addr_infos = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
-    except OSError:
-        return {"success": False, "error": f"Could not find a broker at '{host}' — check that the hostname or IP address is correct.", "note": None}
-
-    last_error: str = "No addresses resolved."
-    for family, sock_type, proto, _canonname, sockaddr in addr_infos:
         try:
-            with socket.socket(family, sock_type, proto) as sock:
-                sock.settimeout(5)
-                sock.connect(sockaddr)
-            note = "TCP connection succeeded. MQTT credentials are not verified here."
-            return {"success": True, "error": None, "note": note}
+            client.connect(host, port, keepalive=5)
+        except socket.timeout:
+            return {"success": False, "error": f"Connection to '{host}:{port}' timed out. Check that the host and port are correct and the broker is running.", "note": None}
+        except socket.gaierror:
+            return {"success": False, "error": f"Could not find a broker at '{host}' — check that the hostname or IP address is correct.", "note": None}
+        except ConnectionRefusedError:
+            return {"success": False, "error": f"Connection to '{host}:{port}' was refused. Check that the broker is running and the port is correct.", "note": None}
         except OSError as exc:
-            last_error = str(exc)
+            return {"success": False, "error": f"Could not connect to the broker at '{host}:{port}': {exc}", "note": None}
 
-    return {"success": False, "error": f"Could not connect to the broker at '{host}:{port}' — check that the host and port are correct and the broker is running.", "note": None}
+        client.loop_start()
+        event_fired = connected_event.wait(timeout=5)
+        client.loop_stop()
+
+        if not event_fired:
+            return {"success": False, "error": f"No response from broker at '{host}:{port}' within 5 seconds. The broker may be overloaded or unreachable.", "note": None}
+
+        rc = connect_result["rc"]
+        # ReasonCode objects compare equal to their integer value.
+        if rc == 0:
+            return {"success": True, "error": None, "note": "MQTT connection and authentication verified."}
+        if rc == 4:
+            return {"success": False, "error": "MQTT broker rejected the username/password. Check credentials.", "note": None}
+        if rc == 5:
+            return {"success": False, "error": "MQTT broker refused authorization. The user may lack permissions.", "note": None}
+        return {"success": False, "error": f"MQTT broker refused connection (code {rc}).", "note": None}
+
+    finally:
+        try:
+            client.disconnect()
+        except Exception:  # noqa: BLE001
+            pass
