@@ -18,7 +18,7 @@
         hx-indicator="#wizard-spinner"
         autocomplete="off">
 
-    <input type="hidden" id="altitude_unit" name="altitude_unit" value="meters">
+    <input type="hidden" id="altitude_unit" name="altitude_unit" value="{{ state.altitude_unit }}">
 
     <fieldset>
       <legend>Station information</legend>
@@ -88,7 +88,7 @@
           <input type="number"
                  id="altitude_meters"
                  name="altitude_meters"
-                 value="{{ state.altitude_meters if state.altitude_meters is not none else '' }}"
+                 value="{{ ((state.altitude_meters / 0.3048) | round(1)) if state.altitude_unit == 'feet' and state.altitude_meters is not none else (state.altitude_meters if state.altitude_meters is not none else '') }}"
                  step="any"
                  min="-500"
                  max="30000"
@@ -101,9 +101,10 @@
           <select id="altitude_unit_select"
                   onchange="onAltUnitChange(this.value)"
                   aria-label="Altitude unit">
-            <option value="meters">meters</option>
-            <option value="feet">feet</option>
+            <option value="meters" {% if state.altitude_unit != 'feet' %}selected{% endif %}>meters</option>
+            <option value="feet" {% if state.altitude_unit == 'feet' %}selected{% endif %}>feet</option>
           </select>
+          <small>&nbsp;</small>
         </div>
       </div>
 
@@ -174,9 +175,17 @@
   var altUnitHidden = document.getElementById("altitude_unit");
   var altUnitSelect = document.getElementById("altitude_unit_select");
 
-  function onAltUnitChange(newUnit) {
+  function onAltUnitChange(newUnit, skipConvert) {
     var prev = altUnitHidden.value;
     if (prev === newUnit) return;
+    if (!skipConvert && altInput.value) {
+      var val = parseFloat(altInput.value);
+      if (!isNaN(val)) {
+        altInput.value = newUnit === "feet"
+          ? (val / 0.3048).toFixed(1)
+          : (val * 0.3048).toFixed(3);
+      }
+    }
     altUnitHidden.value = newUnit;
     altInput.setAttribute("min", newUnit === "feet" ? "-1640" : "-500");
     altInput.setAttribute("max", newUnit === "feet" ? "98425" : "30000");
@@ -185,6 +194,11 @@
   }
 
   window.onAltUnitChange = onAltUnitChange;
+  if (altUnitHidden.value === "feet") {
+    altInput.setAttribute("min", "-1640");
+    altInput.setAttribute("max", "98425");
+    document.querySelector("label[for='altitude_meters']").textContent = "Altitude (feet)";
+  }
 
   function useMyLocation() {
     var status = document.getElementById("geolocation-status");
