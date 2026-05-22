@@ -144,6 +144,19 @@
         If you enter coordinates above, the timezone will be auto-detected.
         {% endif %}
       </small>
+
+      <label for="default_locale">Default language</label>
+      <select id="default_locale"
+              name="default_locale"
+              aria-describedby="locale-hint">
+        {% for locale_tag, locale_label in locales %}
+        <option value="{{ locale_tag }}"
+                {% if locale_tag == (state.default_locale or 'en') %}selected{% endif %}>
+          {{ locale_label }}
+        </option>
+        {% endfor %}
+      </select>
+      <small id="locale-hint">The default display language for the dashboard. Operators and visitors can override this in the UI.</small>
     </fieldset>
 
     <div role="group">

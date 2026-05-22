@@ -183,6 +183,30 @@ def _build_timezone_list() -> list[tuple[str, list[str]]]:
 # Build once at module load; the list is static.
 _TIMEZONE_LIST: list[tuple[str, list[str]]] = _build_timezone_list()
 
+# ---------------------------------------------------------------------------
+# ADR-021 locale list
+# ---------------------------------------------------------------------------
+
+# All 13 supported locales in (bcp47_tag, human_label) order.
+# The first entry ("en") is the default selection.
+_SUPPORTED_LOCALES: list[tuple[str, str]] = [
+    ("en",    "English (en)"),
+    ("de",    "Deutsch (de)"),
+    ("es",    "Español (es)"),
+    ("fil",   "Filipino (fil)"),
+    ("fr",    "Français (fr)"),
+    ("it",    "Italiano (it)"),
+    ("ja",    "日本語 (ja)"),
+    ("nl",    "Nederlands (nl)"),
+    ("pt-PT", "Português — Portugal (pt-PT)"),
+    ("pt-BR", "Português — Brasil (pt-BR)"),
+    ("ru",    "Русский (ru)"),
+    ("zh-CN", "中文 简体 (zh-CN)"),
+    ("zh-TW", "中文 繁體 (zh-TW)"),
+]
+
+_VALID_LOCALES: frozenset[str] = frozenset(tag for tag, _ in _SUPPORTED_LOCALES)
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wizard", tags=["wizard"])
@@ -418,6 +442,8 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.topology = prior.topology
             if state.proxy_secret is None and prior.proxy_secret is not None:
                 state.proxy_secret = prior.proxy_secret
+            if state.default_locale == "en" and prior.default_locale != "en":
+                state.default_locale = prior.default_locale
             if state.api_bind_host == "127.0.0.1" and prior.api_bind_host != "127.0.0.1":
                 state.api_bind_host = prior.api_bind_host
             if state.api_bind_port == 8765 and prior.api_bind_port != 8765:
@@ -1259,6 +1285,7 @@ async def step4_get(request: Request) -> HTMLResponse:
             "error": error,
             "schema_skipped": state.schema_skipped,
             "timezones": _TIMEZONE_LIST,
+            "locales": _SUPPORTED_LOCALES,
         },
     )
 
@@ -1290,6 +1317,10 @@ async def step4_post(request: Request) -> HTMLResponse:
     # Auto-lookup timezone if coordinates provided but timezone not set.
     if state.latitude and state.longitude and not state.timezone:
         state.timezone = lookup_timezone(state.latitude, state.longitude)
+
+    # Default locale — validate against the ADR-021 allowed set; fall back to "en".
+    submitted_locale = str(form.get("default_locale", "en")).strip()
+    state.default_locale = submitted_locale if submitted_locale in _VALID_LOCALES else "en"
 
     save_wizard_state(session_id, state)
     return await step5_get(request)
@@ -1566,6 +1597,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             "longitude": state.longitude,
             "altitude_meters": state.altitude_meters,
             "timezone": state.timezone,
+            "default_locale": state.default_locale,
         },
     }
 
@@ -1940,6 +1972,8 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.altitude_unit = existing.altitude_unit
     if state.timezone is None and existing.timezone is not None:
         state.timezone = existing.timezone
+    if state.default_locale == "en" and existing.default_locale != "en":
+        state.default_locale = existing.default_locale
 
     if not state.providers and existing.providers:
         state.providers = existing.providers
@@ -2078,6 +2112,10 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 state.altitude_unit = "meters"
         if state.timezone is None and station.get("timezone"):
             state.timezone = str(station["timezone"])
+        if state.default_locale == "en" and station.get("default_locale"):
+            locale_val = str(station["default_locale"]).strip()
+            if locale_val in _VALID_LOCALES:
+                state.default_locale = locale_val
 
 
 def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:

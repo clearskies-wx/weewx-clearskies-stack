@@ -310,6 +310,12 @@ def populate_from_config(config_dir: Path) -> WizardState:
                     providers[domain] = provider_id
         state.providers = providers
 
+        station_section = api_cfg.get("station", {})
+        if isinstance(station_section, dict):
+            locale_val = str(station_section.get("default_locale", "")).strip()
+            if locale_val:
+                state.default_locale = locale_val
+
         server_section = api_cfg.get("server", {})
         if isinstance(server_section, dict):
             if server_section.get("bind_host"):

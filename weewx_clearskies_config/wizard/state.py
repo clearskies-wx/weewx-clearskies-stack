@@ -79,6 +79,11 @@ class WizardState:
     # Used by step 4 to render the correct Previous button target.
     schema_skipped: bool = False
 
+    # Default locale for the dashboard UI (ADR-021).  One of the 13 supported
+    # BCP-47 tags.  Sent to the API via POST /setup/apply and written to
+    # [station] default_locale in api.conf by the API.
+    default_locale: str = "en"
+
 
 # ---------------------------------------------------------------------------
 # In-memory session store
