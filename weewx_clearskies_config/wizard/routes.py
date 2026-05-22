@@ -1520,10 +1520,12 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         # differs from the short name the API expects (e.g. "nws_alerts" → "nws").
         api_provider_name = _PROVIDER_NAME_MAP.get(provider_id, provider_id)
         provider_entry: dict[str, Any] = {"provider": api_provider_name}
-        if creds.get("api_key"):
-            provider_entry["api_key"] = creds["api_key"]
-        if creds.get("api_secret"):
-            provider_entry["api_secret"] = creds["api_secret"]
+        api_key_val = creds.get("api_key") or creds.get("client_id")
+        api_secret_val = creds.get("api_secret") or creds.get("client_secret")
+        if api_key_val:
+            provider_entry["api_key"] = api_key_val
+        if api_secret_val:
+            provider_entry["api_secret"] = api_secret_val
         if creds.get("pws_station_id"):
             provider_entry["pws_station_id"] = creds["pws_station_id"]
         if creds.get("nws_user_agent_contact"):
@@ -1882,8 +1884,6 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 # CurrentConfigProviderCredentials; map them to the wizard's
                 # auth_fields naming (api_key, api_secret, pws_station_id, etc.)
                 _FIELD_REMAP: dict[str, str] = {
-                    "client_id": "api_key",      # Aeris primary key
-                    "client_secret": "api_secret",  # Aeris secondary key
                     "appid": "api_key",           # OpenWeatherMap
                     "api_key": "api_key",         # Wunderground primary
                     "pws_station_id": "pws_station_id",
