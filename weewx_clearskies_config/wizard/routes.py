@@ -30,6 +30,9 @@ Route summary:
 from __future__ import annotations
 
 import logging
+import os
+import signal
+import subprocess
 from pathlib import Path
 from typing import Any
 
@@ -1659,13 +1662,156 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             status_code=422,
         )
 
+    # ------------------------------------------------------------------
+    # Step 3: Trigger service restarts so the new config takes effect.
+    #
+    # API restart: POST /setup/restart.  The API may drop the connection
+    # before the response completes (it exits and lets systemd restart it).
+    # Both outcomes are treated as success.
+    #
+    # Realtime restart: SIGTERM to the local weewx-clearskies-realtime
+    # service.  If the service is not installed or not running (e.g. first
+    # setup before MQTT is configured), the result is False and the UI
+    # shows "not running" rather than an error.
+    # ------------------------------------------------------------------
+    api_restart_triggered = False
+    realtime_restart_triggered = False
+    try:
+        restart_client = _get_api_client(state)
+        api_restart_triggered = restart_client.restart()
+    except Exception:  # noqa: BLE001
+        logger.warning("wizard_apply: could not send restart request to API", exc_info=True)
+
+    realtime_restart_triggered = _restart_local_realtime()
+
     assert _templates is not None
     return _templates.TemplateResponse(
         request=request,
         name="wizard/step_complete.html",
-        context={"step": 7, "error": None, "result": result},
+        context={
+            "step": 7,
+            "error": None,
+            "result": result,
+            "api_restart_triggered": api_restart_triggered,
+            "realtime_restart_triggered": realtime_restart_triggered,
+        },
         status_code=200,
     )
+
+
+# ---------------------------------------------------------------------------
+# Restart status polling endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.get("/restart-status", response_class=HTMLResponse)
+async def wizard_restart_status(request: Request) -> HTMLResponse:
+    """Return an HTML fragment reporting the current state of both services.
+
+    Called repeatedly by HTMX on the completion page until both services are
+    up.  The fragment wraps its content in a ``<div class="all-done">`` only
+    when both services are confirmed active, which is the condition the HTMX
+    polling expression watches to stop polling.
+
+    The API health check is unauthenticated (GET /health) so it works even
+    after the setup session has expired.  The realtime service state is read
+    from systemctl on the local machine.
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+
+    api_up = False
+    if state.api_address:
+        try:
+            client = ApiClient(state.api_address)
+            api_up = client.health()
+        except Exception:  # noqa: BLE001
+            api_up = False
+
+    realtime_status = _realtime_service_status()
+    # "active" means systemd confirmed the service is running.
+    # "unknown" means systemctl is not available (dev environment) — treat as
+    # not-applicable rather than failed so the UI doesn't spin forever.
+    realtime_up = realtime_status == "active"
+    realtime_unknown = realtime_status == "unknown"
+
+    return _render(
+        request,
+        "restart_status_fragment.html",
+        {
+            "api_up": api_up,
+            "realtime_up": realtime_up,
+            "realtime_unknown": realtime_unknown,
+        },
+    )
+
+
+# ---------------------------------------------------------------------------
+# Service restart helpers
+# ---------------------------------------------------------------------------
+
+_REALTIME_SERVICE = "weewx-clearskies-realtime"
+
+
+def _restart_local_realtime() -> bool:
+    """Signal the local realtime service to restart via SIGTERM.
+
+    Uses ``systemctl show`` to retrieve the service's MainPID, then sends
+    SIGTERM.  The service supervisor (systemd) will restart it automatically
+    if the unit is configured with ``Restart=on-failure`` or ``Restart=always``.
+
+    Returns True if SIGTERM was delivered, False if the service is not
+    running, not found, or if any step fails.  Failures are logged and
+    swallowed — a missing realtime service (e.g. first setup before MQTT
+    is configured) is not an error condition.
+    """
+    try:
+        result = subprocess.run(
+            ["systemctl", "show", "-p", "MainPID", _REALTIME_SERVICE],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        for line in result.stdout.splitlines():
+            if line.startswith("MainPID="):
+                pid_str = line.split("=", 1)[1].strip()
+                pid = int(pid_str)
+                if pid > 0:
+                    os.kill(pid, signal.SIGTERM)
+                    logger.info("Sent SIGTERM to %s (PID %d)", _REALTIME_SERVICE, pid)
+                    return True
+                # pid == 0 means the service is not running.
+                logger.info("%s is not running (MainPID=0); skipping SIGTERM", _REALTIME_SERVICE)
+                return False
+    except FileNotFoundError:
+        # systemctl not available on this platform (e.g. macOS dev environment).
+        logger.info("systemctl not found; skipping %s restart", _REALTIME_SERVICE)
+    except (ValueError, PermissionError, ProcessLookupError) as exc:
+        logger.warning("Could not signal %s: %s", _REALTIME_SERVICE, exc)
+    except Exception:  # noqa: BLE001
+        logger.warning("Unexpected error restarting %s", _REALTIME_SERVICE, exc_info=True)
+    return False
+
+
+def _realtime_service_status() -> str:
+    """Return the systemd active state of the realtime service.
+
+    Returns one of: "active", "inactive", "failed", "unknown".
+    "unknown" covers cases where systemctl is unavailable or the unit does
+    not exist (first-run before MQTT is configured).
+    """
+    try:
+        result = subprocess.run(
+            ["systemctl", "is-active", _REALTIME_SERVICE],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        return result.stdout.strip() or "unknown"
+    except FileNotFoundError:
+        return "unknown"
+    except Exception:  # noqa: BLE001
+        return "unknown"
 
 
 # ---------------------------------------------------------------------------

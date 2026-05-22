@@ -100,6 +100,28 @@
 }
 @keyframes cs-spin { to { transform: rotate(360deg); } }
 
+/* ----- Inline content spinner (service restart status indicators) -- */
+/* Distinct from .spinner-ring which is the global HTMX loading indicator. */
+.cs-spinner {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  border: 2px solid var(--pico-muted-border-color);
+  border-top-color: var(--pico-primary);
+  border-radius: 50%;
+  animation: cs-spin 0.8s linear infinite;
+  vertical-align: middle;
+  margin-inline-end: 0.4rem;
+  flex-shrink: 0;
+}
+/* .restart-item: row container for each service status line */
+.restart-item {
+  padding: 0.4rem 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+}
+
 /* ----- Password show/hide toggle ----------------------------------- */
 .password-field { position: relative; }
 .password-field input[type="password"],

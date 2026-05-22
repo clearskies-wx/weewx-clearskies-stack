@@ -24,7 +24,7 @@
   <div role="status" aria-live="polite">
     <p>
       Your weather dashboard is being configured.
-      The API will restart automatically to load the new settings — this may take a moment.
+      Both services are restarting to load the new settings — this may take a moment.
     </p>
     <p>
       Your dashboard will be available at the address you configured.
@@ -32,6 +32,28 @@
       IP address or hostname of your weather server.
     </p>
   </div>
+
+  {# ---- Live service restart status ---------------------------------- #}
+  <section aria-labelledby="restart-status-heading">
+    <h3 id="restart-status-heading">Service Restart</h3>
+    <div id="restart-status"
+         role="status"
+         aria-live="polite"
+         aria-label="Service restart progress"
+         hx-get="/wizard/restart-status"
+         hx-trigger="load, every 2s [!document.querySelector('#restart-status .all-done')]"
+         hx-swap="innerHTML">
+      {# Initial placeholder — replaced immediately by the first HTMX poll. #}
+      <div class="restart-item">
+        <span class="cs-spinner" aria-hidden="true"></span>
+        Restarting API service...
+      </div>
+      <div class="restart-item">
+        <span class="cs-spinner" aria-hidden="true"></span>
+        Restarting realtime service...
+      </div>
+    </div>
+  </section>
 
   {% if result %}
   {# ---- Files written -------------------------------------------- #}

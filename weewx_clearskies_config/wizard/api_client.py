@@ -297,6 +297,42 @@ class ApiClient:
         result: dict[str, Any] = response.json()
         return result
 
+    def health(self) -> bool:
+        """GET /health — lightweight liveness check.
+
+        Makes an unauthenticated request so this works regardless of session
+        state.  Returns True if the API is reachable and returns a 2xx response.
+
+        Returns:
+            True if the API responded with a 2xx status, False otherwise.
+        """
+        try:
+            self._request("GET", "/health", include_auth=False, timeout=5.0)
+            return True
+        except Exception:  # noqa: BLE001
+            return False
+
+    def restart(self) -> bool:
+        """POST /setup/restart — request the API to restart.
+
+        The API exits shortly after sending its response, which means the
+        connection may be dropped before the full HTTP response arrives.
+        Both a successful response *and* a connection-level error are treated
+        as success — the restart is happening either way.
+
+        Returns:
+            True (always) — the caller should poll health() to confirm
+            the API has come back up.
+        """
+        _log.info("Requesting API restart via POST /setup/restart")
+        try:
+            self._request("POST", "/setup/restart", include_auth=True, timeout=5.0)
+        except Exception:  # noqa: BLE001
+            # Connection dropped mid-response is expected when the API
+            # exits immediately after handling the restart request.
+            pass
+        return True
+
     # ------------------------------------------------------------------
     # Internal helpers
     # ------------------------------------------------------------------
