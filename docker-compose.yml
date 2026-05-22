@@ -1,0 +1,73 @@
+name: clearskies
+
+services:
+  caddy:
+    image: caddy:2-alpine
+    ports:
+      - "${CLEARSKIES_HTTP_PORT:-80}:80"
+      - "${CLEARSKIES_HTTPS_PORT:-443}:443"
+      - "${CLEARSKIES_HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+      - dashboard-dist:/srv/dashboard:ro
+    depends_on:
+      dashboard:
+        condition: service_completed_successfully
+      api:
+        condition: service_healthy
+      realtime:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # Init container: copies the built SPA into the shared volume and exits.
+  # Caddy serves the SPA directly from the volume (no runtime process needed).
+  dashboard:
+    image: ghcr.io/inguy24/weewx-clearskies-dashboard:${CLEARSKIES_VERSION:-0.1.0}
+    build:
+      context: ../weewx-clearskies-dashboard
+    volumes:
+      - dashboard-dist:/dist
+    restart: "no"
+
+  api:
+    image: ghcr.io/inguy24/weewx-clearskies-api:${CLEARSKIES_VERSION:-0.1.0}
+    build:
+      context: ../weewx-clearskies-api
+    volumes:
+      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies:ro
+      - ${WEEWX_CONF_PATH:-/etc/weewx/weewx.conf}:/etc/weewx/weewx.conf:ro
+      - ${WEEWX_DB_PATH:-/var/lib/weewx/weewx.sdb}:/data/weewx.sdb:ro
+      - clearskies-cache:/var/cache/weewx-clearskies
+    env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
+    healthcheck:
+      # Health server runs on port 8081, separate from the API on 8765 (ADR-030).
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    restart: unless-stopped
+
+  realtime:
+    image: ghcr.io/inguy24/weewx-clearskies-realtime:${CLEARSKIES_VERSION:-0.1.0}
+    build:
+      context: ../weewx-clearskies-realtime
+    volumes:
+      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies:ro
+    env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
+    healthcheck:
+      # Health server runs on port 8082, separate from the SSE endpoint on 8766.
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/health/ready')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    restart: unless-stopped
+
+volumes:
+  caddy-data:
+  caddy-config:
+  dashboard-dist:
+  clearskies-cache:

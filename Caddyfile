@@ -1,0 +1,25 @@
+{$CLEARSKIES_DOMAIN:localhost} {
+    encode gzip
+
+    # SPA fallback: unmatched paths serve index.html for React Router
+    handle /api/v1/* {
+        reverse_proxy api:8765
+    }
+
+    handle /sse {
+        reverse_proxy realtime:8766
+    }
+
+    handle {
+        root * /srv/dashboard
+        try_files {path} /index.html
+        file_server
+    }
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        -Server
+    }
+}
