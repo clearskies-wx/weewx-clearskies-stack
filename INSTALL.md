@@ -113,6 +113,8 @@ chmod 600 config/secrets.env
 docker compose up -d
 ```
 
+The compose file includes a Redis container for caching provider API responses. To enable it, uncomment `CLEARSKIES_CACHE_URL` in `.env`. Redis is optional — without it, the API uses in-process memory caching (cleared on restart).
+
 #### 6. Verify
 
 ```bash
@@ -249,6 +251,8 @@ chmod 600 config/secrets.env
 ```bash
 docker compose up -d
 ```
+
+The compose file includes a Redis container for caching provider API responses. To enable it, uncomment `CLEARSKIES_CACHE_URL` in `.env`. Redis is optional — without it, the API uses in-process memory caching (cleared on restart).
 
 ### 5. Verify
 

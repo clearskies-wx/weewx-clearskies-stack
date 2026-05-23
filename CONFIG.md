@@ -79,7 +79,7 @@ These are loaded into containers via `env_file` and never appear in config files
 
 | Variable | Description |
 |---|---|
-| `CLEARSKIES_CACHE_URL` | Redis URL (e.g. `redis://127.0.0.1:6379/0`). Empty = in-process memory cache. |
+| `CLEARSKIES_CACHE_URL` | Redis URL. A Redis container is included in the weewx-host and single-host compose files. Uncomment in `.env` to enable. Empty = in-process memory cache. |
 
 ### Log level
 
