@@ -5,8 +5,7 @@ services:
     image: ghcr.io/inguy24/weewx-clearskies-api:${CLEARSKIES_VERSION:-0.1.0}
     build:
       context: ../../weewx-clearskies-api
-    ports:
-      - "${CLEARSKIES_API_PORT:-8765}:8765"
+    network_mode: host
     volumes:
       - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies
       - ${WEEWX_CONF_PATH:-/etc/weewx/weewx.conf}:/etc/weewx/weewx.conf:ro
