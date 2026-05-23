@@ -1,0 +1,38 @@
+# Clear Skies Realtime configuration
+# Copy to realtime.conf in your deployment's config directory.
+# Format: configobj INI with subsections ([[name]] inside [section])
+
+[input]
+# "mqtt" — multi-host: realtime on a different host from weewx.
+# "direct" — single-host: weewx on the same host, uses a Unix socket.
+mode = mqtt
+
+    [[mqtt]]
+    broker_host = localhost
+    broker_port = 1883
+    topic = weewx/loop
+    client_id = weewx-clearskies-realtime
+    # username =
+    # Password read from the env var named by password_env (set in secrets.env).
+    password_env = WEEWX_CLEARSKIES_MQTT_PASSWORD
+    tls = false
+    # ca_file =
+    qos = 0
+    keepalive = 60
+
+    [[direct]]
+    socket_path = /var/run/weewx-clearskies/loop.sock
+
+[sse]
+# :: = dual-stack (IPv4 + IPv6)
+bind_host = ::
+bind_port = 8766
+# allowed_origins = *
+
+[health]
+bind_host = 127.0.0.1
+bind_port = 8082
+
+[logging]
+# DEBUG, INFO, WARNING, ERROR. Env var CLEARSKIES_LOG_LEVEL overrides.
+# level = INFO

@@ -4,11 +4,11 @@ The deployment and orchestration hub for [Clear Skies](https://github.com/inguy2
 
 This repo provides:
 
-- **Docker Compose** configuration for the easy-button full-stack deployment
-- **Deployment guides** for single-host, cross-host, and bare-metal topologies
-- **Architecture diagram** showing how the components connect
-- **Example Home Assistant configs** for REST sensor and MQTT integration
-- **Cross-repo compatibility matrix** (below)
+- **Per-host Docker Compose configs** for two-host and single-host deployments
+- **Deployment guides** for container and bare-metal topologies
+- **Example config files** for the API and realtime services
+- **Example Home Assistant configs** for REST and MQTT integration
+- **Cross-repo compatibility matrix**
 
 Distributed AS-IS under [GPL v3](LICENSE).
 
@@ -17,41 +17,64 @@ Distributed AS-IS under [GPL v3](LICENSE).
 ## Architecture
 
 ```
-External provider APIs              weewx (existing)
-(forecast, AQI, alerts,                 │
- earthquakes, radar)                    │ writes archive records
-        │                               │ also publishes weewx/loop → MQTT broker
-        │ HTTPS                         │   (needed for realtime service)
-        │                               │
-        ▼                               ▼
-┌────────────────────────────┐    ┌──────────────────────────┐
-│  weewx-clearskies-api      │    │  weewx-clearskies-       │
-│  FastAPI / Python 3.12     │    │  realtime                │
-│  SQLAlchemy 2.x            │    │  Python 3.12 / paho-mqtt │
-│                            │    │                          │
-│  reads weewx archive DB    │    │  MQTT → SSE bridge       │
-│  calls external providers  │    │  (loop packet stream)    │
-└──────────┬─────────────────┘    └──────────┬───────────────┘
-           │  JSON / HTTP                    │  SSE
-           │                                 │
-           └──────────────┬──────────────────┘
-                          ▼
-          ┌────────────────────────────────────┐
-          │   Reverse proxy (Caddy / Nginx /   │
-          │   Apache)                          │
-          │   TLS termination, routing         │
-          └──────────────┬─────────────────────┘
-                         │  HTTPS
-                         ▼
-          ┌────────────────────────────────────┐
-          │   weewx-clearskies-dashboard       │
-          │   React 19 SPA (static files)      │
-          │   Tailwind v4 · shadcn/ui          │
-          │   Recharts · Lucide                │
-          └────────────────────────────────────┘
+                     weewx host                          front-end host
+             ┌─────────────────────────┐       ┌──────────────────────────────────┐
+             │                         │       │                                  │
+             │  weewx (existing)       │       │  ┌──────────────────────────┐    │
+             │  ├── archive DB         │       │  │  Caddy reverse proxy     │    │
+             │  └── MQTT broker        │       │  │  TLS, SPA, /api proxy    │    │
+             │                         │       │  └──────┬──────────┬────────┘    │
+             │  ┌──────────────────┐   │       │         │          │             │
+             │  │  clearskies-api  │◄──┼───────┼─────────┘          │             │
+             │  │  :8765           │   │  HTTP │                    │             │
+             │  └──────────────────┘   │       │  ┌─────────────────▼────────┐    │
+             │                         │       │  │  clearskies-realtime     │    │
+             │  MQTT ──────────────────┼───────┼──►  :8766 (SSE)             │    │
+             │                         │       │  └──────────────────────────┘    │
+             │                         │       │                                  │
+             │                         │       │  clearskies-dashboard            │
+             │                         │       │  (init: copies SPA to volume)    │
+             └─────────────────────────┘       └──────────────────────────────────┘
 ```
 
-**weewx-clearskies ships zero weewx extensions.** All external data (forecast, AQI, alerts, earthquakes, radar) is fetched by clearskies-api's internal provider modules. No separate weewx extensions are required.
+- **API** reads the weewx archive DB and calls external providers (forecast, AQI, alerts, radar). Co-located with weewx for fast DB access.
+- **Realtime** subscribes to the MQTT broker and bridges loop packets to an SSE stream.
+- **Dashboard** is a React SPA served as static files by Caddy.
+- **Caddy** terminates TLS, serves the dashboard, and proxies `/api/v1/*` to the API and `/sse` to realtime.
+
+Single-host deployment puts all four containers on one machine. See [INSTALL.md](INSTALL.md).
+
+---
+
+## Repo structure
+
+```
+weewx-clearskies-stack/
+├── weewx-host/                  # Two-host: API container on the weewx machine
+│   ├── docker-compose.yml
+│   └── .env.example
+├── frontend-host/               # Two-host: dashboard + realtime + Caddy
+│   ├── docker-compose.yml
+│   ├── Caddyfile
+│   └── .env.example
+├── single-host/                 # All-in-one: all four containers
+│   ├── docker-compose.yml
+│   ├── Caddyfile
+│   └── .env.example
+├── config/                      # Example config files
+│   ├── api.conf.example
+│   └── realtime.conf.example
+├── archive/                     # Pre-split monolithic configs (historical)
+├── dev/                         # Dev stack (MariaDB + Redis for testing)
+├── examples/                    # HA configs, reverse-proxy, systemd units
+├── tests/                       # Wizard test suite
+├── weewx_clearskies_config/     # Config wizard Python package
+├── INSTALL.md                   # Full deployment guide
+├── CONFIG.md                    # Environment and config reference
+├── SECURITY.md                  # Trust model, secrets, vulnerability reporting
+├── CHANGELOG.md                 # Release notes
+└── README.md                    # This file
+```
 
 ---
 
@@ -60,36 +83,37 @@ External provider APIs              weewx (existing)
 | Repo | Role | Distribution |
 |---|---|---|
 | [weewx-clearskies-api](https://github.com/inguy24/weewx-clearskies-api) | HTTP/JSON API + external data providers | `pip install` / Docker |
-| [weewx-clearskies-realtime](https://github.com/inguy24/weewx-clearskies-realtime) | MQTT-to-SSE bridge for live current conditions | `pip install` / Docker |
+| [weewx-clearskies-realtime](https://github.com/inguy24/weewx-clearskies-realtime) | MQTT-to-SSE bridge for live conditions | `pip install` / Docker |
 | [weewx-clearskies-dashboard](https://github.com/inguy24/weewx-clearskies-dashboard) | React SPA (static HTML/CSS/JS) | Pre-built bundle / Docker |
-| **weewx-clearskies-stack** (this repo) | Docker Compose, deployment guide, HA configs | Docs + compose file |
+| **weewx-clearskies-stack** (this repo) | Orchestration, deployment guide, HA configs | Compose files + docs |
 
 ---
 
 ## Cross-repo compatibility matrix
 
-Operators: check this table before mixing component versions. Untested combinations are operator's risk.
-
 | stack | api | realtime | dashboard | Notes |
 |---|---|---|---|---|
-| 0.1.0 | 0.1.0 | 0.1.0 | 0.1.0 | First public release; all repos at v0.1.0 |
+| 0.1.0 | 0.1.0 | 0.1.0 | 0.1.0 | First public release |
 
 ---
 
-## Quick start (Docker Compose)
+## Quick start (Docker Compose — single host)
 
 ```bash
 git clone https://github.com/inguy24/weewx-clearskies-stack.git
-cd weewx-clearskies-stack
+cd weewx-clearskies-stack/single-host
 cp .env.example .env
-$EDITOR .env   # fill in database credentials and provider API keys
+$EDITOR .env
+
+mkdir -p config
+cp ../config/api.conf.example config/api.conf
+cp ../config/realtime.conf.example config/realtime.conf
+$EDITOR config/api.conf config/realtime.conf
 
 docker compose up -d
 ```
 
-Open `https://your-host/` — the Clear Skies dashboard should load.
-
-See [INSTALL.md](INSTALL.md) for the full step-by-step guide, including prerequisites, database setup, and verification steps.
+See [INSTALL.md](INSTALL.md) for the two-host deployment (recommended), prerequisites, database setup, and verification.
 
 ---
 
@@ -97,8 +121,8 @@ See [INSTALL.md](INSTALL.md) for the full step-by-step guide, including prerequi
 
 | Doc | Contents |
 |---|---|
-| [INSTALL.md](INSTALL.md) | Full deployment guide — single-host Docker, cross-host, bare-metal, Raspberry Pi |
-| [CONFIG.md](CONFIG.md) | All `.env` variables for the Docker Compose stack |
+| [INSTALL.md](INSTALL.md) | Full deployment guide — two-host, single-host, bare-metal, Raspberry Pi |
+| [CONFIG.md](CONFIG.md) | Environment variables and config file reference |
 | [SECURITY.md](SECURITY.md) | Trust model, secrets management, vulnerability reporting |
 | [CHANGELOG.md](CHANGELOG.md) | Release notes and upgrade guidance |
 
@@ -106,23 +130,21 @@ See [INSTALL.md](INSTALL.md) for the full step-by-step guide, including prerequi
 
 ## Home Assistant integration
 
-Example configs for consuming Clear Skies data in Home Assistant:
+Example configs in `examples/home-assistant/`:
 
-- `examples/home-assistant/sensors-rest.yaml` — REST sensor definitions for current conditions, forecast, and AQI
-- `examples/home-assistant/sensors-mqtt.yaml` — MQTT sensor definitions consuming the weewx-mqtt loop topic directly
+- `sensors-rest.yaml` — REST sensors for current conditions, forecast, AQI
+- `sensors-mqtt.yaml` — MQTT sensors consuming weewx loop packets directly
 
-See [INSTALL.md](INSTALL.md) §Home Assistant for wiring instructions.
+See [INSTALL.md](INSTALL.md) §Home Assistant for details.
 
 ---
 
 ## Dev/test stack
 
-The `dev/` subdirectory contains the developer/test docker-compose stack: a MariaDB instance seeded with a production weewx archive snapshot, plus an optional Redis service. This is development infrastructure — operators running Clear Skies in production do not use `dev/` directly. See [`dev/README.md`](dev/README.md) for details.
+`dev/` contains the developer/test docker-compose: MariaDB seeded with production weewx data + optional Redis. Not for production use. See [`dev/README.md`](dev/README.md).
 
 ---
 
 ## License
 
 [GNU General Public License v3.0](LICENSE)
-
-Distributed AS-IS. See LICENSE for full terms.

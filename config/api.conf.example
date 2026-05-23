@@ -1,0 +1,66 @@
+# Clear Skies API configuration
+# Copy to api.conf in your deployment's config directory.
+# Full reference: CONFIG.md in the stack repo.
+#
+# Secrets (DB password, API keys) belong in secrets.env, not here.
+# Format: configobj INI (https://configobj.readthedocs.io/)
+
+[api]
+# Listen address. Use 0.0.0.0 for container deployments so Docker
+# port forwarding works. Native installs can keep 127.0.0.1.
+bind_host = 0.0.0.0
+bind_port = 8765
+# max_request_bytes = 1048576
+# cors_origins =
+
+[health]
+bind_host = 127.0.0.1
+bind_port = 8081
+# metrics_enabled = false
+
+[logging]
+# DEBUG, INFO, WARNING, ERROR. Env var CLEARSKIES_LOG_LEVEL overrides.
+# level = INFO
+
+[database]
+kind = sqlite
+path = /data/weewx.sdb
+
+# MariaDB example (set kind = mysql):
+# kind = mysql
+# host = localhost
+# port = 3306
+# name = weewx
+# pool_size = 5
+# max_overflow = 10
+# Credentials via secrets.env:
+#   WEEWX_CLEARSKIES_DB_USER=weewx
+#   WEEWX_CLEARSKIES_DB_PASSWORD=changeme
+
+[weewx]
+# conf_path = /etc/weewx/weewx.conf
+
+[station]
+# default_locale = en
+
+[branding]
+# site_title = My Weather Station
+# logo_url =
+# favicon_url =
+
+[forecast]
+# provider = nws
+
+[alerts]
+# provider = nws
+
+[aqi]
+# provider = airnow
+
+[radar]
+# provider = rainviewer
+
+[tls]
+# enabled = false
+# cert_file =
+# key_file =

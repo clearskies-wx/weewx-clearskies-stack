@@ -1,7 +1,11 @@
-# Secrets
+# Secrets — covers root and per-host directories (weewx-host/, frontend-host/, single-host/)
 .env
 .env.local
 secrets.env
+
+# Operator config files (created from *.example templates)
+api.conf
+realtime.conf
 
 # Mixed (compose may run any language; cover Python + JS basics)
 __pycache__/

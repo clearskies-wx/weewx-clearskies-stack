@@ -1,105 +1,117 @@
 # Configuration — weewx-clearskies-stack
 
-The Docker Compose stack is configured through a `.env` file in the repo root. Copy `.env.example` to `.env` and edit it before running `docker compose up`.
+## Overview
 
-The individual component config files (`api.conf`, `realtime.conf`) are bind-mounted from the host at `/etc/weewx-clearskies/`. See each component's `CONFIG.md` for their full option reference.
+The stack uses three layers of configuration:
 
----
-
-## .env variables
-
-### Caddy (reverse proxy)
-
-| Variable | Default | Description |
-|---|---|---|
-| `CADDY_HOST` | `localhost` | The domain name or IP Caddy listens on and obtains a TLS certificate for. Set to your public domain (e.g. `weather.example.com`) for automatic Let's Encrypt certificates. |
-
-### clearskies-api database
-
-| Variable | Default | Description |
-|---|---|---|
-| `WEEWX_CLEARSKIES_DB_USER` | _(required)_ | Read-only database username. |
-| `WEEWX_CLEARSKIES_DB_PASSWORD` | _(required)_ | Database password for `WEEWX_CLEARSKIES_DB_USER`. |
-
-These are injected into the clearskies-api container as environment variables and read by `db/engine.py`. They never touch `api.conf`.
-
-### clearskies-api provider credentials
-
-All provider credentials are optional. Set the ones for the providers you configure in `api.conf`.
-
-| Variable | Provider(s) | Description |
-|---|---|---|
-| `WEEWX_CLEARSKIES_AERIS_CLIENT_ID` | Aeris (forecast, alerts, AQI, radar) | Aeris client ID |
-| `WEEWX_CLEARSKIES_AERIS_CLIENT_SECRET` | Aeris | Aeris client secret |
-| `WEEWX_CLEARSKIES_OPENWEATHERMAP_APPID` | OpenWeatherMap (forecast, alerts, AQI, radar) | OpenWeatherMap API key |
-| `WEEWX_CLEARSKIES_WUNDERGROUND_API_KEY` | Weather Underground forecast | WU API key |
-| `WEEWX_CLEARSKIES_WUNDERGROUND_PWS_STATION_ID` | Weather Underground forecast | Your PWS station ID |
-| `WEEWX_CLEARSKIES_IQAIR_KEY` | IQAir AQI | IQAir API key |
-
-### clearskies-realtime MQTT
-
-| Variable | Default | Description |
-|---|---|---|
-| `WEEWX_CLEARSKIES_MQTT_PASSWORD` | _(empty)_ | MQTT broker password. Referenced by `[input.mqtt] password_env` in `realtime.conf`. Leave empty for anonymous brokers. |
-
-### Proxy shared secret (cross-host deploys)
-
-| Variable | Default | Description |
-|---|---|---|
-| `WEEWX_CLEARSKIES_PROXY_SECRET` | _(empty)_ | Shared secret for `X-Clearskies-Proxy-Auth` header. Required for cross-host deploys where the API binds to a non-loopback address. Generate with `openssl rand -hex 32`. Leave empty for single-host deploys. |
-
-### Redis cache (optional)
-
-| Variable | Default | Description |
-|---|---|---|
-| `CLEARSKIES_CACHE_URL` | _(empty, uses in-process memory)_ | Redis connection URL. `redis://127.0.0.1:6379/0` or `redis://[::1]:6379/0`. Set to enable persistent provider response caching. |
-
-### Log level (optional)
-
-| Variable | Default | Description |
-|---|---|---|
-| `CLEARSKIES_LOG_LEVEL` | _(uses config file value)_ | Override log level for all components: `DEBUG`, `INFO`, `WARNING`, `ERROR`. |
+1. **`.env` file** — per-host environment variables for Docker Compose. Each deployment directory (`weewx-host/`, `frontend-host/`, `single-host/`) has its own `.env.example` to copy.
+2. **`config/api.conf` and `config/realtime.conf`** — service config files in configobj INI format. Example files in `config/` at the repo root.
+3. **`config/secrets.env`** — runtime secrets (API keys, DB password, MQTT password). Loaded as `env_file` by containers.
 
 ---
 
-## Example .env
+## .env variables by host
+
+### weewx host (`weewx-host/.env`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `CLEARSKIES_VERSION` | `0.1.0` | Container image tag |
+| `CLEARSKIES_CONFIG_DIR` | `./config` | Host directory containing `api.conf` |
+| `CLEARSKIES_SECRETS_FILE` | `./config/secrets.env` | Path to secrets env file |
+| `WEEWX_CONF_PATH` | `/etc/weewx/weewx.conf` | **Required** — host path to weewx.conf |
+| `WEEWX_DB_PATH` | `/var/lib/weewx/weewx.sdb` | **Required (SQLite)** — host path to weewx.sdb |
+| `CLEARSKIES_API_PORT` | `8765` | Port exposed to the host for cross-host access |
+
+### Front-end host (`frontend-host/.env`)
+
+| Variable | Default | Description |
+|---|---|---|
+| `CLEARSKIES_DOMAIN` | `localhost` | **Required** — domain for Caddy TLS cert |
+| `CLEARSKIES_API_URL` | _(none)_ | **Required** — URL of API on weewx host (e.g. `http://192.168.x.x:8765`) |
+| `CLEARSKIES_VERSION` | `0.1.0` | Container image tag |
+| `CLEARSKIES_CONFIG_DIR` | `./config` | Host directory containing `realtime.conf` |
+| `CLEARSKIES_SECRETS_FILE` | `./config/secrets.env` | Path to secrets env file |
+| `CLEARSKIES_HTTP_PORT` | `80` | Caddy HTTP port |
+| `CLEARSKIES_HTTPS_PORT` | `443` | Caddy HTTPS port |
+
+### Single host (`single-host/.env`)
+
+Merged superset — includes all variables from both tables above except `CLEARSKIES_API_URL` and `CLEARSKIES_API_PORT` (not needed when all services share a Docker network).
+
+---
+
+## secrets.env variables
+
+These are loaded into containers via `env_file` and never appear in config files.
+
+### Database (API container)
+
+| Variable | Description |
+|---|---|
+| `WEEWX_CLEARSKIES_DB_USER` | Read-only database username (MariaDB) |
+| `WEEWX_CLEARSKIES_DB_PASSWORD` | Database password |
+
+### Provider API keys (API container)
+
+| Variable | Provider |
+|---|---|
+| `WEEWX_CLEARSKIES_AERIS_CLIENT_ID` | Aeris (forecast, alerts, AQI, radar) |
+| `WEEWX_CLEARSKIES_AERIS_CLIENT_SECRET` | Aeris |
+| `WEEWX_CLEARSKIES_OPENWEATHERMAP_APPID` | OpenWeatherMap |
+| `WEEWX_CLEARSKIES_WUNDERGROUND_API_KEY` | Weather Underground |
+| `WEEWX_CLEARSKIES_WUNDERGROUND_PWS_STATION_ID` | Weather Underground |
+| `WEEWX_CLEARSKIES_IQAIR_KEY` | IQAir AQI |
+
+### MQTT (realtime container)
+
+| Variable | Description |
+|---|---|
+| `WEEWX_CLEARSKIES_MQTT_PASSWORD` | MQTT broker password. Leave empty for anonymous. |
+
+### Cross-host auth
+
+| Variable | Description |
+|---|---|
+| `WEEWX_CLEARSKIES_PROXY_SECRET` | Shared secret for `X-Clearskies-Proxy-Auth`. Generate with `openssl rand -hex 32`. |
+
+### Cache (optional)
+
+| Variable | Description |
+|---|---|
+| `CLEARSKIES_CACHE_URL` | Redis URL (e.g. `redis://127.0.0.1:6379/0`). Empty = in-process memory cache. |
+
+### Log level
+
+| Variable | Description |
+|---|---|
+| `CLEARSKIES_LOG_LEVEL` | Override log level: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
+
+---
+
+## Config files
+
+Example configs are in the `config/` directory at the repo root:
+
+- `config/api.conf.example` — all API settings with defaults and comments
+- `config/realtime.conf.example` — all realtime settings including MQTT and direct mode
+
+Copy these to your deployment's `config/` directory and edit:
 
 ```bash
-# Caddy
-CADDY_HOST=weather.example.com
-
-# Database (MariaDB)
-WEEWX_CLEARSKIES_DB_USER=clearskies_ro
-WEEWX_CLEARSKIES_DB_PASSWORD=<your-db-password>
-
-# Forecast and alerts provider — Open-Meteo (keyless, no credentials needed)
-# If using OpenWeatherMap:
-# WEEWX_CLEARSKIES_OPENWEATHERMAP_APPID=<your-owm-key>
-
-# AQI provider — Open-Meteo (keyless, no credentials needed)
-# If using IQAir:
-# WEEWX_CLEARSKIES_IQAIR_KEY=<your-iqair-key>
-
-# MQTT (leave empty for anonymous broker)
-WEEWX_CLEARSKIES_MQTT_PASSWORD=
-
-# Cross-host proxy secret (leave empty for single-host)
-WEEWX_CLEARSKIES_PROXY_SECRET=
+cd weewx-host    # or frontend-host or single-host
+mkdir -p config
+cp ../config/api.conf.example config/api.conf
+cp ../config/realtime.conf.example config/realtime.conf
 ```
 
----
+Full option references:
 
-## api.conf and realtime.conf
-
-These files are not managed by this repo — they are bind-mounted from `/etc/weewx-clearskies/` on the host. See:
-
-- [weewx-clearskies-api CONFIG.md](https://github.com/inguy24/weewx-clearskies-api/blob/main/CONFIG.md) — every api.conf section and key
-- [weewx-clearskies-realtime CONFIG.md](https://github.com/inguy24/weewx-clearskies-realtime/blob/main/CONFIG.md) — every realtime.conf section and key
-
-Configuration files survive `docker compose pull` and `docker compose up -d` — they are on the host filesystem and are not modified by the image update.
+- [weewx-clearskies-api CONFIG.md](https://github.com/inguy24/weewx-clearskies-api/blob/main/CONFIG.md)
+- [weewx-clearskies-realtime CONFIG.md](https://github.com/inguy24/weewx-clearskies-realtime/blob/main/CONFIG.md)
 
 ---
 
 ## Upgrading configuration between releases
 
-When a new release requires new config keys, [CHANGELOG.md](CHANGELOG.md) documents the migration. The service defaults missing keys gracefully where possible. When a new required key has no safe default, CHANGELOG calls out the manual edit before upgrade.
+When a new release requires new config keys, [CHANGELOG.md](CHANGELOG.md) documents the migration. Services default missing keys gracefully where possible. When a new required key has no safe default, CHANGELOG calls out the manual edit before upgrade.
