@@ -9,6 +9,30 @@
         reverse_proxy realtime:8766
     }
 
+    handle /wizard* {
+        reverse_proxy config:9876
+    }
+
+    handle /bootstrap* {
+        reverse_proxy config:9876
+    }
+
+    handle /login* {
+        reverse_proxy config:9876
+    }
+
+    handle /logout* {
+        reverse_proxy config:9876
+    }
+
+    handle /admin* {
+        reverse_proxy config:9876
+    }
+
+    handle /static/* {
+        reverse_proxy config:9876
+    }
+
     handle {
         root * /srv/dashboard
         try_files {path} /index.html

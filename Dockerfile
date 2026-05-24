@@ -6,27 +6,15 @@ FROM python:3.12-slim-bookworm AS builder
 
 WORKDIR /build
 
-COPY pyproject.toml .
-COPY README.md .
-COPY weewx_clearskies_config/ weewx_clearskies_config/
+# Build context must be the repos parent (contains both weewx-clearskies-stack/
+# and weewx-clearskies-api/).  Compose sets dockerfile: to point here.
+COPY weewx-clearskies-stack/pyproject.toml .
+COPY weewx-clearskies-stack/README.md .
+COPY weewx-clearskies-stack/weewx_clearskies_config/ weewx_clearskies_config/
 
-# NOTE: weewx-clearskies-api is a declared dependency but is not published on
-# PyPI.  To resolve it during the build you must supply an additional build
-# context that points to the API source tree:
-#
-#   docker buildx build \
-#     --build-context weewx-clearskies-api=../weewx-clearskies-api \
-#     -t clearskies-config .
-#
-# Then add this COPY + install step before `pip install .`:
-#
-#   COPY --from=weewx-clearskies-api . /api-src
-#   RUN pip install --no-cache-dir /api-src
-#
-# Alternatively, publish weewx-clearskies-api to a package index and remove
-# the manual COPY step.  Until one of these is in place, the build will fail
-# if pip cannot resolve weewx-clearskies-api>=0.1.0 from the default index.
-RUN pip install --no-cache-dir .
+# weewx-clearskies-api is not on PyPI; install from sibling repo first.
+COPY weewx-clearskies-api/ /api-src/
+RUN pip install --no-cache-dir /api-src && pip install --no-cache-dir .
 
 # ── runtime ──────────────────────────────────────────────────────────────────
 FROM python:3.12-slim-bookworm AS runtime

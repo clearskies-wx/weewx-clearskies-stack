@@ -21,6 +21,8 @@ services:
         condition: service_healthy
       realtime:
         condition: service_healthy
+      config:
+        condition: service_healthy
     restart: unless-stopped
 
   dashboard:
@@ -62,6 +64,24 @@ services:
       timeout: 5s
       retries: 3
       start_period: 15s
+    restart: unless-stopped
+
+  config:
+    image: ghcr.io/inguy24/weewx-clearskies-config:${CLEARSKIES_VERSION:-0.1.0}
+    build:
+      context: ../..
+      dockerfile: weewx-clearskies-stack/Dockerfile
+    volumes:
+      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies
+    env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
+    environment:
+      - CLEARSKIES_API_URL=https://api:8765
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9876/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
     restart: unless-stopped
 
   redis:
