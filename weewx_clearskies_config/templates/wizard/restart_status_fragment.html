@@ -26,19 +26,17 @@
   {% endif %}
 </div>
 
+{% if not realtime_unknown %}
 <div class="restart-item" style="margin-top:0.5rem;">
   {% if realtime_up %}
   <span class="alert-success" style="display:inline-flex; padding:0.3rem 0.6rem; margin-bottom:0; gap:0.4rem;">
     <span aria-hidden="true">&#10003;</span> Realtime service &#8212; running
-  </span>
-  {% elif realtime_unknown %}
-  <span class="alert-success" style="display:inline-flex; padding:0.3rem 0.6rem; margin-bottom:0; gap:0.4rem; background:#d4edda; border-color:#c3e6cb; color:#155724;">
-    <span aria-hidden="true">&#8212;</span> Realtime service &#8212; not configured (systemd not available)
   </span>
   {% else %}
   <span class="cs-spinner" aria-hidden="true"></span>
   Restarting realtime service&#8230;
   {% endif %}
 </div>
+{% endif %}
 
 {% if both_done %}</div>{% endif %}
