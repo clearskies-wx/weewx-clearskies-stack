@@ -197,8 +197,9 @@ def cli(
             click.echo(f"Error: could not resolve bind address: {bind_addr}", err=True)
             sys.exit(1)
     else:
-        # Default: dual-stack all interfaces
-        bind_addresses = ["::"]
+        # Default: all IPv4 interfaces.  Do NOT use :: — uvicorn sets
+        # IPV6_V6ONLY=1 on IPv6 sockets so :: is IPv6-only in practice.
+        bind_addresses = ["0.0.0.0"]
 
     # --- TLS setup ---
 

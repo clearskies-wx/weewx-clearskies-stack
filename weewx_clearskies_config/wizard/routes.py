@@ -856,8 +856,8 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         state.topology = "cross-host"
         if not state.proxy_secret:
             state.proxy_secret = generate_proxy_secret()
-        state.api_bind_host = "::"
-        state.realtime_bind_host = "::"
+        state.api_bind_host = "0.0.0.0"
+        state.realtime_bind_host = "0.0.0.0"
     state.api_bind_port = 8765
     state.realtime_bind_port = 8766
 

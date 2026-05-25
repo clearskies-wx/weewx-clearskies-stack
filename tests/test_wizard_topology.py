@@ -18,10 +18,12 @@ def test_topology_defaults_same_host_binds_loopback():
     assert defaults["realtime_bind_host"] == "127.0.0.1"
 
 
-def test_topology_defaults_cross_host_binds_dual_stack_all_interfaces():
+def test_topology_defaults_cross_host_binds_all_ipv4_interfaces():
+    # :: is NOT used: uvicorn sets IPV6_V6ONLY=1 on IPv6 sockets, so :: is
+    # IPv6-only in practice.  0.0.0.0 gives reliable all-interfaces behaviour.
     defaults = topology_defaults(same_host=False)
-    assert defaults["api_bind_host"] == "::"
-    assert defaults["realtime_bind_host"] == "::"
+    assert defaults["api_bind_host"] == "0.0.0.0"
+    assert defaults["realtime_bind_host"] == "0.0.0.0"
 
 
 def test_topology_defaults_same_host_does_not_need_proxy_secret():
