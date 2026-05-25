@@ -285,7 +285,11 @@ class ApiClient:
             config: The complete wizard configuration dict to apply.
 
         Returns:
-            API response dict (typically confirms success or lists written files).
+            API response dict.  When the API issues a one-time restart token
+            (``restart_token`` key), the caller should pass it to restart() so
+            the restart endpoint can authenticate without a proxy secret.  This
+            bridges the gap between "secret written to disk" and "secret loaded
+            into the running process's environment."
         """
         _log.info("Sending apply config to API")
         response = self._request(
@@ -312,7 +316,7 @@ class ApiClient:
         except Exception:  # noqa: BLE001
             return False
 
-    def restart(self) -> bool:
+    def restart(self, restart_token: str | None = None) -> bool:
         """POST /setup/restart — request the API to restart.
 
         The API exits shortly after sending its response, which means the
@@ -320,13 +324,27 @@ class ApiClient:
         Both a successful response *and* a connection-level error are treated
         as success — the restart is happening either way.
 
+        Args:
+            restart_token: One-time token issued by /setup/apply.  When
+                provided it is sent as ``X-Clearskies-Restart-Token`` and
+                allows the restart to proceed even when the proxy secret is
+                not yet loaded in the API process's environment (first-run
+                case, where the secret was just written to disk by apply).
+                Omit for re-run mode where the proxy secret is already active.
+
         Returns:
             True (always) — the caller should poll health() to confirm
             the API has come back up.
         """
         _log.info("Requesting API restart via POST /setup/restart")
         try:
-            self._request("POST", "/setup/restart", include_auth=True, timeout=5.0)
+            self._request(
+                "POST",
+                "/setup/restart",
+                include_auth=True,
+                restart_token=restart_token,
+                timeout=5.0,
+            )
         except Exception:  # noqa: BLE001
             # Connection dropped mid-response is expected when the API
             # exits immediately after handling the restart request.
@@ -345,6 +363,7 @@ class ApiClient:
         json: dict[str, Any] | None = None,
         timeout: float = _DEFAULT_TIMEOUT,
         include_auth: bool = True,
+        restart_token: str | None = None,
     ) -> httpx.Response:
         """Execute a single HTTP request against the API.
 
@@ -355,6 +374,11 @@ class ApiClient:
             timeout: Request timeout in seconds.
             include_auth: If True (default), include the Authorization header.
                 Set to False for the handshake call which has no session yet.
+            restart_token: When set, adds an ``X-Clearskies-Restart-Token``
+                header.  Used by restart() so the API can authenticate the
+                request via the one-time token issued by /setup/apply rather
+                than requiring proxy auth (which may not be available on
+                first-run when the secret was just written to disk).
 
         Returns:
             The httpx.Response on success (2xx).
@@ -365,6 +389,9 @@ class ApiClient:
         """
         url = self._api_url + path
         headers: dict[str, str] = {"Content-Type": "application/json"} if json is not None else {}
+
+        if restart_token is not None:
+            headers["X-Clearskies-Restart-Token"] = restart_token
 
         if include_auth:
             if self._session_id is not None:

@@ -1607,9 +1607,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     if state.proxy_secret:
         api_payload["proxy_secret"] = state.proxy_secret
 
+    apply_response: dict[str, Any] | None = None
     try:
         client = _get_api_client(state)
-        client.apply(api_payload)
+        apply_response = client.apply(api_payload)
     except ValueError:
         # API not connected — state.api_address or api_session_id is missing.
         return _render(
@@ -1647,6 +1648,12 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             },
             status_code=422,
         )
+
+    # Extract the one-time restart token issued by /setup/apply.  Present on
+    # first-run; absent on re-run (proxy auth is used instead).
+    restart_token: str | None = None
+    if apply_response and isinstance(apply_response, dict):
+        restart_token = apply_response.get("restart_token") or None
 
     # ------------------------------------------------------------------
     # Step 2: Write local config files (realtime.conf, stack.conf,
@@ -1710,7 +1717,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     realtime_restart_triggered = False
     try:
         restart_client = _get_api_client(state)
-        api_restart_triggered = restart_client.restart()
+        # Pass the one-time restart_token so the API can authenticate the
+        # restart request even on first-run, before the proxy secret has been
+        # loaded into the running process's environment.
+        api_restart_triggered = restart_client.restart(restart_token=restart_token)
     except Exception:  # noqa: BLE001
         logger.warning("wizard_apply: could not send restart request to API", exc_info=True)
 
