@@ -54,12 +54,12 @@ _SECTION_META: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("api", "aqi", "AQI Provider", ()),
     ("api", "earthquakes", "Earthquakes Provider", ()),
     ("api", "radar", "Radar Provider", ()),
-    ("api", "webcam", "Webcam", ()),
     # realtime.conf sections
     ("realtime", "server", "Realtime Server", ()),
     ("realtime", "mqtt", "MQTT Settings", ("password",)),
-    # stack.conf sections
+    # stack.conf sections — webcam is a UI concern, written by the wizard to stack.conf
     ("stack", "ui", "UI Settings", ()),
+    ("stack", "webcam", "Webcam", ()),
 ]
 
 # Set of (component, section) pairs that are valid for editing
@@ -78,7 +78,7 @@ _SECTION_ALLOWED_KEYS: dict[tuple[str, str], frozenset[str]] = {
     ("api", "aqi"):         frozenset({"provider"}),
     ("api", "earthquakes"): frozenset({"provider"}),
     ("api", "radar"):       frozenset({"provider"}),
-    ("api", "webcam"):      frozenset({"enabled", "image_url", "video_url", "refresh_interval"}),
+    ("stack", "webcam"):    frozenset({"enabled", "image_url", "video_url", "refresh_interval"}),
     ("realtime", "server"): frozenset({"bind_host", "bind_port"}),
     ("realtime", "mqtt"):   frozenset({
         "enabled", "broker_host", "broker_port", "topic", "username", "password",

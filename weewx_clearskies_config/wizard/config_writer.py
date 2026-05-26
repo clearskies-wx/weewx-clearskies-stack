@@ -107,7 +107,8 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
     """Write stack.conf from *state*.
 
     Sections written:
-      [ui]  — station display settings
+      [ui]     — station display settings
+      [webcam] — webcam config for wizard re-run pre-fill
 
     Returns the path to the written file.
     """
@@ -122,6 +123,13 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
         ),
         "timezone": state.timezone or "",
         "topology": state.topology,
+    }
+
+    cfg["webcam"] = {
+        "enabled": str(state.webcam_enabled).lower(),
+        "image_url": state.webcam_image_url,
+        "video_url": state.webcam_video_url,
+        "refresh_interval": str(state.webcam_refresh_interval),
     }
 
     content = _wrap_with_managed_region(cfg)

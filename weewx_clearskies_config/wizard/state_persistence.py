@@ -326,20 +326,6 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 except (ValueError, TypeError):
                     pass
 
-        webcam_section = api_cfg.get("webcam", {})
-        if isinstance(webcam_section, dict):
-            enabled_val = str(webcam_section.get("enabled", "false")).lower()
-            state.webcam_enabled = enabled_val in ("true", "1", "yes")
-            if webcam_section.get("image_url"):
-                state.webcam_image_url = str(webcam_section["image_url"])
-            if webcam_section.get("video_url"):
-                state.webcam_video_url = str(webcam_section["video_url"])
-            if webcam_section.get("refresh_interval"):
-                try:
-                    state.webcam_refresh_interval = int(webcam_section["refresh_interval"])
-                except (ValueError, TypeError):
-                    pass
-
     stack_cfg = read_config("stack", config_dir)
     if stack_cfg is not None:
         ui_section = stack_cfg.get("ui", {})
@@ -365,6 +351,20 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 state.timezone = str(ui_section["timezone"])
             if ui_section.get("topology") in ("same-host", "cross-host"):
                 state.topology = str(ui_section["topology"])
+
+        webcam_section = stack_cfg.get("webcam", {})
+        if isinstance(webcam_section, dict):
+            enabled_val = str(webcam_section.get("enabled", "false")).lower()
+            state.webcam_enabled = enabled_val in ("true", "1", "yes")
+            if webcam_section.get("image_url"):
+                state.webcam_image_url = str(webcam_section["image_url"])
+            if webcam_section.get("video_url"):
+                state.webcam_video_url = str(webcam_section["video_url"])
+            if webcam_section.get("refresh_interval"):
+                try:
+                    state.webcam_refresh_interval = int(webcam_section["refresh_interval"])
+                except (ValueError, TypeError):
+                    pass
 
     realtime_cfg = read_config("realtime", config_dir)
     if realtime_cfg is not None:

@@ -31,6 +31,7 @@ Route summary:
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 import signal
@@ -1642,13 +1643,6 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     if state.proxy_secret:
         api_payload["proxy_secret"] = state.proxy_secret
 
-    api_payload["webcam"] = {
-        "enabled": state.webcam_enabled,
-        "image_url": state.webcam_image_url,
-        "video_url": state.webcam_video_url,
-        "refresh_interval": state.webcam_refresh_interval,
-    }
-
     apply_response: dict[str, Any] | None = None
     try:
         client = _get_api_client(state)
@@ -1696,6 +1690,21 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     restart_token: str | None = None
     if apply_response and isinstance(apply_response, dict):
         restart_token = apply_response.get("restart_token") or None
+
+    # Write webcam config as a static JSON file for the dashboard.
+    # This is a UI concern — the API does not manage webcam settings.
+    webcam_config = {
+        "enabled": state.webcam_enabled,
+        "imageUrl": state.webcam_image_url,
+        "videoUrl": state.webcam_video_url,
+        "refreshInterval": state.webcam_refresh_interval,
+    }
+    webcam_json_path = "/var/www/clearskies/webcam.json"
+    try:
+        with open(webcam_json_path, "w") as f:
+            json.dump(webcam_config, f, indent=2)
+    except OSError:
+        pass  # non-fatal — operator can create the file manually
 
     # ------------------------------------------------------------------
     # Step 2: Write local config files (realtime.conf, stack.conf,
