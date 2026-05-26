@@ -106,6 +106,13 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     cfg["units"] = {}
     cfg["units"]["groups"] = {k: v for k, v in unit_groups.items()}
 
+    if state.api_address:
+        cfg["api"] = {
+            "upstream_url": state.api_address,
+            "timeout": "30",
+            "tls_verify": "false",
+        }
+
     content = _wrap_with_managed_region(cfg)
     dest = config_dir / "realtime.conf"
     _write_file(dest, content)
