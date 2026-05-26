@@ -94,6 +94,15 @@ class WizardState:
     # When populated, subsequent steps pre-fill from the imported data.
     imported_config: dict[str, Any] | None = None
 
+    # Source skin name detected during step 0 import (e.g. "Belchertown").
+    # Used by image resolution to locate files under /etc/weewx/skins/<skin>/.
+    source_skin: str | None = None
+
+    # Image resolution results from step 0 import (ADR-043).
+    # Shape: {key: {"status": "local"|"api"|"unresolved"|"missing", "dest": str|None, "original": str}}
+    # None means no image detection has been attempted.
+    imported_images: dict[str, Any] | None = None
+
     # Unit configuration (step inserted after station identity).
     # Key = weewx unit group name (e.g. "group_temperature"),
     # Value = selected unit string (e.g. "degree_F").

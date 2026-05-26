@@ -355,12 +355,30 @@ class ApiClient:
     # Internal helpers
     # ------------------------------------------------------------------
 
+    def fetch_skin_file(self, skin: str, path: str) -> bytes | None:
+        """Fetch a file from a skin directory via GET /setup/skin-file.
+
+        Returns file bytes on success, None on 404/error.
+        """
+        try:
+            resp = self._request(
+                "GET",
+                "/setup/skin-file",
+                params={"skin": skin, "path": path},
+            )
+            if resp.status_code == 200:
+                return resp.content
+            return None
+        except Exception:  # noqa: BLE001
+            return None
+
     def _request(
         self,
         method: str,
         path: str,
         *,
         json: dict[str, Any] | None = None,
+        params: dict[str, str] | None = None,
         timeout: float = _DEFAULT_TIMEOUT,
         include_auth: bool = True,
         restart_token: str | None = None,
@@ -371,6 +389,7 @@ class ApiClient:
             method: HTTP method ("GET", "POST", etc.).
             path: URL path relative to api_url (must start with "/").
             json: Optional JSON body for POST requests.
+            params: Optional query-string parameters.
             timeout: Request timeout in seconds.
             include_auth: If True (default), include the Authorization header.
                 Set to False for the handshake call which has no session yet.
@@ -406,7 +425,7 @@ class ApiClient:
                 raise ApiClientError(401, "No session established — call handshake() first")
 
         with httpx.Client(verify=False, timeout=timeout) as client:  # noqa: S501
-            response = client.request(method, url, headers=headers, json=json)
+            response = client.request(method, url, headers=headers, json=json, params=params)
 
         if response.is_success:
             return response

@@ -289,6 +289,26 @@ async def step_import_post(request: Request) -> HTMLResponse:
 
     state.imported_config = imported
 
+    # Detect image paths for later resolution (ADR-043).
+    from weewx_clearskies_config.wizard.image_import import detect_image_paths, resolve_images_local
+
+    image_paths = detect_image_paths(imported)
+    if image_paths:
+        state.source_skin = "Belchertown"  # default; enhance later
+        if _config_dir is not None:
+            results_local = resolve_images_local(
+                image_paths,
+                state.source_skin,
+                _config_dir / "branding",
+            )
+            state.imported_images = results_local
+        else:
+            # No config dir yet — record paths as unresolved for API resolution later.
+            state.imported_images = {
+                k: {"status": "unresolved", "dest": None, "original": v}
+                for k, v in image_paths.items()
+            }
+
     # Pre-populate unit state from the imported skin.conf groups (if present).
     # Only fill groups that exist in UNIT_OPTIONS; ignore unknown groups.
     imported_groups: dict[str, str] = imported.get("units", {}).get("groups", {})
@@ -1861,6 +1881,27 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     if apply_response and isinstance(apply_response, dict):
         restart_token = apply_response.get("restart_token") or None
 
+    # Resolve any unresolved imported images via the API (ADR-043).
+    # The API is confirmed connected at this point (apply succeeded above).
+    if state.imported_images:
+        unresolved_imgs = {
+            k: v for k, v in state.imported_images.items()
+            if v.get("status") == "unresolved"
+        }
+        if unresolved_imgs and _config_dir is not None:
+            from weewx_clearskies_config.wizard.image_import import resolve_images_api
+            try:
+                img_client = _get_api_client(state)
+                updated_imgs = resolve_images_api(
+                    state.imported_images,
+                    state.source_skin or "Belchertown",
+                    _config_dir / "branding",
+                    img_client,
+                )
+                state.imported_images = updated_imgs
+            except Exception:  # noqa: BLE001
+                logger.warning("Image API resolution failed", exc_info=True)
+
     # Write webcam config as a static JSON file for the dashboard.
     # This is a UI concern — the API does not manage webcam settings.
     webcam_config = {
@@ -1957,6 +1998,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             "result": result,
             "api_restart_triggered": api_restart_triggered,
             "realtime_restart_triggered": realtime_restart_triggered,
+            "imported_images": state.imported_images,
         },
         status_code=200,
     )
