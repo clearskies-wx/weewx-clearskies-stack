@@ -290,6 +290,74 @@ def write_bootstrap_summary(
     return dest
 
 
+def build_skin_conf_payload(state: WizardState) -> dict[str, Any]:
+    """Build skin_conf payload for POST /setup/apply (ADR-043).
+
+    Always includes unit group selections (from state.units, or falling back
+    to the US preset when the unit step was not completed).  Includes
+    additional [Units] subsections (string_formats, labels, ordinates,
+    time_formats, degree_days, trend) plus top-level labels, extras, and
+    almanac if the operator imported an existing skin.conf.
+
+    The returned dict is added to the api_payload as "skin_conf" before
+    calling client.apply().
+
+    Args:
+        state: The current WizardState, potentially populated by a prior
+               skin.conf import (state.imported_config) and/or a completed
+               unit step (state.units).
+
+    Returns:
+        Dict suitable for the "skin_conf" key in the POST /setup/apply
+        payload.
+    """
+    from weewx_clearskies_config.wizard.units import UNIT_PRESETS
+
+    payload: dict[str, Any] = {}
+
+    # [Units] section — groups always present; other subsections from import.
+    units: dict[str, Any] = {}
+    if state.units is not None:
+        units["groups"] = dict(state.units)
+    else:
+        units["groups"] = dict(UNIT_PRESETS["us"])
+
+    # Carry forward imported [Units] subsections when an import was done.
+    if state.imported_config is not None:
+        imp_units = state.imported_config.get("units", {})
+        for key in (
+            "string_formats",
+            "labels",
+            "ordinates",
+            "time_formats",
+            "degree_days",
+            "trend",
+        ):
+            value = imp_units.get(key)
+            if value:
+                units[key] = value
+
+    payload["units"] = units
+
+    # [Labels][[Generic]], [Extras], [Almanac] — from import only.
+    if state.imported_config is not None:
+        raw_labels = state.imported_config.get("labels", {})
+        if raw_labels:
+            # skin_import.py returns labels as a flat dict from [Labels][[Generic]].
+            # Wrap under the "generic" key to mirror the skin.conf section hierarchy.
+            payload["labels"] = {"generic": raw_labels}
+
+        extras = state.imported_config.get("extras", {})
+        if extras:
+            payload["extras"] = extras
+
+        almanac = state.imported_config.get("almanac", {})
+        if almanac:
+            payload["almanac"] = almanac
+
+    return payload
+
+
 def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
     """Write local config files and secrets.env from *state*.
 

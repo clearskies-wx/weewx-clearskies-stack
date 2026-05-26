@@ -45,7 +45,7 @@ from fastapi.templating import Jinja2Templates
 
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
 from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
-from weewx_clearskies_config.wizard.config_writer import apply_wizard
+from weewx_clearskies_config.wizard.config_writer import apply_wizard, build_skin_conf_payload
 from weewx_clearskies_config.wizard.known_apis import load_known_apis, verify_or_pin_fingerprint
 from weewx_clearskies_config.wizard.providers import (
     get_provider,
@@ -1810,6 +1810,8 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
     if state.proxy_secret:
         api_payload["proxy_secret"] = state.proxy_secret
+
+    api_payload["skin_conf"] = build_skin_conf_payload(state)
 
     apply_response: dict[str, Any] | None = None
     try:
