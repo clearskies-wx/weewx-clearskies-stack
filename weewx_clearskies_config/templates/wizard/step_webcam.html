@@ -1,0 +1,71 @@
+<article>
+  <header>
+    <h2>Step 7 of 8 &mdash; Webcam <small>(Optional)</small></h2>
+    <p>Configure a webcam to display live images on the dashboard. You can skip this step if you don't have a webcam.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" class="alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form hx-post="/wizard/step/7"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
+
+    <fieldset>
+      <label>
+        <input type="checkbox" name="webcam_enabled" value="on"
+               {% if state.webcam_enabled %}checked{% endif %}
+               onchange="toggleWebcamFields(this.checked)">
+        Enable webcam
+      </label>
+    </fieldset>
+
+    <div id="webcam-fields" {% if not state.webcam_enabled %}hidden{% endif %}>
+      <label for="webcam_image_url">Snapshot URL <span aria-hidden="true">*</span></label>
+      <input type="url" id="webcam_image_url" name="webcam_image_url"
+             value="{{ state.webcam_image_url or '' }}"
+             placeholder="http://192.168.1.100/snapshot.jpg"
+             aria-describedby="webcam-url-help">
+      <small id="webcam-url-help">Direct URL to your webcam's JPEG snapshot endpoint.</small>
+
+      <label for="webcam_refresh_interval">Refresh interval (seconds)</label>
+      <input type="number" id="webcam_refresh_interval" name="webcam_refresh_interval"
+             value="{{ state.webcam_refresh_interval }}" min="5" max="3600">
+
+      <label for="webcam_timelapse_directory">Timelapse directory <small>(optional)</small></label>
+      <input type="text" id="webcam_timelapse_directory" name="webcam_timelapse_directory"
+             value="{{ state.webcam_timelapse_directory or '' }}"
+             placeholder="/var/lib/weewx/timelapse"
+             aria-describedby="timelapse-help">
+      <small id="timelapse-help">Local directory containing timelapse JPEG/PNG files.</small>
+
+      <label for="webcam_timelapse_max_frames">Max timelapse frames</label>
+      <input type="number" id="webcam_timelapse_max_frames" name="webcam_timelapse_max_frames"
+             value="{{ state.webcam_timelapse_max_frames }}" min="10" max="1000">
+    </div>
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/6"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML show:window:top"
+              hx-indicator="#wizard-spinner">
+        &larr; Previous
+      </button>
+      <button type="submit">Next &rarr;</button>
+    </div>
+  </form>
+</article>
+
+<script>
+function toggleWebcamFields(enabled) {
+  var fields = document.getElementById('webcam-fields');
+  if (fields) fields.hidden = !enabled;
+}
+</script>
+
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

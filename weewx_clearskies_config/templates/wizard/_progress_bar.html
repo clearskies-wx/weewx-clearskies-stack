@@ -5,14 +5,15 @@
   "Station",
   "Realtime",
   "Providers",
+  "Webcam",
   "Review"
 ] %}
 <nav id="wizard-nav" aria-label="Wizard progress"{% if oob %} hx-swap-oob="true"{% endif %}>
   <ol class="wizard-progress" role="list">
-    {% for i in range(1, 8) %}
+    {% for i in range(1, 9) %}
     <li
-      {% if i == step and step <= 7 %}aria-current="step"{% endif %}
-      {% if i < step or step > 7 %}class="is-complete"{% endif %}
+      {% if i == step and step <= 8 %}aria-current="step"{% endif %}
+      {% if i < step or step > 8 %}class="is-complete"{% endif %}
     >
       {% if i < step %}
       <a href="#"

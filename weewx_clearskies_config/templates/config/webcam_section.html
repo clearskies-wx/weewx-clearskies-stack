@@ -1,0 +1,215 @@
+{# -------------------------------------------------------------------------
+   Webcam section editor.
+   Rendered by routes.py section_get when section == "webcam".
+
+   Context variables (from routes.py):
+     component ("api"), section ("webcam"), display_name, values, result, error
+   ------------------------------------------------------------------------- #}
+
+{% set enabled_val = values.get("enabled", "") %}
+{% set is_enabled = enabled_val | lower in ("true", "1", "yes", "on") %}
+
+<style>
+  .webcam-config-fields { margin-block-start: 1rem; }
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+</style>
+
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin/config"
+             hx-get="/admin/config"
+             hx-target="#config-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">
+            Configuration
+          </a>
+        </li>
+        <li>{{ display_name }}</li>
+      </ul>
+    </nav>
+    <h2>{{ display_name }}</h2>
+    <p>
+      Configure a live snapshot image and optional timelapse for the dashboard.
+      The snapshot URL must return a JPEG or PNG image; the dashboard polls it
+      on the configured interval.
+    </p>
+  </header>
+
+  {# Result notification area — populated by HTMX after save #}
+  <div id="section-result" role="status" aria-live="polite" aria-atomic="true"></div>
+
+  {% if error %}
+  <div role="alert"
+       style="padding:0.75rem 1rem;margin-block-end:1rem;
+              border-radius:var(--pico-border-radius);
+              background-color:#f8d7da;border:1px solid #f5c6cb;color:#721c24">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <form id="section-form-{{ component }}-{{ section }}"
+        hx-post="/admin/config/{{ component }}/{{ section }}"
+        hx-target="#config-content"
+        hx-swap="innerHTML">
+
+    <fieldset>
+      <legend>Webcam settings</legend>
+
+      {# ------------------------------------------------------------------ #}
+      {# Enable / disable toggle                                             #}
+      {# ------------------------------------------------------------------ #}
+      <label for="webcam_enabled">
+        <input type="checkbox"
+               id="webcam_enabled"
+               name="enabled"
+               value="true"
+               {% if is_enabled %}checked{% endif %}
+               aria-describedby="webcam-enabled-hint"
+               onchange="onWebcamEnabledChange(this.checked)">
+        Enable webcam on the dashboard
+      </label>
+      <small id="webcam-enabled-hint">
+        When disabled, the webcam card is hidden from the dashboard entirely.
+      </small>
+
+    </fieldset>
+
+    {# ------------------------------------------------------------------ #}
+    {# Config fields — shown only when enabled                             #}
+    {# ------------------------------------------------------------------ #}
+    <div id="webcam-config-fields"
+         class="webcam-config-fields"
+         {% if not is_enabled %}hidden{% endif %}>
+
+      <fieldset>
+        <legend>Webcam connection</legend>
+
+        <label for="webcam_image_url">
+          Snapshot URL <span aria-hidden="true">*</span>
+        </label>
+        <input type="url"
+               id="webcam_image_url"
+               name="image_url"
+               value="{{ values.get('image_url', '') }}"
+               placeholder="http://192.168.1.100/snapshot.jpg"
+               autocomplete="off"
+               aria-describedby="webcam-image-url-hint"
+               {% if is_enabled %}required{% endif %}>
+        <small id="webcam-image-url-hint">
+          Direct URL to the camera snapshot image (JPEG or PNG).
+          Example: <code>http://192.168.1.100/snapshot.jpg</code>.
+          The dashboard fetches this URL directly from the browser — it must be
+          reachable by visitors.
+        </small>
+
+        <label for="webcam_refresh_interval">Refresh interval (seconds)</label>
+        <input type="number"
+               id="webcam_refresh_interval"
+               name="refresh_interval"
+               value="{{ values.get('refresh_interval', '30') }}"
+               min="5"
+               max="3600"
+               aria-describedby="webcam-refresh-hint">
+        <small id="webcam-refresh-hint">
+          How often the dashboard reloads the snapshot. Minimum 5 s, maximum 3600 s (1 hour).
+          Default: 30 s. Set higher for cameras with slow connections.
+        </small>
+
+      </fieldset>
+
+      <fieldset>
+        <legend>Timelapse</legend>
+
+        <label for="webcam_timelapse_directory">
+          Timelapse directory
+        </label>
+        <input type="text"
+               id="webcam_timelapse_directory"
+               name="timelapse_directory"
+               value="{{ values.get('timelapse_directory', '') }}"
+               placeholder="/var/lib/weewx/timelapse"
+               autocomplete="off"
+               aria-describedby="webcam-timelapse-dir-hint">
+        <small id="webcam-timelapse-dir-hint">
+          Absolute path to the directory where snapshot frames are archived for
+          timelapse playback. Leave blank to disable timelapse.
+          Example: <code>/var/lib/weewx/timelapse</code>.
+        </small>
+
+        <label for="webcam_timelapse_max_frames">Maximum timelapse frames</label>
+        <input type="number"
+               id="webcam_timelapse_max_frames"
+               name="timelapse_max_frames"
+               value="{{ values.get('timelapse_max_frames', '288') }}"
+               min="10"
+               max="1000"
+               aria-describedby="webcam-max-frames-hint">
+        <small id="webcam-max-frames-hint">
+          Maximum number of frames to keep in the timelapse archive. Older frames
+          are dropped when the limit is reached. Minimum 10, maximum 1000.
+          Default: 288 (one frame every 5 minutes for 24 hours at 30 s interval).
+        </small>
+
+      </fieldset>
+    </div>{# /#webcam-config-fields #}
+
+    <div role="group" style="margin-block-start:1.25rem">
+      <button type="submit">Save Webcam</button>
+      <a href="/admin/config"
+         hx-get="/admin/config"
+         hx-target="#config-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">
+        Cancel
+      </a>
+    </div>
+
+  </form>
+</article>
+
+<script>
+(function () {
+  "use strict";
+
+  function onWebcamEnabledChange(enabled) {
+    var panel = document.getElementById("webcam-config-fields");
+    if (!panel) return;
+    panel.hidden = !enabled;
+
+    /* Toggle required on the URL field so HTML5 validation fires only when
+       webcam is enabled.  Server validates independently — this is UX only. */
+    var urlInput = document.getElementById("webcam_image_url");
+    if (urlInput) {
+      urlInput.required = enabled;
+      /* Move focus to the URL field when the panel becomes visible so keyboard
+         and AT users land in the right place without extra navigation. */
+      if (enabled) {
+        urlInput.focus();
+      }
+    }
+  }
+
+  window.onWebcamEnabledChange = onWebcamEnabledChange;
+
+  /* Initialise on load to handle the pre-filled state from the server. */
+  var checkbox = document.getElementById("webcam_enabled");
+  if (checkbox) {
+    onWebcamEnabledChange(checkbox.checked);
+  }
+}());
+</script>

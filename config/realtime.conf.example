@@ -24,8 +24,12 @@ mode = mqtt
     socket_path = /var/run/weewx-clearskies/loop.sock
 
 [sse]
-# :: = dual-stack (IPv4 + IPv6)
-bind_host = ::
+# 0.0.0.0 = all IPv4 interfaces (reliable behind a reverse proxy).
+# Do NOT use :: here: uvicorn sets IPV6_V6ONLY=1 on IPv6 sockets, so ::
+# is IPv6-only regardless of the kernel net.ipv6.bindv6only setting.
+# For MariaDB my.cnf, use bind-address = * (not ::) to bind all interfaces.
+# Use 127.0.0.1 for loopback-only (same-host topology).
+bind_host = 0.0.0.0
 bind_port = 8766
 # allowed_origins = *
 
