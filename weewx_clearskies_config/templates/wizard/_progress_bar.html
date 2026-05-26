@@ -3,6 +3,7 @@
   "Database",
   "Columns",
   "Station",
+  "Units",
   "Realtime",
   "Providers",
   "Webcam",
@@ -10,14 +11,16 @@
 ] %}
 <nav id="wizard-nav" aria-label="Wizard progress"{% if oob %} hx-swap-oob="true"{% endif %}>
   <ol class="wizard-progress" role="list">
-    {% for i in range(1, 9) %}
+    {% for i in range(1, 10) %}
     <li
-      {% if i == step and step <= 8 %}aria-current="step"{% endif %}
-      {% if i < step or step > 8 %}class="is-complete"{% endif %}
+      {% if i == step and step <= 9 %}aria-current="step"{% endif %}
+      {% if i < step or step > 9 %}class="is-complete"{% endif %}
     >
       {% if i < step %}
+      {# Step 5 is the units step at /wizard/units; all others are at /wizard/step/N. #}
+      {% set step_url = "/wizard/units" if i == 5 else "/wizard/step/" ~ i %}
       <a href="#"
-         hx-get="/wizard/step/{{ i }}"
+         hx-get="{{ step_url }}"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"

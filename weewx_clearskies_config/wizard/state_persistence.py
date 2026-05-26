@@ -482,6 +482,15 @@ def _state_from_dict(raw: dict[str, Any]) -> WizardState:
                 kwargs[f.name] = {str(k): str(v) for k, v in val.items()}
         elif f.name == "api_keys":
             kwargs[f.name] = val  # already processed above
+        elif f.name == "imported_config":
+            # Stored as a dict or None; accept as-is.
+            kwargs[f.name] = val if isinstance(val, dict) else None
+        elif f.name == "units":
+            # Stored as a dict of {group: unit} or None.
+            if isinstance(val, dict):
+                kwargs[f.name] = {str(k): str(v) for k, v in val.items()}
+            else:
+                kwargs[f.name] = None
         else:
             kwargs[f.name] = val
     return WizardState(**kwargs)

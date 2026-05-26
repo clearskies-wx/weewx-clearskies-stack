@@ -64,8 +64,15 @@ from weewx_clearskies_config.wizard.state import (
     get_wizard_state,
     save_wizard_state,
 )
+from weewx_clearskies_config.wizard.skin_import import SkinImportError, parse_skin_conf_text
 from weewx_clearskies_config.wizard.station import lookup_timezone
 from weewx_clearskies_config.wizard.topology import generate_proxy_secret
+from weewx_clearskies_config.wizard.units import (
+    UNIT_GROUP_LABELS,
+    UNIT_OPTIONS,
+    UNIT_PRESETS,
+    validate_units,
+)
 
 # ---------------------------------------------------------------------------
 # Timezone list helper
@@ -213,6 +220,165 @@ _VALID_LOCALES: frozenset[str] = frozenset(tag for tag, _ in _SUPPORTED_LOCALES)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wizard", tags=["wizard"])
+
+# ---------------------------------------------------------------------------
+# Step 0: skin.conf Import or Fresh Start
+# ---------------------------------------------------------------------------
+
+
+@router.get("/import", response_class=HTMLResponse)
+async def step_import_get(request: Request) -> HTMLResponse:
+    """Step 0: Import an existing skin.conf or start fresh."""
+    _require_session(request)
+    return _render(
+        request,
+        "step_import.html",
+        {"step": 0, "error": None},
+    )
+
+
+@router.post("/import", response_class=HTMLResponse)
+async def step_import_post(request: Request) -> HTMLResponse:
+    """Handle the skin.conf import or fresh-start choice.
+
+    - fresh_start=1 in the form body: skip import, proceed to step 1.
+    - A file upload (field name "skin_conf"): parse and store, then step 1.
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+
+    form = await request.form()
+    fresh_start = str(form.get("fresh_start", "0")).strip() == "1"
+
+    if fresh_start:
+        # Clear any previously imported config and proceed.
+        state.imported_config = None
+        save_wizard_state(session_id, state)
+        return await step1_api_get(request)
+
+    # File upload path.
+    skin_conf_file = form.get("skin_conf")
+    if skin_conf_file is None or not hasattr(skin_conf_file, "read"):
+        return _render(
+            request,
+            "step_import.html",
+            {"step": 0, "error": "Please select a skin.conf file to upload, or click Start Fresh."},
+            status_code=422,
+        )
+
+    try:
+        raw_bytes = await skin_conf_file.read()
+        text = raw_bytes.decode("utf-8", errors="replace")
+    except Exception as exc:  # noqa: BLE001
+        return _render(
+            request,
+            "step_import.html",
+            {"step": 0, "error": f"Could not read the uploaded file: {exc}"},
+            status_code=422,
+        )
+
+    try:
+        imported = parse_skin_conf_text(text)
+    except SkinImportError as exc:
+        return _render(
+            request,
+            "step_import.html",
+            {"step": 0, "error": f"Could not parse skin.conf: {exc}"},
+            status_code=422,
+        )
+
+    state.imported_config = imported
+
+    # Pre-populate unit state from the imported skin.conf groups (if present).
+    # Only fill groups that exist in UNIT_OPTIONS; ignore unknown groups.
+    imported_groups: dict[str, str] = imported.get("units", {}).get("groups", {})
+    if imported_groups and state.units is None:
+        merged: dict[str, str] = dict(UNIT_PRESETS["us"])  # start from US defaults
+        valid_units_by_group = {g: {u for u, _ in opts} for g, opts in UNIT_OPTIONS.items()}
+        for group, unit in imported_groups.items():
+            if group in valid_units_by_group and unit in valid_units_by_group[group]:
+                merged[group] = unit
+        state.units = merged
+
+    save_wizard_state(session_id, state)
+    return await step1_api_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Unit Configuration step (inserted after station identity, step 5 in new numbering)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/units", response_class=HTMLResponse)
+async def step_units_get(request: Request) -> HTMLResponse:
+    """Unit configuration step: choose display units per group."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+
+    # Determine the units to pre-fill the dropdowns with.
+    # Priority: 1) already-saved in state, 2) imported skin.conf, 3) US defaults.
+    if state.units is not None:
+        current_units = dict(state.units)
+    else:
+        imported_groups: dict[str, str] = {}
+        if state.imported_config:
+            imported_groups = state.imported_config.get("units", {}).get("groups", {})
+        current_units = dict(UNIT_PRESETS["us"])
+        valid_units_by_group = {g: {u for u, _ in opts} for g, opts in UNIT_OPTIONS.items()}
+        for group, unit in imported_groups.items():
+            if group in valid_units_by_group and unit in valid_units_by_group[group]:
+                current_units[group] = unit
+
+    return _render(
+        request,
+        "step_units.html",
+        {
+            "step": 5,
+            "state": state,
+            "current_units": current_units,
+            "unit_options": UNIT_OPTIONS,
+            "unit_group_labels": UNIT_GROUP_LABELS,
+            "presets": UNIT_PRESETS,
+            "error": None,
+            "errors": {},
+        },
+    )
+
+
+@router.post("/units", response_class=HTMLResponse)
+async def step_units_post(request: Request) -> HTMLResponse:
+    """Save unit selections and advance to step 6 (data pipeline / MQTT)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    # Collect unit group selections from form.
+    submitted_units: dict[str, str] = {}
+    for group in UNIT_OPTIONS:
+        val = str(form.get(group, "")).strip()
+        submitted_units[group] = val
+
+    errors = validate_units(submitted_units)
+    if errors:
+        return _render(
+            request,
+            "step_units.html",
+            {
+                "step": 5,
+                "state": state,
+                "current_units": submitted_units,
+                "unit_options": UNIT_OPTIONS,
+                "unit_group_labels": UNIT_GROUP_LABELS,
+                "presets": UNIT_PRESETS,
+                "error": "Please correct the errors below.",
+                "errors": errors,
+            },
+            status_code=422,
+        )
+
+    state.units = submitted_units
+    save_wizard_state(session_id, state)
+    return await step5_get(request)
 
 
 def _get_api_client(state: WizardState) -> ApiClient:
@@ -479,12 +645,14 @@ async def wizard_index(request: Request) -> HTMLResponse:
         request=request,
         name="wizard/layout.html",
         context={
-            "step": 1,
+            "step": 0,
             "state": state,
             "success": False,
             "api_host": api_host,
             "api_port": api_port,
             "rerun_mode": rerun,
+            "initial_step": "import",
+            "error": None,
         },
     )
 
@@ -1021,7 +1189,7 @@ async def step5_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_mqtt.html",
-        {"step": 5, "state": state, "error": None, "test_result": None,
+        {"step": 6, "state": state, "error": None, "test_result": None,
          "pipeline_hint": pipeline_hint},
     )
 
@@ -1088,7 +1256,7 @@ async def step5_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_mqtt.html",
-                {"step": 5, "state": state, "error": "; ".join(errors.values()),
+                {"step": 6, "state": state, "error": "; ".join(errors.values()),
                  "test_result": None, "pipeline_hint": None},
                 status_code=422,
             )
@@ -1334,7 +1502,7 @@ async def step4_post(request: Request) -> HTMLResponse:
     state.default_locale = submitted_locale if submitted_locale in _VALID_LOCALES else "en"
 
     save_wizard_state(session_id, state)
-    return await step5_get(request)
+    return await step_units_get(request)
 
 
 @router.post("/step/4/timezone", response_class=HTMLResponse)
@@ -1385,7 +1553,7 @@ async def step6_get(request: Request) -> HTMLResponse:
         request,
         "step_providers.html",
         {
-            "step": 6,
+            "step": 7,
             "state": state,
             "providers_by_domain": by_domain,
             "recommendations": recommendations,
@@ -1508,7 +1676,7 @@ async def step6_post(request: Request) -> HTMLResponse:
 async def step7_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
-    return _render(request, "step_webcam.html", {"step": 7, "state": state, "error": None})
+    return _render(request, "step_webcam.html", {"step": 8, "state": state, "error": None})
 
 
 @router.post("/step/7", response_class=HTMLResponse)
@@ -1538,7 +1706,7 @@ async def step8_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 8, "state": state, "error": None},
+        {"step": 9, "state": state, "error": None},
     )
 
 
@@ -1573,7 +1741,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 8,
+                "step": 9,
                 "error": "The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option.",
                 "result": None,
             },
@@ -1653,7 +1821,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 8,
+                "step": 9,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -1666,7 +1834,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 8,
+                "step": 9,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -1678,7 +1846,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 8,
+                "step": 9,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
@@ -1735,7 +1903,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 8, "state": state, "error": local_error},
+            {"step": 9, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -1748,7 +1916,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 8, "state": state, "error": local_error},
+            {"step": 9, "state": state, "error": local_error},
             status_code=422,
         )
 
@@ -1782,7 +1950,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         request=request,
         name="wizard/step_complete.html",
         context={
-            "step": 8,
+            "step": 9,
             "error": None,
             "result": result,
             "api_restart_triggered": api_restart_triggered,

@@ -1,0 +1,66 @@
+<article>
+  <header>
+    <h2>Import Existing Configuration</h2>
+    <p>If you have an existing weewx skin (like Belchertown), you can import its
+       <code>skin.conf</code> to pre-fill the configuration steps below.
+       Otherwise, click <strong>Start Fresh</strong> to begin with the US defaults.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" class="alert-error">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {# --- Fresh-start path --- #}
+  <form id="fresh-start-form"
+        hx-post="/wizard/import"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        autocomplete="off"
+        style="margin-block-end: 1.5rem;">
+    <input type="hidden" name="fresh_start" value="1">
+    <button type="submit" class="outline">
+      Skip &mdash; Start Fresh &#8594;
+    </button>
+    <small style="display:block; margin-block-start:0.5rem;">
+      Start with sensible US-unit defaults. You can adjust all settings in the steps that follow.
+    </small>
+  </form>
+
+  <hr>
+
+  {# --- File upload path --- #}
+  <form id="import-form"
+        hx-post="/wizard/import"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        hx-encoding="multipart/form-data"
+        autocomplete="off">
+
+    <fieldset>
+      <legend>Import from skin.conf</legend>
+
+      <label for="skin_conf">skin.conf file</label>
+      <input type="file"
+             id="skin_conf"
+             name="skin_conf"
+             accept=".conf,text/plain"
+             aria-describedby="skin-conf-hint">
+      <small id="skin-conf-hint">
+        Select the <code>skin.conf</code> file from your existing weewx skin directory
+        (e.g. <code>/etc/weewx/skins/Belchertown/skin.conf</code>).
+        Only <code>.conf</code> files are accepted. The file is parsed locally and
+        nothing is sent to any external server.
+      </small>
+
+      <button type="submit" style="margin-block-start:1rem;">
+        Import and Continue &#8594;
+      </button>
+    </fieldset>
+  </form>
+</article>
+
+{# The import step is pre-wizard (step 0) — do not include the progress bar OOB update. #}

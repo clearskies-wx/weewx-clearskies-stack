@@ -97,6 +97,15 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     else:
         cfg["input"] = {"mode": "direct"}
 
+    # Write [units][[groups]] when the operator has completed the unit step.
+    # If the step was skipped (units is None), fall back to US defaults so the
+    # realtime service always has a complete unit configuration.
+    from weewx_clearskies_config.wizard.units import UNIT_PRESETS
+
+    unit_groups = state.units if state.units is not None else UNIT_PRESETS["us"]
+    cfg["units"] = {}
+    cfg["units"]["groups"] = {k: v for k, v in unit_groups.items()}
+
     content = _wrap_with_managed_region(cfg)
     dest = config_dir / "realtime.conf"
     _write_file(dest, content)

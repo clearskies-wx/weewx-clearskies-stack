@@ -90,6 +90,16 @@ class WizardState:
     webcam_video_url: str = "/webcam/weewx_timelapse.mp4"
     webcam_refresh_interval: int = 60
 
+    # Step 0: skin.conf import — None means no import was attempted.
+    # When populated, subsequent steps pre-fill from the imported data.
+    imported_config: dict[str, Any] | None = None
+
+    # Unit configuration (step inserted after station identity).
+    # Key = weewx unit group name (e.g. "group_temperature"),
+    # Value = selected unit string (e.g. "degree_F").
+    # None means the step has not been completed; defaults to US units on first visit.
+    units: dict[str, str] | None = None
+
 
 # ---------------------------------------------------------------------------
 # In-memory session store
