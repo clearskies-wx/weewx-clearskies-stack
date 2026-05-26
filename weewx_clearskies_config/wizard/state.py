@@ -1,6 +1,6 @@
 """WizardState dataclass and in-memory session store.
 
-The wizard collects configuration across 7 steps. Data accumulates in a
+The wizard collects configuration across 8 steps. Data accumulates in a
 WizardState keyed by session ID. The store is backed by disk so progress
 survives tool restarts.
 """
@@ -83,6 +83,12 @@ class WizardState:
     # BCP-47 tags.  Sent to the API via POST /setup/apply and written to
     # [station] default_locale in api.conf by the API.
     default_locale: str = "en"
+
+    # Webcam configuration
+    webcam_enabled: bool = False
+    webcam_image_url: str = "/webcam/weather_cam.jpg"
+    webcam_video_url: str = "/webcam/weewx_timelapse.mp4"
+    webcam_refresh_interval: int = 60
 
 
 # ---------------------------------------------------------------------------

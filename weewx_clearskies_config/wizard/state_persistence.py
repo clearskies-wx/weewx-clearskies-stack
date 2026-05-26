@@ -326,6 +326,20 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 except (ValueError, TypeError):
                     pass
 
+        webcam_section = api_cfg.get("webcam", {})
+        if isinstance(webcam_section, dict):
+            enabled_val = str(webcam_section.get("enabled", "false")).lower()
+            state.webcam_enabled = enabled_val in ("true", "1", "yes")
+            if webcam_section.get("image_url"):
+                state.webcam_image_url = str(webcam_section["image_url"])
+            if webcam_section.get("video_url"):
+                state.webcam_video_url = str(webcam_section["video_url"])
+            if webcam_section.get("refresh_interval"):
+                try:
+                    state.webcam_refresh_interval = int(webcam_section["refresh_interval"])
+                except (ValueError, TypeError):
+                    pass
+
     stack_cfg = read_config("stack", config_dir)
     if stack_cfg is not None:
         ui_section = stack_cfg.get("ui", {})
@@ -438,9 +452,9 @@ def _domain_for_provider(provider_id: str, providers: dict[str, str]) -> str | N
 
 def _state_from_dict(raw: dict[str, Any]) -> WizardState:
     """Construct a WizardState from a plain dict, validating types."""
-    _INT_FIELDS = {"db_port", "api_bind_port", "realtime_bind_port", "mqtt_broker_port", "mqtt_qos", "mqtt_keepalive"}
+    _INT_FIELDS = {"db_port", "api_bind_port", "realtime_bind_port", "mqtt_broker_port", "mqtt_qos", "mqtt_keepalive", "webcam_refresh_interval"}
     _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters"}
-    _BOOL_FIELDS = {"mqtt_tls", "schema_skipped"}
+    _BOOL_FIELDS = {"mqtt_tls", "schema_skipped", "webcam_enabled"}
 
     kwargs: dict[str, Any] = {}
     for f in dataclasses.fields(WizardState):
