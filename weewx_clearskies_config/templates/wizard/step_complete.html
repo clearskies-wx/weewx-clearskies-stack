@@ -12,7 +12,7 @@
     <h3>Configuration failed</h3>
     <p>{{ error }}</p>
     <a href="#"
-       hx-get="/wizard/step/8"
+       hx-get="/wizard/step/7"
        hx-target="#wizard-content"
        hx-swap="innerHTML show:window:top"
        hx-indicator="#wizard-spinner">
@@ -148,7 +148,7 @@
 </article>
 
 {# ------------------------------------------------------------------ #}
-{# OOB: replace the progress bar nav so all 8 steps show as complete. #}
+{# OOB: replace the progress bar nav so all 7 steps show as complete. #}
 {# hx-swap-oob="true" targets the element with matching id="wizard-nav". #}
 {# ------------------------------------------------------------------ #}
 <nav id="wizard-nav" aria-label="Wizard progress" hx-swap-oob="true">
@@ -159,7 +159,6 @@
     <li class="is-complete"><span class="step-label" aria-hidden="true">Station</span><span class="sr-only">Step 4: Station (complete)</span></li>
     <li class="is-complete"><span class="step-label" aria-hidden="true">Realtime</span><span class="sr-only">Step 5: Realtime (complete)</span></li>
     <li class="is-complete"><span class="step-label" aria-hidden="true">Providers</span><span class="sr-only">Step 6: Providers (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Webcam</span><span class="sr-only">Step 7: Webcam (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Review</span><span class="sr-only">Step 8: Review (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Review</span><span class="sr-only">Step 7: Review (complete)</span></li>
   </ol>
 </nav>

@@ -1,6 +1,6 @@
 """WizardState dataclass and in-memory session store.
 
-The wizard collects configuration across 8 steps. Data accumulates in a
+The wizard collects configuration across 7 steps. Data accumulates in a
 WizardState keyed by session ID. The store is backed by disk so progress
 survives tool restarts.
 """
@@ -64,13 +64,6 @@ class WizardState:
     mqtt_tls: bool = False
     mqtt_qos: int = 0
     mqtt_keepalive: int = 60
-
-    # Webcam (optional)
-    webcam_enabled: bool = False
-    webcam_image_url: str | None = None
-    webcam_refresh_interval: int = 60
-    webcam_timelapse_directory: str | None = None
-    webcam_timelapse_max_frames: int = 100
 
     # Topology
     topology: str = "same-host"  # "same-host" or "cross-host"

@@ -1,6 +1,6 @@
 <article>
   <header>
-    <h2>Step 8 of 8 — Review &amp; Apply</h2>
+    <h2>Step 7 of 7 — Review &amp; Apply</h2>
     <p>Review your configuration before applying.
        Applying will send the API configuration to the remote API, then write
        <code>realtime.conf</code>, <code>stack.conf</code>, and <code>secrets.env</code>
@@ -235,34 +235,7 @@
     {% endif %}
   </section>
 
-  {# 6. Webcam ----------------------------------------------------- #}
-  <section class="review-section" aria-labelledby="review-webcam">
-    <h3 id="review-webcam">
-      Webcam
-      <a class="review-edit-link"
-         href="#"
-         hx-get="/wizard/step/7"
-         hx-target="#wizard-content"
-         hx-swap="innerHTML show:window:top"
-         hx-indicator="#wizard-spinner"
-         aria-label="Edit webcam settings">Edit</a>
-    </h3>
-    {% if state.webcam_enabled %}
-    <table class="review-table">
-      <caption class="sr-only">Webcam configuration</caption>
-      <tbody>
-        <tr><th scope="row">Snapshot URL</th><td>{{ state.webcam_image_url or '(not set)' }}</td></tr>
-        <tr><th scope="row">Refresh interval</th><td>{{ state.webcam_refresh_interval }} seconds</td></tr>
-        <tr><th scope="row">Timelapse directory</th><td>{{ state.webcam_timelapse_directory or '(none)' }}</td></tr>
-        <tr><th scope="row">Max timelapse frames</th><td>{{ state.webcam_timelapse_max_frames }}</td></tr>
-      </tbody>
-    </table>
-    {% else %}
-    <p>Not configured.</p>
-    {% endif %}
-  </section>
-
-  {# 7. API Keys ---------------------------------------------------- #}
+  {# 6. API Keys ---------------------------------------------------- #}
   {% if state.api_keys %}
   <section class="review-section" aria-labelledby="review-keys">
     <h3 id="review-keys">
@@ -315,7 +288,7 @@
         autocomplete="off">
     <div role="group">
       <button type="button"
-              hx-get="/wizard/step/7"
+              hx-get="/wizard/step/6"
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">

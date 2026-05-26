@@ -5,8 +5,6 @@
 {# Group nav_sections by component for sidebar grouping #}
 {% set components = ["api", "realtime", "stack"] %}
 {% set component_labels = {"api": "API", "realtime": "Realtime", "stack": "Stack"} %}
-{# Feature sections are rendered under a separate "Features" heading, not under their component #}
-{% set feature_sections = ["webcam"] %}
 
 <style>
   /* Config dashboard layout */
@@ -132,8 +130,7 @@
   <aside class="config-sidebar">
     <nav aria-label="Configuration sections">
       {% for comp in components %}
-      {# Exclude feature sections from infrastructure component groups #}
-      {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | rejectattr("section", "in", feature_sections) | list %}
+      {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | list %}
       {% if comp_sections %}
       <div class="component-group" role="group" aria-labelledby="comp-label-{{ comp }}">
         <span class="component-label" id="comp-label-{{ comp }}">
@@ -169,41 +166,6 @@
       </div>
       {% endif %}
       {% endfor %}
-
-      {# Features group — webcam and any future feature sections #}
-      {% set features_nav = nav_sections | selectattr("section", "in", feature_sections) | list %}
-      {% if features_nav %}
-      <div class="component-group" role="group" aria-labelledby="comp-label-features"
-           style="border-block-start:1px solid var(--pico-muted-border-color);margin-block-start:0.75rem;padding-block-start:0.75rem">
-        <span class="component-label" id="comp-label-features">Features</span>
-        <ul>
-          {% for s in features_nav %}
-          <li>
-            <a href="/admin/config/{{ s.component }}/{{ s.section }}"
-               hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
-               hx-target="#config-content"
-               hx-swap="innerHTML"
-               hx-push-url="true">
-              <span class="section-name">{{ s.display_name }}</span>
-              {% if s.values %}
-              {% set summary_items = [] %}
-              {% for k, v in s.values.items() %}
-              {% if loop.index <= 2 and k not in ("password", "api_key", "client_secret") %}
-              {% set _ = summary_items.append(v | string) %}
-              {% endif %}
-              {% endfor %}
-              {% if summary_items %}
-              <span class="section-summary" aria-hidden="true">
-                {{ summary_items | join(" · ") }}
-              </span>
-              {% endif %}
-              {% endif %}
-            </a>
-          </li>
-          {% endfor %}
-        </ul>
-      </div>
-      {% endif %}
 
       {# Column Mapping — always shown under API group #}
       <div class="column-mapping-link">
@@ -241,8 +203,7 @@
       <p>Select a section from the sidebar to view and edit its settings.</p>
 
       {% for comp in components %}
-      {# Exclude feature sections from infrastructure component overviews #}
-      {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | rejectattr("section", "in", feature_sections) | list %}
+      {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | list %}
       {% if comp_sections %}
       <div class="overview-section-group">
         <h3>{{ component_labels.get(comp, comp | capitalize) }}
@@ -288,54 +249,6 @@
       </div>
       {% endif %}
       {% endfor %}
-
-      {# Features overview — webcam and any future feature sections #}
-      {% set features_overview = nav_sections | selectattr("section", "in", feature_sections) | list %}
-      {% if features_overview %}
-      <div class="overview-section-group"
-           style="border-block-start:1px solid var(--pico-muted-border-color);padding-block-start:1rem;margin-block-start:0.5rem">
-        <h3>Features
-          <small style="font-weight:400;font-size:0.7em;color:var(--pico-muted-color)">
-            (optional modules)
-          </small>
-        </h3>
-
-        {% for s in features_overview %}
-        <article class="overview-card">
-          <header>
-            <h4 style="margin-bottom:0.25rem">
-              {{ s.display_name }}
-              <a href="/admin/config/{{ s.component }}/{{ s.section }}"
-                 hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
-                 hx-target="#config-content"
-                 hx-swap="innerHTML"
-                 hx-push-url="true"
-                 style="font-size:0.75em;margin-inline-start:0.75rem;font-weight:400">
-                Edit
-              </a>
-            </h4>
-          </header>
-          {% if s.values %}
-          <dl>
-            {% for key, val in s.values.items() %}
-            {% if key not in ("password", "api_key", "client_secret") %}
-            <dt>{{ key }}</dt>
-            <dd>{{ val }}</dd>
-            {% else %}
-            <dt>{{ key }}</dt>
-            <dd><em style="color:var(--pico-muted-color)">(stored in secrets.env)</em></dd>
-            {% endif %}
-            {% endfor %}
-          </dl>
-          {% else %}
-          <p><em style="color:var(--pico-muted-color)">
-            Not configured yet — click Edit to set up.
-          </em></p>
-          {% endif %}
-        </article>
-        {% endfor %}
-      </div>
-      {% endif %}
 
       {% else %}
       <p>No configuration files found in <code>{{ config_dir }}</code>.

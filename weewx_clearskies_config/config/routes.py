@@ -59,8 +59,6 @@ _SECTION_META: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("realtime", "mqtt", "MQTT Settings", ("password",)),
     # stack.conf sections
     ("stack", "ui", "UI Settings", ()),
-    # Features
-    ("api", "webcam", "Webcam", ()),  # no secret fields
 ]
 
 # Set of (component, section) pairs that are valid for editing
@@ -90,7 +88,6 @@ _SECTION_ALLOWED_KEYS: dict[tuple[str, str], frozenset[str]] = {
         "station_name", "latitude", "longitude", "altitude_meters", "timezone",
         "topology",
     }),
-    ("api", "webcam"):      frozenset({"enabled", "image_url", "refresh_interval", "timelapse_directory", "timelapse_max_frames"}),
 }
 
 # Map (component, section) -> display name
@@ -371,21 +368,6 @@ async def section_get(request: Request, component: str, section: str) -> HTMLRes
 
     values = get_section(component, section, _config_dir)
     secret_fields = _SECTION_SECRETS.get((component, section), ())
-
-    if section == "webcam":
-        template = "webcam_section.html"
-        return _render(
-            request,
-            template,
-            {
-                "component": component,
-                "section": section,
-                "display_name": _section_display_name(component, section),
-                "values": values,
-                "result": None,
-                "error": None,
-            },
-        )
 
     return _render(
         request,

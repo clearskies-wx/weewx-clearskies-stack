@@ -1,4 +1,4 @@
-"""FastAPI router for the 8-step setup wizard.
+"""FastAPI router for the 7-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -23,9 +23,7 @@ Route summary:
   GET  /wizard/step/6/key-fields/{domain}/{provider_id} — inline key fields fragment
   POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
   POST /wizard/step/6           — save provider choices + keys, return step 7 fragment
-  GET  /wizard/step/7           — webcam configuration (optional), render step 7 fragment
-  POST /wizard/step/7           — save webcam settings, return step 8 fragment
-  GET  /wizard/step/8           — review summary, render step 8 fragment
+  GET  /wizard/step/7           — review summary, render step 7 fragment
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -454,16 +452,6 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.realtime_bind_host = prior.realtime_bind_host
             if state.realtime_bind_port == 8766 and prior.realtime_bind_port != 8766:
                 state.realtime_bind_port = prior.realtime_bind_port
-            if not state.webcam_enabled and prior.webcam_enabled:
-                state.webcam_enabled = prior.webcam_enabled
-            if state.webcam_image_url is None and prior.webcam_image_url is not None:
-                state.webcam_image_url = prior.webcam_image_url
-            if state.webcam_refresh_interval == 60 and prior.webcam_refresh_interval != 60:
-                state.webcam_refresh_interval = prior.webcam_refresh_interval
-            if state.webcam_timelapse_directory is None and prior.webcam_timelapse_directory is not None:
-                state.webcam_timelapse_directory = prior.webcam_timelapse_directory
-            if state.webcam_timelapse_max_frames == 100 and prior.webcam_timelapse_max_frames != 100:
-                state.webcam_timelapse_max_frames = prior.webcam_timelapse_max_frames
             save_wizard_state(session_id, state)
             logger.info("Restored wizard progress from prior session into session %s", session_id[:8])
         else:
@@ -1501,7 +1489,7 @@ async def step6_post(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 7: Webcam (optional)
+# Step 7: Review + Apply
 # ---------------------------------------------------------------------------
 
 
@@ -1509,66 +1497,12 @@ async def step6_post(request: Request) -> HTMLResponse:
 async def step7_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
-    return _render(
-        request,
-        "step_webcam.html",
-        {"step": 7, "state": state, "error": None},
-    )
-
-
-@router.post("/step/7", response_class=HTMLResponse)
-async def step7_post(request: Request) -> HTMLResponse:
-    """Save webcam settings and advance to step 8 (review)."""
-    session_id = _require_session(request)
-    form = await request.form()
-    state = get_wizard_state(session_id)
-
-    webcam_enabled = str(form.get("webcam_enabled", "")).strip().lower() in ("on", "true", "1", "yes")
-
-    if webcam_enabled:
-        webcam_image_url = str(form.get("webcam_image_url", "")).strip() or None
-        if not webcam_image_url:
-            return _render(
-                request,
-                "step_webcam.html",
-                {"step": 7, "state": state, "error": "Snapshot URL is required when webcam is enabled"},
-                status_code=422,
-            )
-        state.webcam_enabled = True
-        state.webcam_image_url = webcam_image_url
-        refresh_raw = _parse_int(str(form.get("webcam_refresh_interval", "60")), default=60)
-        state.webcam_refresh_interval = max(5, min(3600, refresh_raw))
-        timelapse_dir = str(form.get("webcam_timelapse_directory", "")).strip() or None
-        state.webcam_timelapse_directory = timelapse_dir
-        max_frames_raw = _parse_int(str(form.get("webcam_timelapse_max_frames", "100")), default=100)
-        state.webcam_timelapse_max_frames = max(10, min(1000, max_frames_raw))
-    else:
-        # Not enabled — clear all webcam fields to defaults.
-        state.webcam_enabled = False
-        state.webcam_image_url = None
-        state.webcam_refresh_interval = 60
-        state.webcam_timelapse_directory = None
-        state.webcam_timelapse_max_frames = 100
-
-    save_wizard_state(session_id, state)
-    return await step8_get(request)
-
-
-# ---------------------------------------------------------------------------
-# Step 8: Review + Apply
-# ---------------------------------------------------------------------------
-
-
-@router.get("/step/8", response_class=HTMLResponse)
-async def step8_get(request: Request) -> HTMLResponse:
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
     if state.db_host is None and state.station_name is None:
         _merge_from_existing_config(state)
     return _render(
         request,
         "step_review.html",
-        {"step": 8, "state": state, "error": None},
+        {"step": 7, "state": state, "error": None},
     )
 
 
@@ -1603,7 +1537,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 8,
+                "step": 7,
                 "error": "The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option.",
                 "result": None,
             },
@@ -1673,15 +1607,6 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     if state.proxy_secret:
         api_payload["proxy_secret"] = state.proxy_secret
 
-    if state.webcam_enabled:
-        api_payload["webcam"] = {
-            "enabled": True,
-            "image_url": state.webcam_image_url or "",
-            "refresh_interval": state.webcam_refresh_interval,
-            "timelapse_directory": state.webcam_timelapse_directory or "",
-            "timelapse_max_frames": state.webcam_timelapse_max_frames,
-        }
-
     apply_response: dict[str, Any] | None = None
     try:
         client = _get_api_client(state)
@@ -1692,7 +1617,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 8,
+                "step": 7,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -1705,7 +1630,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 8,
+                "step": 7,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -1717,7 +1642,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 8,
+                "step": 7,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
@@ -1759,7 +1684,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 8, "state": state, "error": local_error},
+            {"step": 7, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -1772,7 +1697,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 8, "state": state, "error": local_error},
+            {"step": 7, "state": state, "error": local_error},
             status_code=422,
         )
 
@@ -1806,7 +1731,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         request=request,
         name="wizard/step_complete.html",
         context={
-            "step": 8,
+            "step": 7,
             "error": None,
             "result": result,
             "api_restart_triggered": api_restart_triggered,
@@ -2096,17 +2021,6 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.mqtt_password = existing.mqtt_password
     if not state.mqtt_tls and existing.mqtt_tls:
         state.mqtt_tls = existing.mqtt_tls
-
-    if not state.webcam_enabled and existing.webcam_enabled:
-        state.webcam_enabled = existing.webcam_enabled
-    if state.webcam_image_url is None and existing.webcam_image_url is not None:
-        state.webcam_image_url = existing.webcam_image_url
-    if state.webcam_refresh_interval == 60 and existing.webcam_refresh_interval != 60:
-        state.webcam_refresh_interval = existing.webcam_refresh_interval
-    if state.webcam_timelapse_directory is None and existing.webcam_timelapse_directory is not None:
-        state.webcam_timelapse_directory = existing.webcam_timelapse_directory
-    if state.webcam_timelapse_max_frames == 100 and existing.webcam_timelapse_max_frames != 100:
-        state.webcam_timelapse_max_frames = existing.webcam_timelapse_max_frames
 
 
 def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> None:
