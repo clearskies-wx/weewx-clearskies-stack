@@ -2174,6 +2174,8 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 # CurrentConfigProviderCredentials; map them to the wizard's
                 # auth_fields naming (api_key, api_secret, pws_station_id, etc.)
                 _FIELD_REMAP: dict[str, str] = {
+                    "client_id": "client_id",             # Aeris
+                    "client_secret": "client_secret",     # Aeris
                     "appid": "api_key",           # OpenWeatherMap
                     "api_key": "api_key",         # Wunderground primary
                     "pws_station_id": "pws_station_id",

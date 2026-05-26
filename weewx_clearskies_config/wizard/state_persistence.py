@@ -429,7 +429,7 @@ def populate_from_config(config_dir: Path) -> WizardState:
         for domain, provider_id in state.providers.items():
             existing_creds = api_keys.get(provider_id, {})
             env_prefix = (
-                f"WEEWX_CLEARSKIES_{domain.upper()}_{provider_id.upper()}_"
+                f"WEEWX_CLEARSKIES_{provider_id.upper()}_"
             )
             for env_key, env_val in secrets.items():
                 if env_key.startswith(env_prefix):
