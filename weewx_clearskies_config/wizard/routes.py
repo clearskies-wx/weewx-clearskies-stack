@@ -228,12 +228,12 @@ router = APIRouter(prefix="/wizard", tags=["wizard"])
 
 @router.get("/import", response_class=HTMLResponse)
 async def step_import_get(request: Request) -> HTMLResponse:
-    """Step 0: Import an existing skin.conf or start fresh."""
+    """Step 2: Import an existing skin.conf or start fresh."""
     _require_session(request)
     return _render(
         request,
         "step_import.html",
-        {"step": 0, "error": None},
+        {"step": 2, "error": None},
     )
 
 
@@ -241,8 +241,9 @@ async def step_import_get(request: Request) -> HTMLResponse:
 async def step_import_post(request: Request) -> HTMLResponse:
     """Handle the skin.conf import or fresh-start choice.
 
-    - fresh_start=1 in the form body: skip import, proceed to step 1.
-    - A file upload (field name "skin_conf"): parse and store, then step 1.
+    - fresh_start=1 in the form body: skip import, proceed to step 2 (database).
+    - skin_name in the form body: fetch skin.conf from the API and parse it, then step 2.
+    - A file upload (field name "skin_conf"): parse and store, then step 2.
     """
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
@@ -251,42 +252,97 @@ async def step_import_post(request: Request) -> HTMLResponse:
     fresh_start = str(form.get("fresh_start", "0")).strip() == "1"
 
     if fresh_start:
-        # Clear any previously imported config and proceed.
+        # Clear any previously imported config and proceed to step 2 (database).
         state.imported_config = None
         save_wizard_state(session_id, state)
-        return await step1_api_get(request)
+        return await step2_db_get(request)
 
-    # File upload path.
+    skin_name = str(form.get("skin_name", "")).strip()
     skin_conf_file = form.get("skin_conf")
-    if skin_conf_file is None or not hasattr(skin_conf_file, "read"):
+
+    if skin_name:
+        # API-based fetch path: retrieve skin.conf from the weewx host.
+        try:
+            client = _get_api_client(state)
+            data = client.fetch_skin_file(skin_name, "skin.conf")
+            if data is None:
+                return _render(
+                    request,
+                    "step_import.html",
+                    {
+                        "step": 2,
+                        "error": (
+                            f"Could not find skin.conf in /etc/weewx/skins/{skin_name}/. "
+                            "Check the skin name."
+                        ),
+                    },
+                    status_code=422,
+                )
+            text = data.decode("utf-8", errors="replace")
+        except ValueError:
+            return _render(
+                request,
+                "step_import.html",
+                {
+                    "step": 2,
+                    "error": "API not connected. Complete step 1 (API Connection) before importing.",
+                },
+                status_code=422,
+            )
+        except Exception as exc:  # noqa: BLE001
+            return _render(
+                request,
+                "step_import.html",
+                {"step": 2, "error": f"Failed to fetch skin.conf: {exc}"},
+                status_code=422,
+            )
+
+        try:
+            imported = parse_skin_conf_text(text)
+        except SkinImportError as exc:
+            return _render(
+                request,
+                "step_import.html",
+                {"step": 2, "error": f"Could not parse skin.conf: {exc}"},
+                status_code=422,
+            )
+
+        state.source_skin = skin_name
+
+    elif skin_conf_file is not None and hasattr(skin_conf_file, "read"):
+        # File upload fallback path.
+        try:
+            raw_bytes = await skin_conf_file.read()
+            text = raw_bytes.decode("utf-8", errors="replace")
+        except Exception as exc:  # noqa: BLE001
+            return _render(
+                request,
+                "step_import.html",
+                {"step": 2, "error": f"Could not read the uploaded file: {exc}"},
+                status_code=422,
+            )
+
+        try:
+            imported = parse_skin_conf_text(text)
+        except SkinImportError as exc:
+            return _render(
+                request,
+                "step_import.html",
+                {"step": 2, "error": f"Could not parse skin.conf: {exc}"},
+                status_code=422,
+            )
+
+        state.source_skin = "Belchertown"  # default; enhance later
+
+    else:
         return _render(
             request,
             "step_import.html",
-            {"step": 0, "error": "Please select a skin.conf file to upload, or click Start Fresh."},
+            {"step": 2, "error": "Enter a skin name or upload a file, or click Skip — Start Fresh."},
             status_code=422,
         )
 
-    try:
-        raw_bytes = await skin_conf_file.read()
-        text = raw_bytes.decode("utf-8", errors="replace")
-    except Exception as exc:  # noqa: BLE001
-        return _render(
-            request,
-            "step_import.html",
-            {"step": 0, "error": f"Could not read the uploaded file: {exc}"},
-            status_code=422,
-        )
-
-    try:
-        imported = parse_skin_conf_text(text)
-    except SkinImportError as exc:
-        return _render(
-            request,
-            "step_import.html",
-            {"step": 0, "error": f"Could not parse skin.conf: {exc}"},
-            status_code=422,
-        )
-
+    # Common post-import processing (runs for both API-fetch and file-upload paths).
     state.imported_config = imported
 
     # Detect image paths for later resolution (ADR-043).
@@ -294,11 +350,10 @@ async def step_import_post(request: Request) -> HTMLResponse:
 
     image_paths = detect_image_paths(imported)
     if image_paths:
-        state.source_skin = "Belchertown"  # default; enhance later
         if _config_dir is not None:
             results_local = resolve_images_local(
                 image_paths,
-                state.source_skin,
+                state.source_skin or "Belchertown",
                 _config_dir / "branding",
             )
             state.imported_images = results_local
@@ -321,7 +376,7 @@ async def step_import_post(request: Request) -> HTMLResponse:
         state.units = merged
 
     save_wizard_state(session_id, state)
-    return await step1_api_get(request)
+    return await step2_db_get(request)
 
 
 # ---------------------------------------------------------------------------
@@ -353,7 +408,7 @@ async def step_units_get(request: Request) -> HTMLResponse:
         request,
         "step_units.html",
         {
-            "step": 5,
+            "step": 6,
             "state": state,
             "current_units": current_units,
             "unit_options": UNIT_OPTIONS,
@@ -384,7 +439,7 @@ async def step_units_post(request: Request) -> HTMLResponse:
             request,
             "step_units.html",
             {
-                "step": 5,
+                "step": 6,
                 "state": state,
                 "current_units": submitted_units,
                 "unit_options": UNIT_OPTIONS,
@@ -665,13 +720,12 @@ async def wizard_index(request: Request) -> HTMLResponse:
         request=request,
         name="wizard/layout.html",
         context={
-            "step": 0,
+            "step": 1,
             "state": state,
             "success": False,
             "api_host": api_host,
             "api_port": api_port,
             "rerun_mode": rerun,
-            "initial_step": "import",
             "error": None,
         },
     )
@@ -986,7 +1040,7 @@ async def step2_db_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_db.html",
-        {"step": 2, "state": state, "result": None, "error": api_warning},
+        {"step": 3, "state": state, "result": None, "error": api_warning},
     )
 
 
@@ -1079,14 +1133,14 @@ async def step2_db_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_db.html",
-                {"step": 2, "state": state, "result": None, "error": error_msg},
+                {"step": 3, "state": state, "result": None, "error": error_msg},
                 status_code=422,
             )
     except ValueError:
         return _render(
             request,
             "step_db.html",
-            {"step": 2, "state": state, "result": None, "error": "API not connected. Go back to step 1 and reconnect."},
+            {"step": 3, "state": state, "result": None, "error": "API not connected. Go back to step 1 and reconnect."},
             status_code=422,
         )
     except ApiClientError as exc:
@@ -1095,14 +1149,14 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_db.html",
-            {"step": 2, "state": state, "result": None, "error": _api_error_message(exc)},
+            {"step": 3, "state": state, "result": None, "error": _api_error_message(exc)},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
         return _render(
             request,
             "step_db.html",
-            {"step": 2, "state": state, "result": None, "error": "Could not reach the API to test the connection. Check that the API is running and try again."},
+            {"step": 3, "state": state, "result": None, "error": "Could not reach the API to test the connection. Check that the API is running and try again."},
             status_code=422,
         )
 
@@ -1209,7 +1263,7 @@ async def step5_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_mqtt.html",
-        {"step": 6, "state": state, "error": None, "test_result": None,
+        {"step": 7, "state": state, "error": None, "test_result": None,
          "pipeline_hint": pipeline_hint},
     )
 
@@ -1276,7 +1330,7 @@ async def step5_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_mqtt.html",
-                {"step": 6, "state": state, "error": "; ".join(errors.values()),
+                {"step": 7, "state": state, "error": "; ".join(errors.values()),
                  "test_result": None, "pipeline_hint": None},
                 status_code=422,
             )
@@ -1346,7 +1400,7 @@ async def step3_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_schema.html",
-        {"step": 3, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_groups": canonical_groups},
+        {"step": 4, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_groups": canonical_groups},
     )
 
 
@@ -1383,7 +1437,7 @@ async def step3_post(request: Request) -> HTMLResponse:
             request,
             "step_schema.html",
             {
-                "step": 3,
+                "step": 4,
                 "state": state,
                 "schema": schema_data,
                 "error": schema_error,
@@ -1479,7 +1533,7 @@ async def step4_get(request: Request) -> HTMLResponse:
         request,
         "step_station.html",
         {
-            "step": 4,
+            "step": 5,
             "state": state,
             "error": error,
             "schema_skipped": state.schema_skipped,
@@ -1573,7 +1627,7 @@ async def step6_get(request: Request) -> HTMLResponse:
         request,
         "step_providers.html",
         {
-            "step": 7,
+            "step": 8,
             "state": state,
             "providers_by_domain": by_domain,
             "recommendations": recommendations,
@@ -1696,7 +1750,7 @@ async def step6_post(request: Request) -> HTMLResponse:
 async def step7_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
-    return _render(request, "step_webcam.html", {"step": 8, "state": state, "error": None})
+    return _render(request, "step_webcam.html", {"step": 9, "state": state, "error": None})
 
 
 @router.post("/step/7", response_class=HTMLResponse)
@@ -1726,7 +1780,7 @@ async def step8_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 9, "state": state, "error": None},
+        {"step": 10, "state": state, "error": None},
     )
 
 
@@ -1761,7 +1815,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 9,
+                "step": 10,
                 "error": "The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option.",
                 "result": None,
             },
@@ -1843,7 +1897,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 9,
+                "step": 10,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -1856,7 +1910,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 9,
+                "step": 10,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -1868,7 +1922,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 9,
+                "step": 10,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
@@ -1946,7 +2000,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 9, "state": state, "error": local_error},
+            {"step": 10, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -1959,7 +2013,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 9, "state": state, "error": local_error},
+            {"step": 10, "state": state, "error": local_error},
             status_code=422,
         )
 
@@ -1993,7 +2047,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         request=request,
         name="wizard/step_complete.html",
         context={
-            "step": 9,
+            "step": 10,
             "error": None,
             "result": result,
             "api_restart_triggered": api_restart_triggered,

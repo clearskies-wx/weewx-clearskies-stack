@@ -1,9 +1,9 @@
 <article>
   <header>
-    <h2>Import Existing Configuration</h2>
-    <p>If you have an existing weewx skin (like Belchertown), you can import its
-       <code>skin.conf</code> to pre-fill the configuration steps below.
-       Otherwise, click <strong>Start Fresh</strong> to begin with the US defaults.</p>
+    <h2>Step 2 of 10 — Import Existing Configuration</h2>
+    <p>If you have an existing weewx skin (like Belchertown), enter its name to import
+       the configuration and pre-fill the steps that follow.
+       Otherwise, click <strong>Skip — Start Fresh</strong> to begin with US defaults.</p>
   </header>
 
   {% if error %}
@@ -12,26 +12,6 @@
   </div>
   {% endif %}
 
-  {# --- Fresh-start path --- #}
-  <form id="fresh-start-form"
-        hx-post="/wizard/import"
-        hx-target="#wizard-content"
-        hx-swap="innerHTML show:window:top"
-        hx-indicator="#wizard-spinner"
-        autocomplete="off"
-        style="margin-block-end: 1.5rem;">
-    <input type="hidden" name="fresh_start" value="1">
-    <button type="submit" class="outline">
-      Skip &mdash; Start Fresh &#8594;
-    </button>
-    <small style="display:block; margin-block-start:0.5rem;">
-      Start with sensible US-unit defaults. You can adjust all settings in the steps that follow.
-    </small>
-  </form>
-
-  <hr>
-
-  {# --- File upload path --- #}
   <form id="import-form"
         hx-post="/wizard/import"
         hx-target="#wizard-content"
@@ -40,27 +20,81 @@
         hx-encoding="multipart/form-data"
         autocomplete="off">
 
+    {# --- API-based import --- #}
     <fieldset>
-      <legend>Import from skin.conf</legend>
+      <legend>Import from weewx skin</legend>
 
-      <label for="skin_conf">skin.conf file</label>
-      <input type="file"
-             id="skin_conf"
-             name="skin_conf"
-             accept=".conf,text/plain"
-             aria-describedby="skin-conf-hint">
-      <small id="skin-conf-hint">
-        Select the <code>skin.conf</code> file from your existing weewx skin directory
-        (e.g. <code>/etc/weewx/skins/Belchertown/skin.conf</code>).
-        Only <code>.conf</code> files are accepted. The file is parsed locally and
-        nothing is sent to any external server.
+      <label for="skin_name">Skin name</label>
+      <input type="text"
+             id="skin_name"
+             name="skin_name"
+             value="Belchertown"
+             placeholder="e.g. Belchertown"
+             aria-describedby="skin-name-hint">
+      <small id="skin-name-hint">
+        Directory name from <code>/etc/weewx/skins/</code> on your weewx host.
+        The API will fetch the <code>skin.conf</code> file automatically.
       </small>
 
-      <button type="submit" style="margin-block-start:1rem;">
-        Import and Continue &#8594;
-      </button>
+      <div class="wizard-nav" role="group" style="margin-block-start: 1rem;">
+        <button type="submit" hx-indicator="#wizard-spinner">
+          Import and Continue &#8594;
+        </button>
+      </div>
     </fieldset>
+
+    <hr>
+
+    {# --- File upload fallback --- #}
+    <details class="wizard-details">
+      <summary>Or upload a skin.conf file manually</summary>
+      <div>
+        <label for="skin_conf_file">skin.conf file</label>
+        <input type="file"
+               id="skin_conf_file"
+               name="skin_conf"
+               accept=".conf,text/plain"
+               aria-describedby="skin-conf-hint">
+        <small id="skin-conf-hint">
+          Use this if the API cannot reach the skin directory directly.
+          Select the <code>skin.conf</code> from your existing weewx skin
+          (e.g. <code>/etc/weewx/skins/Belchertown/skin.conf</code>).
+        </small>
+
+        <div style="margin-block-start: 1rem;">
+          <button type="submit" class="outline" hx-indicator="#wizard-spinner">
+            Upload and Continue &#8594;
+          </button>
+        </div>
+      </div>
+    </details>
+
+    <hr>
+
+    {# --- Fresh-start path --- #}
+    <div>
+      <input type="hidden" name="fresh_start" value="0">
+      <button type="submit"
+              name="fresh_start"
+              value="1"
+              class="outline secondary"
+              hx-indicator="#wizard-spinner">
+        Skip &#8212; Start Fresh &#8594;
+      </button>
+      <small style="display:block; margin-block-start:0.5rem;">
+        Start with sensible US-unit defaults. You can adjust all settings in the steps that follow.
+      </small>
+    </div>
+
   </form>
 </article>
 
-{# The import step is pre-wizard (step 0) — do not include the progress bar OOB update. #}
+{# OOB: update the progress bar to reflect the current step.
+   Skip when rendered inside layout.html on the initial page load —
+   the nav is already correct from layout.html's own include above.
+   The OOB fragment is only needed when this file is served as an
+   HTMX fragment response (i.e. GET /wizard/import navigation). #}
+{% if not _in_layout %}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}
+{% endif %}

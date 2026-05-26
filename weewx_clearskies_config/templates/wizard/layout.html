@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Clear Skies Setup Wizard{% if step == 0 %} — Import{% elif step <= 9 %} — Step {{ step }} of 9{% else %} — Complete{% endif %}{% endblock %}
+{% block title %}Clear Skies Setup Wizard{% if step >= 1 and step <= 10 %} — Step {{ step }} of 10{% else %} — Complete{% endif %}{% endblock %}
 {% block content %}
 
 {# ------------------------------------------------------------------ #}
@@ -394,11 +394,7 @@
 {# ------------------------------------------------------------------ #}
 {% set _in_layout = true %}
 <section id="wizard-content" aria-atomic="false">
-  {% if initial_step == "import" %}
-  {% include "wizard/step_import.html" %}
-  {% else %}
   {% include "wizard/step_api.html" %}
-  {% endif %}
 </section>
 
 {# ------------------------------------------------------------------ #}
