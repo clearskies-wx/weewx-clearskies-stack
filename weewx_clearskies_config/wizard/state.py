@@ -111,6 +111,7 @@ class WizardState:
 
     # Branding (step 8)
     site_title: str = ""
+    copyright_entity: str = ""
     logo_light_url: str = ""
     logo_dark_url: str = ""
     favicon_url: str = ""

@@ -32,6 +32,14 @@
              placeholder="My Weather Station">
       <small>Displayed in the browser tab and dashboard header. Leave blank to use the station name.</small>
 
+      <label for="copyright_entity">Copyright Entity</label>
+      <input type="text"
+             id="copyright_entity"
+             name="copyright_entity"
+             value="{{ state.copyright_entity }}"
+             placeholder="Your Name or Organization">
+      <small>Name shown in the footer copyright line (e.g. your name or organization). Leave blank to omit.</small>
+
       {# Logo — light theme #}
       <fieldset>
         <legend>Logo (light theme)</legend>

@@ -324,6 +324,7 @@
       <caption class="sr-only">Branding configuration</caption>
       <tbody>
         <tr><th scope="row">Site title</th><td>{{ state.site_title or '<em>(not set — station name used)</em>' | safe }}</td></tr>
+        <tr><th scope="row">Copyright entity</th><td>{{ state.copyright_entity or '<em>(not set)</em>' | safe }}</td></tr>
         <tr><th scope="row">Logo (light theme)</th><td>{{ state.logo_light_url or '<em>None</em>' | safe }}</td></tr>
         <tr><th scope="row">Logo (dark theme)</th><td>{{ state.logo_dark_url or '<em>None</em>' | safe }}</td></tr>
         <tr><th scope="row">Favicon</th><td>{{ state.favicon_url or '<em>None</em>' | safe }}</td></tr>

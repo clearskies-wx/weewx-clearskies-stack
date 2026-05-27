@@ -723,6 +723,8 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.webcam_refresh_interval = prior.webcam_refresh_interval
             if not state.site_title and prior.site_title:
                 state.site_title = prior.site_title
+            if not state.copyright_entity and prior.copyright_entity:
+                state.copyright_entity = prior.copyright_entity
             if not state.logo_light_url and prior.logo_light_url:
                 state.logo_light_url = prior.logo_light_url
             if not state.logo_dark_url and prior.logo_dark_url:
@@ -1910,6 +1912,7 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
 
     # --- Branding ---
     state.site_title = str(form.get("site_title", "")).strip()
+    state.copyright_entity = str(form.get("copyright_entity", "")).strip()
 
     # For each image field: if a file was uploaded use its saved URL,
     # otherwise fall back to the URL text input (may be empty or a prior value).
@@ -2090,9 +2093,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
     api_payload["skin_conf"] = build_skin_conf_payload(state)
 
-    # Branding fields (site title, logo URLs, favicon).
+    # Branding fields (site title, logo URLs, favicon, copyright entity).
     api_payload["branding"] = {
         "site_title": state.site_title,
+        "copyright_entity": state.copyright_entity,
         "logo_light_url": state.logo_light_url,
         "logo_dark_url": state.logo_dark_url,
         "favicon_url": state.favicon_url,
@@ -2569,6 +2573,8 @@ def _merge_from_existing_config(state: WizardState) -> None:
 
     if not state.site_title and existing.site_title:
         state.site_title = existing.site_title
+    if not state.copyright_entity and existing.copyright_entity:
+        state.copyright_entity = existing.copyright_entity
     if not state.logo_light_url and existing.logo_light_url:
         state.logo_light_url = existing.logo_light_url
     if not state.logo_dark_url and existing.logo_dark_url:
@@ -2694,6 +2700,8 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
     if isinstance(branding, dict):
         if not state.site_title and branding.get("site_title"):
             state.site_title = str(branding["site_title"])
+        if not state.copyright_entity and branding.get("copyright_entity"):
+            state.copyright_entity = str(branding["copyright_entity"])
         if not state.logo_light_url and branding.get("logo_light_url"):
             state.logo_light_url = str(branding["logo_light_url"])
         if not state.logo_dark_url and branding.get("logo_dark_url"):

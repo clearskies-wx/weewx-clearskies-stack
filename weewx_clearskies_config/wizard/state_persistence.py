@@ -334,6 +334,11 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 except (ValueError, TypeError):
                     pass
 
+        api_branding_section = api_cfg.get("branding", {})
+        if isinstance(api_branding_section, dict):
+            if api_branding_section.get("copyright_entity"):
+                state.copyright_entity = str(api_branding_section["copyright_entity"])
+
     stack_cfg = read_config("stack", config_dir)
     if stack_cfg is not None:
         ui_section = stack_cfg.get("ui", {})
@@ -378,6 +383,8 @@ def populate_from_config(config_dir: Path) -> WizardState:
         if isinstance(branding_section, dict):
             if branding_section.get("site_title"):
                 state.site_title = str(branding_section["site_title"])
+            if branding_section.get("copyright_entity"):
+                state.copyright_entity = str(branding_section["copyright_entity"])
             if branding_section.get("logo_light_url"):
                 state.logo_light_url = str(branding_section["logo_light_url"])
             if branding_section.get("logo_dark_url"):
