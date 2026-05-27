@@ -13,6 +13,7 @@
         hx-target="#wizard-content"
         hx-swap="innerHTML show:window:top"
         hx-indicator="#wizard-spinner"
+        hx-encoding="multipart/form-data"
         autocomplete="off">
 
     <label for="site_title">Site Title</label>
@@ -23,29 +24,116 @@
            placeholder="My Weather Station">
     <small>Displayed in the browser tab and dashboard header. Leave blank to use the station name.</small>
 
-    <label for="logo_light_url">Logo URL (light theme)</label>
-    <input type="text"
-           id="logo_light_url"
-           name="logo_light_url"
-           value="{{ state.logo_light_url }}"
-           placeholder="https://example.com/logo-light.png">
-    <small>PNG or SVG, recommended max 500 KB. Shown when the visitor uses a light colour scheme.</small>
+    {# ------------------------------------------------------------------ #}
+    {# Logo — light theme                                                  #}
+    {# ------------------------------------------------------------------ #}
 
-    <label for="logo_dark_url">Logo URL (dark theme)</label>
-    <input type="text"
-           id="logo_dark_url"
-           name="logo_dark_url"
-           value="{{ state.logo_dark_url }}"
-           placeholder="https://example.com/logo-dark.png">
-    <small>PNG or SVG, recommended max 500 KB. Shown when the visitor uses a dark colour scheme.</small>
+    <fieldset>
+      <legend>Logo (light theme)</legend>
+      <p><small>Shown when the visitor uses a light colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
 
-    <label for="favicon_url">Favicon URL</label>
-    <input type="text"
-           id="favicon_url"
-           name="favicon_url"
-           value="{{ state.favicon_url }}"
-           placeholder="https://example.com/favicon.ico">
-    <small>ICO or PNG, recommended max 100 KB. Leave blank to use the default Clear Skies icon.</small>
+      {% if state.logo_light_url %}
+      <p>
+        <small>
+          Current:
+          {% if state.logo_light_url.startswith('/wizard/branding/') %}
+            <strong>uploaded file</strong> — {{ state.logo_light_url.split('/')[-1] }}
+          {% else %}
+            <a href="{{ state.logo_light_url }}" target="_blank" rel="noopener">{{ state.logo_light_url }}</a>
+          {% endif %}
+        </small>
+      </p>
+      {% endif %}
+
+      <label for="logo_light_file">Upload a file</label>
+      <input type="file"
+             id="logo_light_file"
+             name="logo_light_file"
+             accept=".png,.svg,image/png,image/svg+xml">
+      <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+
+      <label for="logo_light_url">— or enter a URL</label>
+      <input type="text"
+             id="logo_light_url"
+             name="logo_light_url"
+             value="{{ state.logo_light_url }}"
+             placeholder="https://example.com/logo-light.png">
+      <small>Leave blank if uploading a file above.</small>
+    </fieldset>
+
+    {# ------------------------------------------------------------------ #}
+    {# Logo — dark theme                                                   #}
+    {# ------------------------------------------------------------------ #}
+
+    <fieldset>
+      <legend>Logo (dark theme)</legend>
+      <p><small>Shown when the visitor uses a dark colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
+
+      {% if state.logo_dark_url %}
+      <p>
+        <small>
+          Current:
+          {% if state.logo_dark_url.startswith('/wizard/branding/') %}
+            <strong>uploaded file</strong> — {{ state.logo_dark_url.split('/')[-1] }}
+          {% else %}
+            <a href="{{ state.logo_dark_url }}" target="_blank" rel="noopener">{{ state.logo_dark_url }}</a>
+          {% endif %}
+        </small>
+      </p>
+      {% endif %}
+
+      <label for="logo_dark_file">Upload a file</label>
+      <input type="file"
+             id="logo_dark_file"
+             name="logo_dark_file"
+             accept=".png,.svg,image/png,image/svg+xml">
+      <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+
+      <label for="logo_dark_url">— or enter a URL</label>
+      <input type="text"
+             id="logo_dark_url"
+             name="logo_dark_url"
+             value="{{ state.logo_dark_url }}"
+             placeholder="https://example.com/logo-dark.png">
+      <small>Leave blank if uploading a file above.</small>
+    </fieldset>
+
+    {# ------------------------------------------------------------------ #}
+    {# Favicon                                                             #}
+    {# ------------------------------------------------------------------ #}
+
+    <fieldset>
+      <legend>Favicon</legend>
+      <p><small>Small icon shown in the browser tab. ICO or PNG, max 100&nbsp;KB. Leave blank to use the default Clear Skies icon.</small></p>
+
+      {% if state.favicon_url %}
+      <p>
+        <small>
+          Current:
+          {% if state.favicon_url.startswith('/wizard/branding/') %}
+            <strong>uploaded file</strong> — {{ state.favicon_url.split('/')[-1] }}
+          {% else %}
+            <a href="{{ state.favicon_url }}" target="_blank" rel="noopener">{{ state.favicon_url }}</a>
+          {% endif %}
+        </small>
+      </p>
+      {% endif %}
+
+      <label for="favicon_file">Upload a file</label>
+      <input type="file"
+             id="favicon_file"
+             name="favicon_file"
+             accept=".ico,.png,image/x-icon,image/vnd.microsoft.icon,image/png">
+      <small>ICO or PNG, max 100&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+
+      <label for="favicon_url">— or enter a URL</label>
+      <input type="text"
+             id="favicon_url"
+             name="favicon_url"
+             value="{{ state.favicon_url }}"
+             placeholder="https://example.com/favicon.ico">
+      <small>Leave blank if uploading a file above.</small>
+    </fieldset>
 
     <div role="group">
       <button type="button"

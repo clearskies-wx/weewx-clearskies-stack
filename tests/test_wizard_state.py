@@ -137,3 +137,47 @@ def test_clear_wizard_state_does_not_affect_other_sessions():
     clear_wizard_state("sess-remove")
     # The kept session must survive
     assert get_wizard_state("sess-keep").db_host == "keep-me"
+
+
+# ---------------------------------------------------------------------------
+# Earthquake config fields — defaults and persistence
+# ---------------------------------------------------------------------------
+
+
+def test_wizard_state_earthquake_radius_km_defaults_to_100():
+    state = WizardState()
+    assert state.earthquake_radius_km == 100.0
+
+
+def test_wizard_state_earthquake_min_magnitude_defaults_to_2():
+    state = WizardState()
+    assert state.earthquake_min_magnitude == 2.0
+
+
+def test_wizard_state_earthquake_default_days_defaults_to_7():
+    state = WizardState()
+    assert state.earthquake_default_days == 7
+
+
+def test_wizard_state_earthquake_fields_can_be_overridden():
+    state = WizardState(
+        earthquake_radius_km=250.0,
+        earthquake_min_magnitude=3.5,
+        earthquake_default_days=14,
+    )
+    assert state.earthquake_radius_km == 250.0
+    assert state.earthquake_min_magnitude == 3.5
+    assert state.earthquake_default_days == 14
+
+
+def test_wizard_state_earthquake_fields_persist_across_save_get():
+    state = WizardState(
+        earthquake_radius_km=500.0,
+        earthquake_min_magnitude=4.0,
+        earthquake_default_days=30,
+    )
+    save_wizard_state("sess-eq", state)
+    retrieved = get_wizard_state("sess-eq")
+    assert retrieved.earthquake_radius_km == 500.0
+    assert retrieved.earthquake_min_magnitude == 4.0
+    assert retrieved.earthquake_default_days == 30

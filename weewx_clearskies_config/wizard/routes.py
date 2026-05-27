@@ -38,6 +38,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import signal
 import subprocess
 from pathlib import Path
@@ -45,6 +46,7 @@ from typing import Any
 
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
@@ -530,6 +532,19 @@ def create_wizard_router(
     _session_manager = session_manager
     _config_dir = config_dir
     configure_state_persistence(config_dir)
+
+    # Mount the operator's uploaded branding assets so they are served at a
+    # stable URL (/wizard/branding/<filename>).  The directory is created on
+    # demand during the first upload; StaticFiles raises an error if the
+    # directory does not exist yet, so we create it here.
+    branding_dir = config_dir / "branding"
+    branding_dir.mkdir(parents=True, exist_ok=True)
+    router.mount(
+        "/branding",
+        StaticFiles(directory=str(branding_dir)),
+        name="wizard-branding",
+    )
+
     return router
 
 
@@ -1824,6 +1839,90 @@ async def step7_post(request: Request) -> HTMLResponse:
 # Step 8: Branding
 # ---------------------------------------------------------------------------
 
+# Allowed file types for branding uploads.
+# Keys are the form field names; values are (allowed_extensions, allowed_mimes, max_bytes).
+_BRANDING_UPLOAD_RULES: dict[str, tuple[frozenset[str], frozenset[str], int]] = {
+    "logo_light_file": (
+        frozenset({".png", ".svg"}),
+        frozenset({"image/png", "image/svg+xml"}),
+        500 * 1024,  # 500 KB
+    ),
+    "logo_dark_file": (
+        frozenset({".png", ".svg"}),
+        frozenset({"image/png", "image/svg+xml"}),
+        500 * 1024,
+    ),
+    "favicon_file": (
+        frozenset({".ico", ".png"}),
+        frozenset({"image/x-icon", "image/vnd.microsoft.icon", "image/png"}),
+        100 * 1024,  # 100 KB
+    ),
+}
+
+# Sanitise a filename: keep only alphanumerics, hyphens, underscores, dots.
+# Prevents path traversal and shell-special-character issues.
+_SAFE_FILENAME_RE = re.compile(r"[^\w.\-]")
+
+
+def _sanitise_filename(name: str) -> str:
+    """Return a filesystem-safe version of *name*.
+
+    Strips directory components, replaces unsafe characters with underscores,
+    and ensures the result is non-empty.
+    """
+    base = Path(name).name  # strip any directory component
+    safe = _SAFE_FILENAME_RE.sub("_", base)
+    return safe or "upload"
+
+
+async def _handle_branding_upload(
+    form: Any,
+    field_name: str,
+) -> tuple[str | None, str | None]:
+    """Process one branding file upload field.
+
+    Returns ``(url, error)`` where *url* is the served URL to store in state
+    (``/wizard/branding/<filename>``), or None if no file was uploaded.
+    *error* is a human-readable message or None.
+
+    The caller uses None to mean "keep the URL text-field value instead."
+    """
+    if _config_dir is None:
+        return None, "Configuration directory not set — cannot save uploaded files."
+
+    allowed_exts, _allowed_mimes, max_bytes = _BRANDING_UPLOAD_RULES[field_name]
+    upload = form.get(field_name)
+
+    # Starlette represents a non-selected file input as either None or a
+    # UploadFile with an empty .filename.  Both mean "no file chosen."
+    if upload is None or not hasattr(upload, "filename") or not upload.filename:
+        return None, None
+
+    raw_filename: str = str(upload.filename)
+    suffix = Path(raw_filename).suffix.lower()
+    if suffix not in allowed_exts:
+        return None, (
+            f"Unsupported file type \"{suffix}\" for {field_name.replace('_file', '')}. "
+            f"Allowed: {', '.join(sorted(allowed_exts))}."
+        )
+
+    data: bytes = await upload.read()
+    if len(data) > max_bytes:
+        max_kb = max_bytes // 1024
+        return None, (
+            f"{field_name.replace('_file', '').replace('_', ' ').title()}: "
+            f"file is {len(data) // 1024} KB, exceeds the {max_kb} KB limit."
+        )
+
+    safe_name = _sanitise_filename(raw_filename)
+    dest_dir = _config_dir / "branding"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    dest = dest_dir / safe_name
+    dest.write_bytes(data)
+    logger.info("Saved branding upload %s → %s", field_name, dest)
+
+    return f"/wizard/branding/{safe_name}", None
+
 
 @router.get("/step/8", response_class=HTMLResponse)
 async def step8_branding_get(request: Request) -> HTMLResponse:
@@ -1839,9 +1938,36 @@ async def step8_branding_post(request: Request) -> HTMLResponse:
     state = get_wizard_state(session_id)
 
     state.site_title = str(form.get("site_title", "")).strip()
-    state.logo_light_url = str(form.get("logo_light_url", "")).strip()
-    state.logo_dark_url = str(form.get("logo_dark_url", "")).strip()
-    state.favicon_url = str(form.get("favicon_url", "")).strip()
+
+    # For each image field: if a file was uploaded use its saved URL,
+    # otherwise fall back to the URL text input (may be empty or a prior value).
+    errors: list[str] = []
+
+    logo_light_url, err = await _handle_branding_upload(form, "logo_light_file")
+    if err:
+        errors.append(err)
+    else:
+        state.logo_light_url = logo_light_url or str(form.get("logo_light_url", "")).strip()
+
+    logo_dark_url, err = await _handle_branding_upload(form, "logo_dark_file")
+    if err:
+        errors.append(err)
+    else:
+        state.logo_dark_url = logo_dark_url or str(form.get("logo_dark_url", "")).strip()
+
+    favicon_url, err = await _handle_branding_upload(form, "favicon_file")
+    if err:
+        errors.append(err)
+    else:
+        state.favicon_url = favicon_url or str(form.get("favicon_url", "")).strip()
+
+    if errors:
+        return _render(
+            request,
+            "step_branding.html",
+            {"step": 10, "state": state, "error": " ".join(errors)},
+            status_code=422,
+        )
 
     save_wizard_state(session_id, state)
     return await step9_social_get(request)
@@ -2018,7 +2144,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     # Earthquake provider settings (sent even when no earthquakes provider is
     # selected, so the API can initialise defaults without a second apply call).
     api_payload["earthquakes"] = {
-        "radius_km": state.earthquake_radius_km,
+        "default_radius_km": state.earthquake_radius_km,
         "min_magnitude": state.earthquake_min_magnitude,
         "default_days": state.earthquake_default_days,
     }
