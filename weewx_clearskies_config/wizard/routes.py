@@ -1943,6 +1943,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         for db_col, canonical in state.column_mapping.items()
         if canonical is not None
     }
+    # Persist explicitly "not mapped" columns so re-runs don't re-suggest them.
+    unmapped = [db_col for db_col, canonical in state.column_mapping.items() if canonical is None]
+    if unmapped:
+        api_column_mapping["_excluded"] = ",".join(sorted(unmapped))
 
     # Build providers dict: domain → ProviderConfig-shaped dict.
     # state.providers maps domain → provider_id.

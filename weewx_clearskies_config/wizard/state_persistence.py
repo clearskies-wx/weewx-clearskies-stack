@@ -299,11 +299,15 @@ def populate_from_config(config_dir: Path) -> WizardState:
         if isinstance(mapping_section, dict):
             # api.conf stores mappings as canonical = db_col (e.g. outTemp = outside_temperature).
             # WizardState.column_mapping expects the inverse: {db_col: canonical}.
+            excluded_str = str(mapping_section.get("_excluded", ""))
+            excluded = [c.strip() for c in excluded_str.split(",") if c.strip()]
             state.column_mapping = {
                 str(v): str(k)
                 for k, v in mapping_section.items()
-                if v
+                if v and k != "_excluded"
             }
+            for col in excluded:
+                state.column_mapping[col] = None
 
         providers: dict[str, str] = {}
         for domain in _PROVIDER_DOMAINS:
