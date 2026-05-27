@@ -1,6 +1,6 @@
 <article>
   <header>
-    <h2>Step 12 of 12 — Review &amp; Apply</h2>
+    <h2>Step 11 of 11 — Review &amp; Apply</h2>
     <p>Review your configuration before applying.
        Applying will send the API configuration to the remote API, then write
        <code>realtime.conf</code>, <code>stack.conf</code>, and <code>secrets.env</code>
@@ -306,18 +306,20 @@
     </table>
   </section>
 
-  {# 8. Branding --------------------------------------------------- #}
-  <section class="review-section" aria-labelledby="review-branding">
-    <h3 id="review-branding">
-      Branding
+  {# 8. Appearance (branding + social + seismic) ------------------- #}
+  <section class="review-section" aria-labelledby="review-appearance">
+    <h3 id="review-appearance">
+      Appearance
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/8"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit branding settings">Edit</a>
+         aria-label="Edit appearance settings">Edit</a>
     </h3>
+
+    <h4>Branding</h4>
     <table class="review-table">
       <caption class="sr-only">Branding configuration</caption>
       <tbody>
@@ -327,20 +329,8 @@
         <tr><th scope="row">Favicon</th><td>{{ state.favicon_url or '<em>None</em>' | safe }}</td></tr>
       </tbody>
     </table>
-  </section>
 
-  {# 9. Social ----------------------------------------------------- #}
-  <section class="review-section" aria-labelledby="review-social">
-    <h3 id="review-social">
-      Social Media
-      <a class="review-edit-link"
-         href="#"
-         hx-get="/wizard/step/9"
-         hx-target="#wizard-content"
-         hx-swap="innerHTML show:window:top"
-         hx-indicator="#wizard-spinner"
-         aria-label="Edit social media links">Edit</a>
-    </h3>
+    <h4>Social Links</h4>
     {% set social_links = [
       ("Facebook",   state.facebook_url),
       ("Twitter / X", state.twitter_url),
@@ -360,21 +350,9 @@
     {% else %}
     <p>No social links configured.</p>
     {% endif %}
-  </section>
 
-  {# 10. Seismic config -------------------------------------------- #}
-  {% if state.providers.get("earthquakes") %}
-  <section class="review-section" aria-labelledby="review-seismic">
-    <h3 id="review-seismic">
-      Earthquake Settings
-      <a class="review-edit-link"
-         href="#"
-         hx-get="/wizard/step/6"
-         hx-target="#wizard-content"
-         hx-swap="innerHTML show:window:top"
-         hx-indicator="#wizard-spinner"
-         aria-label="Edit earthquake settings">Edit</a>
-    </h3>
+    {% if state.providers.get("earthquakes") %}
+    <h4>Seismic Page Settings</h4>
     <table class="review-table">
       <caption class="sr-only">Earthquake data configuration</caption>
       <tbody>
@@ -383,8 +361,8 @@
         <tr><th scope="row">Time window</th><td>{{ state.earthquake_default_days }} day{{ "s" if state.earthquake_default_days != 1 else "" }}</td></tr>
       </tbody>
     </table>
+    {% endif %}
   </section>
-  {% endif %}
 
   <form hx-post="/wizard/apply"
         hx-target="#wizard-content"
@@ -393,7 +371,7 @@
         autocomplete="off">
     <div role="group">
       <button type="button"
-              hx-get="/wizard/step/9"
+              hx-get="/wizard/step/8"
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">

@@ -1,4 +1,4 @@
-"""Tests for the branding step (step 8) of the setup wizard.
+"""Tests for the appearance step (step 8) of the setup wizard.
 
 Covers:
   - GET /wizard/step/8 — page loads with existing URL values pre-filled
@@ -122,7 +122,7 @@ def test_branding_post_url_only_saves_state(authed_client):
             "favicon_url": "https://example.com/fav.ico",
         },
     )
-    # Successful post advances to step 9 (social), returning 200 HTML fragment.
+    # Successful post advances to step 9 (review), returning 200 HTML fragment.
     assert resp.status_code == 200
     state = _get_state(authed_client)
     assert state.site_title == "My Station"

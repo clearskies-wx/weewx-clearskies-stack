@@ -1,4 +1,4 @@
-"""FastAPI router for the 10-step setup wizard.
+"""FastAPI router for the 11-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -19,17 +19,15 @@ Route summary:
   GET  /wizard/step/5           — data pipeline / MQTT, render step 5 fragment
   POST /wizard/step/5/test      — test MQTT broker connection, return result fragment
   POST /wizard/step/5           — save input mode + MQTT settings, return step 6 fragment
-  GET  /wizard/step/6           — provider selection + inline key entry + earthquake config, render step 6 fragment
+  GET  /wizard/step/6           — provider selection + inline key entry, render step 6 fragment
   GET  /wizard/step/6/key-fields/{domain}/{provider_id} — inline key fields fragment
   POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
-  POST /wizard/step/6           — save provider choices + keys + earthquake config, return step 7 fragment (webcam)
+  POST /wizard/step/6           — save provider choices + keys, return step 7 fragment (webcam)
   GET  /wizard/step/7           — webcam configuration, render step 7 fragment
-  POST /wizard/step/7           — save webcam settings, return step 8 fragment (branding)
-  GET  /wizard/step/8           — branding configuration, render step 8 fragment
-  POST /wizard/step/8           — save branding settings, return step 9 fragment (social)
-  GET  /wizard/step/9           — social media URLs, render step 9 fragment
-  POST /wizard/step/9           — save social URLs, return step 10 fragment (review)
-  GET  /wizard/step/10          — review summary, render step 10 fragment
+  POST /wizard/step/7           — save webcam settings, return step 8 fragment (appearance)
+  GET  /wizard/step/8           — appearance (branding + social + seismic), render step 8 fragment
+  POST /wizard/step/8           — save appearance settings (branding, social URLs, earthquake config), return step 9 fragment (review)
+  GET  /wizard/step/9           — review summary, render step 9 fragment
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -1786,26 +1784,6 @@ async def step6_post(request: Request) -> HTMLResponse:
                 api_keys[provider_id] = creds
     state.api_keys = api_keys
 
-    # Inline earthquake config fields (shown when earthquakes provider is selected).
-    radius_raw = str(form.get("earthquake_radius_km", "100")).strip()
-    try:
-        state.earthquake_radius_km = max(1.0, float(radius_raw))
-    except (ValueError, TypeError):
-        state.earthquake_radius_km = 100.0
-
-    magnitude_raw = str(form.get("earthquake_min_magnitude", "2.0")).strip()
-    try:
-        state.earthquake_min_magnitude = max(0.0, float(magnitude_raw))
-    except (ValueError, TypeError):
-        state.earthquake_min_magnitude = 2.0
-
-    days_raw = str(form.get("earthquake_default_days", "7")).strip()
-    try:
-        days_val = int(days_raw)
-        state.earthquake_default_days = days_val if days_val in (1, 7, 14, 30) else 7
-    except (ValueError, TypeError):
-        state.earthquake_default_days = 7
-
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -1832,11 +1810,11 @@ async def step7_post(request: Request) -> HTMLResponse:
     state.webcam_video_url = str(form.get("webcam_video_url", "/webcam/weewx_timelapse.mp4")).strip()
     state.webcam_refresh_interval = int(form.get("webcam_refresh_interval", 60))
     save_wizard_state(session_id, state)
-    return await step8_branding_get(request)
+    return await step8_appearance_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 8: Branding
+# Step 8: Appearance (branding + social links + seismic page settings)
 # ---------------------------------------------------------------------------
 
 # Allowed file types for branding uploads.
@@ -1925,18 +1903,20 @@ async def _handle_branding_upload(
 
 
 @router.get("/step/8", response_class=HTMLResponse)
-async def step8_branding_get(request: Request) -> HTMLResponse:
+async def step8_appearance_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
-    return _render(request, "step_branding.html", {"step": 10, "state": state, "error": None})
+    return _render(request, "step_appearance.html", {"step": 10, "state": state, "error": None})
 
 
 @router.post("/step/8", response_class=HTMLResponse)
-async def step8_branding_post(request: Request) -> HTMLResponse:
+async def step8_appearance_post(request: Request) -> HTMLResponse:
+    """Save branding, social URLs, and earthquake config; advance to step 9 (review)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
 
+    # --- Branding ---
     state.site_title = str(form.get("site_title", "")).strip()
 
     # For each image field: if a file was uploaded use its saved URL,
@@ -1964,49 +1944,48 @@ async def step8_branding_post(request: Request) -> HTMLResponse:
     if errors:
         return _render(
             request,
-            "step_branding.html",
+            "step_appearance.html",
             {"step": 10, "state": state, "error": " ".join(errors)},
             status_code=422,
         )
 
-    save_wizard_state(session_id, state)
-    return await step9_social_get(request)
-
-
-# ---------------------------------------------------------------------------
-# Step 9: Social Media
-# ---------------------------------------------------------------------------
-
-
-@router.get("/step/9", response_class=HTMLResponse)
-async def step9_social_get(request: Request) -> HTMLResponse:
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-    return _render(request, "step_social.html", {"step": 11, "state": state, "error": None})
-
-
-@router.post("/step/9", response_class=HTMLResponse)
-async def step9_social_post(request: Request) -> HTMLResponse:
-    session_id = _require_session(request)
-    form = await request.form()
-    state = get_wizard_state(session_id)
-
+    # --- Social Links ---
     state.facebook_url = str(form.get("facebook_url", "")).strip()
     state.twitter_url = str(form.get("twitter_url", "")).strip()
     state.instagram_url = str(form.get("instagram_url", "")).strip()
     state.youtube_url = str(form.get("youtube_url", "")).strip()
 
+    # --- Earthquake / Seismic Page Settings ---
+    radius_raw = str(form.get("earthquake_radius_km", "100")).strip()
+    try:
+        state.earthquake_radius_km = max(1.0, float(radius_raw))
+    except (ValueError, TypeError):
+        state.earthquake_radius_km = 100.0
+
+    magnitude_raw = str(form.get("earthquake_min_magnitude", "2.0")).strip()
+    try:
+        state.earthquake_min_magnitude = max(0.0, float(magnitude_raw))
+    except (ValueError, TypeError):
+        state.earthquake_min_magnitude = 2.0
+
+    days_raw = str(form.get("earthquake_default_days", "7")).strip()
+    try:
+        days_val = int(days_raw)
+        state.earthquake_default_days = days_val if days_val in (1, 7, 14, 30) else 7
+    except (ValueError, TypeError):
+        state.earthquake_default_days = 7
+
     save_wizard_state(session_id, state)
-    return await step10_review_get(request)
+    return await step9_review_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 10: Review + Apply
+# Step 9: Review + Apply
 # ---------------------------------------------------------------------------
 
 
-@router.get("/step/10", response_class=HTMLResponse)
-async def step10_review_get(request: Request) -> HTMLResponse:
+@router.get("/step/9", response_class=HTMLResponse)
+async def step9_review_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if state.db_host is None and state.station_name is None:
@@ -2014,7 +1993,7 @@ async def step10_review_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 12, "state": state, "error": None},
+        {"step": 11, "state": state, "error": None},
     )
 
 
@@ -2159,7 +2138,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 12,
+                "step": 11,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -2172,7 +2151,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 12,
+                "step": 11,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -2184,7 +2163,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 12,
+                "step": 11,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
