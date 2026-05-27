@@ -385,17 +385,6 @@ def populate_from_config(config_dir: Path) -> WizardState:
             if branding_section.get("favicon_url"):
                 state.favicon_url = str(branding_section["favicon_url"])
 
-        social_section = stack_cfg.get("social", {})
-        if isinstance(social_section, dict):
-            if social_section.get("facebook_url"):
-                state.facebook_url = str(social_section["facebook_url"])
-            if social_section.get("twitter_url"):
-                state.twitter_url = str(social_section["twitter_url"])
-            if social_section.get("instagram_url"):
-                state.instagram_url = str(social_section["instagram_url"])
-            if social_section.get("youtube_url"):
-                state.youtube_url = str(social_section["youtube_url"])
-
         earthquakes_section = stack_cfg.get("earthquakes", {})
         if isinstance(earthquakes_section, dict):
             if earthquakes_section.get("radius_km"):

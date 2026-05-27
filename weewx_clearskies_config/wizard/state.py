@@ -115,12 +115,6 @@ class WizardState:
     logo_dark_url: str = ""
     favicon_url: str = ""
 
-    # Social (step 9)
-    facebook_url: str = ""
-    twitter_url: str = ""
-    instagram_url: str = ""
-    youtube_url: str = ""
-
     # Seismic config (inline in provider step, earthquakes domain)
     earthquake_radius_km: float = 100.0
     earthquake_min_magnitude: float = 2.0

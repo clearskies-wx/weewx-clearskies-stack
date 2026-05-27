@@ -25,8 +25,8 @@ Route summary:
   POST /wizard/step/6           — save provider choices + keys, return step 7 fragment (webcam)
   GET  /wizard/step/7           — webcam configuration, render step 7 fragment
   POST /wizard/step/7           — save webcam settings, return step 8 fragment (appearance)
-  GET  /wizard/step/8           — appearance (branding + social + seismic), render step 8 fragment
-  POST /wizard/step/8           — save appearance settings (branding, social URLs, earthquake config), return step 9 fragment (review)
+  GET  /wizard/step/8           — appearance (branding + seismic), render step 8 fragment
+  POST /wizard/step/8           — save appearance settings (branding, earthquake config), return step 9 fragment (review)
   GET  /wizard/step/9           — review summary, render step 9 fragment
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
@@ -729,14 +729,6 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.logo_dark_url = prior.logo_dark_url
             if not state.favicon_url and prior.favicon_url:
                 state.favicon_url = prior.favicon_url
-            if not state.facebook_url and prior.facebook_url:
-                state.facebook_url = prior.facebook_url
-            if not state.twitter_url and prior.twitter_url:
-                state.twitter_url = prior.twitter_url
-            if not state.instagram_url and prior.instagram_url:
-                state.instagram_url = prior.instagram_url
-            if not state.youtube_url and prior.youtube_url:
-                state.youtube_url = prior.youtube_url
             if state.earthquake_radius_km == 100.0 and prior.earthquake_radius_km != 100.0:
                 state.earthquake_radius_km = prior.earthquake_radius_km
             if state.earthquake_min_magnitude == 2.0 and prior.earthquake_min_magnitude != 2.0:
@@ -1814,7 +1806,7 @@ async def step7_post(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 8: Appearance (branding + social links + seismic page settings)
+# Step 8: Appearance (branding + seismic page settings)
 # ---------------------------------------------------------------------------
 
 # Allowed file types for branding uploads.
@@ -1911,7 +1903,7 @@ async def step8_appearance_get(request: Request) -> HTMLResponse:
 
 @router.post("/step/8", response_class=HTMLResponse)
 async def step8_appearance_post(request: Request) -> HTMLResponse:
-    """Save branding, social URLs, and earthquake config; advance to step 9 (review)."""
+    """Save branding and earthquake config; advance to step 9 (review)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -1948,12 +1940,6 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
             {"step": 10, "state": state, "error": " ".join(errors)},
             status_code=422,
         )
-
-    # --- Social Links ---
-    state.facebook_url = str(form.get("facebook_url", "")).strip()
-    state.twitter_url = str(form.get("twitter_url", "")).strip()
-    state.instagram_url = str(form.get("instagram_url", "")).strip()
-    state.youtube_url = str(form.get("youtube_url", "")).strip()
 
     # --- Earthquake / Seismic Page Settings ---
     radius_raw = str(form.get("earthquake_radius_km", "100")).strip()
@@ -2110,14 +2096,6 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "logo_light_url": state.logo_light_url,
         "logo_dark_url": state.logo_dark_url,
         "favicon_url": state.favicon_url,
-    }
-
-    # Social media URLs.
-    api_payload["social"] = {
-        "facebook_url": state.facebook_url,
-        "twitter_url": state.twitter_url,
-        "instagram_url": state.instagram_url,
-        "youtube_url": state.youtube_url,
     }
 
     # Earthquake provider settings (sent even when no earthquakes provider is
@@ -2597,14 +2575,6 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.logo_dark_url = existing.logo_dark_url
     if not state.favicon_url and existing.favicon_url:
         state.favicon_url = existing.favicon_url
-    if not state.facebook_url and existing.facebook_url:
-        state.facebook_url = existing.facebook_url
-    if not state.twitter_url and existing.twitter_url:
-        state.twitter_url = existing.twitter_url
-    if not state.instagram_url and existing.instagram_url:
-        state.instagram_url = existing.instagram_url
-    if not state.youtube_url and existing.youtube_url:
-        state.youtube_url = existing.youtube_url
     if state.earthquake_radius_km == 100.0 and existing.earthquake_radius_km != 100.0:
         state.earthquake_radius_km = existing.earthquake_radius_km
     if state.earthquake_min_magnitude == 2.0 and existing.earthquake_min_magnitude != 2.0:
@@ -2730,18 +2700,6 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
             state.logo_dark_url = str(branding["logo_dark_url"])
         if not state.favicon_url and branding.get("favicon_url"):
             state.favicon_url = str(branding["favicon_url"])
-
-    # --- Social ---
-    social = config.get("social", {})
-    if isinstance(social, dict):
-        if not state.facebook_url and social.get("facebook_url"):
-            state.facebook_url = str(social["facebook_url"])
-        if not state.twitter_url and social.get("twitter_url"):
-            state.twitter_url = str(social["twitter_url"])
-        if not state.instagram_url and social.get("instagram_url"):
-            state.instagram_url = str(social["instagram_url"])
-        if not state.youtube_url and social.get("youtube_url"):
-            state.youtube_url = str(social["youtube_url"])
 
     # --- Earthquake settings ---
     earthquakes = config.get("earthquakes", {})

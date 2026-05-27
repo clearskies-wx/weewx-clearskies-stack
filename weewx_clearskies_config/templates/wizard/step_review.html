@@ -306,7 +306,7 @@
     </table>
   </section>
 
-  {# 8. Appearance (branding + social + seismic) ------------------- #}
+  {# 8. Appearance (branding + seismic) ------------------------------ #}
   <section class="review-section" aria-labelledby="review-appearance">
     <h3 id="review-appearance">
       Appearance
@@ -329,27 +329,6 @@
         <tr><th scope="row">Favicon</th><td>{{ state.favicon_url or '<em>None</em>' | safe }}</td></tr>
       </tbody>
     </table>
-
-    <h4>Social Links</h4>
-    {% set social_links = [
-      ("Facebook",   state.facebook_url),
-      ("Twitter / X", state.twitter_url),
-      ("Instagram",  state.instagram_url),
-      ("YouTube",    state.youtube_url),
-    ] %}
-    {% set configured_links = social_links | selectattr("1") | list %}
-    {% if configured_links %}
-    <table class="review-table">
-      <caption class="sr-only">Configured social media links</caption>
-      <tbody>
-        {% for platform, url in configured_links %}
-        <tr><th scope="row">{{ platform }}</th><td>{{ url }}</td></tr>
-        {% endfor %}
-      </tbody>
-    </table>
-    {% else %}
-    <p>No social links configured.</p>
-    {% endif %}
 
     {% if state.providers.get("earthquakes") %}
     <h4>Seismic Page Settings</h4>

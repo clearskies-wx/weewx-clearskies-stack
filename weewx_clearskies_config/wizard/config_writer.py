@@ -218,13 +218,6 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
         "favicon_url": state.favicon_url,
     }
 
-    cfg["social"] = {
-        "facebook_url": state.facebook_url,
-        "twitter_url": state.twitter_url,
-        "instagram_url": state.instagram_url,
-        "youtube_url": state.youtube_url,
-    }
-
     cfg["earthquakes"] = {
         "radius_km": str(state.earthquake_radius_km),
         "min_magnitude": str(state.earthquake_min_magnitude),

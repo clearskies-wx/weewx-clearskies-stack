@@ -1,7 +1,7 @@
 <article>
   <header>
     <h2>Step 10 of 11 — Appearance</h2>
-    <p>Customise your site's branding, social links, and earthquake display settings.</p>
+    <p>Customise your site's branding and earthquake display settings.</p>
   </header>
 
   {% if error %}
@@ -133,43 +133,6 @@
                placeholder="https://example.com/favicon.ico">
         <small>Leave blank if uploading a file above.</small>
       </fieldset>
-    </fieldset>
-
-    {# ================================================================== #}
-    {# Section 2: Social Links                                             #}
-    {# ================================================================== #}
-
-    <fieldset>
-      <legend>Social Links</legend>
-      <p><small>Add links to your social media profiles. Leave blank to hide them from your site.</small></p>
-
-      <label for="facebook_url">Facebook URL</label>
-      <input type="text"
-             id="facebook_url"
-             name="facebook_url"
-             value="{{ state.facebook_url }}"
-             placeholder="https://facebook.com/...">
-
-      <label for="twitter_url">Twitter / X URL</label>
-      <input type="text"
-             id="twitter_url"
-             name="twitter_url"
-             value="{{ state.twitter_url }}"
-             placeholder="https://twitter.com/...">
-
-      <label for="instagram_url">Instagram URL</label>
-      <input type="text"
-             id="instagram_url"
-             name="instagram_url"
-             value="{{ state.instagram_url }}"
-             placeholder="https://instagram.com/...">
-
-      <label for="youtube_url">YouTube URL</label>
-      <input type="text"
-             id="youtube_url"
-             name="youtube_url"
-             value="{{ state.youtube_url }}"
-             placeholder="https://youtube.com/...">
     </fieldset>
 
     {# ================================================================== #}
