@@ -212,6 +212,122 @@ def test_write_realtime_conf_station_section_appears_after_units_and_before_api(
 
 
 # ---------------------------------------------------------------------------
+# write_realtime_conf — imported [units] subsections
+# ---------------------------------------------------------------------------
+
+_IMPORTED_CONFIG_FULL = {
+    "units": {
+        "groups": {"group_temperature": "degree_F", "group_speed": "mile_per_hour"},
+        "string_formats": {"degree_F": "%.1f", "mile_per_hour": "%.0f"},
+        "labels": {"degree_F": " °F", "mile_per_hour": " mph"},
+        "ordinates": {
+            "directions": [
+                "N", "NNE", "NE", "ENE",
+                "E", "ESE", "SE", "SSE",
+                "S", "SSW", "SW", "WSW",
+                "W", "WNW", "NW", "NNW",
+            ],
+            "na": "N/A",
+        },
+        "time_formats": {},
+        "degree_days": {},
+        "trend": {},
+        "timezone": None,
+    },
+    "labels": {},
+    "extras": {},
+    "almanac": {},
+    "warnings": [],
+}
+
+
+def test_write_realtime_conf_writes_string_formats_when_imported(tmp_path: Path):
+    """[[string_formats]] written under [units] when imported_config contains them."""
+    state = _minimal_state(imported_config=_IMPORTED_CONFIG_FULL)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[string_formats]]" in content
+    assert "degree_F = %.1f" in content
+    assert "mile_per_hour = %.0f" in content
+
+
+def test_write_realtime_conf_writes_labels_when_imported(tmp_path: Path):
+    """[[labels]] written under [units] when imported_config contains them."""
+    state = _minimal_state(imported_config=_IMPORTED_CONFIG_FULL)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[labels]]" in content
+    # ConfigObj quotes values that contain leading spaces or special chars.
+    assert "degree_F" in content and "°F" in content
+    assert "mile_per_hour" in content and "mph" in content
+
+
+def test_write_realtime_conf_writes_ordinates_directions_when_imported(tmp_path: Path):
+    """[[ordinates]] written under [units] with a 'directions' key when imported."""
+    state = _minimal_state(imported_config=_IMPORTED_CONFIG_FULL)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[ordinates]]" in content
+    assert "directions" in content
+    assert "NNE" in content
+
+
+def test_write_realtime_conf_omits_string_formats_when_not_imported(tmp_path: Path):
+    """[[string_formats]] must NOT appear when imported_config is None."""
+    state = _minimal_state(imported_config=None)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[string_formats]]" not in content
+
+
+def test_write_realtime_conf_omits_labels_when_not_imported(tmp_path: Path):
+    """[[labels]] must NOT appear when imported_config is None."""
+    state = _minimal_state(imported_config=None)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[labels]]" not in content
+
+
+def test_write_realtime_conf_omits_ordinates_when_not_imported(tmp_path: Path):
+    """[[ordinates]] must NOT appear when imported_config is None."""
+    state = _minimal_state(imported_config=None)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[ordinates]]" not in content
+
+
+def test_write_realtime_conf_omits_subsections_when_imported_units_empty(tmp_path: Path):
+    """No [[string_formats]], [[labels]], or [[ordinates]] when imported units dicts are empty."""
+    state = _minimal_state(
+        imported_config={
+            "units": {
+                "groups": {},
+                "string_formats": {},
+                "labels": {},
+                "ordinates": {"directions": [], "na": "N/A"},
+            }
+        }
+    )
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[string_formats]]" not in content
+    assert "[[labels]]" not in content
+    assert "[[ordinates]]" not in content
+
+
+def test_write_realtime_conf_groups_still_present_when_subsections_imported(tmp_path: Path):
+    """[[groups]] must still be written alongside the new subsections."""
+    state = _minimal_state(
+        units={"group_temperature": "degree_C"},
+        imported_config=_IMPORTED_CONFIG_FULL,
+    )
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[[groups]]" in content
+    assert "group_temperature = degree_C" in content
+
+
+# ---------------------------------------------------------------------------
 # write_stack_conf — all xfail due to BUG A7
 # ---------------------------------------------------------------------------
 

@@ -2,7 +2,7 @@
   <header>
     <h2>Step 4 of 10 — Column Mapping</h2>
     <p>Review your archive table schema. Stock weewx columns are auto-mapped.
-       Assign canonical names to any custom columns, or leave them blank to skip.</p>
+       Assign canonical names to any custom columns, or leave them blank to exclude from API.</p>
   </header>
 
   {% if error %}
@@ -59,7 +59,7 @@
         <legend>Custom columns — assign canonical names</legend>
         <p>
           <small>
-            Select a canonical name from the dropdown, or leave blank to skip.
+            Select a canonical name from the dropdown, or leave blank to exclude from API.
             Columns with a suggested match are pre-selected — verify and adjust as needed.
           </small>
         </p>
@@ -71,7 +71,7 @@
               <th scope="col">Confidence</th>
               <th scope="col">
                 Canonical name
-                <span class="sr-only">(choose from dropdown; leave blank to skip)</span>
+                <span class="sr-only">(choose from dropdown; leave blank to exclude from API)</span>
               </th>
             </tr>
           </thead>
@@ -107,7 +107,7 @@
                         name="col_{{ col.db_name }}"
                         aria-describedby="col-hint-{{ col.db_name }}{% if col_error %} col-err-{{ col.db_name }}{% endif %}"
                         {% if col_error %}aria-invalid="true" class="input-error"{% endif %}>
-                  <option value="">— leave blank to skip —</option>
+                  <option value="">— not mapped —</option>
                   {% for group_label, fields in canonical_groups %}
                   <optgroup label="{{ group_label }}">
                     {% for name in fields %}

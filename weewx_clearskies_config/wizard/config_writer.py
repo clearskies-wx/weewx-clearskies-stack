@@ -16,6 +16,7 @@ MANAGED REGION format:
 from __future__ import annotations
 
 import os
+import shutil
 import stat
 from datetime import datetime, timezone
 from pathlib import Path
@@ -39,6 +40,9 @@ def _wrap_with_managed_region(cfg: ConfigObj) -> str:
     """Serialize *cfg* and wrap it in MANAGED REGION markers."""
     import io
 
+    # Ensure ConfigObj writes UTF-8 bytes so non-ASCII values (e.g. unit
+    # labels containing "°") are preserved correctly.
+    cfg.encoding = "utf-8"
     buf = io.BytesIO()
     cfg.write(outfile=buf)
     content = buf.getvalue().decode("utf-8")
@@ -112,6 +116,32 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     cfg["units"] = {}
     cfg["units"]["groups"] = {k: v for k, v in unit_groups.items()}
 
+    # Write imported [Units] subsections when a skin.conf import was performed.
+    # Only write subsections that have actual data — don't emit empty sections.
+    # The BFF (settings.py) reads [[string_formats]], [[labels]], and
+    # [[ordinates]] from the [units] section of realtime.conf.
+    if state.imported_config is not None:
+        imp_units = state.imported_config.get("units", {})
+
+        string_formats = imp_units.get("string_formats", {})
+        if string_formats:
+            cfg["units"]["string_formats"] = {k: v for k, v in string_formats.items()}
+
+        labels = imp_units.get("labels", {})
+        if labels:
+            cfg["units"]["labels"] = {k: v for k, v in labels.items()}
+
+        # [[ordinates]] stores a "directions" key (comma-separated or list) that
+        # the BFF parses via ordinates_raw.get("directions", "").  Emit only when
+        # the imported config has a non-empty directions list.
+        ordinates = imp_units.get("ordinates", {})
+        directions = ordinates.get("directions", [])
+        if directions:
+            directions_str = (
+                ", ".join(directions) if isinstance(directions, list) else str(directions)
+            )
+            cfg["units"]["ordinates"] = {"directions": directions_str}
+
     # [station] — required by the realtime BFF for solar position and
     # day/night determination (ADR-044).  Only written when both lat and lon
     # are present; altitude and timezone have safe defaults (0 and "").
@@ -132,6 +162,8 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
 
     content = _wrap_with_managed_region(cfg)
     dest = config_dir / "realtime.conf"
+    if dest.exists():
+        shutil.copy2(dest, dest.with_suffix(dest.suffix + ".bak"))
     _write_file(dest, content)
     return dest
 
@@ -181,6 +213,8 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
 
     content = _wrap_with_managed_region(cfg)
     dest = config_dir / "stack.conf"
+    if dest.exists():
+        shutil.copy2(dest, dest.with_suffix(dest.suffix + ".bak"))
     _write_file(dest, content)
     return dest
 
@@ -245,6 +279,8 @@ def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
         lines.append(f"{key}={_shell_quote_value(value)}\n")
 
     content = "".join(lines)
+    if dest.exists():
+        shutil.copy2(dest, dest.with_suffix(dest.suffix + ".bak"))
     _write_file(dest, content, mode=0o600)
 
     # Verify the mode was set (Linux/macOS only; Windows ignores chmod).
