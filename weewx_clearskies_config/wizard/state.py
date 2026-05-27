@@ -109,6 +109,23 @@ class WizardState:
     # None means the step has not been completed; defaults to US units on first visit.
     units: dict[str, str] | None = None
 
+    # Branding (step 8)
+    site_title: str = ""
+    logo_light_url: str = ""
+    logo_dark_url: str = ""
+    favicon_url: str = ""
+
+    # Social (step 9)
+    facebook_url: str = ""
+    twitter_url: str = ""
+    instagram_url: str = ""
+    youtube_url: str = ""
+
+    # Seismic config (inline in provider step, earthquakes domain)
+    earthquake_radius_km: float = 100.0
+    earthquake_min_magnitude: float = 2.0
+    earthquake_default_days: int = 7
+
 
 # ---------------------------------------------------------------------------
 # In-memory session store

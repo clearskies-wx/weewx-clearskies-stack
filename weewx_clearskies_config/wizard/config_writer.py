@@ -211,6 +211,26 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
         "refresh_interval": str(state.webcam_refresh_interval),
     }
 
+    cfg["branding"] = {
+        "site_title": state.site_title,
+        "logo_light_url": state.logo_light_url,
+        "logo_dark_url": state.logo_dark_url,
+        "favicon_url": state.favicon_url,
+    }
+
+    cfg["social"] = {
+        "facebook_url": state.facebook_url,
+        "twitter_url": state.twitter_url,
+        "instagram_url": state.instagram_url,
+        "youtube_url": state.youtube_url,
+    }
+
+    cfg["earthquakes"] = {
+        "radius_km": str(state.earthquake_radius_km),
+        "min_magnitude": str(state.earthquake_min_magnitude),
+        "default_days": str(state.earthquake_default_days),
+    }
+
     content = _wrap_with_managed_region(cfg)
     dest = config_dir / "stack.conf"
     if dest.exists():

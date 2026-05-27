@@ -1,0 +1,61 @@
+<article>
+  <header>
+    <h2>Step 11 of 12 — Social Media</h2>
+    <p>Add links to your social media profiles. Leave blank to hide them from your site.</p>
+  </header>
+
+  {% if error %}
+  <div class="alert-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <form id="step-form"
+        hx-post="/wizard/step/9"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
+
+    <label for="facebook_url">Facebook URL</label>
+    <input type="text"
+           id="facebook_url"
+           name="facebook_url"
+           value="{{ state.facebook_url }}"
+           placeholder="https://facebook.com/...">
+
+    <label for="twitter_url">Twitter / X URL</label>
+    <input type="text"
+           id="twitter_url"
+           name="twitter_url"
+           value="{{ state.twitter_url }}"
+           placeholder="https://twitter.com/...">
+
+    <label for="instagram_url">Instagram URL</label>
+    <input type="text"
+           id="instagram_url"
+           name="instagram_url"
+           value="{{ state.instagram_url }}"
+           placeholder="https://instagram.com/...">
+
+    <label for="youtube_url">YouTube URL</label>
+    <input type="text"
+           id="youtube_url"
+           name="youtube_url"
+           value="{{ state.youtube_url }}"
+           placeholder="https://youtube.com/...">
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/8"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML show:window:top"
+              hx-indicator="#wizard-spinner">
+        &#8592; Previous: Branding
+      </button>
+      <button type="submit">Next: Review &#8594;</button>
+    </div>
+  </form>
+</article>
+
+{# OOB: update the progress bar to reflect the current step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

@@ -1,6 +1,6 @@
 <article>
   <header>
-    <h2>Step 8 of 10 — Providers &amp; API Keys</h2>
+    <h2>Step 8 of 12 — Providers &amp; API Keys</h2>
     <p>Choose a data provider for each service domain.
        Providers that match your station location are pre-selected.
        For providers that require an API key, the key fields appear inline when you select them.</p>
@@ -98,6 +98,44 @@
       </div>
     </fieldset>
     {% endfor %}
+
+    {# Earthquake provider configuration — shown when any earthquakes provider is selected. #}
+    {% if state.providers.get("earthquakes") or providers_by_domain.get("earthquakes") %}
+    <fieldset id="earthquake-config">
+      <legend>Earthquake Data Settings</legend>
+      <p><small>These settings control how recent earthquake data is fetched and displayed.</small></p>
+
+      <label for="earthquake_radius_km">Search Radius (km)</label>
+      <input type="number"
+             id="earthquake_radius_km"
+             name="earthquake_radius_km"
+             value="{{ state.earthquake_radius_km }}"
+             min="1"
+             max="20000"
+             step="1">
+      <small>Radius around your station to search for earthquakes. Default: 100 km.</small>
+
+      <label for="earthquake_min_magnitude">Minimum Magnitude</label>
+      <input type="number"
+             id="earthquake_min_magnitude"
+             name="earthquake_min_magnitude"
+             value="{{ state.earthquake_min_magnitude }}"
+             min="0"
+             max="10"
+             step="0.1">
+      <small>Only show earthquakes at or above this magnitude. Default: 2.0.</small>
+
+      <label for="earthquake_default_days">Time Period (days)</label>
+      <select id="earthquake_default_days" name="earthquake_default_days">
+        {% for days in [1, 7, 14, 30] %}
+        <option value="{{ days }}" {% if state.earthquake_default_days == days %}selected{% endif %}>
+          {{ days }} day{{ "s" if days != 1 else "" }}
+        </option>
+        {% endfor %}
+      </select>
+      <small>How far back to look for earthquakes. Default: 7 days.</small>
+    </fieldset>
+    {% endif %}
 
     <div role="group">
       <button type="button"

@@ -1,4 +1,4 @@
-"""FastAPI router for the 8-step setup wizard.
+"""FastAPI router for the 10-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -19,13 +19,17 @@ Route summary:
   GET  /wizard/step/5           — data pipeline / MQTT, render step 5 fragment
   POST /wizard/step/5/test      — test MQTT broker connection, return result fragment
   POST /wizard/step/5           — save input mode + MQTT settings, return step 6 fragment
-  GET  /wizard/step/6           — provider selection + inline key entry, render step 6 fragment
+  GET  /wizard/step/6           — provider selection + inline key entry + earthquake config, render step 6 fragment
   GET  /wizard/step/6/key-fields/{domain}/{provider_id} — inline key fields fragment
   POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
-  POST /wizard/step/6           — save provider choices + keys, return step 7 fragment (webcam)
+  POST /wizard/step/6           — save provider choices + keys + earthquake config, return step 7 fragment (webcam)
   GET  /wizard/step/7           — webcam configuration, render step 7 fragment
-  POST /wizard/step/7           — save webcam settings, return step 8 fragment (review)
-  GET  /wizard/step/8           — review summary, render step 8 fragment
+  POST /wizard/step/7           — save webcam settings, return step 8 fragment (branding)
+  GET  /wizard/step/8           — branding configuration, render step 8 fragment
+  POST /wizard/step/8           — save branding settings, return step 9 fragment (social)
+  GET  /wizard/step/9           — social media URLs, render step 9 fragment
+  POST /wizard/step/9           — save social URLs, return step 10 fragment (review)
+  GET  /wizard/step/10          — review summary, render step 10 fragment
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -704,6 +708,28 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.webcam_video_url = prior.webcam_video_url
             if state.webcam_refresh_interval == 60 and prior.webcam_refresh_interval != 60:
                 state.webcam_refresh_interval = prior.webcam_refresh_interval
+            if not state.site_title and prior.site_title:
+                state.site_title = prior.site_title
+            if not state.logo_light_url and prior.logo_light_url:
+                state.logo_light_url = prior.logo_light_url
+            if not state.logo_dark_url and prior.logo_dark_url:
+                state.logo_dark_url = prior.logo_dark_url
+            if not state.favicon_url and prior.favicon_url:
+                state.favicon_url = prior.favicon_url
+            if not state.facebook_url and prior.facebook_url:
+                state.facebook_url = prior.facebook_url
+            if not state.twitter_url and prior.twitter_url:
+                state.twitter_url = prior.twitter_url
+            if not state.instagram_url and prior.instagram_url:
+                state.instagram_url = prior.instagram_url
+            if not state.youtube_url and prior.youtube_url:
+                state.youtube_url = prior.youtube_url
+            if state.earthquake_radius_km == 100.0 and prior.earthquake_radius_km != 100.0:
+                state.earthquake_radius_km = prior.earthquake_radius_km
+            if state.earthquake_min_magnitude == 2.0 and prior.earthquake_min_magnitude != 2.0:
+                state.earthquake_min_magnitude = prior.earthquake_min_magnitude
+            if state.earthquake_default_days == 7 and prior.earthquake_default_days != 7:
+                state.earthquake_default_days = prior.earthquake_default_days
             save_wizard_state(session_id, state)
             logger.info("Restored wizard progress from prior session into session %s", session_id[:8])
         else:
@@ -1745,6 +1771,26 @@ async def step6_post(request: Request) -> HTMLResponse:
                 api_keys[provider_id] = creds
     state.api_keys = api_keys
 
+    # Inline earthquake config fields (shown when earthquakes provider is selected).
+    radius_raw = str(form.get("earthquake_radius_km", "100")).strip()
+    try:
+        state.earthquake_radius_km = max(1.0, float(radius_raw))
+    except (ValueError, TypeError):
+        state.earthquake_radius_km = 100.0
+
+    magnitude_raw = str(form.get("earthquake_min_magnitude", "2.0")).strip()
+    try:
+        state.earthquake_min_magnitude = max(0.0, float(magnitude_raw))
+    except (ValueError, TypeError):
+        state.earthquake_min_magnitude = 2.0
+
+    days_raw = str(form.get("earthquake_default_days", "7")).strip()
+    try:
+        days_val = int(days_raw)
+        state.earthquake_default_days = days_val if days_val in (1, 7, 14, 30) else 7
+    except (ValueError, TypeError):
+        state.earthquake_default_days = 7
+
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -1771,16 +1817,70 @@ async def step7_post(request: Request) -> HTMLResponse:
     state.webcam_video_url = str(form.get("webcam_video_url", "/webcam/weewx_timelapse.mp4")).strip()
     state.webcam_refresh_interval = int(form.get("webcam_refresh_interval", 60))
     save_wizard_state(session_id, state)
-    return await step8_get(request)
+    return await step8_branding_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 8: Review + Apply
+# Step 8: Branding
 # ---------------------------------------------------------------------------
 
 
 @router.get("/step/8", response_class=HTMLResponse)
-async def step8_get(request: Request) -> HTMLResponse:
+async def step8_branding_get(request: Request) -> HTMLResponse:
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(request, "step_branding.html", {"step": 10, "state": state, "error": None})
+
+
+@router.post("/step/8", response_class=HTMLResponse)
+async def step8_branding_post(request: Request) -> HTMLResponse:
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    state.site_title = str(form.get("site_title", "")).strip()
+    state.logo_light_url = str(form.get("logo_light_url", "")).strip()
+    state.logo_dark_url = str(form.get("logo_dark_url", "")).strip()
+    state.favicon_url = str(form.get("favicon_url", "")).strip()
+
+    save_wizard_state(session_id, state)
+    return await step9_social_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Step 9: Social Media
+# ---------------------------------------------------------------------------
+
+
+@router.get("/step/9", response_class=HTMLResponse)
+async def step9_social_get(request: Request) -> HTMLResponse:
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(request, "step_social.html", {"step": 11, "state": state, "error": None})
+
+
+@router.post("/step/9", response_class=HTMLResponse)
+async def step9_social_post(request: Request) -> HTMLResponse:
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    state.facebook_url = str(form.get("facebook_url", "")).strip()
+    state.twitter_url = str(form.get("twitter_url", "")).strip()
+    state.instagram_url = str(form.get("instagram_url", "")).strip()
+    state.youtube_url = str(form.get("youtube_url", "")).strip()
+
+    save_wizard_state(session_id, state)
+    return await step10_review_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Step 10: Review + Apply
+# ---------------------------------------------------------------------------
+
+
+@router.get("/step/10", response_class=HTMLResponse)
+async def step10_review_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if state.db_host is None and state.station_name is None:
@@ -1788,7 +1888,7 @@ async def step8_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 10, "state": state, "error": None},
+        {"step": 12, "state": state, "error": None},
     )
 
 
@@ -1895,6 +1995,30 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
     api_payload["skin_conf"] = build_skin_conf_payload(state)
 
+    # Branding fields (site title, logo URLs, favicon).
+    api_payload["branding"] = {
+        "site_title": state.site_title,
+        "logo_light_url": state.logo_light_url,
+        "logo_dark_url": state.logo_dark_url,
+        "favicon_url": state.favicon_url,
+    }
+
+    # Social media URLs.
+    api_payload["social"] = {
+        "facebook_url": state.facebook_url,
+        "twitter_url": state.twitter_url,
+        "instagram_url": state.instagram_url,
+        "youtube_url": state.youtube_url,
+    }
+
+    # Earthquake provider settings (sent even when no earthquakes provider is
+    # selected, so the API can initialise defaults without a second apply call).
+    api_payload["earthquakes"] = {
+        "radius_km": state.earthquake_radius_km,
+        "min_magnitude": state.earthquake_min_magnitude,
+        "default_days": state.earthquake_default_days,
+    }
+
     apply_response: dict[str, Any] | None = None
     try:
         client = _get_api_client(state)
@@ -1905,7 +2029,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 10,
+                "step": 12,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -1918,7 +2042,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 10,
+                "step": 12,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -1930,7 +2054,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 10,
+                "step": 12,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
@@ -2008,7 +2132,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 10, "state": state, "error": local_error},
+            {"step": 12, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -2021,7 +2145,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 10, "state": state, "error": local_error},
+            {"step": 12, "state": state, "error": local_error},
             status_code=422,
         )
 
@@ -2356,6 +2480,29 @@ def _merge_from_existing_config(state: WizardState) -> None:
     if state.webcam_refresh_interval == 60 and existing.webcam_refresh_interval != 60:
         state.webcam_refresh_interval = existing.webcam_refresh_interval
 
+    if not state.site_title and existing.site_title:
+        state.site_title = existing.site_title
+    if not state.logo_light_url and existing.logo_light_url:
+        state.logo_light_url = existing.logo_light_url
+    if not state.logo_dark_url and existing.logo_dark_url:
+        state.logo_dark_url = existing.logo_dark_url
+    if not state.favicon_url and existing.favicon_url:
+        state.favicon_url = existing.favicon_url
+    if not state.facebook_url and existing.facebook_url:
+        state.facebook_url = existing.facebook_url
+    if not state.twitter_url and existing.twitter_url:
+        state.twitter_url = existing.twitter_url
+    if not state.instagram_url and existing.instagram_url:
+        state.instagram_url = existing.instagram_url
+    if not state.youtube_url and existing.youtube_url:
+        state.youtube_url = existing.youtube_url
+    if state.earthquake_radius_km == 100.0 and existing.earthquake_radius_km != 100.0:
+        state.earthquake_radius_km = existing.earthquake_radius_km
+    if state.earthquake_min_magnitude == 2.0 and existing.earthquake_min_magnitude != 2.0:
+        state.earthquake_min_magnitude = existing.earthquake_min_magnitude
+    if state.earthquake_default_days == 7 and existing.earthquake_default_days != 7:
+        state.earthquake_default_days = existing.earthquake_default_days
+
 
 def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> None:
     """Call GET /setup/current-config and merge the response into *state*.
@@ -2462,6 +2609,51 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
             locale_val = str(station["default_locale"]).strip()
             if locale_val in _VALID_LOCALES:
                 state.default_locale = locale_val
+
+    # --- Branding ---
+    branding = config.get("branding", {})
+    if isinstance(branding, dict):
+        if not state.site_title and branding.get("site_title"):
+            state.site_title = str(branding["site_title"])
+        if not state.logo_light_url and branding.get("logo_light_url"):
+            state.logo_light_url = str(branding["logo_light_url"])
+        if not state.logo_dark_url and branding.get("logo_dark_url"):
+            state.logo_dark_url = str(branding["logo_dark_url"])
+        if not state.favicon_url and branding.get("favicon_url"):
+            state.favicon_url = str(branding["favicon_url"])
+
+    # --- Social ---
+    social = config.get("social", {})
+    if isinstance(social, dict):
+        if not state.facebook_url and social.get("facebook_url"):
+            state.facebook_url = str(social["facebook_url"])
+        if not state.twitter_url and social.get("twitter_url"):
+            state.twitter_url = str(social["twitter_url"])
+        if not state.instagram_url and social.get("instagram_url"):
+            state.instagram_url = str(social["instagram_url"])
+        if not state.youtube_url and social.get("youtube_url"):
+            state.youtube_url = str(social["youtube_url"])
+
+    # --- Earthquake settings ---
+    earthquakes = config.get("earthquakes", {})
+    if isinstance(earthquakes, dict):
+        if state.earthquake_radius_km == 100.0 and earthquakes.get("radius_km") is not None:
+            try:
+                state.earthquake_radius_km = float(earthquakes["radius_km"])
+            except (ValueError, TypeError):
+                pass
+        if state.earthquake_min_magnitude == 2.0 and earthquakes.get("min_magnitude") is not None:
+            try:
+                state.earthquake_min_magnitude = float(earthquakes["min_magnitude"])
+            except (ValueError, TypeError):
+                pass
+        if state.earthquake_default_days == 7 and earthquakes.get("default_days") is not None:
+            try:
+                days = int(earthquakes["default_days"])
+                if days in (1, 7, 14, 30):
+                    state.earthquake_default_days = days
+            except (ValueError, TypeError):
+                pass
 
 
 def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:

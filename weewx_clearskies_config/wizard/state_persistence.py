@@ -370,6 +370,48 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 except (ValueError, TypeError):
                     pass
 
+        branding_section = stack_cfg.get("branding", {})
+        if isinstance(branding_section, dict):
+            if branding_section.get("site_title"):
+                state.site_title = str(branding_section["site_title"])
+            if branding_section.get("logo_light_url"):
+                state.logo_light_url = str(branding_section["logo_light_url"])
+            if branding_section.get("logo_dark_url"):
+                state.logo_dark_url = str(branding_section["logo_dark_url"])
+            if branding_section.get("favicon_url"):
+                state.favicon_url = str(branding_section["favicon_url"])
+
+        social_section = stack_cfg.get("social", {})
+        if isinstance(social_section, dict):
+            if social_section.get("facebook_url"):
+                state.facebook_url = str(social_section["facebook_url"])
+            if social_section.get("twitter_url"):
+                state.twitter_url = str(social_section["twitter_url"])
+            if social_section.get("instagram_url"):
+                state.instagram_url = str(social_section["instagram_url"])
+            if social_section.get("youtube_url"):
+                state.youtube_url = str(social_section["youtube_url"])
+
+        earthquakes_section = stack_cfg.get("earthquakes", {})
+        if isinstance(earthquakes_section, dict):
+            if earthquakes_section.get("radius_km"):
+                try:
+                    state.earthquake_radius_km = float(earthquakes_section["radius_km"])
+                except (ValueError, TypeError):
+                    pass
+            if earthquakes_section.get("min_magnitude"):
+                try:
+                    state.earthquake_min_magnitude = float(earthquakes_section["min_magnitude"])
+                except (ValueError, TypeError):
+                    pass
+            if earthquakes_section.get("default_days"):
+                try:
+                    days = int(earthquakes_section["default_days"])
+                    if days in (1, 7, 14, 30):
+                        state.earthquake_default_days = days
+                except (ValueError, TypeError):
+                    pass
+
     realtime_cfg = read_config("realtime", config_dir)
     if realtime_cfg is not None:
         server_section = realtime_cfg.get("server", {})
@@ -456,8 +498,8 @@ def _domain_for_provider(provider_id: str, providers: dict[str, str]) -> str | N
 
 def _state_from_dict(raw: dict[str, Any]) -> WizardState:
     """Construct a WizardState from a plain dict, validating types."""
-    _INT_FIELDS = {"db_port", "api_bind_port", "realtime_bind_port", "mqtt_broker_port", "mqtt_qos", "mqtt_keepalive", "webcam_refresh_interval"}
-    _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters"}
+    _INT_FIELDS = {"db_port", "api_bind_port", "realtime_bind_port", "mqtt_broker_port", "mqtt_qos", "mqtt_keepalive", "webcam_refresh_interval", "earthquake_default_days"}
+    _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters", "earthquake_radius_km", "earthquake_min_magnitude"}
     _BOOL_FIELDS = {"mqtt_tls", "schema_skipped", "webcam_enabled"}
 
     kwargs: dict[str, Any] = {}
