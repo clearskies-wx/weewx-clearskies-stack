@@ -396,9 +396,10 @@ def suggest_canonical(
             return canonical, "high"
 
     # Substring match: db_column contained in canonical or canonical in db_column.
-    # Skip for very short column names (≤3 chars) to avoid false positives such as
-    # "co" (carbon monoxide) matching "cooldeg".
-    if len(db_column) <= 3:
+    # Skip for single-character column names to avoid spurious matches.
+    # Note: "co" and other 2-3 char canonical names are already handled by the
+    # exact-match check above, so the guard only needs to block length-1 strings.
+    if len(db_column) <= 1:
         return None, "none"
 
     substring_matches = [

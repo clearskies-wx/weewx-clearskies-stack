@@ -276,7 +276,7 @@ def test_provider(
         elapsed_ms = int((time.monotonic() - start) * 1000)
         return {
             "success": False,
-            "error": "Could not reach the provider — check your internet connection",
+            "error": "Connection timed out — check your internet connection",
             "response_time_ms": elapsed_ms,
         }
     except httpx.RequestError as exc:

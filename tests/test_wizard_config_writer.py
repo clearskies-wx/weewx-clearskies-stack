@@ -379,6 +379,7 @@ def test_write_secrets_env_does_not_contain_ini_section_headers(tmp_path: Path):
     )
 
 
+@pytest.mark.xfail(reason="ADR-038: DB password now managed by API")
 def test_write_secrets_env_includes_db_password(tmp_path: Path):
     state = _minimal_state(db_password="my_db_password!")
     write_secrets_env(state, tmp_path)
@@ -387,6 +388,7 @@ def test_write_secrets_env_includes_db_password(tmp_path: Path):
     assert "WEEWX_CLEARSKIES_DB_PASSWORD='my_db_password!'" in content
 
 
+@pytest.mark.xfail(reason="ADR-038: provider API keys now managed by API")
 def test_write_secrets_env_includes_provider_api_keys(tmp_path: Path):
     state = _minimal_state(api_keys={"openweathermap_aqi": {"api_key": "myowmkey123"}})
     write_secrets_env(state, tmp_path)
@@ -415,7 +417,7 @@ def test_write_secrets_env_returns_path_to_written_file(tmp_path: Path):
 def test_apply_wizard_writes_all_expected_conf_files(tmp_path: Path):
     result = apply_wizard(_minimal_state(), tmp_path)
     files = [Path(p).name for p in result["files_written"]]
-    assert "api.conf" in files
+    # api.conf is written by the API itself (ADR-038); wizard only writes local config files.
     assert "realtime.conf" in files
     assert "stack.conf" in files
 
@@ -435,6 +437,7 @@ def test_apply_wizard_all_written_files_exist_on_disk(tmp_path: Path):
 
 
 
+@pytest.mark.xfail(reason="ADR-038: wizard no longer writes api.conf", raises=FileNotFoundError)
 def test_apply_wizard_api_conf_does_not_contain_db_password(tmp_path: Path):
     state = _minimal_state(db_password="never_in_conf")
     apply_wizard(state, tmp_path)

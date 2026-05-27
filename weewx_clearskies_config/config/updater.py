@@ -208,3 +208,35 @@ def update_column_mapping(
     }
 
     update_managed_region(api_conf, "column_mapping", clean_mapping)
+
+    # Delete keys that were explicitly passed as None — they signal "unmap this column".
+    # update_managed_region only adds/updates; it never removes existing keys.
+    # Re-read and rewrite the file to purge None-valued entries.
+    none_keys = [db_col for db_col, canonical in mapping.items() if canonical is None]
+    if none_keys:
+        import io
+        from configobj import ConfigObj
+
+        file_text = api_conf.read_text(encoding="utf-8")
+        begin_idx = file_text.find(MANAGED_BEGIN)
+        end_idx = file_text.find(MANAGED_END)
+
+        if begin_idx != -1 and end_idx != -1:
+            begin_line_end = file_text.find("\n", begin_idx)
+            begin_line_end = len(file_text) if begin_line_end == -1 else begin_line_end + 1
+            end_line_start = end_idx
+
+            managed_text = file_text[begin_line_end:end_line_start]
+            pre_text = file_text[:begin_line_end]
+            post_text = file_text[end_line_start:]
+
+            cfg = ConfigObj(infile=io.StringIO(managed_text))
+            section_name = "column_mapping"
+            if section_name in cfg:
+                for key in none_keys:
+                    cfg[section_name].pop(key, None)
+
+            buf = io.BytesIO()
+            cfg.write(outfile=buf)
+            new_managed_text = buf.getvalue().decode("utf-8")
+            api_conf.write_text(pre_text + new_managed_text + post_text, encoding="utf-8")

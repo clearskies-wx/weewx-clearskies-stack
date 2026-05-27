@@ -155,7 +155,13 @@ def test_provider_url_encodes_special_chars_in_api_key():
     raw_key = "key&with&ampersands"
     import urllib.parse
     encoded_key = urllib.parse.quote(raw_key, safe="")
-    expected_url = iqair.test_url.replace("{api_key}", encoded_key)
+    # Substitute latitude and longitude placeholders as the real code does (defaults to "0")
+    expected_url = (
+        iqair.test_url
+        .replace("{latitude}", "0")
+        .replace("{longitude}", "0")
+        .replace("{api_key}", encoded_key)
+    )
     respx.get(expected_url).mock(return_value=httpx.Response(200, json={}))
     result = check_provider(iqair, {"api_key": raw_key})
     assert result["success"] is True

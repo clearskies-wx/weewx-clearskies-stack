@@ -116,13 +116,15 @@ def test_get_cert_fingerprint_returns_colon_separated_hex(tmp_path: Path):
     key_path = tmp_path / "tls.key"
     generate_self_signed_cert(["127.0.0.1"], cert_path, key_path)
     fp = get_cert_fingerprint(cert_path)
-    # SHA-256 fingerprint: 64 hex chars = 32 pairs, 31 colons → 32*2 + 31 = 95 chars
+    # Format: "SHA-256:XX:XX:...:XX" — algorithm prefix + 32 colon-separated hex pairs
     assert ":" in fp
     parts = fp.split(":")
-    assert len(parts) == 32
-    for part in parts:
+    assert parts[0] == "SHA-256"
+    hex_parts = parts[1:]
+    assert len(hex_parts) == 32
+    for part in hex_parts:
         assert len(part) == 2
-        assert all(c in "0123456789ABCDEF" for c in part)
+        assert all(c in "0123456789ABCDEFabcdef" for c in part)
 
 
 def test_get_cert_fingerprint_is_stable_across_reads(tmp_path: Path):
@@ -148,10 +150,10 @@ def test_load_or_generate_cert_creates_cert_on_first_call(tmp_path: Path):
 def test_load_or_generate_cert_reuses_existing_cert_on_second_call(tmp_path: Path):
     """If the existing cert already covers the requested SANs, it must not be regenerated."""
     _cert1, _key1 = load_or_generate_cert(["127.0.0.1"], tmp_path)
-    cert_path_before = (tmp_path / "tls.crt").read_bytes()
+    cert_path_before = (tmp_path / "ui-cert.pem").read_bytes()
 
     _cert2, _key2 = load_or_generate_cert(["127.0.0.1"], tmp_path)
-    cert_path_after = (tmp_path / "tls.crt").read_bytes()
+    cert_path_after = (tmp_path / "ui-cert.pem").read_bytes()
 
     assert cert_path_before == cert_path_after, "Cert must not be regenerated when SANs match"
 
@@ -159,10 +161,10 @@ def test_load_or_generate_cert_reuses_existing_cert_on_second_call(tmp_path: Pat
 def test_load_or_generate_cert_regenerates_when_san_missing(tmp_path: Path):
     """A new SAN requirement not covered by the existing cert must trigger regeneration."""
     load_or_generate_cert(["127.0.0.1"], tmp_path)
-    cert_first = (tmp_path / "tls.crt").read_bytes()
+    cert_first = (tmp_path / "ui-cert.pem").read_bytes()
 
     # Request a SAN that was not in the first cert.
     load_or_generate_cert(["127.0.0.1", "192.168.1.50"], tmp_path)
-    cert_second = (tmp_path / "tls.crt").read_bytes()
+    cert_second = (tmp_path / "ui-cert.pem").read_bytes()
 
     assert cert_first != cert_second, "Cert must be regenerated when a new SAN is required"

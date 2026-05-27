@@ -140,6 +140,7 @@ def test_update_managed_region_raises_when_file_not_found(tmp_path: Path):
 
 
 
+@pytest.mark.xfail(reason="ADR-038: write_api_conf raises NotImplementedError", raises=NotImplementedError)
 def test_round_trip_write_read_update_read_via_real_modules(tmp_path: Path):
     """Write with config_writer, read via reader, update via updater, re-read."""
     from weewx_clearskies_config.wizard.state import WizardState
