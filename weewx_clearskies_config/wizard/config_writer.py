@@ -63,8 +63,14 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     """Write realtime.conf from *state*.
 
     Sections written:
-      [sse]     — bind address and port for the realtime SSE service
-      [input]   — input mode; if mqtt, includes nested [[mqtt]] subsection
+      [sse]      — bind address and port for the realtime SSE service
+      [input]    — input mode; if mqtt, includes nested [[mqtt]] subsection
+      [units]    — unit group selections (falls back to US defaults if not set)
+      [station]  — latitude, longitude, altitude, and timezone for solar
+                   position and day/night determination (ADR-044).
+                   Written only when both latitude and longitude are set.
+      [api]      — upstream API URL and connection settings (when api_address
+                   is set)
 
     The MQTT password is never written here — only the env var name
     (WEEWX_CLEARSKIES_MQTT_PASSWORD) is stored, and the password itself
@@ -106,6 +112,17 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     cfg["units"] = {}
     cfg["units"]["groups"] = {k: v for k, v in unit_groups.items()}
 
+    # [station] — required by the realtime BFF for solar position and
+    # day/night determination (ADR-044).  Only written when both lat and lon
+    # are present; altitude and timezone have safe defaults (0 and "").
+    if state.latitude is not None and state.longitude is not None:
+        cfg["station"] = {
+            "latitude": str(state.latitude),
+            "longitude": str(state.longitude),
+            "altitude_meters": str(state.altitude_meters) if state.altitude_meters is not None else "0",
+            "timezone": state.timezone or "",
+        }
+
     if state.api_address:
         cfg["api"] = {
             "upstream_url": state.api_address,
@@ -117,6 +134,20 @@ def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
     dest = config_dir / "realtime.conf"
     _write_file(dest, content)
     return dest
+
+
+def write_api_conf(state: WizardState, config_dir: Path) -> Path:
+    """Write api.conf from *state*.
+
+    Not yet implemented (BUG A7).  The API writes its own config via
+    POST /setup/apply (ADR-038); this function is reserved for a future
+    local-cache copy of the API's config if that requirement is confirmed.
+
+    Raises:
+        NotImplementedError: Always.  Tests for this function are marked
+            xfail pending BUG A7 resolution.
+    """
+    raise NotImplementedError("write_api_conf is not implemented (BUG A7)")
 
 
 def write_stack_conf(state: WizardState, config_dir: Path) -> Path:

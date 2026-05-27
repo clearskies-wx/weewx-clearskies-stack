@@ -59,28 +59,34 @@ def _minimal_state(**overrides) -> WizardState:
 # write_api_conf — all xfail due to BUG A7
 # ---------------------------------------------------------------------------
 
+_XFAIL_BUG_A7 = pytest.mark.xfail(
+    raises=NotImplementedError,
+    reason="write_api_conf not yet implemented (BUG A7)",
+    strict=True,
+)
 
 
+@_XFAIL_BUG_A7
 def test_write_api_conf_creates_api_conf_file(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     assert (tmp_path / "api.conf").exists()
 
 
-
+@_XFAIL_BUG_A7
 def test_write_api_conf_includes_managed_region_begin_marker(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
     assert _MANAGED_BEGIN in content
 
 
-
+@_XFAIL_BUG_A7
 def test_write_api_conf_includes_managed_region_end_marker(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
     assert _MANAGED_END in content
 
 
-
+@_XFAIL_BUG_A7
 def test_write_api_conf_writes_server_section_with_bind_host_and_port(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
@@ -88,7 +94,7 @@ def test_write_api_conf_writes_server_section_with_bind_host_and_port(tmp_path: 
     assert "bind_port = 8765" in content
 
 
-
+@_XFAIL_BUG_A7
 def test_write_api_conf_writes_database_section_without_password(tmp_path: Path):
     """DB password must NEVER appear in the .conf file — it lives in secrets.env."""
     state = _minimal_state(db_password="should_not_be_here")
@@ -97,7 +103,7 @@ def test_write_api_conf_writes_database_section_without_password(tmp_path: Path)
     assert "should_not_be_here" not in content
 
 
-
+@_XFAIL_BUG_A7
 def test_write_api_conf_writes_column_mapping_section(tmp_path: Path):
     state = _minimal_state(
         column_mapping={"outTemp": "outdoor_temperature", "rain": "precipitation"}
@@ -108,7 +114,7 @@ def test_write_api_conf_writes_column_mapping_section(tmp_path: Path):
     assert "rain = precipitation" in content
 
 
-
+@_XFAIL_BUG_A7
 def test_write_api_conf_writes_all_five_provider_domain_sections(tmp_path: Path):
     write_api_conf(_minimal_state(), tmp_path)
     content = (tmp_path / "api.conf").read_text(encoding="utf-8")
@@ -116,7 +122,7 @@ def test_write_api_conf_writes_all_five_provider_domain_sections(tmp_path: Path)
         assert f"[{domain}]" in content
 
 
-
+@_XFAIL_BUG_A7
 def test_write_api_conf_returns_path_to_written_file(tmp_path: Path):
     result = write_api_conf(_minimal_state(), tmp_path)
     assert result == tmp_path / "api.conf"
@@ -148,6 +154,61 @@ def test_write_realtime_conf_writes_server_bind_address_and_port(tmp_path: Path)
     content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
     assert "bind_host = 127.0.0.1" in content
     assert "bind_port = 8766" in content
+
+
+def test_write_realtime_conf_writes_station_section_when_lat_lon_set(tmp_path: Path):
+    """[station] section is written when both latitude and longitude are present (ADR-044)."""
+    state = _minimal_state(
+        latitude=38.8894,
+        longitude=-77.0352,
+        altitude_meters=15.24,
+        timezone="America/New_York",
+    )
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[station]" in content
+    assert "38.8894" in content
+    assert "-77.0352" in content
+    assert "15.24" in content
+    assert "America/New_York" in content
+
+
+def test_write_realtime_conf_omits_station_section_when_lat_lon_are_none(tmp_path: Path):
+    """[station] section must not be written when latitude or longitude is None (ADR-044)."""
+    state = _minimal_state(latitude=None, longitude=None)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[station]" not in content
+
+
+def test_write_realtime_conf_omits_station_section_when_only_lat_is_none(tmp_path: Path):
+    """Both lat and lon required; missing either means no [station] section (ADR-044)."""
+    state = _minimal_state(latitude=None, longitude=-77.0352)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[station]" not in content
+
+
+def test_write_realtime_conf_station_altitude_defaults_to_zero_when_none(tmp_path: Path):
+    """altitude_meters defaults to '0' in [station] when not provided (ADR-044)."""
+    state = _minimal_state(latitude=38.8894, longitude=-77.0352, altitude_meters=None)
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    assert "[station]" in content
+    assert "altitude_meters = 0" in content
+
+
+def test_write_realtime_conf_station_section_appears_after_units_and_before_api(tmp_path: Path):
+    """[station] must appear after [units] and before [api] in realtime.conf (ADR-044)."""
+    state = _minimal_state(latitude=38.8894, longitude=-77.0352, api_address="http://127.0.0.1:8765")
+    write_realtime_conf(state, tmp_path)
+    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
+    units_pos = content.index("[units]")
+    station_pos = content.index("[station]")
+    api_pos = content.index("[api]")
+    assert units_pos < station_pos < api_pos, (
+        f"Expected [units] < [station] < [api], got positions {units_pos}, {station_pos}, {api_pos}"
+    )
 
 
 # ---------------------------------------------------------------------------
