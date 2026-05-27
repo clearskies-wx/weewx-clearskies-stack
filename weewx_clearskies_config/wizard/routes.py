@@ -1168,10 +1168,13 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         state.schema_data = schema_data
         if not schema_data.get("unmapped_columns"):
             # All columns are stock — auto-save the stock mapping and skip step 3.
-            state.column_mapping = {
-                col["db_name"]: col["canonical"]
-                for col in schema_data.get("stock_columns", [])
-            }
+            # Merge with any existing mappings (e.g. from a prior wizard run) so that
+            # custom entries are not overwritten by stock defaults.
+            existing = dict(state.column_mapping or {})
+            for col in schema_data.get("stock_columns", []):
+                if col["db_name"] not in existing:
+                    existing[col["db_name"]] = col["canonical"]
+            state.column_mapping = existing
             skip_schema = True
     except ApiClientError as exc:
         # Schema fetch failed — fall through to step 3 so the user can review.
@@ -1447,7 +1450,12 @@ async def step3_post(request: Request) -> HTMLResponse:
             status_code=422,
         )
 
-    state.column_mapping = mapping
+    # Merge form submissions with pre-existing state (e.g. stock columns set by
+    # step 2, or custom mappings loaded from api.conf on re-run).  Form fields
+    # only cover the unmapped columns, so existing entries must be preserved.
+    merged = dict(state.column_mapping or {})
+    merged.update(mapping)
+    state.column_mapping = merged
     state.schema_data = None  # Clear cached schema data — no longer needed.
     save_wizard_state(session_id, state)
     return await step4_get(request)

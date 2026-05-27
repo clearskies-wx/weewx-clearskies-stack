@@ -297,8 +297,12 @@ def populate_from_config(config_dir: Path) -> WizardState:
 
         mapping_section = api_cfg.get("column_mapping", {})
         if isinstance(mapping_section, dict):
+            # api.conf stores mappings as canonical = db_col (e.g. outTemp = outside_temperature).
+            # WizardState.column_mapping expects the inverse: {db_col: canonical}.
             state.column_mapping = {
-                k: (str(v) if v else None) for k, v in mapping_section.items()
+                str(v): str(k)
+                for k, v in mapping_section.items()
+                if v
             }
 
         providers: dict[str, str] = {}
