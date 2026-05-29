@@ -286,6 +286,61 @@ def test_branding_post_favicon_exceeds_size_limit_returns_422(authed_client):
 
 
 # ---------------------------------------------------------------------------
+# 6b. GET /wizard/step/8 — single-logo inversion advisory (ADR-022)
+# ---------------------------------------------------------------------------
+
+
+def _set_logos(client, *, light: str, dark: str) -> None:
+    """Set the two logo URLs on the client's wizard state and persist them."""
+    from weewx_clearskies_config.wizard.state import get_wizard_state, save_wizard_state
+
+    cookie = client.cookies.get("clearskies_session")
+    state = get_wizard_state(cookie)
+    state.logo_light_url = light
+    state.logo_dark_url = dark
+    save_wizard_state(cookie, state)
+
+
+def test_branding_warns_when_light_only(authed_client):
+    """Light logo present, dark absent → advisory about dark-theme inversion."""
+    _set_logos(authed_client, light="https://example.com/light.png", dark="")
+    resp = authed_client.get("/wizard/step/8")
+    assert resp.status_code == 200
+    assert "light-theme logo but no dark-theme logo" in resp.text
+    # Non-blocking advisory framing, not an error.
+    assert "<strong>Note:</strong>" in resp.text
+
+
+def test_branding_warns_when_dark_only(authed_client):
+    """Dark logo present, light absent → advisory about light-theme inversion."""
+    _set_logos(authed_client, light="", dark="https://example.com/dark.png")
+    resp = authed_client.get("/wizard/step/8")
+    assert resp.status_code == 200
+    assert "dark-theme logo but no light-theme logo" in resp.text
+    assert "<strong>Note:</strong>" in resp.text
+
+
+def test_branding_no_warning_when_both_logos_present(authed_client):
+    """Both logos present → no inversion advisory."""
+    _set_logos(
+        authed_client,
+        light="https://example.com/light.png",
+        dark="https://example.com/dark.png",
+    )
+    resp = authed_client.get("/wizard/step/8")
+    assert resp.status_code == 200
+    assert "colour-inverted" not in resp.text
+
+
+def test_branding_no_warning_when_no_logos(authed_client):
+    """Neither logo present → no inversion advisory."""
+    _set_logos(authed_client, light="", dark="")
+    resp = authed_client.get("/wizard/step/8")
+    assert resp.status_code == 200
+    assert "colour-inverted" not in resp.text
+
+
+# ---------------------------------------------------------------------------
 # 7. _sanitise_filename — unit tests
 # ---------------------------------------------------------------------------
 

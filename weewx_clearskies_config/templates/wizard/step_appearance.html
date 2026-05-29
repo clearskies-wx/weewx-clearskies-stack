@@ -108,6 +108,31 @@
         <small>Leave blank if uploading a file above.</small>
       </fieldset>
 
+      {# Single-logo advisory (ADR-022).  Providing only one logo variant is
+         valid; the dashboard automatically CSS-inverts it for the opposite
+         colour scheme.  Warn the operator that the inverted result may not
+         look right, and how to avoid it.  Non-blocking — this never prevents
+         advancing the wizard. #}
+      {% if state.logo_light_url and not state.logo_dark_url %}
+      <div class="alert-error" role="status" aria-live="polite">
+        <span>
+          <strong>Note:</strong> You have a light-theme logo but no dark-theme logo.
+          Visitors using a dark colour scheme will see your light logo automatically
+          colour-inverted, which may not look correct. Upload a dark-theme logo above
+          to control how it appears.
+        </span>
+      </div>
+      {% elif state.logo_dark_url and not state.logo_light_url %}
+      <div class="alert-error" role="status" aria-live="polite">
+        <span>
+          <strong>Note:</strong> You have a dark-theme logo but no light-theme logo.
+          Visitors using a light colour scheme will see your dark logo automatically
+          colour-inverted, which may not look correct. Upload a light-theme logo above
+          to control how it appears.
+        </span>
+      </div>
+      {% endif %}
+
       {# Favicon #}
       <fieldset>
         <legend>Favicon</legend>
