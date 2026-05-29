@@ -40,3 +40,31 @@ bind_port = 8082
 [logging]
 # DEBUG, INFO, WARNING, ERROR. Env var CLEARSKIES_LOG_LEVEL overrides.
 # level = INFO
+
+[api]
+# REQUIRED — upstream clearskies-api URL for BFF proxy mode (ADR-041).
+#
+# Caddy routes ALL /api/v1/* traffic to the realtime BFF (port 8766), which
+# unit-converts responses before sending them to the dashboard.  The BFF must
+# know where the upstream API lives.  If upstream_url is empty or missing,
+# every /api/v1/* request returns 503 and THE WHOLE SITE FAILS.
+#
+# SINGLE-HOST (docker compose, single-host/): both services run as compose
+# services on the same host.  Use the compose service name.  tls_verify is
+# false because the API uses a self-signed certificate by default.
+upstream_url = https://api:8765
+tls_verify = false
+#
+# FRONTEND-HOST (docker compose, frontend-host/): realtime runs on the
+# front-end host; the API runs on a separate weewx host.  Set upstream_url
+# to the weewx host's external or LAN address.  Example:
+# upstream_url = https://weewx-host.example.com:8765
+# tls_verify = false
+#
+# NATIVE / REVERSE-PROXY (pip-installed, examples/reverse-proxy/):
+# both services run as systemd units on the same host.  Example:
+# upstream_url = https://localhost:8765
+# tls_verify = false
+#
+# Upstream request timeout in seconds.
+# timeout = 30

@@ -2,7 +2,7 @@
     encode gzip
 
     handle /api/v1/* {
-        reverse_proxy {$CLEARSKIES_API_URL}
+        reverse_proxy realtime:8766
     }
 
     handle /sse {
