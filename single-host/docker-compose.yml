@@ -12,6 +12,7 @@ services:
       - caddy-data:/data
       - caddy-config:/config
       - dashboard-dist:/srv/dashboard:ro
+      - ${CLEARSKIES_WWW_DIR:-/var/www/clearskies}:/var/www/clearskies:ro
     environment:
       - CLEARSKIES_DOMAIN=${CLEARSKIES_DOMAIN:-localhost}
     depends_on:
