@@ -12,6 +12,11 @@ weather.example.com {
 
     reverse_proxy /sse localhost:8766
 
+    handle /webcam.json {
+        root * /etc/weewx-clearskies
+        file_server
+    }
+
     handle {
         root * /var/www/clearskies
         try_files {path} /index.html

@@ -108,6 +108,13 @@ def _print_banner(
 @click.option("--reset-admin-password", is_flag=True, default=False)
 @click.option("--show-secrets", is_flag=True, default=False)
 @click.option("--headless", is_flag=True, default=False)
+@click.option(
+    "--dashboard-root",
+    default="/var/www/clearskies",
+    show_default=True,
+    metavar="PATH",
+    help="Dashboard web root (static files only — webcam.json is written to --config-dir).",
+)
 @click.option("--db-host", default=None, help="Headless: database host")
 @click.option("--db-port", default=None, type=int, help="Headless: database port")
 @click.option("--db-user", default=None, help="Headless: database user")
@@ -131,6 +138,7 @@ def cli(
     reset_admin_password: bool,
     show_secrets: bool,
     headless: bool,
+    dashboard_root: str,
     db_host: str | None,
     db_port: int | None,
     db_user: str | None,
@@ -247,6 +255,7 @@ def cli(
         tls_cert_path=cert_path,
         tls_key_path=key_path,
         config_dir=_config_dir(),
+        dashboard_root=Path(dashboard_root),
         bootstrap_manager=bootstrap_manager,
     )
     app = create_app(app_config)

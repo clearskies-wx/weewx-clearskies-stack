@@ -34,7 +34,7 @@
     }
 
     handle /webcam.json {
-        root * /var/www/clearskies
+        root * /etc/weewx-clearskies
         file_server
     }
 

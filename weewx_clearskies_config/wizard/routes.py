@@ -2190,7 +2190,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "videoUrl": state.webcam_video_url,
         "refreshInterval": state.webcam_refresh_interval,
     }
-    webcam_json_path = (_dashboard_root or Path("/var/www/clearskies")) / "webcam.json"
+    webcam_json_path = (_config_dir or Path("/etc/weewx-clearskies")) / "webcam.json"
     try:
         with open(webcam_json_path, "w") as f:
             json.dump(webcam_config, f, indent=2)
