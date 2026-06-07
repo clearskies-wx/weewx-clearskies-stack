@@ -517,18 +517,21 @@ def _api_error_message(exc: ApiClientError) -> str:
 _templates: Jinja2Templates | None = None
 _session_manager: SessionManager | None = None
 _config_dir: Path | None = None
+_dashboard_root: Path | None = None
 
 
 def create_wizard_router(
     templates: Jinja2Templates,
     session_manager: SessionManager,
     config_dir: Path,
+    dashboard_root: Path | None = None,
 ) -> APIRouter:
     """Configure the wizard router with shared app objects and return it."""
-    global _templates, _session_manager, _config_dir  # noqa: PLW0603
+    global _templates, _session_manager, _config_dir, _dashboard_root  # noqa: PLW0603
     _templates = templates
     _session_manager = session_manager
     _config_dir = config_dir
+    _dashboard_root = dashboard_root or Path("/var/www/clearskies")
     configure_state_persistence(config_dir)
 
     # Mount the operator's uploaded branding assets so they are served at a
@@ -2187,12 +2190,18 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "videoUrl": state.webcam_video_url,
         "refreshInterval": state.webcam_refresh_interval,
     }
-    webcam_json_path = "/var/www/clearskies/webcam.json"
+    webcam_json_path = (_dashboard_root or Path("/var/www/clearskies")) / "webcam.json"
     try:
         with open(webcam_json_path, "w") as f:
             json.dump(webcam_config, f, indent=2)
+        logger.info("Wrote webcam config to %s", webcam_json_path)
     except OSError:
-        pass  # non-fatal — operator can create the file manually
+        logger.warning(
+            "Failed to write webcam config to %s — the dashboard webcam card "
+            "will not appear until this file is created manually.",
+            webcam_json_path,
+            exc_info=True,
+        )
 
     # ------------------------------------------------------------------
     # Step 2: Write local config files (realtime.conf, stack.conf,
@@ -2729,6 +2738,15 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                     state.earthquake_default_days = days
             except (ValueError, TypeError):
                 pass
+
+    # --- Column mapping ---
+    # API format: {canonical_name: db_column_name}
+    # Wizard format (state.column_mapping): {db_column_name: canonical_name}
+    # Only populate if state has no mapping yet (re-run scenario).
+    if not state.column_mapping:
+        api_col_mapping = config.get("column_mapping")
+        if isinstance(api_col_mapping, dict) and api_col_mapping:
+            state.column_mapping = {str(v): str(k) for k, v in api_col_mapping.items() if v}
 
 
 def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:
