@@ -295,9 +295,9 @@ def process_api_schema(api_response: dict[str, Any]) -> dict[str, Any]:
             "stock_mapped": int,
         }
 
-    Columns the API already flagged with a canonical name are treated as stock
-    (auto-mapped) even when ``stock`` is False — this covers extension columns
-    the API recognises.
+    Only columns the API flags as ``stock`` are auto-mapped.  Non-stock columns
+    always appear in the unmapped list for operator review, even when the API
+    returns an identity canonical name.
     """
     canonical_field_names = list(_ALL_CANONICAL_NAMES)
     try:
@@ -320,8 +320,7 @@ def process_api_schema(api_response: dict[str, Any]) -> dict[str, Any]:
         canonical: str | None = col.get("canonical") or None
         is_stock: bool = bool(col.get("stock", False))
 
-        if is_stock or canonical:
-            # API considers this column mapped — treat as auto-mapped.
+        if is_stock:
             effective_canonical = canonical or name
             stock_columns.append(
                 {
@@ -332,13 +331,12 @@ def process_api_schema(api_response: dict[str, Any]) -> dict[str, Any]:
             )
             claimed[effective_canonical] = (99, name)
 
-    # Second pass: process non-stock, non-canonical columns (need operator review).
+    # Second pass: process non-stock columns (need operator review).
     for col in columns:
         name = col.get("name", "")
-        canonical = col.get("canonical") or None
         is_stock = bool(col.get("stock", False))
 
-        if is_stock or canonical:
+        if is_stock:
             continue  # already handled above
 
         lower_name = name.lower()
