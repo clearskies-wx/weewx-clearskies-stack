@@ -1197,33 +1197,19 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         )
 
     # Fetch schema via API and process it.
-    skip_schema = False
     try:
         api_schema = client.get_schema()
         schema_data = process_api_schema(api_schema)
         state.schema_data = schema_data
-        if not schema_data.get("unmapped_columns"):
-            # All columns are stock — auto-save the stock mapping and skip step 3.
-            # Merge with any existing mappings (e.g. from a prior wizard run) so that
-            # custom entries are not overwritten by stock defaults.
-            existing = dict(state.column_mapping or {})
-            for col in schema_data.get("stock_columns", []):
-                if col["db_name"] not in existing:
-                    existing[col["db_name"]] = col["canonical"]
-            state.column_mapping = existing
-            skip_schema = True
     except ApiClientError as exc:
-        # Schema fetch failed — fall through to step 3 so the user can review.
         logger.warning("get_schema failed in step2_db_post (%s): %s", exc.status_code, exc.detail)
         state.schema_data = None
     except Exception:  # noqa: BLE001
         logger.warning("get_schema network error in step2_db_post", exc_info=True)
         state.schema_data = None
 
-    state.schema_skipped = skip_schema
+    state.schema_skipped = False
     save_wizard_state(session_id, state)
-    if skip_schema:
-        return await step4_get(request)
     return await step3_get(request)
 
 
