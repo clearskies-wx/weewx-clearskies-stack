@@ -34,6 +34,7 @@ class AppConfig:
     tls_cert_path: Path | None
     tls_key_path: Path | None
     config_dir: Path
+    dashboard_root: Path = field(default_factory=lambda: Path("/var/www/clearskies"))
     bootstrap_manager: BootstrapManager | None = field(default=None)
 
 
@@ -93,6 +94,7 @@ def create_app(config: AppConfig) -> FastAPI:
         templates=templates,
         session_manager=session_manager,
         config_dir=config.config_dir,
+        dashboard_root=config.dashboard_root,
     )
     app.include_router(wizard_router)
 
