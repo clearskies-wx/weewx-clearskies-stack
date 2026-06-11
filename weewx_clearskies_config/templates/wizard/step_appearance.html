@@ -322,6 +322,31 @@
     </fieldset>
 
     {# ================================================================== #}
+    {# Section: Legal Content Override                                     #}
+    {# ================================================================== #}
+
+    <fieldset>
+      <legend>Legal Content Override</legend>
+      <p><small>Optional. Leave blank to use the default templates. If provided, this markdown will replace the default content on your Legal page.</small></p>
+
+      <label for="custom_terms_md">Custom Terms of Use (Markdown)</label>
+      <textarea id="custom_terms_md"
+                name="custom_terms_md"
+                rows="10"
+                placeholder="# Terms of Use&#10;&#10;Enter your custom Terms of Use in Markdown format..."
+                aria-describedby="custom_terms_md_help">{{ state.custom_terms_md }}</textarea>
+      <small id="custom_terms_md_help">Markdown content that replaces the default Terms of Use on your Legal page. Leave blank to use the built-in template.</small>
+
+      <label for="custom_privacy_md">Custom Privacy Policy (Markdown)</label>
+      <textarea id="custom_privacy_md"
+                name="custom_privacy_md"
+                rows="10"
+                placeholder="# Privacy Policy&#10;&#10;Enter your custom Privacy Policy in Markdown format..."
+                aria-describedby="custom_privacy_md_help">{{ state.custom_privacy_md }}</textarea>
+      <small id="custom_privacy_md_help">Markdown content that replaces the default Privacy Policy on your Legal page. Leave blank to use the built-in template.</small>
+    </fieldset>
+
+    {# ================================================================== #}
     {# Section 3: Seismic Page Settings                                    #}
     {# ================================================================== #}
 

@@ -56,7 +56,7 @@ from fastapi.templating import Jinja2Templates
 
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
 from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
-from weewx_clearskies_config.wizard.config_writer import apply_wizard, build_skin_conf_payload
+from weewx_clearskies_config.wizard.config_writer import apply_wizard, build_skin_conf_payload, write_branding_json
 from weewx_clearskies_config.wizard.known_apis import load_known_apis, verify_or_pin_fingerprint
 from weewx_clearskies_config.wizard.providers import (
     get_provider,
@@ -813,6 +813,10 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.earthquake_min_magnitude = prior.earthquake_min_magnitude
             if state.earthquake_default_days == 7 and prior.earthquake_default_days != 7:
                 state.earthquake_default_days = prior.earthquake_default_days
+            if not state.custom_terms_md and prior.custom_terms_md:
+                state.custom_terms_md = prior.custom_terms_md
+            if not state.custom_privacy_md and prior.custom_privacy_md:
+                state.custom_privacy_md = prior.custom_privacy_md
             save_wizard_state(session_id, state)
             logger.info("Restored wizard progress from prior session into session %s", session_id[:8])
         else:
@@ -2062,6 +2066,10 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
     except (ValueError, TypeError):
         state.earthquake_default_days = 7
 
+    # --- Legal Content Overrides (T4.2) ---
+    state.custom_terms_md = str(form.get("custom_terms_md", "")).strip()
+    state.custom_privacy_md = str(form.get("custom_privacy_md", "")).strip()
+
     save_wizard_state(session_id, state)
     return await step9_review_get(request)
 
@@ -2191,29 +2199,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
     api_payload["skin_conf"] = build_skin_conf_payload(state)
 
-    # Branding fields (site title, logo URLs, favicon, copyright entity, plus
-    # accent color, theme mode, logo alt text, and custom CSS URL added in T2.3).
-    # google_analytics_id and privacy_regions are Phase 4 fields — saved to state
-    # and stack.conf only; not sent to the API until the API supports them.
-    api_payload["branding"] = {
-        "site_title": state.site_title,
-        "copyright_entity": state.copyright_entity,
-        "logo_light_url": state.logo_light_url,
-        "logo_dark_url": state.logo_dark_url,
-        "logo_alt": state.logo_alt,
-        "favicon_url": state.favicon_url,
-        "accent": state.accent or "blue",
-        "default_theme_mode": state.default_theme_mode or "auto-os",
-        "custom_css_url": state.custom_css_url or None,
-    }
-
-    # Social media URLs — sent as a separate block per the API schema.
-    api_payload["social"] = {
-        "facebook": state.facebook_url,
-        "twitter": state.twitter_url,
-        "instagram": state.instagram_url,
-        "youtube": state.youtube_url,
-    }
+    # Branding and social fields are no longer sent to the API (ADR-022 amendment).
+    # They are written to branding.json (a static file served by Caddy) in the
+    # local write step below.  The API payload now contains only database,
+    # column mapping, station, providers, and earthquake settings.
 
     # Earthquake provider settings (sent even when no earthquakes provider is
     # selected, so the API can initialise defaults without a second apply call).
@@ -2312,6 +2301,42 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             webcam_json_path,
             exc_info=True,
         )
+
+    # Write branding.json as a static file for the dashboard (ADR-022 amendment).
+    # Caddy serves this at /branding.json; the dashboard fetches it directly.
+    try:
+        write_branding_json(state, _config_dir)
+        logger.info("Wrote branding.json to %s", _config_dir)
+    except OSError:
+        logger.warning(
+            "Failed to write branding.json to %s — the dashboard will use "
+            "default branding until this file is created manually.",
+            _config_dir,
+            exc_info=True,
+        )
+
+    # Write policy override files if provided (T4.2).
+    # /etc/weewx-clearskies/content/terms.md and privacy.md replace the default
+    # templates on the dashboard's Legal page when present.
+    _effective_config_dir = _config_dir or Path("/etc/weewx-clearskies")
+    if state.custom_terms_md or state.custom_privacy_md:
+        content_dir = _effective_config_dir / "content"
+        try:
+            os.makedirs(content_dir, exist_ok=True)
+            if state.custom_terms_md:
+                terms_path = content_dir / "terms.md"
+                terms_path.write_text(state.custom_terms_md, encoding="utf-8")
+                logger.info("Wrote custom terms.md to %s", terms_path)
+            if state.custom_privacy_md:
+                privacy_path = content_dir / "privacy.md"
+                privacy_path.write_text(state.custom_privacy_md, encoding="utf-8")
+                logger.info("Wrote custom privacy.md to %s", privacy_path)
+        except OSError:
+            logger.warning(
+                "Failed to write policy override files to %s",
+                content_dir,
+                exc_info=True,
+            )
 
     # ------------------------------------------------------------------
     # Step 2: Write local config files (realtime.conf, stack.conf,
@@ -2727,6 +2752,11 @@ def _merge_from_existing_config(state: WizardState) -> None:
     if state.earthquake_default_days == 7 and existing.earthquake_default_days != 7:
         state.earthquake_default_days = existing.earthquake_default_days
 
+    if not state.custom_terms_md and existing.custom_terms_md:
+        state.custom_terms_md = existing.custom_terms_md
+    if not state.custom_privacy_md and existing.custom_privacy_md:
+        state.custom_privacy_md = existing.custom_privacy_md
+
 
 def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> None:
     """Call GET /setup/current-config and merge the response into *state*.
@@ -2834,43 +2864,10 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
             if locale_val in _VALID_LOCALES:
                 state.default_locale = locale_val
 
-    # --- Branding ---
-    branding = config.get("branding", {})
-    if isinstance(branding, dict):
-        if not state.site_title and branding.get("site_title"):
-            state.site_title = str(branding["site_title"])
-        if not state.copyright_entity and branding.get("copyright_entity"):
-            state.copyright_entity = str(branding["copyright_entity"])
-        if not state.logo_light_url and branding.get("logo_light_url"):
-            state.logo_light_url = str(branding["logo_light_url"])
-        if not state.logo_dark_url and branding.get("logo_dark_url"):
-            state.logo_dark_url = str(branding["logo_dark_url"])
-        if not state.logo_alt and branding.get("logo_alt"):
-            state.logo_alt = str(branding["logo_alt"])
-        if not state.favicon_url and branding.get("favicon_url"):
-            state.favicon_url = str(branding["favicon_url"])
-        if not state.accent and branding.get("accent"):
-            state.accent = str(branding["accent"])
-        if not state.default_theme_mode and branding.get("default_theme_mode"):
-            state.default_theme_mode = str(branding["default_theme_mode"])
-        if not state.custom_css_url and branding.get("custom_css_url"):
-            state.custom_css_url = str(branding["custom_css_url"])
-
-    # --- Social media ---
-    social = config.get("social", {})
-    if isinstance(social, dict):
-        # API response uses short keys ("facebook", "twitter", etc.).
-        # Wizard state uses the _url suffix form ("facebook_url", etc.).
-        _SOCIAL_FIELD_REMAP: dict[str, str] = {
-            "facebook":  "facebook_url",
-            "twitter":   "twitter_url",
-            "instagram": "instagram_url",
-            "youtube":   "youtube_url",
-        }
-        for api_field, state_field in _SOCIAL_FIELD_REMAP.items():
-            val = social.get(api_field)
-            if val and not getattr(state, state_field):
-                setattr(state, state_field, str(val))
+    # --- Branding and Social media ---
+    # Branding and social fields are no longer fetched from the API (ADR-022
+    # amendment).  branding.json is now the authoritative source; pre-populate
+    # is handled by populate_from_branding_json() in state_persistence.py.
 
     # --- Earthquake settings ---
     earthquakes = config.get("earthquakes", {})

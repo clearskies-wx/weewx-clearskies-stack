@@ -17,6 +17,11 @@ weather.example.com {
         file_server
     }
 
+    handle /branding.json {
+        root * /etc/weewx-clearskies
+        file_server
+    }
+
     handle {
         root * /var/www/clearskies
         try_files {path} /index.html

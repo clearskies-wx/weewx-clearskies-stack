@@ -15,6 +15,7 @@ MANAGED REGION format:
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import stat
@@ -253,6 +254,46 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
     return dest
 
 
+def write_branding_json(state: WizardState, config_dir: Path) -> Path:
+    """Write branding.json for Caddy to serve to the dashboard.
+
+    Per ADR-022 amendment: branding config is no longer sent to the API.
+    The wizard writes branding.json directly to config_dir (typically
+    /etc/weewx-clearskies/) and Caddy serves it as a static file at
+    /branding.json, matching the same pattern as webcam.json.
+
+    Returns the path to the written file.
+    """
+    branding = {
+        "siteTitle": state.site_title or "",
+        "copyrightEntity": state.copyright_entity or "",
+        "logo": {
+            "lightUrl": state.logo_light_url or "",
+            "darkUrl": state.logo_dark_url or "",
+            "alt": state.logo_alt or "",
+        },
+        "faviconUrl": state.favicon_url or "",
+        "accent": state.accent or "blue",
+        "defaultThemeMode": state.default_theme_mode or "auto-os",
+        "customCssUrl": state.custom_css_url or None,
+        "social": {
+            "facebook": state.facebook_url or "",
+            "twitter": state.twitter_url or "",
+            "instagram": state.instagram_url or "",
+            "youtube": state.youtube_url or "",
+        },
+        "googleAnalyticsId": state.google_analytics_id or "",
+        "privacyRegions": state.privacy_regions or "global",
+    }
+    dest = config_dir / "branding.json"
+    if dest.exists():
+        shutil.copy2(dest, dest.with_suffix(".json.bak"))
+    with open(dest, "w", encoding="utf-8") as f:
+        json.dump(branding, f, indent=2, ensure_ascii=False)
+        f.write("\n")
+    return dest
+
+
 def _shell_quote_value(value: str) -> str:
     """Wrap *value* in single quotes for safe use in a POSIX shell env file.
 
@@ -486,6 +527,7 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
 
     files_written.append(str(write_realtime_conf(state, config_dir)))
     files_written.append(str(write_stack_conf(state, config_dir)))
+    files_written.append(str(write_branding_json(state, config_dir)))
     secrets_written.append(str(write_secrets_env(state, config_dir)))
 
     result: dict[str, Any] = {

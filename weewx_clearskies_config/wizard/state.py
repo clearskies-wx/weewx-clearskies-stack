@@ -150,6 +150,13 @@ class WizardState:
     earthquake_min_magnitude: float = 2.0
     earthquake_default_days: int = 7
 
+    # Legal content overrides (T4.2) — optional Markdown that replaces the
+    # default templates on the dashboard's Legal page.  Empty string means
+    # "use the default template."  Written to
+    # /etc/weewx-clearskies/content/terms.md and privacy.md on apply.
+    custom_terms_md: str = ""
+    custom_privacy_md: str = ""
+
 
 # ---------------------------------------------------------------------------
 # In-memory session store

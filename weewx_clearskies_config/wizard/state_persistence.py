@@ -494,6 +494,11 @@ def populate_from_config(config_dir: Path) -> WizardState:
 
     state.proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
 
+    # Pre-populate branding fields from branding.json (ADR-022 amendment).
+    # branding.json is the authoritative source; stack.conf [branding] is kept
+    # as a backup but branding.json wins when present.
+    populate_from_branding_json(state, config_dir)
+
     if state.providers:
         api_keys: dict[str, dict[str, str]] = {}
         for domain, provider_id in state.providers.items():
@@ -510,6 +515,75 @@ def populate_from_config(config_dir: Path) -> WizardState:
         state.api_keys = api_keys
 
     return state
+
+
+def populate_from_branding_json(state: WizardState, config_dir: Path) -> None:
+    """Populate branding-related state fields from branding.json if it exists.
+
+    Called during wizard re-run to pre-populate the appearance step with the
+    values that were written on the previous run.  Gracefully handles a missing
+    file (first run) — no fields are changed in that case.
+
+    Per ADR-022 amendment, branding.json is the authoritative source for all
+    branding and social fields.  stack.conf [branding] is kept as a backup/
+    reference copy but branding.json values take precedence.
+    """
+    import json as _json
+
+    branding_path = config_dir / "branding.json"
+    if not branding_path.exists():
+        return
+
+    try:
+        data = _json.loads(branding_path.read_text(encoding="utf-8"))
+    except (OSError, _json.JSONDecodeError) as exc:
+        logger.warning("Could not read branding.json from %s: %s", config_dir, exc)
+        return
+
+    if not isinstance(data, dict):
+        logger.warning("branding.json at %s is not a JSON object; skipping", config_dir)
+        return
+
+    # Populate scalar fields — always overwrite from branding.json (it is
+    # authoritative).  Empty strings in the file mean "not set".
+    if data.get("siteTitle"):
+        state.site_title = str(data["siteTitle"])
+    if data.get("copyrightEntity"):
+        state.copyright_entity = str(data["copyrightEntity"])
+    if data.get("faviconUrl"):
+        state.favicon_url = str(data["faviconUrl"])
+    if data.get("accent"):
+        state.accent = str(data["accent"])
+    if data.get("defaultThemeMode"):
+        state.default_theme_mode = str(data["defaultThemeMode"])
+    if data.get("customCssUrl"):
+        state.custom_css_url = str(data["customCssUrl"])
+    if data.get("googleAnalyticsId"):
+        state.google_analytics_id = str(data["googleAnalyticsId"])
+    if data.get("privacyRegions"):
+        state.privacy_regions = str(data["privacyRegions"])
+
+    # Nested logo object
+    logo = data.get("logo")
+    if isinstance(logo, dict):
+        if logo.get("lightUrl"):
+            state.logo_light_url = str(logo["lightUrl"])
+        if logo.get("darkUrl"):
+            state.logo_dark_url = str(logo["darkUrl"])
+        if logo.get("alt"):
+            state.logo_alt = str(logo["alt"])
+
+    # Nested social object
+    social = data.get("social")
+    if isinstance(social, dict):
+        if social.get("facebook"):
+            state.facebook_url = str(social["facebook"])
+        if social.get("twitter"):
+            state.twitter_url = str(social["twitter"])
+        if social.get("instagram"):
+            state.instagram_url = str(social["instagram"])
+        if social.get("youtube"):
+            state.youtube_url = str(social["youtube"])
 
 
 # ---------------------------------------------------------------------------
