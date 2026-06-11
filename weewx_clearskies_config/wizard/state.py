@@ -90,6 +90,12 @@ class WizardState:
     webcam_video_url: str = "/webcam/weewx_timelapse.mp4"
     webcam_refresh_interval: int = 60
 
+    # EULA acceptance — empty string means not yet accepted.
+    # Set to a UTC ISO-8601 timestamp (e.g. "2026-06-10T12:34:56.789012Z")
+    # when the operator accepts the Operator License Agreement in step 3.
+    # Used to skip re-display if already accepted in the same wizard run.
+    eula_accepted_at: str = ""
+
     # Step 0: skin.conf import — None means no import was attempted.
     # When populated, subsequent steps pre-fill from the imported data.
     imported_config: dict[str, Any] | None = None

@@ -1,0 +1,445 @@
+<article>
+  <header>
+    <h2>Step 3 of 12 — Operator License Agreement</h2>
+    <p>Read the Clear Skies Operator License Agreement (EULA) below, then check the
+       box to confirm you have read and agree to its terms.</p>
+  </header>
+
+  {% if error %}
+  <div role="alert" class="alert-error">
+    <strong>Error:</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if state.eula_accepted_at %}
+  <div class="alert-success" role="status">
+    <span>
+      <strong>Previously accepted.</strong>
+      You accepted this Agreement on {{ state.eula_accepted_at[:10] }}.
+      Review the text below and check the box again to continue.
+    </span>
+  </div>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ #}
+  {# EULA text panel                                                      #}
+  {# role="document" + tabindex="0" makes the panel a focusable reading  #}
+  {# region accessible to keyboard and assistive-technology users.        #}
+  {# ------------------------------------------------------------------ #}
+  <div role="document"
+       tabindex="0"
+       id="eula-text"
+       aria-label="Clear Skies Operator License Agreement text"
+       style="
+         height: 28rem;
+         overflow-y: scroll;
+         border: 1px solid var(--pico-muted-border-color);
+         border-radius: 0.375rem;
+         padding: 1rem 1.25rem;
+         font-size: 0.875rem;
+         line-height: 1.6;
+         background: var(--pico-card-background-color, var(--pico-background-color));
+         white-space: pre-wrap;
+         font-family: ui-monospace, 'Cascadia Code', 'Source Code Pro', Menlo, Consolas, monospace;
+         margin-block-end: 1.25rem;
+       ">
+Clear Skies Weather Dashboard
+Operator License Agreement (End User License Agreement)
+EULA Version: 1.0
+Last Updated: 2026-06-10
+
+This End User License Agreement ("Agreement") is a legal contract between you ("Operator") and
+Shane Burkhardt ("Developer") governing your installation and use of the Clear Skies Weather
+Dashboard software ("Software"). Read it carefully before proceeding.
+
+
+1. ACCEPTANCE
+
+By installing, configuring, or operating this Software, you agree to be bound by the terms of
+this Agreement. If you do not agree to these terms, do not install or use the Software.
+
+This Agreement supplements — and does not replace — the GNU General Public License version 3
+("GPL v3"), which governs the Software's source code. Where this Agreement and the GPL v3
+address the same matter, the GPL v3 governs; where this Agreement addresses matters the GPL v3
+is silent on (warranty, liability, operator responsibilities), this Agreement controls.
+
+
+2. LICENSE GRANT
+
+The Software is free and open-source software licensed under the GNU General Public License
+version 3. A copy of the GPL v3 is included in the Software source repository at the root
+level as LICENSE.txt and is available at: https://www.gnu.org/licenses/gpl-3.0.html
+
+Under the GPL v3, you are granted the rights to:
+
+  (a) Run the Software for any purpose.
+  (b) Study and modify the source code.
+  (c) Distribute verbatim copies of the Software.
+  (d) Distribute your modified versions under the GPL v3.
+
+No proprietary license tiers, activation keys, device limits, or usage fees apply. All
+features are available to all operators under the same GPL v3 terms.
+
+
+3. THIRD-PARTY SERVICES
+
+The Software may be configured to communicate with one or more third-party data providers and
+services, including but not limited to:
+
+  - Aeris Weather (aerisweather.com) — forecast and alerts data
+  - National Weather Service / NOAA (weather.gov) — forecast, alerts, and radar data
+  - OpenWeatherMap (openweathermap.org) — forecast and AQI data
+  - IQAir (iqair.com) — air quality data
+  - Weather Underground / wunderground.com — personal weather station data
+  - United States Geological Survey (USGS) — earthquake data
+  - Google Analytics / Google Tag Manager — website usage analytics (operator-configured)
+  - Map tile providers (OpenStreetMap, Mapbox, or others) — map rendering
+  - Any MQTT broker the operator configures for real-time data delivery
+
+By configuring and using these services through the Software, you acknowledge:
+
+  (a) Each third-party service is governed solely by that service's own terms of service,
+      privacy policy, and acceptable use policy — not this Agreement.
+  (b) You are solely responsible for obtaining any required accounts, API keys, or
+      licenses from each third-party service you choose to use.
+  (c) You are solely responsible for your compliance with each third-party service's terms.
+  (d) The Developer is not responsible for the availability, accuracy, pricing, or terms
+      of any third-party service, and does not guarantee continued compatibility.
+  (e) The Developer does not receive, store, or process any third-party API credentials
+      you enter into the Software; those credentials are stored locally on your server.
+
+
+4. DATA COLLECTION AND PRIVACY
+
+The Software itself collects no telemetry, usage data, analytics, or personally identifiable
+information. No data is transmitted to the Developer.
+
+However, as an Operator you control a web application that may collect data from website
+visitors — including but not limited to IP addresses, browser identifiers, geolocation,
+weather preferences, and usage patterns. The nature and extent of that collection depends
+entirely on how you configure the Software, which third-party services you enable, and the
+legal and technical choices you make.
+
+You are solely responsible for:
+
+  (a) Understanding what data your deployed instance collects and how it is processed.
+  (b) Implementing any legally required data retention, deletion, and access policies.
+  (c) Providing visitors with accurate, lawful privacy notices.
+  (d) Configuring or disabling analytics, tracking, and cookie technologies as required
+      by applicable law and your own policies.
+
+The default configuration templates provided by the Software (Terms of Use, Privacy Policy,
+cookie consent) are starting points for your own legal documents, not finished legal
+instruments. They are provided as-is and do not constitute legal advice. You must review and
+adapt them to your specific circumstances before deploying them to visitors.
+
+
+5. CALIFORNIA PRIVACY RIGHTS (CalOPPA / CCPA / CPRA)
+
+If your website has visitors who are California residents, you may have obligations under
+the California Online Privacy Protection Act (CalOPPA), the California Consumer Privacy Act
+(CCPA), and the California Privacy Rights Act (CPRA), including but not limited to:
+
+  - Posting a conspicuous privacy policy disclosing what information is collected and shared.
+  - Providing California residents the right to know, delete, correct, and opt out of the
+    sale or sharing of their personal information.
+  - Not discriminating against residents who exercise their privacy rights.
+
+The Software does not make these legal determinations for you. You are solely responsible for
+assessing your obligations under California privacy law and for configuring and disclosing
+your data practices accordingly.
+
+
+6. INTELLECTUAL PROPERTY
+
+The Software is licensed under the GPL v3. All rights not explicitly granted by the GPL v3
+are reserved by the Developer. Nothing in this Agreement grants you any right to use the
+Developer's name, trademarks, or service marks beyond what is permitted by applicable law
+or the GPL v3.
+
+Weather data (temperature, precipitation, wind, atmospheric readings) is factual information
+and is generally not subject to copyright protection. Display formats, charts, UI elements,
+and source code authored by the Developer are protected by copyright and licensed under the
+GPL v3 as set forth in Section 2 above.
+
+
+7. DISCLAIMER OF WARRANTIES
+
+THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS
+OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+PARTICULAR PURPOSE, TITLE, AND NONINFRINGEMENT. THIS DISCLAIMER INCORPORATES AND EXTENDS
+THE NO-WARRANTY PROVISIONS OF THE GPL v3 (SECTIONS 15 AND 16).
+
+SPECIFIC DISCLAIMERS:
+
+  (a) Weather data sourced through the Software is provided for general informational
+      purposes only. It is not certified for safety-critical applications and must not
+      be used as the primary basis for aviation, marine navigation, emergency management,
+      search-and-rescue, hazardous-materials handling, or any other life-safety decision.
+
+  (b) The Developer makes no representation that the Software or its default templates
+      (Terms of Use, Privacy Policy, cookie consent, EULA) comply with any specific law,
+      regulation, or jurisdiction — including but not limited to GDPR, CCPA, CalOPPA,
+      PIPEDA, or any sector-specific regulation.
+
+  (c) The Developer does not warrant that the Software will meet your requirements, operate
+      uninterrupted or error-free, or that defects will be corrected.
+
+  (d) The Developer does not warrant the continued availability, accuracy, or fitness of
+      any third-party data provider integrated with the Software.
+
+
+8. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, AND AS FURTHER SET FORTH IN SECTIONS 15
+AND 16 OF THE GPL v3, IN NO EVENT SHALL THE DEVELOPER BE LIABLE FOR ANY INDIRECT,
+INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR ANY LOSS OF
+PROFITS, DATA, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATED TO:
+
+  (a) Your use of or inability to use the Software.
+  (b) Inaccuracy, incompleteness, or untimeliness of weather data displayed by the Software.
+  (c) Any decision — financial, safety-related, or otherwise — made in reliance on data
+      provided by or through the Software.
+  (d) Any regulatory, civil, or criminal liability arising from your operation of a weather
+      website, including failure to comply with applicable privacy or data-protection laws.
+  (e) Any claim by a visitor to your website arising from your configuration or use of
+      the Software.
+  (f) Interruption or termination of any third-party data service.
+  (g) Unauthorized access to your server, configuration files, or API credentials.
+
+The Developer's total cumulative liability to you for all claims arising under or related to
+this Agreement shall not exceed zero United States dollars ($0.00), reflecting that the
+Software is provided at no charge under the GPL v3.
+
+
+9. OPERATOR RESPONSIBILITIES
+
+You acknowledge and agree that, as the Operator of a publicly accessible weather website
+built with this Software, you bear sole responsibility for:
+
+  (a) LEGAL COMPLIANCE. Complying with all laws and regulations applicable to your website
+      and its operation, including but not limited to:
+        - Privacy and data protection law (GDPR, CCPA/CPRA, CalOPPA, PIPEDA, and equivalents)
+          in every jurisdiction where your visitors are located, not merely where you are based.
+        - Consumer protection, accessibility (e.g. WCAG 2.1 AA), and electronic commerce law.
+        - Any sector-specific regulation applicable to weather data publication.
+
+  (b) VISITOR-FACING LEGAL NOTICES. Drafting, publishing, and keeping current all legal
+      notices and policies required for your website, including a Privacy Policy, Terms of
+      Use, and any required cookie consent disclosures. Default templates provided by the
+      Software are starting points — they require your review and legal adaptation.
+
+  (c) THIRD-PARTY SERVICE COMPLIANCE. Complying with the terms of service, acceptable use
+      policies, and rate limits of every third-party service you configure in the Software.
+      This includes obtaining required accounts, keys, and permissions before enabling
+      any data provider.
+
+  (d) SECURITY. Securing your server, network configuration, API credentials, database,
+      and any secrets stored by the Software. The Developer does not audit, monitor, or
+      secure your deployment.
+
+  (e) DATA YOUR STATION COLLECTS. If your weather station collects, stores, or transmits
+      data beyond raw meteorological readings — including visitor-generated data — you are
+      responsible for that data's handling, protection, retention, and any required
+      disclosures.
+
+  (f) ACCURACY DISCLAIMER TO VISITORS. Publishing a clear disclaimer to website visitors
+      stating that weather data is for general informational purposes only and is not
+      suitable for safety-critical decisions.
+
+  (g) BACKUPS AND DISASTER RECOVERY. Maintaining adequate backups of your configuration
+      files, database, and any customizations. The Developer is not responsible for data
+      loss resulting from hardware failure, software bugs, or accidental deletion.
+
+
+10. INDEMNIFICATION
+
+You agree to indemnify, defend, and hold harmless the Developer from and against any and all
+claims, demands, liabilities, damages, losses, costs, and expenses (including reasonable
+attorneys' fees) arising out of or in connection with:
+
+  (a) Your deployment, configuration, operation, or modification of the Software.
+  (b) Your violation of this Agreement.
+  (c) Your violation of any applicable law or regulation.
+  (d) Your violation of any third-party service's terms of service.
+  (e) Any claim by a visitor to your website.
+  (f) Your failure to provide required legal notices or privacy disclosures to visitors.
+
+
+11. NO OBLIGATION TO SUPPORT
+
+The Software is a community project maintained on a best-effort, volunteer basis. The Developer
+is under no obligation to:
+
+  (a) Provide updates, bug fixes, patches, or new features.
+  (b) Maintain compatibility with future versions of weewx, operating systems, third-party
+      services, or web browsers.
+  (c) Provide technical support, documentation, or assistance of any kind.
+  (d) Continue developing, distributing, or hosting the Software.
+
+Any support or updates provided are voluntary acts of goodwill and do not create an ongoing
+obligation. The GPL v3 ensures you always have the right to maintain your own fork of the
+Software if the Developer ceases development.
+
+
+12. GOVERNING LAW
+
+This Agreement shall be governed by and construed in accordance with the laws of the State of
+California, United States of America, without regard to its conflict-of-law provisions.
+
+
+13. ARBITRATION
+
+Any dispute, controversy, or claim arising out of or relating to this Agreement, or the breach
+thereof, shall be resolved by binding arbitration administered by a mutually agreed-upon
+arbitration service, conducted in California, United States of America, in accordance with
+its then-current rules. The arbitrator's decision shall be final and binding, and judgment
+on the award may be entered in any court of competent jurisdiction.
+
+This arbitration clause does not apply to injunctive relief for intellectual property
+violations, which either party may seek in any court of competent jurisdiction.
+
+
+14. CLASS ACTION WAIVER
+
+YOU AND THE DEVELOPER AGREE THAT ANY PROCEEDINGS TO RESOLVE CLAIMS ARISING UNDER OR RELATED
+TO THIS AGREEMENT WILL BE CONDUCTED SOLELY ON AN INDIVIDUAL BASIS. NEITHER YOU NOR THE
+DEVELOPER MAY BRING OR PARTICIPATE IN ANY CLASS, COLLECTIVE, CONSOLIDATED, OR REPRESENTATIVE
+PROCEEDING. The arbitrator may not consolidate more than one person's claims without the
+express written consent of all parties.
+
+
+15. FORCE MAJEURE / SEVERABILITY / WAIVER / ENTIRE AGREEMENT
+
+Force Majeure. The Developer shall not be liable for delays or failures caused by
+circumstances beyond its reasonable control, including acts of God, natural disasters,
+pandemics, war, civil unrest, or failures of third-party infrastructure.
+
+Severability. If any provision of this Agreement is held to be invalid, illegal, or
+unenforceable, that provision shall be modified to the minimum extent necessary to make it
+enforceable, or severed if modification is not possible. The remaining provisions continue
+in full force and effect.
+
+Waiver. Failure to enforce any provision of this Agreement is not a waiver of that
+provision or the right to enforce it in the future.
+
+Entire Agreement. This Agreement, together with the GPL v3 (incorporated by reference),
+constitutes the entire agreement between the parties regarding the Software and supersedes
+all prior agreements, representations, or understandings regarding its subject matter.
+
+
+16. TERMINATION
+
+This Agreement is effective from the date you first install or use the Software and
+continues until terminated.
+
+Your rights under this Agreement terminate automatically — without notice from the Developer —
+if you fail to comply with any material term of this Agreement. Upon termination, you must
+cease operating the Software and destroy all copies in your possession.
+
+Operator termination. You may terminate this Agreement at any time by ceasing to use and
+uninstalling the Software. Your GPL v3 rights (including rights to retain your own modified
+copy of the source code) survive termination of this Agreement.
+
+Developer-initiated revocation. The Developer may revoke your rights under this Agreement
+(in addition to GPL v3 rights, to the extent permitted by that license) if you: (a) use the
+Software in a manner that violates applicable law; (b) impersonate the Developer or falsely
+represent the Software as endorsed by the Developer; or (c) distribute the Software in
+violation of the GPL v3.
+
+Sections 7 (Disclaimer of Warranties), 8 (Limitation of Liability), 9 (Operator
+Responsibilities), 10 (Indemnification), 12 (Governing Law), 13 (Arbitration), 14 (Class
+Action Waiver), and 15 (Force Majeure / Severability / Waiver / Entire Agreement) survive
+any termination of this Agreement.
+
+
+17. CHANGES TO THIS AGREEMENT
+
+The Developer reserves the right to update this Agreement at any time. Updated versions will
+be identified by a new version number and updated "Last Updated" date in the header of this
+file. The EULA version number is recorded when you accept; if the version changes, the setup
+wizard will present the new Agreement for re-acceptance before proceeding.
+
+Continued operation of the Software after a new version takes effect constitutes acceptance
+of the revised Agreement.
+
+
+18. CONTACT
+
+For questions about this Agreement, to report violations, or to contact the Developer,
+please use the project's GitHub repository:
+
+  https://github.com/inguy24/weewx-clearskies-stack
+
+No legal correspondence should be sent through GitHub Issues. For formal legal matters,
+contact the Developer through the repository's stated contact methods.
+
+
+BY CHECKING THE ACCEPTANCE BOX BELOW, YOU ACKNOWLEDGE THAT YOU HAVE READ THIS AGREEMENT,
+UNDERSTAND ITS TERMS, AND AGREE TO BE BOUND BY THEM, INCLUDING THE BINDING ARBITRATION
+PROVISION AND CLASS ACTION WAIVER IN SECTIONS 13 AND 14.
+  </div>
+
+  <form id="eula-form"
+        hx-post="/wizard/eula"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
+
+    <fieldset>
+      <label for="eula_accepted" style="display: flex; align-items: flex-start; gap: 0.75rem; cursor: pointer;">
+        <input type="checkbox"
+               id="eula_accepted"
+               name="eula_accepted"
+               value="1"
+               required
+               aria-describedby="eula-accept-hint"
+               style="margin-top: 0.2rem; flex-shrink: 0;">
+        <span>
+          I have read and agree to the Clear Skies Operator License Agreement
+          (EULA Version 1.0, Last Updated 2026-06-10).
+        </span>
+      </label>
+      <small id="eula-accept-hint" style="margin-block-start: 0.5rem; display: block;">
+        You must scroll through and check this box to continue. Acceptance is recorded
+        with a timestamp and stored in your wizard session.
+      </small>
+    </fieldset>
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/import"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML show:window:top"
+              hx-indicator="#wizard-spinner">
+        &#8592; Previous: Import
+      </button>
+      <button type="submit" id="eula-submit-btn">
+        I Agree — Continue &#8594;
+      </button>
+    </div>
+  </form>
+
+  <script>
+    /* Disable the submit button until the checkbox is checked.
+       This is a UX guard; the server validates independently. */
+    (function () {
+      var checkbox = document.getElementById("eula_accepted");
+      var submitBtn = document.getElementById("eula-submit-btn");
+      if (!checkbox || !submitBtn) return;
+
+      function updateBtn() {
+        submitBtn.disabled = !checkbox.checked;
+        submitBtn.setAttribute("aria-disabled", checkbox.checked ? "false" : "true");
+      }
+
+      updateBtn();  /* set initial state */
+      checkbox.addEventListener("change", updateBtn);
+    }());
+  </script>
+</article>
+
+{# OOB: update the progress bar to reflect the current step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

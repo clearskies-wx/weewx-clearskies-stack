@@ -1,4 +1,4 @@
-"""FastAPI router for the 11-step setup wizard.
+"""FastAPI router for the 12-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -8,26 +8,32 @@ Route summary:
   GET  /wizard                  — full wizard page (step 1)
   GET  /wizard/step/1           — step 1 fragment (API connection)
   POST /wizard/step/1           — verify fingerprint + handshake, return step 2 fragment
-  GET  /wizard/step/2           — step 2 fragment (DB connection); pre-fills from API defaults
+  GET  /wizard/import           — step 2 fragment (import existing skin.conf or start fresh)
+  POST /wizard/import           — parse uploaded skin.conf or skip, return step 3 (EULA) fragment
+  GET  /wizard/eula             — step 3 fragment (Operator License Agreement)
+  POST /wizard/eula             — record acceptance timestamp, return step 4 (DB) fragment
+  GET  /wizard/step/2           — step 4 fragment (DB connection); pre-fills from API defaults
   POST /wizard/step/2/test      — test DB connection via API, return result fragment
-  POST /wizard/step/2           — save DB settings, fetch schema via API, return step 3 or 4 fragment
+  POST /wizard/step/2           — save DB settings, fetch schema via API, return step 5 or 6 fragment
   GET  /wizard/step/3           — render column mapping form using schema from state or API
-  POST /wizard/step/3           — save column mapping, return step 4 fragment
-  GET  /wizard/step/4           — read station identity from API, render step 4 fragment
+  POST /wizard/step/3           — save column mapping, return step 6 fragment
+  GET  /wizard/step/4           — read station identity from API, render step 6 fragment
   POST /wizard/step/4/timezone  — lookup timezone from lat/lon, return input fragment
-  POST /wizard/step/4           — save station info, return step 5 fragment
-  GET  /wizard/step/5           — data pipeline / MQTT, render step 5 fragment
+  POST /wizard/step/4           — save station info, return step 7 (units) fragment
+  GET  /wizard/units            — step 7 fragment (display units)
+  POST /wizard/units            — save unit selections, return step 8 (MQTT) fragment
+  GET  /wizard/step/5           — step 8 fragment (data pipeline / MQTT)
   POST /wizard/step/5/test      — test MQTT broker connection, return result fragment
-  POST /wizard/step/5           — save input mode + MQTT settings, return step 6 fragment
-  GET  /wizard/step/6           — provider selection + inline key entry, render step 6 fragment
+  POST /wizard/step/5           — save input mode + MQTT settings, return step 9 fragment
+  GET  /wizard/step/6           — step 9 fragment (provider selection + inline key entry)
   GET  /wizard/step/6/key-fields/{domain}/{provider_id} — inline key fields fragment
   POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
-  POST /wizard/step/6           — save provider choices + keys, return step 7 fragment (webcam)
-  GET  /wizard/step/7           — webcam configuration, render step 7 fragment
-  POST /wizard/step/7           — save webcam settings, return step 8 fragment (appearance)
-  GET  /wizard/step/8           — appearance (branding + seismic), render step 8 fragment
-  POST /wizard/step/8           — save appearance settings (branding, earthquake config), return step 9 fragment (review)
-  GET  /wizard/step/9           — review summary, render step 9 fragment
+  POST /wizard/step/6           — save provider choices + keys, return step 10 fragment (webcam)
+  GET  /wizard/step/7           — step 10 fragment (webcam configuration)
+  POST /wizard/step/7           — save webcam settings, return step 11 fragment (appearance)
+  GET  /wizard/step/8           — step 11 fragment (appearance: branding + seismic)
+  POST /wizard/step/8           — save appearance settings, return step 12 fragment (review)
+  GET  /wizard/step/9           — step 12 fragment (review summary)
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -39,6 +45,7 @@ import os
 import re
 import signal
 import subprocess
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -256,10 +263,10 @@ async def step_import_post(request: Request) -> HTMLResponse:
     fresh_start = str(form.get("fresh_start", "0")).strip() == "1"
 
     if fresh_start:
-        # Clear any previously imported config and proceed to step 2 (database).
+        # Clear any previously imported config and proceed to step 3 (EULA).
         state.imported_config = None
         save_wizard_state(session_id, state)
-        return await step2_db_get(request)
+        return await step_eula_get(request)
 
     skin_name = str(form.get("skin_name", "")).strip()
     skin_conf_file = form.get("skin_conf")
@@ -380,11 +387,57 @@ async def step_import_post(request: Request) -> HTMLResponse:
         state.units = merged
 
     save_wizard_state(session_id, state)
+    return await step_eula_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Step 3: EULA — Operator License Agreement acceptance
+# ---------------------------------------------------------------------------
+
+
+@router.get("/eula", response_class=HTMLResponse)
+async def step_eula_get(request: Request) -> HTMLResponse:
+    """Step 3: EULA — render the Operator License Agreement acceptance step."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(
+        request,
+        "step_eula.html",
+        {"step": 3, "state": state, "error": None},
+    )
+
+
+@router.post("/eula", response_class=HTMLResponse)
+async def step_eula_post(request: Request) -> HTMLResponse:
+    """Step 3: EULA — validate acceptance checkbox and record timestamp, advance to step 4 (DB)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    accepted = str(form.get("eula_accepted", "")).strip() == "1"
+    if not accepted:
+        return _render(
+            request,
+            "step_eula.html",
+            {
+                "step": 3,
+                "state": state,
+                "error": (
+                    "You must check the acceptance box to continue. "
+                    "Please scroll through the Agreement and check the box."
+                ),
+            },
+            status_code=422,
+        )
+
+    # Record acceptance timestamp in ISO-8601 UTC format.
+    state.eula_accepted_at = datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+    save_wizard_state(session_id, state)
     return await step2_db_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Unit Configuration step (inserted after station identity, step 5 in new numbering)
+# Unit Configuration step (inserted after station identity, step 7 in new numbering)
 # ---------------------------------------------------------------------------
 
 
@@ -412,7 +465,7 @@ async def step_units_get(request: Request) -> HTMLResponse:
         request,
         "step_units.html",
         {
-            "step": 6,
+            "step": 7,
             "state": state,
             "current_units": current_units,
             "unit_options": UNIT_OPTIONS,
@@ -1076,7 +1129,7 @@ async def step2_db_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_db.html",
-        {"step": 3, "state": state, "result": None, "error": api_warning},
+        {"step": 4, "state": state, "result": None, "error": api_warning},
     )
 
 
@@ -1169,14 +1222,14 @@ async def step2_db_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_db.html",
-                {"step": 3, "state": state, "result": None, "error": error_msg},
+                {"step": 4, "state": state, "result": None, "error": error_msg},
                 status_code=422,
             )
     except ValueError:
         return _render(
             request,
             "step_db.html",
-            {"step": 3, "state": state, "result": None, "error": "API not connected. Go back to step 1 and reconnect."},
+            {"step": 4, "state": state, "result": None, "error": "API not connected. Go back to step 1 and reconnect."},
             status_code=422,
         )
     except ApiClientError as exc:
@@ -1185,14 +1238,14 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_db.html",
-            {"step": 3, "state": state, "result": None, "error": _api_error_message(exc)},
+            {"step": 4, "state": state, "result": None, "error": _api_error_message(exc)},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
         return _render(
             request,
             "step_db.html",
-            {"step": 3, "state": state, "result": None, "error": "Could not reach the API to test the connection. Check that the API is running and try again."},
+            {"step": 4, "state": state, "result": None, "error": "Could not reach the API to test the connection. Check that the API is running and try again."},
             status_code=422,
         )
 
@@ -1288,7 +1341,7 @@ async def step5_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_mqtt.html",
-        {"step": 7, "state": state, "error": None, "test_result": None,
+        {"step": 8, "state": state, "error": None, "test_result": None,
          "pipeline_hint": pipeline_hint},
     )
 
@@ -1355,7 +1408,7 @@ async def step5_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_mqtt.html",
-                {"step": 7, "state": state, "error": "; ".join(errors.values()),
+                {"step": 8, "state": state, "error": "; ".join(errors.values()),
                  "test_result": None, "pipeline_hint": None},
                 status_code=422,
             )
@@ -1425,7 +1478,7 @@ async def step3_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_schema.html",
-        {"step": 4, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_groups": canonical_groups},
+        {"step": 5, "state": state, "schema": schema_data, "error": error, "errors": {}, "canonical_groups": canonical_groups},
     )
 
 
@@ -1462,7 +1515,7 @@ async def step3_post(request: Request) -> HTMLResponse:
             request,
             "step_schema.html",
             {
-                "step": 4,
+                "step": 5,
                 "state": state,
                 "schema": schema_data,
                 "error": schema_error,
@@ -1563,7 +1616,7 @@ async def step4_get(request: Request) -> HTMLResponse:
         request,
         "step_station.html",
         {
-            "step": 5,
+            "step": 6,
             "state": state,
             "error": error,
             "schema_skipped": state.schema_skipped,
@@ -1657,7 +1710,7 @@ async def step6_get(request: Request) -> HTMLResponse:
         request,
         "step_providers.html",
         {
-            "step": 8,
+            "step": 9,
             "state": state,
             "providers_by_domain": by_domain,
             "recommendations": recommendations,
@@ -1780,7 +1833,7 @@ async def step6_post(request: Request) -> HTMLResponse:
 async def step7_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
-    return _render(request, "step_webcam.html", {"step": 9, "state": state, "error": None})
+    return _render(request, "step_webcam.html", {"step": 10, "state": state, "error": None})
 
 
 @router.post("/step/7", response_class=HTMLResponse)
@@ -1889,7 +1942,7 @@ async def _handle_branding_upload(
 async def step8_appearance_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
-    return _render(request, "step_appearance.html", {"step": 10, "state": state, "error": None})
+    return _render(request, "step_appearance.html", {"step": 11, "state": state, "error": None})
 
 
 @router.post("/step/8", response_class=HTMLResponse)
@@ -1929,7 +1982,7 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_appearance.html",
-            {"step": 10, "state": state, "error": " ".join(errors)},
+            {"step": 11, "state": state, "error": " ".join(errors)},
             status_code=422,
         )
 
@@ -1971,7 +2024,7 @@ async def step9_review_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 11, "state": state, "error": None},
+        {"step": 12, "state": state, "error": None},
     )
 
 
@@ -2006,7 +2059,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 10,
+                "step": 13,
                 "error": "The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option.",
                 "result": None,
             },
@@ -2109,7 +2162,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 11,
+                "step": 12,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -2122,7 +2175,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 11,
+                "step": 12,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -2134,7 +2187,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 11,
+                "step": 12,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
@@ -2265,7 +2318,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         request=request,
         name="wizard/step_complete.html",
         context={
-            "step": 10,
+            "step": 13,
             "error": None,
             "result": result,
             "api_restart_triggered": api_restart_triggered,
