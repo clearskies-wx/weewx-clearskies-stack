@@ -785,8 +785,28 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.logo_light_url = prior.logo_light_url
             if not state.logo_dark_url and prior.logo_dark_url:
                 state.logo_dark_url = prior.logo_dark_url
+            if not state.logo_alt and prior.logo_alt:
+                state.logo_alt = prior.logo_alt
             if not state.favicon_url and prior.favicon_url:
                 state.favicon_url = prior.favicon_url
+            if not state.accent and prior.accent:
+                state.accent = prior.accent
+            if not state.default_theme_mode and prior.default_theme_mode:
+                state.default_theme_mode = prior.default_theme_mode
+            if not state.custom_css_url and prior.custom_css_url:
+                state.custom_css_url = prior.custom_css_url
+            if not state.facebook_url and prior.facebook_url:
+                state.facebook_url = prior.facebook_url
+            if not state.twitter_url and prior.twitter_url:
+                state.twitter_url = prior.twitter_url
+            if not state.instagram_url and prior.instagram_url:
+                state.instagram_url = prior.instagram_url
+            if not state.youtube_url and prior.youtube_url:
+                state.youtube_url = prior.youtube_url
+            if not state.google_analytics_id and prior.google_analytics_id:
+                state.google_analytics_id = prior.google_analytics_id
+            if not state.privacy_regions and prior.privacy_regions:
+                state.privacy_regions = prior.privacy_regions
             if state.earthquake_radius_km == 100.0 and prior.earthquake_radius_km != 100.0:
                 state.earthquake_radius_km = prior.earthquake_radius_km
             if state.earthquake_min_magnitude == 2.0 and prior.earthquake_min_magnitude != 2.0:
@@ -1986,6 +2006,42 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
             status_code=422,
         )
 
+    # Logo alt text (WCAG requirement)
+    state.logo_alt = str(form.get("logo_alt", "")).strip()
+
+    # Accent color — validate against allowed values; default to "blue".
+    _VALID_ACCENTS = {"blue", "teal", "indigo", "purple", "green", "amber"}
+    submitted_accent = str(form.get("accent", "")).strip()
+    state.accent = submitted_accent if submitted_accent in _VALID_ACCENTS else ""
+
+    # Default theme mode — validate against allowed values.
+    _VALID_THEME_MODES = {"light", "dark", "auto-os", "auto-sunrise-sunset"}
+    submitted_theme_mode = str(form.get("default_theme_mode", "")).strip()
+    state.default_theme_mode = submitted_theme_mode if submitted_theme_mode in _VALID_THEME_MODES else ""
+
+    # Custom CSS URL — allow empty string (means "no custom CSS").
+    state.custom_css_url = str(form.get("custom_css_url", "")).strip()
+
+    # --- Social Media ---
+    state.facebook_url = str(form.get("facebook_url", "")).strip()
+    state.twitter_url = str(form.get("twitter_url", "")).strip()
+    state.instagram_url = str(form.get("instagram_url", "")).strip()
+    state.youtube_url = str(form.get("youtube_url", "")).strip()
+
+    # --- Analytics ---
+    # Stored for future Phase 4 API support; not sent to the API yet.
+    state.google_analytics_id = str(form.get("google_analytics_id", "")).strip()
+
+    # --- Privacy & Legal ---
+    # Collect all checked checkbox values and join as a comma-separated string.
+    # form.getlist() returns a list of values for a multi-value field.
+    privacy_values: list[str] = [
+        str(v).strip()
+        for v in form.getlist("privacy_regions")
+        if str(v).strip()
+    ]
+    state.privacy_regions = ",".join(privacy_values)
+
     # --- Earthquake / Seismic Page Settings ---
     radius_raw = str(form.get("earthquake_radius_km", "100")).strip()
     try:
@@ -2135,13 +2191,28 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
     api_payload["skin_conf"] = build_skin_conf_payload(state)
 
-    # Branding fields (site title, logo URLs, favicon, copyright entity).
+    # Branding fields (site title, logo URLs, favicon, copyright entity, plus
+    # accent color, theme mode, logo alt text, and custom CSS URL added in T2.3).
+    # google_analytics_id and privacy_regions are Phase 4 fields — saved to state
+    # and stack.conf only; not sent to the API until the API supports them.
     api_payload["branding"] = {
         "site_title": state.site_title,
         "copyright_entity": state.copyright_entity,
         "logo_light_url": state.logo_light_url,
         "logo_dark_url": state.logo_dark_url,
+        "logo_alt": state.logo_alt,
         "favicon_url": state.favicon_url,
+        "accent": state.accent or "blue",
+        "default_theme_mode": state.default_theme_mode or "auto-os",
+        "custom_css_url": state.custom_css_url or None,
+    }
+
+    # Social media URLs — sent as a separate block per the API schema.
+    api_payload["social"] = {
+        "facebook": state.facebook_url,
+        "twitter": state.twitter_url,
+        "instagram": state.instagram_url,
+        "youtube": state.youtube_url,
     }
 
     # Earthquake provider settings (sent even when no earthquakes provider is
@@ -2627,8 +2698,28 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.logo_light_url = existing.logo_light_url
     if not state.logo_dark_url and existing.logo_dark_url:
         state.logo_dark_url = existing.logo_dark_url
+    if not state.logo_alt and existing.logo_alt:
+        state.logo_alt = existing.logo_alt
     if not state.favicon_url and existing.favicon_url:
         state.favicon_url = existing.favicon_url
+    if not state.accent and existing.accent:
+        state.accent = existing.accent
+    if not state.default_theme_mode and existing.default_theme_mode:
+        state.default_theme_mode = existing.default_theme_mode
+    if not state.custom_css_url and existing.custom_css_url:
+        state.custom_css_url = existing.custom_css_url
+    if not state.facebook_url and existing.facebook_url:
+        state.facebook_url = existing.facebook_url
+    if not state.twitter_url and existing.twitter_url:
+        state.twitter_url = existing.twitter_url
+    if not state.instagram_url and existing.instagram_url:
+        state.instagram_url = existing.instagram_url
+    if not state.youtube_url and existing.youtube_url:
+        state.youtube_url = existing.youtube_url
+    if not state.google_analytics_id and existing.google_analytics_id:
+        state.google_analytics_id = existing.google_analytics_id
+    if not state.privacy_regions and existing.privacy_regions:
+        state.privacy_regions = existing.privacy_regions
     if state.earthquake_radius_km == 100.0 and existing.earthquake_radius_km != 100.0:
         state.earthquake_radius_km = existing.earthquake_radius_km
     if state.earthquake_min_magnitude == 2.0 and existing.earthquake_min_magnitude != 2.0:
@@ -2754,8 +2845,32 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
             state.logo_light_url = str(branding["logo_light_url"])
         if not state.logo_dark_url and branding.get("logo_dark_url"):
             state.logo_dark_url = str(branding["logo_dark_url"])
+        if not state.logo_alt and branding.get("logo_alt"):
+            state.logo_alt = str(branding["logo_alt"])
         if not state.favicon_url and branding.get("favicon_url"):
             state.favicon_url = str(branding["favicon_url"])
+        if not state.accent and branding.get("accent"):
+            state.accent = str(branding["accent"])
+        if not state.default_theme_mode and branding.get("default_theme_mode"):
+            state.default_theme_mode = str(branding["default_theme_mode"])
+        if not state.custom_css_url and branding.get("custom_css_url"):
+            state.custom_css_url = str(branding["custom_css_url"])
+
+    # --- Social media ---
+    social = config.get("social", {})
+    if isinstance(social, dict):
+        # API response uses short keys ("facebook", "twitter", etc.).
+        # Wizard state uses the _url suffix form ("facebook_url", etc.).
+        _SOCIAL_FIELD_REMAP: dict[str, str] = {
+            "facebook":  "facebook_url",
+            "twitter":   "twitter_url",
+            "instagram": "instagram_url",
+            "youtube":   "youtube_url",
+        }
+        for api_field, state_field in _SOCIAL_FIELD_REMAP.items():
+            val = social.get(api_field)
+            if val and not getattr(state, state_field):
+                setattr(state, state_field, str(val))
 
     # --- Earthquake settings ---
     earthquakes = config.get("earthquakes", {})

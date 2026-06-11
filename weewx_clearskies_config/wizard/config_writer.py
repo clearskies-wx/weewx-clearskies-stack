@@ -215,7 +215,28 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
         "site_title": state.site_title,
         "logo_light_url": state.logo_light_url,
         "logo_dark_url": state.logo_dark_url,
+        "logo_alt": state.logo_alt,
         "favicon_url": state.favicon_url,
+        "accent": state.accent,
+        "default_theme_mode": state.default_theme_mode,
+        "custom_css_url": state.custom_css_url,
+    }
+
+    cfg["social"] = {
+        "facebook": state.facebook_url,
+        "twitter": state.twitter_url,
+        "instagram": state.instagram_url,
+        "youtube": state.youtube_url,
+    }
+
+    # Phase 4 fields — saved locally so wizard re-run can pre-populate them.
+    # The API does not yet accept these fields; they are sent only after the API update.
+    cfg["analytics"] = {
+        "google_analytics_id": state.google_analytics_id,
+    }
+
+    cfg["privacy"] = {
+        "regions": state.privacy_regions,
     }
 
     cfg["earthquakes"] = {

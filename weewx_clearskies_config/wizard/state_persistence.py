@@ -389,8 +389,37 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 state.logo_light_url = str(branding_section["logo_light_url"])
             if branding_section.get("logo_dark_url"):
                 state.logo_dark_url = str(branding_section["logo_dark_url"])
+            if branding_section.get("logo_alt"):
+                state.logo_alt = str(branding_section["logo_alt"])
             if branding_section.get("favicon_url"):
                 state.favicon_url = str(branding_section["favicon_url"])
+            if branding_section.get("accent"):
+                state.accent = str(branding_section["accent"])
+            if branding_section.get("default_theme_mode"):
+                state.default_theme_mode = str(branding_section["default_theme_mode"])
+            if branding_section.get("custom_css_url"):
+                state.custom_css_url = str(branding_section["custom_css_url"])
+
+        social_section = stack_cfg.get("social", {})
+        if isinstance(social_section, dict):
+            if social_section.get("facebook"):
+                state.facebook_url = str(social_section["facebook"])
+            if social_section.get("twitter"):
+                state.twitter_url = str(social_section["twitter"])
+            if social_section.get("instagram"):
+                state.instagram_url = str(social_section["instagram"])
+            if social_section.get("youtube"):
+                state.youtube_url = str(social_section["youtube"])
+
+        analytics_section = stack_cfg.get("analytics", {})
+        if isinstance(analytics_section, dict):
+            if analytics_section.get("google_analytics_id"):
+                state.google_analytics_id = str(analytics_section["google_analytics_id"])
+
+        privacy_section = stack_cfg.get("privacy", {})
+        if isinstance(privacy_section, dict):
+            if privacy_section.get("regions"):
+                state.privacy_regions = str(privacy_section["regions"])
 
         earthquakes_section = stack_cfg.get("earthquakes", {})
         if isinstance(earthquakes_section, dict):

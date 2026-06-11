@@ -327,7 +327,73 @@
         <tr><th scope="row">Copyright entity</th><td>{{ state.copyright_entity or '<em>(not set)</em>' | safe }}</td></tr>
         <tr><th scope="row">Logo (light theme)</th><td>{{ state.logo_light_url or '<em>None</em>' | safe }}</td></tr>
         <tr><th scope="row">Logo (dark theme)</th><td>{{ state.logo_dark_url or '<em>None</em>' | safe }}</td></tr>
+        <tr><th scope="row">Logo alt text</th><td>{{ state.logo_alt or '<em>(not set)</em>' | safe }}</td></tr>
         <tr><th scope="row">Favicon</th><td>{{ state.favicon_url or '<em>None</em>' | safe }}</td></tr>
+        <tr>
+          <th scope="row">Accent color</th>
+          <td>
+            {% if state.accent %}
+              {{ state.accent | capitalize }}
+            {% else %}
+              <em>Blue (default)</em>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Theme mode</th>
+          <td>
+            {% if state.default_theme_mode == "light" %}
+              Light
+            {% elif state.default_theme_mode == "dark" %}
+              Dark
+            {% elif state.default_theme_mode == "auto-os" %}
+              Match device
+            {% elif state.default_theme_mode == "auto-sunrise-sunset" %}
+              Match sunrise/sunset
+            {% else %}
+              <em>Match device (default)</em>
+            {% endif %}
+          </td>
+        </tr>
+        <tr><th scope="row">Custom CSS URL</th><td>{{ state.custom_css_url or '<em>None</em>' | safe }}</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Social Media</h4>
+    <table class="review-table">
+      <caption class="sr-only">Social media links</caption>
+      <tbody>
+        <tr><th scope="row">Facebook</th><td>{{ state.facebook_url or '<em>Not configured</em>' | safe }}</td></tr>
+        <tr><th scope="row">Twitter / X</th><td>{{ state.twitter_url or '<em>Not configured</em>' | safe }}</td></tr>
+        <tr><th scope="row">Instagram</th><td>{{ state.instagram_url or '<em>Not configured</em>' | safe }}</td></tr>
+        <tr><th scope="row">YouTube</th><td>{{ state.youtube_url or '<em>Not configured</em>' | safe }}</td></tr>
+      </tbody>
+    </table>
+
+    <h4>Analytics &amp; Privacy</h4>
+    <table class="review-table">
+      <caption class="sr-only">Analytics and privacy settings</caption>
+      <tbody>
+        <tr>
+          <th scope="row">GA Measurement ID</th>
+          <td>
+            {{ state.google_analytics_id or '<em>Not configured</em>' | safe }}
+            {% if state.google_analytics_id %}
+            <br><small><em>Phase 4: takes effect after the API update.</em></small>
+            {% endif %}
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Privacy regions</th>
+          <td>
+            {% if state.privacy_regions %}
+              {{ state.privacy_regions }}
+              <br><small><em>Phase 4: takes effect after the API update.</em></small>
+            {% else %}
+              <em>Global (default)</em>
+            {% endif %}
+          </td>
+        </tr>
       </tbody>
     </table>
 

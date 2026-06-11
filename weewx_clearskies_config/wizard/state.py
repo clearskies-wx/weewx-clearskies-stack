@@ -120,7 +120,30 @@ class WizardState:
     copyright_entity: str = ""
     logo_light_url: str = ""
     logo_dark_url: str = ""
+    logo_alt: str = ""
     favicon_url: str = ""
+
+    # Appearance / theme (step 8)
+    # accent: one of "blue", "teal", "indigo", "purple", "green", "amber"
+    accent: str = ""
+    # default_theme_mode: one of "light", "dark", "auto-os", "auto-sunrise-sunset"
+    default_theme_mode: str = ""
+    # custom_css_url: optional URL to a custom CSS file (sent as None when blank)
+    custom_css_url: str = ""
+
+    # Social media URLs (step 8) — sent in a separate "social" block on apply
+    facebook_url: str = ""
+    twitter_url: str = ""
+    instagram_url: str = ""
+    youtube_url: str = ""
+
+    # Analytics (step 8) — Phase 4 API fields; saved to state/stack.conf only
+    # GA4 Measurement ID (format: G-XXXXXXXXXX)
+    google_analytics_id: str = ""
+
+    # Privacy regions (step 8) — Phase 4 API field; saved to state/stack.conf only
+    # Comma-separated list of continent slugs, e.g. "north-america,europe" or "global"
+    privacy_regions: str = ""
 
     # Seismic config (inline in provider step, earthquakes domain)
     earthquake_radius_km: float = 100.0
