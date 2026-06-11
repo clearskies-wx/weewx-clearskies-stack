@@ -1,0 +1,385 @@
+Clear Skies Weather Dashboard
+Kasunduan sa Lisensya ng Operator (End User License Agreement)
+EULA Version: 1.0
+Huling Na-update: 2026-06-10
+
+Ang End User License Agreement na ito («Kasunduan») ay isang legal na kontrata sa pagitan
+ninyo («Operator») at Shane Burkhardt («Developer») na namamahala sa inyong pag-install at
+paggamit ng Clear Skies Weather Dashboard software («Software»). Basahin ito nang maingat
+bago magpatuloy.
+
+
+1. PAGTANGGAP
+
+Sa pamamagitan ng pag-install, pag-configure, o pagpapatakbo ng Software na ito, sumasang-ayon
+kayo na mapasaklaw ng mga tuntunin ng Kasunduang ito. Kung hindi kayo sumasang-ayon sa mga
+tuntuning ito, huwag i-install o gamitin ang Software.
+
+Ang Kasunduang ito ay nagdaragdag — at hindi pinapalitan — ng GNU General Public License
+bersyon 3 («GPL v3»), na namamahala sa source code ng Software. Kung saan ang Kasunduang ito
+at ang GPL v3 ay tumutugon sa parehong bagay, ang GPL v3 ang manaig; kung saan ang
+Kasunduang ito ay tumutugon sa mga bagay na hindi tinutugunan ng GPL v3 (warranty, pananagutan,
+mga responsibilidad ng operator), ang Kasunduang ito ang manaig.
+
+
+2. PAGBIBIGAY NG LISENSYA
+
+Ang Software ay libreng open-source software na lisensyado sa ilalim ng GNU General Public
+License bersyon 3. Ang kopya ng GPL v3 ay kasama sa source repository ng Software sa
+ugat na antas bilang LICENSE.txt at makukuha sa: https://www.gnu.org/licenses/gpl-3.0.html
+
+Sa ilalim ng GPL v3, binibigyan kayo ng mga karapatang:
+
+  (a) Patakbuhin ang Software para sa anumang layunin.
+  (b) Pag-aralan at baguhin ang source code.
+  (c) Ipamahagi ang mga literal na kopya ng Software.
+  (d) Ipamahagi ang inyong mga binagong bersyon sa ilalim ng GPL v3.
+
+Walang naaangkop na proprietary na mga antas ng lisensya, mga activation key, limitasyon sa
+device, o mga bayarin sa paggamit. Lahat ng mga feature ay available sa lahat ng operator sa
+ilalim ng parehong mga tuntunin ng GPL v3.
+
+
+3. MGA SERBISYO NG IKATLONG PARTIDO
+
+Ang Software ay maaaring i-configure upang makipag-communicate sa isa o higit pang mga
+tagapaglaan ng data at serbisyo ng ikatlong partido, kabilang ngunit hindi limitado sa:
+
+  - Aeris Weather (aerisweather.com) — data ng paghula at alerto
+  - National Weather Service / NOAA (weather.gov) — data ng paghula, alerto, at radar
+  - OpenWeatherMap (openweathermap.org) — data ng paghula at kalidad ng hangin
+  - IQAir (iqair.com) — data ng kalidad ng hangin
+  - Weather Underground / wunderground.com — data ng personal na istasyon ng panahon
+  - United States Geological Survey (USGS) — data ng lindol
+  - Google Analytics / Google Tag Manager — analytics ng paggamit ng website (na-configure
+    ng operator)
+  - Mga tagapaglaan ng map tile (OpenStreetMap, Mapbox, o iba pa) — pag-render ng mapa
+  - Anumang MQTT broker na kino-configure ng operator para sa paghahatid ng data sa real-time
+
+Sa pamamagitan ng pag-configure at paggamit ng mga serbisyong ito sa pamamagitan ng Software,
+kinikilala ninyo:
+
+  (a) Ang bawat serbisyo ng ikatlong partido ay pinamamahalaan lamang ng sariling mga tuntunin
+      ng serbisyo, patakaran sa privacy, at katanggap-tanggap na patakaran sa paggamit ng
+      serbisyong iyon — hindi ng Kasunduang ito.
+  (b) Kayo ay responsable lamang sa pagkuha ng anumang kinakailangang mga account, API key,
+      o lisensya mula sa bawat serbisyo ng ikatlong partido na pipiliin ninyong gamitin.
+  (c) Kayo ay responsable lamang sa inyong pagsunod sa mga tuntunin ng bawat serbisyo ng
+      ikatlong partido.
+  (d) Ang Developer ay hindi responsable para sa availability, katumpakan, presyo, o mga
+      tuntunin ng anumang serbisyo ng ikatlong partido, at hindi ginagarantiyahan ang
+      patuloy na compatibility.
+  (e) Ang Developer ay hindi tumatanggap, nag-iimbak, o nagpoproseso ng anumang mga
+      kredensyal ng API ng ikatlong partido na inilalagay ninyo sa Software; ang mga
+      kredensyal na iyon ay nakaimbak nang lokal sa inyong server.
+
+
+4. KOLEKSYON NG DATA AT PRIVACY
+
+Ang Software mismo ay walang kinokolektang telemetry, datos ng paggamit, analytics, o
+personally identifiable information. Walang data na ipinapadala sa Developer.
+
+Gayunpaman, bilang isang Operator pinamamahalaan ninyo ang isang web application na maaaring
+mangolekta ng data mula sa mga bisita ng website — kabilang ngunit hindi limitado sa mga IP
+address, identifier ng browser, geolocation, mga kagustuhan sa panahon, at mga pattern ng
+paggamit. Ang kalikasan at lawak ng koleksyon na iyon ay nakasalalay nang buo sa kung paano
+ninyo kino-configure ang Software, kung anong mga serbisyo ng ikatlong partido ang
+pine-enable ninyo, at sa mga legal at teknikal na pagpili na ginagawa ninyo.
+
+Kayo ay responsable lamang para sa:
+
+  (a) Pag-unawa kung anong data ang kinokolekta ng inyong deployed na instance at kung paano
+      ito pinoproseso.
+  (b) Pagpapatupad ng anumang legal na kinakailangang mga patakaran sa pagpapanatili,
+      pagtanggal, at pag-access ng data.
+  (c) Pagbibigay sa mga bisita ng tumpak at legal na mga abiso sa privacy.
+  (d) Pag-configure o pag-disable ng analytics, tracking, at mga teknolohiya ng cookie ayon
+      sa kinakailangan ng naaangkop na batas at ng inyong sariling mga patakaran.
+
+Ang mga default na template ng configuration na ibinibigay ng Software (Mga Tuntunin ng
+Paggamit, Patakaran sa Privacy, pahintulot ng cookie) ay mga panimulang punto para sa inyong
+sariling mga legal na dokumento, hindi natapos na mga legal na instrumento. Ibinibigay ang
+mga ito nang as-is at hindi bumubuo ng legal na payo. Dapat ninyong suriin at iaangkop ang
+mga ito sa inyong partikular na mga kalagayan bago i-deploy ang mga ito sa mga bisita.
+
+
+5. MGA KARAPATAN SA PRIVACY NG CALIFORNIA (CalOPPA / CCPA / CPRA)
+
+Kung ang inyong website ay may mga bisita na naninirahan sa California, maaari kayong may
+mga obligasyon sa ilalim ng California Online Privacy Protection Act (CalOPPA), California
+Consumer Privacy Act (CCPA), at California Privacy Rights Act (CPRA), kabilang ngunit hindi
+limitado sa:
+
+  - Pag-post ng kapansin-pansing patakaran sa privacy na nagbubunyag kung anong impormasyon
+    ang kinokolekta at ibinabahagi.
+  - Pagbibigay sa mga residente ng California ng karapatang malaman, tanggalin, ituwid, at
+    mag-opt out sa pagbebenta o pagbabahagi ng kanilang personal na impormasyon.
+  - Hindi nagdidiscriminate laban sa mga residente na gumagamit ng kanilang mga karapatan sa
+    privacy.
+
+Ang Software ay hindi gumagawa ng mga legal na determinasyong ito para sa inyo. Kayo ay
+responsable lamang para sa pagsusuri ng inyong mga obligasyon sa ilalim ng batas sa privacy
+ng California at para sa pag-configure at pagsisiwalat ng inyong mga kasanayan sa data nang
+naaayon.
+
+
+6. INTELLECTUAL PROPERTY
+
+Ang Software ay lisensyado sa ilalim ng GPL v3. Ang lahat ng mga karapatang hindi tahasang
+ibinibigay ng GPL v3 ay nakalaan ng Developer. Walang anuman sa Kasunduang ito ang nagbibigay
+sa inyo ng anumang karapatang gamitin ang pangalan, mga trademark, o mga service mark ng
+Developer nang higit pa sa pinahihintulutan ng naaangkop na batas o ng GPL v3.
+
+Ang datos ng panahon (temperatura, pag-ulan, hangin, mga pagbabasa sa atmospera) ay
+katotohanan at sa pangkalahatan ay hindi napapailalim sa proteksyon ng copyright. Ang mga
+format ng display, tsart, mga elemento ng UI, at source code na ginawa ng Developer ay
+protektado ng copyright at lisensyado sa ilalim ng GPL v3 ayon sa itinakda sa Seksyon 2
+sa itaas.
+
+
+7. DISCLAIMER NG MGA WARRANTY
+
+ANG SOFTWARE AY IBINIBIGAY «AS IS» AT «AS AVAILABLE» NANG WALANG WARRANTY NG ANUMANG URI,
+TAHAS O IPINAHIWATIG, KABILANG NGUNIT HINDI LIMITADO SA MGA WARRANTY NG MERCHANTABILITY,
+ANGKOP PARA SA ISANG PARTIKULAR NA LAYUNIN, TITULO, AT NON-INFRINGEMENT. ANG DISCLAIMER NA
+ITO AY NAGSASAMA AT NAGPAPALAWAK NG MGA PROBISYON NA WALANG WARRANTY NG GPL v3 (SEKSYON 15
+AT 16).
+
+MGA PARTIKULAR NA DISCLAIMER:
+
+  (a) Ang datos ng panahon na kinukuha sa pamamagitan ng Software ay ibinibigay para sa
+      pangkalahatang layunin ng impormasyon lamang. Hindi ito sertipikado para sa mga
+      safety-critical na aplikasyon at hindi dapat gamitin bilang pangunahing batayan para
+      sa pagbabay-langoy, pagbabagyo-dagat, pamamahala ng emergency, paghahanap-at-pagliligtas,
+      paghawak ng mapanganib na materyales, o anumang iba pang desisyon na may kinalaman sa
+      kaligtasan ng buhay.
+
+  (b) Ang Developer ay walang representasyon na ang Software o ang mga default na template
+      nito (Mga Tuntunin ng Paggamit, Patakaran sa Privacy, pahintulot ng cookie, EULA) ay
+      sumusunod sa anumang partikular na batas, regulasyon, o hurisdiksyon — kabilang ngunit
+      hindi limitado sa GDPR, CCPA, CalOPPA, PIPEDA, o anumang sektoral na regulasyon.
+
+  (c) Ang Developer ay hindi nago-garantiya na ang Software ay matutugunan ang inyong mga
+      kinakailangan, gagana nang walang pagkaantala o walang error, o na maiaayos ang mga
+      depekto.
+
+  (d) Ang Developer ay hindi nago-garantiya ng patuloy na availability, katumpakan, o angkop
+      ng anumang tagapaglaan ng datos ng ikatlong partido na pinagsama sa Software.
+
+
+8. LIMITASYON NG PANANAGUTAN
+
+SA PINAKAMATAAS NA LAWAK NA PINAHIHINTULUTAN NG NAAANGKOP NA BATAS, AT AYON SA KARAGDAGANG
+ITINAKDA SA MGA SEKSYON 15 AT 16 NG GPL v3, SA ANUMANG PAGKAKATAON ANG DEVELOPER AY HINDI
+MANANAGOT PARA SA ANUMANG HINDI DIREKTA, INCIDENTAL, ESPESYAL, CONSEQUENTIAL, EXEMPLARY, O
+PUNITIVE NA PINSALA, O ANUMANG PAGKAWALA NG KITA, DATA, GOODWILL, O IBA PANG HINDI
+MATERYAL NA PAGKAWALA, NA NAGMUMULA SA O NAUUGNAY SA:
+
+  (a) Ang inyong paggamit o kawalan ng kakayahang gumamit ng Software.
+  (b) Kawalan ng katumpakan, pagkakumpleto, o pagiging napapanahon ng datos ng panahon na
+      ipinapakita ng Software.
+  (c) Anumang desisyon — pinansyal, may kinalaman sa kaligtasan, o iba pa — na ginawa batay
+      sa datos na ibinibigay ng o sa pamamagitan ng Software.
+  (d) Anumang regulatoryo, sibil, o kriminal na pananagutan na nagmumula sa inyong operasyon
+      ng isang website ng panahon, kabilang ang kabiguang sumunod sa naaangkop na mga batas
+      sa privacy o proteksyon ng data.
+  (e) Anumang claim ng isang bisita sa inyong website na nagmumula sa inyong configuration
+      o paggamit ng Software.
+  (f) Pagkaantala o pagwawakas ng anumang serbisyo ng datos ng ikatlong partido.
+  (g) Hindi awtorisadong access sa inyong server, mga configuration file, o mga kredensyal
+      ng API.
+
+Ang kabuuang cumulative na pananagutan ng Developer sa inyo para sa lahat ng mga claim na
+nagmumula sa o nauugnay sa Kasunduang ito ay hindi lalampas sa zero na dolyar ng Estados
+Unidos ($0.00), na sumasalamin na ang Software ay ibinibigay nang walang bayad sa ilalim
+ng GPL v3.
+
+
+9. MGA RESPONSIBILIDAD NG OPERATOR
+
+Kinikilala at sinasang-ayunan ninyo na, bilang Operator ng isang publicly accessible na
+website ng panahon na itinayo gamit ang Software na ito, kayo ay may eksklusibong
+responsibilidad para sa:
+
+  (a) PAGSUNOD SA BATAS. Pagsunod sa lahat ng batas at regulasyon na naaangkop sa inyong
+      website at operasyon nito, kabilang ngunit hindi limitado sa:
+        - Batas sa privacy at proteksyon ng data (GDPR, CCPA/CPRA, CalOPPA, PIPEDA, at
+          mga katumbas) sa bawat hurisdiksyon kung saan matatagpuan ang inyong mga bisita,
+          hindi lamang kung saan kayo naroroon.
+        - Proteksyon ng mamimili, accessibility (hal. WCAG 2.1 AA), at batas sa e-commerce.
+        - Anumang sektoral na regulasyon na naaangkop sa publikasyon ng datos ng panahon.
+
+  (b) MGA LEGAL NA ABISO PARA SA MGA BISITA. Pagsulat, paglalathala, at pananatiling
+      kasalukuyan ng lahat ng legal na abiso at patakaran na kinakailangan para sa inyong
+      website, kabilang ang Patakaran sa Privacy, Mga Tuntunin ng Paggamit, at anumang
+      kinakailangang mga pagsisiwalat ng pahintulot ng cookie. Ang mga default na template
+      na ibinibigay ng Software ay mga panimulang punto — nangangailangan ang mga ito ng
+      inyong pagsusuri at legal na pagbabago.
+
+  (c) PAGSUNOD SA SERBISYO NG IKATLONG PARTIDO. Pagsunod sa mga tuntunin ng serbisyo,
+      mga katanggap-tanggap na patakaran sa paggamit, at mga limitasyon sa rate ng bawat
+      serbisyo ng ikatlong partido na kino-configure ninyo sa Software. Kasama rito ang
+      pagkuha ng kinakailangang mga account, key, at pahintulot bago paganahin ang anumang
+      tagapaglaan ng datos.
+
+  (d) SEGURIDAD. Pag-secure ng inyong server, configuration ng network, mga kredensyal ng
+      API, database, at anumang mga lihim na nakaimbak ng Software. Ang Developer ay hindi
+      nag-o-audit, nagmo-monitor, o nag-se-secure ng inyong deployment.
+
+  (e) DATA NA KINOKOLEKTA NG INYONG ISTASYON. Kung ang inyong istasyon ng panahon ay
+      nangongolekta, nagtatago, o naghahatid ng datos na higit pa sa mga raw na pagbabasa
+      ng meteorolohiko — kabilang ang data na generated ng bisita — kayo ay responsable para
+      sa paghawak, proteksyon, pagpapanatili, at anumang kinakailangang pagsisiwalat ng
+      data na iyon.
+
+  (f) DISCLAIMER NG KATUMPAKAN SA MGA BISITA. Paglalathala ng malinaw na disclaimer sa
+      mga bisita ng website na nagtatakda na ang datos ng panahon ay para sa pangkalahatang
+      layunin ng impormasyon lamang at hindi angkop para sa mga safety-critical na desisyon.
+
+  (g) MGA BACKUP AT DISASTER RECOVERY. Pagpapanatili ng sapat na mga backup ng inyong mga
+      configuration file, database, at anumang mga customization. Ang Developer ay hindi
+      responsable para sa pagkawala ng data na nagresulta mula sa pagkabigo ng hardware,
+      mga bug ng software, o aksidenteng pagtanggal.
+
+
+10. INDEMNIFICATION
+
+Sumasang-ayon kayo na i-indemnify, ipagtanggol, at ipaglaban ang Developer mula sa at laban
+sa lahat ng mga claim, demand, pananagutan, pinsala, pagkawala, gastos, at mga gastos
+(kabilang ang makatwirang bayad sa abogado) na nagmumula sa o may kaugnayan sa:
+
+  (a) Ang inyong deployment, configuration, operasyon, o pagbabago ng Software.
+  (b) Ang inyong paglabag sa Kasunduang ito.
+  (c) Ang inyong paglabag sa anumang naaangkop na batas o regulasyon.
+  (d) Ang inyong paglabag sa mga tuntunin ng serbisyo ng anumang serbisyo ng ikatlong partido.
+  (e) Anumang claim ng isang bisita sa inyong website.
+  (f) Ang inyong kabiguan sa pagbibigay ng kinakailangang mga legal na abiso o mga
+      pagsisiwalat ng privacy sa mga bisita.
+
+
+11. WALANG OBLIGASYON SA SUPORTA
+
+Ang Software ay isang proyekto ng komunidad na pinapanatili sa pinakamahusay na pagsisikap,
+batayan ng boluntaryo. Ang Developer ay walang obligasyon na:
+
+  (a) Magbigay ng mga update, pag-aayos ng bug, patch, o mga bagong feature.
+  (b) Mapanatili ang compatibility sa mga susunod na bersyon ng weewx, mga operating system,
+      mga serbisyo ng ikatlong partido, o mga web browser.
+  (c) Magbigay ng teknikal na suporta, dokumentasyon, o tulong ng anumang uri.
+  (d) Ipagpatuloy ang pagbuo, pamamahagi, o pag-host ng Software.
+
+Anumang suporta o mga update na ibinibigay ay mga boluntaryong kilos ng mabuting kalooban at
+hindi lumilikha ng patuloy na obligasyon. Tinitiyak ng GPL v3 na palagi kayong may karapatang
+mapanatili ang inyong sariling fork ng Software kung ang Developer ay titigil sa pagbuo.
+
+
+12. NAMAMAHALANG BATAS
+
+Ang Kasunduang ito ay pamamahalaan at bibigyang-kahulugan ayon sa mga batas ng Estado ng
+California, Estados Unidos ng Amerika, nang walang pagsasaalang-alang sa mga probisyon ng
+salungatan ng batas nito.
+(Namamahalang batas: Estado ng California, USA — naaangkop anuman ang lokasyon ng Operator.)
+
+
+13. ARBITRASYON
+
+Anumang alitan, kontroversiyo, o claim na nagmumula sa o may kaugnayan sa Kasunduang ito,
+o paglabag nito, ay malulutas sa pamamagitan ng binding arbitration na pinamahalaan ng isang
+magkasamang napagkasunduang serbisyo ng arbitrasyon, na isinasagawa sa California, Estados
+Unidos ng Amerika, ayon sa mga kasalukuyang panuntunan nito. Ang desisyon ng arbitrator ay
+magiging panghuling at may bisa, at ang paghatol sa award ay maaaring ipasok sa anumang
+husgado ng may kakayahang hurisdiksyon.
+(Binding arbitration clause — lugar: California, USA. Pagwawaiver ng paglilitis ng jury.)
+
+Ang sugnay ng arbitrasyon na ito ay hindi naaangkop sa injunctive relief para sa mga
+paglabag ng intellectual property, na maaaring hanapin ng alinmang partido sa anumang
+husgado ng may kakayahang hurisdiksyon.
+
+
+14. PAGWAWAIVER NG CLASS ACTION
+
+KAYO AT ANG DEVELOPER AY SUMASANG-AYON NA ANG ANUMANG MGA PROSESO UPANG MALUTAS ANG MGA
+CLAIM NA NAGMUMULA SA O NAUUGNAY SA KASUNDUANG ITO AY ISASAGAWA NANG EKSKLUSIBO SA BATAYAN
+NG INDIBIDWAL. HINDI KAYO NI ANG DEVELOPER ANG MAAARING MAG-BRING O LUMAHOK SA ANUMANG
+KLASE, KOLEKTIBO, PINAGSAMA, O REPRESENTATIBONG PROSESO. Hindi maaaring pagsama-samahin ng
+arbitrator ang mga claim ng higit sa isang tao nang walang tahasang nakasulat na pahintulot
+ng lahat ng partido.
+(Pagwawaiver ng class action — naaangkop sa ilalim ng batas ng California.)
+
+
+15. FORCE MAJEURE / SEVERABILITY / PAGWAWAIVER / BUONG KASUNDUAN
+
+Force Majeure. Ang Developer ay hindi mananagot para sa mga pagkaantala o kabiguang dulot ng
+mga pangyayari na lampas sa makatwirang kontrol nito, kabilang ang mga gawa ng Diyos,
+mga natural na sakuna, mga pandemya, giyera, kaguluhan ng sibil, o mga kabiguan ng
+imprastraktura ng ikatlong partido.
+
+Severability. Kung ang anumang probisyon ng Kasunduang ito ay napananaigan na may kawalang
+bisa, ilegal, o hindi maipapatupad, ang probisyong iyon ay babaguhin sa minimum na lawak na
+kinakailangan upang maging maipapatupad, o ihihiwalay kung ang pagbabago ay hindi posible.
+Ang mga natitirang probisyon ay magpapatuloy sa buong lakas at bisa.
+
+Pagwawaiver. Ang kabiguang magpatupad ng anumang probisyon ng Kasunduang ito ay hindi isang
+pagwawaiver ng probisyon na iyon o ng karapatang ipatupad ito sa hinaharap.
+
+Buong Kasunduan. Ang Kasunduang ito, kasama ang GPL v3 (na isinama sa pamamagitan ng
+sanggunian), ay bumubuo ng buong kasunduan sa pagitan ng mga partido tungkol sa Software at
+pinapalitan ang lahat ng nakaraang mga kasunduan, representasyon, o pag-unawa tungkol sa
+paksa nito.
+
+
+16. PAGWAWAKAS
+
+Ang Kasunduang ito ay may bisa mula sa petsa kung kailan kayo unang nag-install o gumamit
+ng Software at nagpapatuloy hanggang sa wakasan.
+
+Ang inyong mga karapatan sa ilalim ng Kasunduang ito ay awtomatikong mawawakas — nang walang
+abiso mula sa Developer — kung kayo ay nabigo na sumunod sa anumang mahalagang tuntunin ng
+Kasunduang ito. Sa pagwawakas, kailangan ninyong tigilan ang pagpapatakbo ng Software at
+sirain ang lahat ng kopya sa inyong pag-aari.
+
+Pagwawakas ng Operator. Maaari ninyong wakasan ang Kasunduang ito anumang oras sa pamamagitan
+ng pagtigil sa paggamit at pag-uninstall ng Software. Ang inyong mga karapatan sa GPL v3
+(kabilang ang mga karapatang mapanatili ang inyong sariling binagong kopya ng source code)
+ay nakaligtas sa pagwawakas ng Kasunduang ito.
+
+Pagbawi na inisyado ng Developer. Maaaring bawiin ng Developer ang inyong mga karapatan sa
+ilalim ng Kasunduang ito (bukod sa mga karapatan ng GPL v3, sa lawak na pinahihintulutan ng
+lisensyang iyon) kung kayo: (a) gumamit ng Software sa paraang lumalabag sa naaangkop na
+batas; (b) nagpapanggap na Developer o maling kumakatawan na ang Software ay sinusuportahan
+ng Developer; o (c) namamahagi ng Software na lumalabag sa GPL v3.
+
+Ang mga Seksyon 7 (Disclaimer ng mga Warranty), 8 (Limitasyon ng Pananagutan), 9 (Mga
+Responsibilidad ng Operator), 10 (Indemnification), 12 (Namamahalang Batas), 13
+(Arbitrasyon), 14 (Pagwawaiver ng Class Action), at 15 (Force Majeure / Severability /
+Pagwawaiver / Buong Kasunduan) ay nakaligtas sa anumang pagwawakas ng Kasunduang ito.
+
+
+17. MGA PAGBABAGO SA KASUNDUANG ITO
+
+Inireserba ng Developer ang karapatang i-update ang Kasunduang ito anumang oras. Ang mga
+na-update na bersyon ay matutukoy sa pamamagitan ng isang bagong numero ng bersyon at na-update
+na petsa ng «Huling Na-update» sa header ng file na ito. Ang numero ng bersyon ng EULA ay
+naitala kapag kayo ay tumanggap; kung ang bersyon ay magbago, ipapakita ng setup wizard ang
+bagong Kasunduan para sa muling pagtanggap bago magpatuloy.
+
+Ang patuloy na operasyon ng Software pagkatapos na magkabisa ang isang bagong bersyon ay
+bumubuo ng pagtanggap sa binagong Kasunduan.
+
+
+18. PAKIKIPAG-UGNAYAN
+
+Para sa mga tanong tungkol sa Kasunduang ito, upang mag-ulat ng mga paglabag, o upang
+makipag-ugnayan sa Developer, mangyaring gamitin ang GitHub repository ng proyekto:
+
+  https://github.com/inguy24/weewx-clearskies-stack
+
+Walang legal na sulat ang dapat na ipadala sa pamamagitan ng GitHub Issues. Para sa mga
+pormal na legal na bagay, makipag-ugnayan sa Developer sa pamamagitan ng mga paraan ng
+pakikipag-ugnayan na nakasaad sa repository.
+
+
+SA PAMAMAGITAN NG PAG-CHECK SA ACCEPTANCE BOX SA SETUP WIZARD, KINIKILALA NINYO NA NABASA
+NINYO ANG KASUNDUANG ITO, NAIINTINDIHAN ANG MGA TUNTUNIN NITO, AT SUMASANG-AYON NA MAPASAKLAW
+NG MGA ITO, KABILANG ANG PROBISYON NG BINDING ARBITRATION AT PAGWAWAIVER NG CLASS ACTION SA
+MGA SEKSYON 13 AT 14.

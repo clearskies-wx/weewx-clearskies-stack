@@ -1,0 +1,366 @@
+Clear Skies Weather Dashboard
+Contrato de Licença para Operadores (Contrato de Licença de Utilizador Final)
+EULA Version: 1.0
+Última actualização: 2026-06-10
+
+O presente Contrato de Licença de Utilizador Final («Contrato») é um contrato juridicamente
+vinculativo entre V. Ex.ª («Operador») e Shane Burkhardt («Programador») que rege a
+instalação e utilização do software Clear Skies Weather Dashboard («Software»). Leia-o
+atentamente antes de prosseguir.
+
+
+1. ACEITAÇÃO
+
+Ao instalar, configurar ou operar este Software, V. Ex.ª aceita ficar vinculado pelos termos
+do presente Contrato. Caso não concorde com estes termos, não instale nem utilize o Software.
+
+O presente Contrato complementa — e não substitui — a Licença Pública Geral GNU versão 3
+(«GPL v3»), que rege o código-fonte do Software. Quando o presente Contrato e a GPL v3
+tratarem da mesma matéria, prevalecerá a GPL v3; quando o presente Contrato tratar de
+matérias sobre as quais a GPL v3 é omissa (garantia, responsabilidade, obrigações do
+operador), o presente Contrato prevalecerá.
+
+
+2. CONCESSÃO DE LICENÇA
+
+O Software é um software livre e de código aberto licenciado ao abrigo da Licença Pública
+Geral GNU versão 3. Uma cópia da GPL v3 está incluída no repositório de código-fonte do
+Software ao nível de raiz como LICENSE.txt e está disponível em:
+https://www.gnu.org/licenses/gpl-3.0.html
+
+Nos termos da GPL v3, são concedidos a V. Ex.ª os seguintes direitos:
+
+  (a) Executar o Software para qualquer finalidade.
+  (b) Estudar e modificar o código-fonte.
+  (c) Distribuir cópias literais do Software.
+  (d) Distribuir as suas versões modificadas ao abrigo da GPL v3.
+
+Não se aplicam níveis de licença proprietária, chaves de activação, limites de dispositivos
+ou taxas de utilização. Todas as funcionalidades estão disponíveis para todos os operadores
+ao abrigo dos mesmos termos da GPL v3.
+
+
+3. SERVIÇOS DE TERCEIROS
+
+O Software pode ser configurado para comunicar com um ou mais fornecedores de dados e
+serviços de terceiros, incluindo, mas não se limitando a:
+
+  - Aeris Weather (aerisweather.com) — dados de previsão e alertas
+  - National Weather Service / NOAA (weather.gov) — dados de previsão, alertas e radar
+  - OpenWeatherMap (openweathermap.org) — dados de previsão e qualidade do ar
+  - IQAir (iqair.com) — dados de qualidade do ar
+  - Weather Underground / wunderground.com — dados de estações meteorológicas pessoais
+  - United States Geological Survey (USGS) — dados sísmicos
+  - Google Analytics / Google Tag Manager — análise de utilização do sítio web (configurado
+    pelo operador)
+  - Fornecedores de mosaicos de mapa (OpenStreetMap, Mapbox ou outros) — renderização de
+    mapas
+  - Qualquer mediador MQTT que o operador configure para entrega de dados em tempo real
+
+Ao configurar e utilizar estes serviços através do Software, V. Ex.ª reconhece que:
+
+  (a) Cada serviço de terceiros é regido exclusivamente pelos seus próprios termos de serviço,
+      política de privacidade e política de utilização aceitável — não pelo presente Contrato.
+  (b) V. Ex.ª é o único responsável por obter as contas, chaves de API ou licenças necessárias
+      de cada serviço de terceiros que optar por utilizar.
+  (c) V. Ex.ª é o único responsável pelo cumprimento dos termos de cada serviço de terceiros.
+  (d) O Programador não é responsável pela disponibilidade, precisão, preços ou termos de
+      qualquer serviço de terceiros e não garante compatibilidade contínua.
+  (e) O Programador não recebe, armazena nem processa quaisquer credenciais de API de
+      terceiros introduzidas por V. Ex.ª no Software; essas credenciais são armazenadas
+      localmente no seu servidor.
+
+
+4. RECOLHA DE DADOS E PRIVACIDADE
+
+O próprio Software não recolhe telemetria, dados de utilização, dados analíticos ou
+informações de identificação pessoal. Nenhum dado é transmitido ao Programador.
+
+No entanto, enquanto Operador, V. Ex.ª gere uma aplicação web que pode recolher dados dos
+visitantes do sítio web — incluindo, mas não se limitando a, endereços IP, identificadores
+de navegador, geolocalização, preferências meteorológicas e padrões de utilização. A natureza
+e a extensão dessa recolha dependem inteiramente de como V. Ex.ª configura o Software, de
+quais serviços de terceiros activa e das escolhas jurídicas e técnicas que efectua.
+
+V. Ex.ª é o único responsável por:
+
+  (a) Compreender que dados a sua instância implementada recolhe e como são processados.
+  (b) Implementar as políticas de retenção, eliminação e acesso a dados legalmente exigidas.
+  (c) Fornecer aos visitantes avisos de privacidade precisos e legais.
+  (d) Configurar ou desactivar as tecnologias de análise, rastreamento e cookies conforme
+      exigido pela lei aplicável e pelas suas próprias políticas.
+
+Os modelos de configuração predefinidos fornecidos pelo Software (Termos de Utilização,
+Política de Privacidade, consentimento de cookies) são pontos de partida para os seus
+próprios documentos jurídicos, não instrumentos jurídicos definitivos. São fornecidos no
+estado em que se encontram e não constituem aconselhamento jurídico. Deve revê-los e
+adaptá-los às suas circunstâncias específicas antes de os disponibilizar aos visitantes.
+
+
+5. DIREITOS DE PRIVACIDADE DA CALIFÓRNIA (CalOPPA / CCPA / CPRA)
+
+Se o seu sítio web tiver visitantes residentes na Califórnia, V. Ex.ª pode ter obrigações
+ao abrigo do California Online Privacy Protection Act (CalOPPA), do California Consumer
+Privacy Act (CCPA) e do California Privacy Rights Act (CPRA), incluindo, mas não se
+limitando a:
+
+  - Publicar uma política de privacidade visível que divulgue que informações são recolhidas
+    e partilhadas.
+  - Conceder aos residentes da Califórnia o direito de saber, eliminar, corrigir e recusar
+    a venda ou partilha das suas informações pessoais.
+  - Não discriminar residentes que exerçam os seus direitos de privacidade.
+
+O Software não toma estas decisões jurídicas por V. Ex.ª. V. Ex.ª é o único responsável por
+avaliar as suas obrigações ao abrigo da lei de privacidade da Califórnia e por configurar e
+divulgar as suas práticas de dados em conformidade.
+
+
+6. PROPRIEDADE INTELECTUAL
+
+O Software está licenciado ao abrigo da GPL v3. Todos os direitos não expressamente concedidos
+pela GPL v3 estão reservados ao Programador. Nada no presente Contrato concede a V. Ex.ª o
+direito de utilizar o nome, marcas comerciais ou marcas de serviço do Programador para além
+do que é permitido pela lei aplicável ou pela GPL v3.
+
+Os dados meteorológicos (temperatura, precipitação, vento, leituras atmosféricas) são
+informações factuais e geralmente não estão sujeitos a protecção por direitos de autor.
+Os formatos de visualização, gráficos, elementos de interface de utilizador e código-fonte
+da autoria do Programador estão protegidos por direitos de autor e licenciados ao abrigo da
+GPL v3 conforme estabelecido na Secção 2 acima.
+
+
+7. EXCLUSÃO DE GARANTIAS
+
+O SOFTWARE É FORNECIDO «NO ESTADO EM QUE SE ENCONTRA» E «CONFORME DISPONÍVEL» SEM GARANTIA
+DE QUALQUER TIPO, EXPRESSA OU IMPLÍCITA, INCLUINDO, MAS NÃO SE LIMITANDO ÀS GARANTIAS DE
+COMERCIALIZAÇÃO, ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA, TÍTULO E NÃO VIOLAÇÃO. ESTA EXCLUSÃO
+INCORPORA E ESTENDE AS DISPOSIÇÕES DE AUSÊNCIA DE GARANTIA DA GPL v3 (ARTIGOS 15 E 16).
+
+EXCLUSÕES ESPECÍFICAS:
+
+  (a) Os dados meteorológicos obtidos através do Software são fornecidos apenas para fins
+      informativos gerais. Não estão certificados para aplicações críticas de segurança e
+      não devem ser utilizados como base principal para decisões em aviação, navegação
+      marítima, gestão de emergências, busca e salvamento, manuseamento de materiais
+      perigosos ou qualquer outra decisão crítica para a vida.
+
+  (b) O Programador não garante que o Software ou os seus modelos predefinidos (Termos de
+      Utilização, Política de Privacidade, consentimento de cookies, EULA) estejam em
+      conformidade com alguma lei, regulamento ou jurisdição específica — incluindo, mas não
+      se limitando ao RGPD, CCPA, CalOPPA, PIPEDA ou qualquer regulamentação sectorial.
+
+  (c) O Programador não garante que o Software satisfará os seus requisitos, funcionará sem
+      interrupções ou erros, ou que os defeitos serão corrigidos.
+
+  (d) O Programador não garante a disponibilidade contínua, precisão ou adequação de qualquer
+      fornecedor de dados de terceiros integrado no Software.
+
+
+8. LIMITAÇÃO DE RESPONSABILIDADE
+
+NA EXTENSÃO MÁXIMA PERMITIDA PELA LEI APLICÁVEL, E CONFORME ADICIONALMENTE ESTABELECIDO
+NOS ARTIGOS 15 E 16 DA GPL v3, O PROGRAMADOR NÃO SERÁ RESPONSÁVEL POR QUAISQUER DANOS
+INDIRECTOS, INCIDENTAIS, ESPECIAIS, CONSEQUENTES, EXEMPLARES OU PUNITIVOS, NEM POR PERDA
+DE LUCROS, DADOS, CLIENTELA OU OUTRAS PERDAS IMATERIAIS, DECORRENTES DE OU RELACIONADOS COM:
+
+  (a) A utilização ou incapacidade de utilização do Software por parte de V. Ex.ª.
+  (b) Imprecisão, incompletude ou falta de actualidade de dados meteorológicos apresentados
+      pelo Software.
+  (c) Qualquer decisão — financeira, relacionada com a segurança ou outra — tomada com base
+      em dados fornecidos por ou através do Software.
+  (d) Qualquer responsabilidade regulatória, civil ou penal decorrente da exploração de um
+      sítio web meteorológico, incluindo o incumprimento de leis aplicáveis de privacidade
+      ou protecção de dados.
+  (e) Qualquer reclamação de um visitante do seu sítio web decorrente da configuração ou
+      utilização do Software.
+  (f) Interrupção ou encerramento de qualquer serviço de dados de terceiros.
+  (g) Acesso não autorizado ao seu servidor, ficheiros de configuração ou credenciais de API.
+
+A responsabilidade cumulativa total do Programador para com V. Ex.ª por todas as reclamações
+decorrentes de ou relacionadas com o presente Contrato não excederá zero dólares americanos
+($0,00), reflectindo que o Software é fornecido gratuitamente ao abrigo da GPL v3.
+
+
+9. OBRIGAÇÕES DO OPERADOR
+
+V. Ex.ª reconhece e concorda que, enquanto Operador de um sítio web meteorológico de acesso
+público construído com este Software, assume a responsabilidade exclusiva por:
+
+  (a) CONFORMIDADE JURÍDICA. Cumprir todas as leis e regulamentos aplicáveis ao seu sítio
+      web e à sua exploração, incluindo, mas não se limitando a:
+        - Leis de privacidade e protecção de dados (RGPD, CCPA/CPRA, CalOPPA, PIPEDA e
+          equivalentes) em cada jurisdição onde os seus visitantes se encontrem, não apenas
+          onde V. Ex.ª está sediado.
+        - Protecção do consumidor, acessibilidade (ex.: WCAG 2.1 AA) e direito do comércio
+          electrónico.
+        - Qualquer regulamentação sectorial aplicável à publicação de dados meteorológicos.
+
+  (b) AVISOS JURÍDICOS PARA VISITANTES. Redigir, publicar e manter actualizados todos os
+      avisos e políticas jurídicas exigidos para o seu sítio web, incluindo uma Política de
+      Privacidade, Termos de Utilização e quaisquer divulgações de consentimento de cookies
+      exigidas. Os modelos predefinidos fornecidos pelo Software são pontos de partida —
+      requerem a sua revisão e adaptação jurídica.
+
+  (c) CONFORMIDADE COM SERVIÇOS DE TERCEIROS. Cumprir os termos de serviço, políticas de
+      utilização aceitável e limites de frequência de cada serviço de terceiros que configurar
+      no Software. Tal inclui obter contas, chaves e permissões necessárias antes de activar
+      qualquer fornecedor de dados.
+
+  (d) SEGURANÇA. Proteger o seu servidor, configuração de rede, credenciais de API, base de
+      dados e quaisquer segredos armazenados pelo Software. O Programador não audita, monitoriza
+      nem protege a sua implementação.
+
+  (e) DADOS RECOLHIDOS PELA SUA ESTAÇÃO. Se a sua estação meteorológica recolher, armazenar
+      ou transmitir dados para além de leituras meteorológicas brutas — incluindo dados gerados
+      por visitantes — V. Ex.ª é responsável pelo tratamento, protecção, retenção e quaisquer
+      divulgações exigidas em relação a esses dados.
+
+  (f) AVISO DE PRECISÃO AOS VISITANTES. Publicar um aviso claro aos visitantes do sítio web
+      indicando que os dados meteorológicos são apenas para fins informativos gerais e não são
+      adequados para decisões críticas de segurança.
+
+  (g) CÓPIAS DE SEGURANÇA E RECUPERAÇÃO DE DESASTRES. Manter cópias de segurança adequadas
+      dos seus ficheiros de configuração, base de dados e quaisquer personalizações. O
+      Programador não é responsável por perda de dados resultante de avarias de hardware,
+      erros de software ou eliminação acidental.
+
+
+10. INDEMNIZAÇÃO
+
+V. Ex.ª concorda em indemnizar, defender e isentar o Programador de todas e quaisquer
+reclamações, exigências, responsabilidades, danos, perdas, custos e despesas (incluindo
+honorários advocatícios razoáveis) decorrentes de ou relacionados com:
+
+  (a) A sua implementação, configuração, exploração ou modificação do Software.
+  (b) A sua violação do presente Contrato.
+  (c) A sua violação de qualquer lei ou regulamento aplicável.
+  (d) A sua violação dos termos de serviço de qualquer serviço de terceiros.
+  (e) Qualquer reclamação de um visitante do seu sítio web.
+  (f) A sua omissão na prestação dos avisos jurídicos ou divulgações de privacidade exigidos
+      aos visitantes.
+
+
+11. SEM OBRIGAÇÃO DE SUPORTE
+
+O Software é um projecto comunitário mantido em regime de melhor esforço por voluntários.
+O Programador não tem qualquer obrigação de:
+
+  (a) Fornecer actualizações, correcções de erros, patches ou novas funcionalidades.
+  (b) Manter compatibilidade com versões futuras do weewx, sistemas operativos, serviços de
+      terceiros ou navegadores web.
+  (c) Fornecer suporte técnico, documentação ou assistência de qualquer tipo.
+  (d) Continuar a desenvolver, distribuir ou alojar o Software.
+
+Qualquer suporte ou actualização fornecida é um acto voluntário de boa vontade e não cria
+uma obrigação contínua. A GPL v3 garante que V. Ex.ª tem sempre o direito de manter o seu
+próprio fork do Software caso o Programador cesse o desenvolvimento.
+
+
+12. LEI APLICÁVEL
+
+O presente Contrato é regido e interpretado de acordo com as leis do Estado da Califórnia,
+Estados Unidos da América, sem consideração às suas disposições sobre conflitos de leis.
+(Lei aplicável: Estado da Califórnia, EUA — aplica-se independentemente da localização do
+Operador.)
+
+
+13. ARBITRAGEM
+
+Qualquer litígio, controvérsia ou reclamação decorrente de ou relacionado com o presente
+Contrato, ou a sua violação, será resolvido por arbitragem vinculativa administrada por um
+serviço de arbitragem mutuamente acordado, conduzida na Califórnia, Estados Unidos da
+América, de acordo com as suas regras em vigor. A decisão do árbitro será definitiva e
+vinculativa, e a sentença arbitral poderá ser executada em qualquer tribunal competente.
+(Cláusula de arbitragem vinculativa — sede: Califórnia, EUA. Renúncia ao julgamento por
+júri.)
+
+A presente cláusula de arbitragem não se aplica a medidas cautelares por violações de
+propriedade intelectual, que qualquer das partes pode requerer em qualquer tribunal
+competente.
+
+
+14. RENÚNCIA A ACÇÕES COLECTIVAS
+
+V. EX.ª E O PROGRAMADOR CONCORDAM QUE QUALQUER PROCESSO PARA RESOLVER RECLAMAÇÕES
+DECORRENTES DE OU RELACIONADAS COM O PRESENTE CONTRATO SERÁ CONDUZIDO EXCLUSIVAMENTE EM
+BASE INDIVIDUAL. NEM V. EX.ª NEM O PROGRAMADOR PODERÃO INTENTAR OU PARTICIPAR EM QUALQUER
+PROCESSO COLECTIVO, CONSOLIDADO OU REPRESENTATIVO. O árbitro não pode consolidar as
+reclamações de mais de uma pessoa sem o consentimento expresso e por escrito de todas as
+partes.
+(Renúncia a acções colectivas — aplicável ao abrigo da lei da Califórnia.)
+
+
+15. FORÇA MAIOR / DIVISIBILIDADE / RENÚNCIA / ACORDO INTEGRAL
+
+Força Maior. O Programador não será responsável por atrasos ou falhas causados por
+circunstâncias fora do seu controlo razoável, incluindo actos de Deus, catástrofes naturais,
+pandemias, guerra, distúrbios civis ou falhas na infra-estrutura de terceiros.
+
+Divisibilidade. Se alguma disposição do presente Contrato for considerada inválida, ilegal
+ou inexequível, essa disposição será modificada na medida mínima necessária para a tornar
+executável, ou suprimida se a modificação não for possível. As disposições restantes
+continuarão em pleno vigor e efeito.
+
+Renúncia. A não aplicação de qualquer disposição do presente Contrato não constitui renúncia
+a essa disposição nem ao direito de a aplicar no futuro.
+
+Acordo Integral. O presente Contrato, em conjunto com a GPL v3 (incorporada por referência),
+constitui o acordo integral entre as partes relativamente ao Software e substitui todos os
+acordos, representações ou entendimentos anteriores relativos ao seu objecto.
+
+
+16. RESCISÃO
+
+O presente Contrato entra em vigor na data em que V. Ex.ª instala ou utiliza o Software pela
+primeira vez e mantém-se válido até ser rescindido.
+
+Os direitos de V. Ex.ª ao abrigo do presente Contrato extinguem-se automaticamente — sem
+notificação do Programador — se V. Ex.ª não cumprir qualquer cláusula essencial do presente
+Contrato. Após a rescisão, V. Ex.ª deve cessar a exploração do Software e destruir todas as
+cópias em sua posse.
+
+Rescisão pelo Operador. V. Ex.ª pode rescindir o presente Contrato a qualquer momento
+cessando a utilização e desinstalando o Software. Os seus direitos ao abrigo da GPL v3
+(incluindo os direitos de reter a sua própria cópia modificada do código-fonte) subsistem
+após a rescisão do presente Contrato.
+
+Revogação iniciada pelo Programador. O Programador pode revogar os direitos de V. Ex.ª ao
+abrigo do presente Contrato (para além dos direitos da GPL v3, na medida permitida por essa
+licença) se V. Ex.ª: (a) utilizar o Software de forma que viole a lei aplicável; (b) se fizer
+passar pelo Programador ou declarar falsamente que o Software é endossado pelo Programador;
+ou (c) distribuir o Software em violação da GPL v3.
+
+As Secções 7 (Exclusão de Garantias), 8 (Limitação de Responsabilidade), 9 (Obrigações do
+Operador), 10 (Indemnização), 12 (Lei Aplicável), 13 (Arbitragem), 14 (Renúncia a Acções
+Colectivas) e 15 (Força Maior / Divisibilidade / Renúncia / Acordo Integral) subsistem após
+qualquer rescisão do presente Contrato.
+
+
+17. ALTERAÇÕES AO PRESENTE CONTRATO
+
+O Programador reserva-se o direito de actualizar o presente Contrato a qualquer momento.
+As versões actualizadas serão identificadas por um novo número de versão e uma data de
+«Última actualização» actualizada no cabeçalho deste ficheiro. O número de versão da EULA
+é registado quando V. Ex.ª aceita; se a versão mudar, o assistente de configuração
+apresentará o novo Contrato para nova aceitação antes de prosseguir.
+
+A exploração continuada do Software após a entrada em vigor de uma nova versão constitui a
+aceitação do Contrato revisto.
+
+
+18. CONTACTO
+
+Para questões sobre o presente Contrato, para comunicar violações ou para contactar o
+Programador, utilize o repositório GitHub do projecto:
+
+  https://github.com/inguy24/weewx-clearskies-stack
+
+Não deve ser enviada correspondência jurídica através do GitHub Issues. Para assuntos
+jurídicos formais, contacte o Programador através dos métodos de contacto indicados no
+repositório.
+
+
+AO ASSINALAR A CAIXA DE ACEITAÇÃO NO ASSISTENTE DE CONFIGURAÇÃO, V. EX.ª CONFIRMA QUE LEU
+O PRESENTE CONTRATO, COMPREENDE OS SEUS TERMOS E ACEITA FICAR VINCULADO PELOS MESMOS,
+INCLUINDO A DISPOSIÇÃO DE ARBITRAGEM VINCULATIVA E A RENÚNCIA A ACÇÕES COLECTIVAS NAS
+SECÇÕES 13 E 14.

@@ -394,16 +394,40 @@ async def step_import_post(request: Request) -> HTMLResponse:
 # Step 3: EULA — Operator License Agreement acceptance
 # ---------------------------------------------------------------------------
 
+# Path to the directory containing EULA text files (relative to this module).
+_STATIC_DIR: Path = Path(__file__).parent.parent / "static"
+
+
+def _load_eula_text(locale: str) -> str:
+    """Return the EULA text for *locale*, falling back to English.
+
+    Tries to load ``EULA_{locale}.txt`` from the static directory.  Falls back
+    to the English ``EULA.txt`` if the locale-specific file is absent or cannot
+    be read.
+    """
+    if locale and locale != "en":
+        locale_path = _STATIC_DIR / f"EULA_{locale}.txt"
+        try:
+            return locale_path.read_text(encoding="utf-8")
+        except OSError:
+            pass  # Fall through to English
+    english_path = _STATIC_DIR / "EULA.txt"
+    try:
+        return english_path.read_text(encoding="utf-8")
+    except OSError:
+        return ""  # Should never happen in a correctly installed package
+
 
 @router.get("/eula", response_class=HTMLResponse)
 async def step_eula_get(request: Request) -> HTMLResponse:
     """Step 3: EULA — render the Operator License Agreement acceptance step."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    eula_text = _load_eula_text(state.default_locale)
     return _render(
         request,
         "step_eula.html",
-        {"step": 3, "state": state, "error": None},
+        {"step": 3, "state": state, "error": None, "eula_text": eula_text},
     )
 
 
@@ -416,6 +440,7 @@ async def step_eula_post(request: Request) -> HTMLResponse:
 
     accepted = str(form.get("eula_accepted", "")).strip() == "1"
     if not accepted:
+        eula_text = _load_eula_text(state.default_locale)
         return _render(
             request,
             "step_eula.html",
@@ -426,6 +451,7 @@ async def step_eula_post(request: Request) -> HTMLResponse:
                     "You must check the acceptance box to continue. "
                     "Please scroll through the Agreement and check the box."
                 ),
+                "eula_text": eula_text,
             },
             status_code=422,
         )

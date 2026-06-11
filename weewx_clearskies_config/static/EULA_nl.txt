@@ -1,0 +1,373 @@
+Clear Skies Weather Dashboard
+Licentieovereenkomst voor Operators (Eindgebruikerslicentieovereenkomst)
+EULA Version: 1.0
+Laatste update: 2026-06-10
+
+Deze Eindgebruikerslicentieovereenkomst («Overeenkomst») is een juridisch bindende overeenkomst
+tussen u («Operator») en Shane Burkhardt («Ontwikkelaar») die uw installatie en gebruik van
+de Clear Skies Weather Dashboard-software («Software») regelt. Lees hem zorgvuldig door
+voordat u verdergaat.
+
+
+1. ACCEPTATIE
+
+Door deze Software te installeren, configureren of in gebruik te nemen, stemt u ermee in
+gebonden te zijn aan de voorwaarden van deze Overeenkomst. Als u niet akkoord gaat met deze
+voorwaarden, installeer of gebruik de Software dan niet.
+
+Deze Overeenkomst vormt een aanvulling op — en vervangt niet — de GNU General Public License
+versie 3 («GPL v3»), die de broncode van de Software regelt. Waar deze Overeenkomst en de
+GPL v3 dezelfde materie behandelen, prevaleert de GPL v3; waar deze Overeenkomst zaken
+behandelt waarover de GPL v3 zwijgt (garantie, aansprakelijkheid, verantwoordelijkheden van
+de operator), is deze Overeenkomst van toepassing.
+
+
+2. LICENTIEVERLENING
+
+De Software is gratis opensourcesoftware gelicentieerd onder de GNU General Public License
+versie 3. Een kopie van de GPL v3 is opgenomen in het broncoderepository van de Software op
+het rootniveau als LICENSE.txt en is beschikbaar op:
+https://www.gnu.org/licenses/gpl-3.0.html
+
+Op grond van de GPL v3 worden u de volgende rechten verleend:
+
+  (a) De Software voor elk doel uitvoeren.
+  (b) De broncode bestuderen en wijzigen.
+  (c) Letterlijke kopieën van de Software verspreiden.
+  (d) Uw gewijzigde versies verspreiden onder de GPL v3.
+
+Er zijn geen eigendomslicentieniveaus, activeringssleutels, apparaatlimieten of gebruikskosten
+van toepassing. Alle functies zijn beschikbaar voor alle operators onder dezelfde GPL v3-
+voorwaarden.
+
+
+3. DIENSTEN VAN DERDEN
+
+De Software kan worden geconfigureerd om te communiceren met een of meer externe
+gegevensleveranciers en -diensten, waaronder maar niet beperkt tot:
+
+  - Aeris Weather (aerisweather.com) — weersverwachting en waarschuwingsdata
+  - National Weather Service / NOAA (weather.gov) — weersverwachting, waarschuwingen en
+    radardata
+  - OpenWeatherMap (openweathermap.org) — weersverwachting en luchtkwaliteitsdata
+  - IQAir (iqair.com) — luchtkwaliteitsdata
+  - Weather Underground / wunderground.com — data van persoonlijke weerstations
+  - United States Geological Survey (USGS) — aardbevingsdata
+  - Google Analytics / Google Tag Manager — websitegebruiksanalyses (door de operator
+    geconfigureerd)
+  - Kaarttegelaanbieders (OpenStreetMap, Mapbox of andere) — kaartweergave
+  - Elke MQTT-broker die de operator configureert voor levering van realtime data
+
+Door deze diensten via de Software te configureren en te gebruiken, erkent u:
+
+  (a) Elke dienst van derden wordt uitsluitend geregeld door de eigen gebruiksvoorwaarden,
+      het privacybeleid en het beleid voor acceptabel gebruik van die dienst — niet door deze
+      Overeenkomst.
+  (b) U bent als enige verantwoordelijk voor het verkrijgen van vereiste accounts, API-sleutels
+      of licenties van elke dienst van derden die u kiest te gebruiken.
+  (c) U bent als enige verantwoordelijk voor uw naleving van de voorwaarden van elke dienst
+      van derden.
+  (d) De Ontwikkelaar is niet verantwoordelijk voor de beschikbaarheid, nauwkeurigheid,
+      prijsstelling of voorwaarden van een dienst van derden en garandeert geen voortdurende
+      compatibiliteit.
+  (e) De Ontwikkelaar ontvangt, bewaart of verwerkt geen API-inloggegevens van derden die u
+      in de Software invoert; deze inloggegevens worden lokaal op uw server opgeslagen.
+
+
+4. GEGEVENSVERZAMELING EN PRIVACY
+
+De Software zelf verzamelt geen telemetrie, gebruiksdata, analyses of persoonlijk
+identificeerbare informatie. Er worden geen gegevens naar de Ontwikkelaar verzonden.
+
+Als Operator beheert u echter een webapplicatie die mogelijk gegevens van websitebezoekers
+verzamelt — waaronder maar niet beperkt tot IP-adressen, browseridentificatoren, geolocatie,
+weervoorkeuren en gebruikspatronen. De aard en omvang van die verzameling hangt volledig af
+van hoe u de Software configureert, welke diensten van derden u inschakelt en de juridische
+en technische keuzes die u maakt.
+
+U bent als enige verantwoordelijk voor:
+
+  (a) Begrijpen welke gegevens uw geïmplementeerde instantie verzamelt en hoe deze worden
+      verwerkt.
+  (b) Het implementeren van wettelijk vereiste beleidsregels voor gegevensbewaring, -wissing
+      en -toegang.
+  (c) Het verstrekken van nauwkeurige, rechtmatige privacymeldingen aan bezoekers.
+  (d) Het configureren of uitschakelen van analyse-, tracking- en cookietechnologieën zoals
+      vereist door toepasselijk recht en uw eigen beleid.
+
+De standaard configuratiesjablonen die door de Software worden geleverd (Gebruiksvoorwaarden,
+Privacybeleid, cookietoestemming) zijn uitgangspunten voor uw eigen juridische documenten,
+geen definitieve juridische instrumenten. Ze worden geleverd zoals ze zijn en vormen geen
+juridisch advies. U moet ze beoordelen en aanpassen aan uw specifieke omstandigheden voordat
+u ze aan bezoekers beschikbaar stelt.
+
+
+5. PRIVACYRECHTEN IN CALIFORNIË (CalOPPA / CCPA / CPRA)
+
+Als uw website bezoekers heeft die inwoner zijn van Californië, kunt u verplichtingen hebben
+op grond van de California Online Privacy Protection Act (CalOPPA), de California Consumer
+Privacy Act (CCPA) en de California Privacy Rights Act (CPRA), waaronder maar niet beperkt
+tot:
+
+  - Het plaatsen van een opvallend privacybeleid dat openbaar maakt welke informatie wordt
+    verzameld en gedeeld.
+  - Het bieden aan inwoners van Californië van het recht om te weten, te verwijderen, te
+    corrigeren en zich af te melden voor de verkoop of het delen van hun persoonsgegevens.
+  - Niet discrimineren van inwoners die hun privacyrechten uitoefenen.
+
+De Software neemt deze juridische beslissingen niet voor u. U bent als enige verantwoordelijk
+voor het beoordelen van uw verplichtingen op grond van het Californische privacyrecht en voor
+het dienovereenkomstig configureren en openbaar maken van uw gegevenspraktijken.
+
+
+6. INTELLECTUELE EIGENDOM
+
+De Software is gelicentieerd onder de GPL v3. Alle rechten die niet uitdrukkelijk worden
+verleend door de GPL v3 zijn voorbehouden aan de Ontwikkelaar. Niets in deze Overeenkomst
+verleent u het recht om de naam, handelsmerken of dienstmerken van de Ontwikkelaar te
+gebruiken buiten wat is toegestaan door toepasselijk recht of de GPL v3.
+
+Weerdata (temperatuur, neerslag, wind, atmosferische metingen) zijn feitelijke informatie
+en zijn over het algemeen niet onderworpen aan auteursrechtbescherming. Weergaveformaten,
+grafieken, UI-elementen en door de Ontwikkelaar geschreven broncode zijn beschermd door
+auteursrecht en gelicentieerd onder de GPL v3 zoals uiteengezet in Sectie 2 hierboven.
+
+
+7. UITSLUITING VAN GARANTIES
+
+DE SOFTWARE WORDT GELEVERD «ALS IS» EN «ZOALS BESCHIKBAAR» ZONDER ENIGE GARANTIE, UITDRUKKELIJK
+OF IMPLICIET, MET INBEGRIP VAN MAAR NIET BEPERKT TOT DE GARANTIES VAN VERKOOPBAARHEID,
+GESCHIKTHEID VOOR EEN BEPAALD DOEL, TITEL EN NIET-INBREUK. DEZE UITSLUITING OMVAT EN BREIDT
+DE GEEN-GARANTIEBEPALINGEN VAN DE GPL v3 UIT (ARTIKELEN 15 EN 16).
+
+SPECIFIEKE UITSLUITINGEN:
+
+  (a) Via de Software verkregen weerdata worden uitsluitend verstrekt voor algemene
+      informatiedoeleinden. Ze zijn niet gecertificeerd voor veiligheidskritische toepassingen
+      en mogen niet worden gebruikt als primaire basis voor beslissingen in de luchtvaart,
+      zeevaart, noodbeheer, opsporing en redding, omgang met gevaarlijke stoffen of andere
+      beslissingen die van vitaal belang zijn voor de veiligheid.
+
+  (b) De Ontwikkelaar geeft geen garantie dat de Software of de standaardsjablonen ervan
+      (Gebruiksvoorwaarden, Privacybeleid, cookietoestemming, EULA) voldoen aan een
+      specifieke wet, regelgeving of jurisdictie — waaronder maar niet beperkt tot AVG, CCPA,
+      CalOPPA, PIPEDA of sectorspecifieke regelgeving.
+
+  (c) De Ontwikkelaar garandeert niet dat de Software aan uw vereisten zal voldoen,
+      ononderbroken of foutloos zal werken, of dat defecten zullen worden gecorrigeerd.
+
+  (d) De Ontwikkelaar garandeert niet de voortdurende beschikbaarheid, nauwkeurigheid of
+      geschiktheid van een in de Software geïntegreerde externe gegevensprovider.
+
+
+8. BEPERKING VAN AANSPRAKELIJKHEID
+
+VOOR ZOVER MAXIMAAL TOEGESTAAN DOOR TOEPASSELIJK RECHT, EN ZOALS NADER UITEENGEZET IN
+ARTIKELEN 15 EN 16 VAN DE GPL v3, IS DE ONTWIKKELAAR IN GEEN GEVAL AANSPRAKELIJK VOOR ENIGE
+INDIRECTE, INCIDENTELE, BIJZONDERE, GEVOLGSCHADE, EXEMPLAIRE OF PUNITIEVE SCHADE, OF ENIG
+VERLIES VAN WINST, DATA, GOODWILL OF ANDERE IMMATERIËLE VERLIEZEN, VOORTKOMEND UIT OF
+VERBAND HOUDEND MET:
+
+  (a) Uw gebruik van of onvermogen om de Software te gebruiken.
+  (b) Onnauwkeurigheid, onvolledigheid of ontijdigheid van weerdata weergegeven door de
+      Software.
+  (c) Enige beslissing — financieel, veiligheidsgerelateerd of anderszins — genomen op basis
+      van gegevens verstrekt door of via de Software.
+  (d) Enige regelgevende, civiele of strafrechtelijke aansprakelijkheid voortkomend uit uw
+      exploitatie van een weerwebsite, inclusief het niet naleven van toepasselijke privacy-
+      of gegevensbeschermingswetgeving.
+  (e) Enige claim van een bezoeker van uw website voortkomend uit uw configuratie of gebruik
+      van de Software.
+  (f) Onderbreking of beëindiging van een externe datadienst.
+  (g) Onbevoegde toegang tot uw server, configuratiebestanden of API-inloggegevens.
+
+De totale cumulatieve aansprakelijkheid van de Ontwikkelaar jegens u voor alle claims
+voortkomend uit of verband houdend met deze Overeenkomst zal niet meer bedragen dan nul
+Amerikaanse dollar ($ 0,00), wat weerspiegelt dat de Software kosteloos wordt verstrekt
+onder de GPL v3.
+
+
+9. VERANTWOORDELIJKHEDEN VAN DE OPERATOR
+
+U erkent en gaat ermee akkoord dat u als Operator van een openbaar toegankelijke weerwebsite
+die met deze Software is gebouwd, de uitsluitende verantwoordelijkheid draagt voor:
+
+  (a) JURIDISCHE NALEVING. Voldoen aan alle wetten en regelgeving die van toepassing zijn
+      op uw website en de exploitatie ervan, waaronder maar niet beperkt tot:
+        - Privacy- en gegevensbeschermingswetgeving (AVG, CCPA/CPRA, CalOPPA, PIPEDA en
+          equivalenten) in elke jurisdictie waar uw bezoekers zich bevinden, niet alleen waar
+          u gevestigd bent.
+        - Consumentenbescherming, toegankelijkheid (bijv. WCAG 2.1 AA) en e-commercewetgeving.
+        - Sectorspecifieke regelgeving die van toepassing is op de publicatie van weerdata.
+
+  (b) JURIDISCHE MEDEDELINGEN AAN BEZOEKERS. Het opstellen, publiceren en actueel houden van
+      alle wettelijk vereiste juridische kennisgevingen en beleidsregels voor uw website,
+      waaronder een Privacybeleid, Gebruiksvoorwaarden en vereiste kennisgevingen over
+      cookietoestemming. Standaardsjablonen van de Software zijn uitgangspunten — ze vereisen
+      uw beoordeling en juridische aanpassing.
+
+  (c) NALEVING VAN DIENSTEN VAN DERDEN. Voldoen aan de gebruiksvoorwaarden, beleidsregels
+      voor acceptabel gebruik en tarieflimieten van elke dienst van derden die u in de
+      Software configureert. Dit omvat het verkrijgen van vereiste accounts, sleutels en
+      machtigingen voordat een gegevensprovider wordt ingeschakeld.
+
+  (d) BEVEILIGING. Uw server, netwerkconfiguratie, API-inloggegevens, database en door de
+      Software opgeslagen geheimen beveiligen. De Ontwikkelaar controleert, bewaakt of
+      beveiligt uw implementatie niet.
+
+  (e) DATA VAN UW STATION. Als uw weerstation gegevens verzamelt, opslaat of doorgeeft die
+      verder gaan dan ruwe meteorologische metingen — inclusief door bezoekers gegenereerde
+      data — bent u verantwoordelijk voor de verwerking, bescherming, bewaring en vereiste
+      openbaarmakingen van die data.
+
+  (f) NAUWKEURIGHEIDSDISCLAIMER AAN BEZOEKERS. Een duidelijke disclaimer publiceren aan
+      websitebezoekers waarin staat dat weerdata uitsluitend voor algemene informatiedoeleinden
+      zijn en niet geschikt zijn voor veiligheidskritische beslissingen.
+
+  (g) BACK-UPS EN NOODHERSTEL. Adequate back-ups bijhouden van uw configuratiebestanden,
+      database en eventuele aanpassingen. De Ontwikkelaar is niet verantwoordelijk voor
+      gegevensverlies als gevolg van hardwarestoringen, softwarefouten of onbedoelde wissing.
+
+
+10. VRIJWARING
+
+U gaat ermee akkoord de Ontwikkelaar te vrijwaren, te verdedigen en schadeloos te stellen
+van en voor alle claims, eisen, aansprakelijkheden, schaden, verliezen, kosten en uitgaven
+(inclusief redelijke advocatenhonoraria) die voortvloeien uit of verband houden met:
+
+  (a) Uw implementatie, configuratie, exploitatie of wijziging van de Software.
+  (b) Uw schending van deze Overeenkomst.
+  (c) Uw schending van toepasselijke wetgeving of regelgeving.
+  (d) Uw schending van de gebruiksvoorwaarden van een dienst van derden.
+  (e) Enige claim van een bezoeker van uw website.
+  (f) Uw nalaten de vereiste juridische kennisgevingen of privacymededelingen aan bezoekers
+      te verstrekken.
+
+
+11. GEEN SUPPORTVERPLICHTING
+
+De Software is een communityproject dat op basis van best-effort en vrijwilligheid wordt
+onderhouden. De Ontwikkelaar is niet verplicht tot:
+
+  (a) Het leveren van updates, bugfixes, patches of nieuwe functies.
+  (b) Het handhaven van compatibiliteit met toekomstige versies van weewx, besturingssystemen,
+      diensten van derden of webbrowsers.
+  (c) Het bieden van technische ondersteuning, documentatie of hulp van welke aard dan ook.
+  (d) Het voortdurend ontwikkelen, verspreiden of hosten van de Software.
+
+Verleende ondersteuning of updates zijn vrijwillige daden van goede wil en creëren geen
+voortdurende verplichting. De GPL v3 garandeert dat u altijd het recht heeft uw eigen fork
+van de Software te onderhouden als de Ontwikkelaar de ontwikkeling stopt.
+
+
+12. TOEPASSELIJK RECHT
+
+Deze Overeenkomst wordt beheerst door en uitgelegd in overeenstemming met de wetten van de
+staat Californië, Verenigde Staten van Amerika, zonder rekening te houden met de bepalingen
+inzake wetsconflicten.
+(Toepasselijk recht: staat Californië, VS — van toepassing ongeacht de locatie van de
+Operator.)
+
+
+13. ARBITRAGE
+
+Elk geschil, elke controverse of claim die voortvloeit uit of verband houdt met deze
+Overeenkomst, of de schending ervan, wordt beslecht door bindende arbitrage beheerd door
+een wederzijds overeengekomen arbitragedienst, uitgevoerd in Californië, Verenigde Staten
+van Amerika, overeenkomstig de dan geldende regels. De beslissing van de arbiter is
+definitief en bindend, en het vonnis over de uitspraak kan worden ingeschreven bij elk
+bevoegd gerecht.
+(Bindende arbitrageclausule — zetel: Californië, VS. Afstand van juryrechtspraak.)
+
+Deze arbitrageclausule is niet van toepassing op voorlopige voorzieningen voor inbreuken op
+intellectuele eigendomsrechten, die elke partij bij elk bevoegd gerecht kan aanvragen.
+
+
+14. AFSTANDSDOEN VAN GROEPSACTIES
+
+U EN DE ONTWIKKELAAR KOMEN OVEREEN DAT ALLE PROCEDURES TER BESLECHTING VAN CLAIMS DIE
+VOORTVLOEIEN UIT OF VERBAND HOUDEN MET DEZE OVEREENKOMST UITSLUITEND OP INDIVIDUELE BASIS
+WORDEN GEVOERD. NOCH U NOCH DE ONTWIKKELAAR MAG EEN GROEPS-, COLLECTIEVE, GECONSOLIDEERDE
+OF REPRESENTATIEVE PROCEDURE AANSPANNEN OF DAARAAN DEELNEMEN. De arbiter mag claims van meer
+dan één persoon niet consolideren zonder de uitdrukkelijke schriftelijke toestemming van alle
+partijen.
+(Afstandsdoen van groepsacties — van toepassing op grond van het recht van Californië.)
+
+
+15. OVERMACHT / SCHEIDBAARHEID / AFSTANDSDOEN / VOLLEDIGE OVEREENKOMST
+
+Overmacht. De Ontwikkelaar is niet aansprakelijk voor vertragingen of tekortkomingen
+veroorzaakt door omstandigheden buiten zijn redelijke controle, waaronder goddelijke
+tussenkomst, natuurrampen, pandemieën, oorlog, burgerlijke onrust of storingen van
+infrastructuur van derden.
+
+Scheidbaarheid. Als een bepaling van deze Overeenkomst ongeldig, onwettig of niet-afdwingbaar
+wordt geacht, wordt die bepaling zo minimaal mogelijk gewijzigd om afdwingbaar te worden,
+of verwijderd als wijziging niet mogelijk is. De overige bepalingen blijven volledig van
+kracht.
+
+Afstandsdoen. Het niet handhaven van een bepaling van deze Overeenkomst vormt geen afstand
+van die bepaling of het recht om deze in de toekomst te handhaven.
+
+Volledige Overeenkomst. Deze Overeenkomst vormt, samen met de GPL v3 (door middel van
+verwijzing opgenomen), de volledige overeenkomst tussen de partijen met betrekking tot de
+Software en vervangt alle voorafgaande overeenkomsten, verklaringen of afspraken met
+betrekking tot het onderwerp ervan.
+
+
+16. BEËINDIGING
+
+Deze Overeenkomst is van kracht vanaf de datum waarop u de Software voor het eerst
+installeert of gebruikt en duurt voort totdat deze wordt beëindigd.
+
+Uw rechten onder deze Overeenkomst eindigen automatisch — zonder kennisgeving van de
+Ontwikkelaar — als u een materiële bepaling van deze Overeenkomst niet naleeft. Bij
+beëindiging moet u de Software buiten gebruik stellen en alle exemplaren in uw bezit
+vernietigen.
+
+Beëindiging door de Operator. U kunt deze Overeenkomst op elk moment beëindigen door de
+Software niet meer te gebruiken en te verwijderen. Uw GPL v3-rechten (inclusief rechten om
+uw eigen gewijzigde kopie van de broncode te bewaren) blijven na beëindiging van deze
+Overeenkomst van kracht.
+
+Door de Ontwikkelaar geïnitieerde intrekking. De Ontwikkelaar kan uw rechten onder deze
+Overeenkomst intrekken (naast GPL v3-rechten, voor zover toegestaan door die licentie) als
+u: (a) de Software gebruikt op een manier die toepasselijk recht schendt; (b) de Ontwikkelaar
+imiteert of de Software ten onrechte als door de Ontwikkelaar aanbevolen voorstelt; of
+(c) de Software verspreidt in strijd met de GPL v3.
+
+De Secties 7 (Uitsluiting van Garanties), 8 (Beperking van Aansprakelijkheid), 9
+(Verantwoordelijkheden van de Operator), 10 (Vrijwaring), 12 (Toepasselijk Recht), 13
+(Arbitrage), 14 (Afstandsdoen van Groepsacties) en 15 (Overmacht / Scheidbaarheid /
+Afstandsdoen / Volledige Overeenkomst) blijven van kracht na elke beëindiging van deze
+Overeenkomst.
+
+
+17. WIJZIGINGEN IN DEZE OVEREENKOMST
+
+De Ontwikkelaar behoudt zich het recht voor deze Overeenkomst op elk moment bij te werken.
+Bijgewerkte versies worden geïdentificeerd door een nieuw versienummer en een bijgewerkte
+datum van «Laatste update» in de koptekst van dit bestand. Het EULA-versienummer wordt
+geregistreerd wanneer u accepteert; als de versie verandert, zal de installatiewizard de
+nieuwe Overeenkomst ter hernieuwde acceptatie presenteren voordat wordt verdergegaan.
+
+Voortgezet gebruik van de Software nadat een nieuwe versie van kracht wordt, geldt als
+acceptatie van de herziene Overeenkomst.
+
+
+18. CONTACT
+
+Voor vragen over deze Overeenkomst, voor het melden van overtredingen of om contact op te
+nemen met de Ontwikkelaar, gebruikt u het GitHub-repository van het project:
+
+  https://github.com/inguy24/weewx-clearskies-stack
+
+Er mag geen juridische correspondentie worden verzonden via GitHub Issues. Voor formele
+juridische zaken neemt u contact op met de Ontwikkelaar via de contactmethoden die in het
+repository zijn vermeld.
+
+
+DOOR HET AANVINKEN VAN HET ACCEPTATIEVAKJE IN DE INSTALLATIEWIZARD BEVESTIGT U DAT U DEZE
+OVEREENKOMST HEBT GELEZEN, DE VOORWAARDEN BEGRIJPT EN ERMEE AKKOORD GAAT HIERAAN GEBONDEN
+TE ZIJN, MET INBEGRIP VAN DE BINDENDE ARBITRAGEBEPALING EN HET AFSTANDSDOEN VAN GROEPSACTIES
+IN DE SECTIES 13 EN 14.

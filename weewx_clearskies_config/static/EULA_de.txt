@@ -1,0 +1,376 @@
+Clear Skies Weather Dashboard
+Betreiber-Lizenzvertrag (Endnutzer-Lizenzvertrag)
+EULA Version: 1.0
+Zuletzt aktualisiert: 2026-06-10
+
+Dieser Endnutzer-Lizenzvertrag („Vertrag") ist ein rechtlich bindender Vertrag zwischen Ihnen
+(„Betreiber") und Shane Burkhardt („Entwickler") und regelt Ihre Installation und Nutzung der
+Clear Skies Weather Dashboard Software („Software"). Lesen Sie ihn sorgfältig, bevor Sie
+fortfahren.
+
+
+1. ANNAHME
+
+Durch die Installation, Konfiguration oder den Betrieb dieser Software erklären Sie sich mit
+den Bedingungen dieses Vertrags einverstanden. Wenn Sie diesen Bedingungen nicht zustimmen,
+installieren oder verwenden Sie die Software nicht.
+
+Dieser Vertrag ergänzt — und ersetzt nicht — die GNU General Public License Version 3
+(„GPL v3"), die den Quellcode der Software regelt. Soweit dieser Vertrag und die GPL v3
+dieselbe Angelegenheit regeln, gilt die GPL v3; soweit dieser Vertrag Angelegenheiten regelt,
+zu denen die GPL v3 schweigt (Gewährleistung, Haftung, Betreiberpflichten), gilt dieser
+Vertrag.
+
+
+2. LIZENZGEWÄHRUNG
+
+Die Software ist freie Open-Source-Software, lizenziert unter der GNU General Public License
+Version 3. Eine Kopie der GPL v3 ist im Software-Quellrepository auf Stammebene als
+LICENSE.txt enthalten und unter https://www.gnu.org/licenses/gpl-3.0.html verfügbar.
+
+Gemäß der GPL v3 werden Ihnen folgende Rechte eingeräumt:
+
+  (a) Die Software für jeden Zweck ausführen.
+  (b) Den Quellcode studieren und modifizieren.
+  (c) Originalgetreue Kopien der Software verbreiten.
+  (d) Ihre modifizierten Versionen unter der GPL v3 verbreiten.
+
+Es gelten keine proprietären Lizenzstufen, Aktivierungsschlüssel, Gerätebeschränkungen oder
+Nutzungsgebühren. Alle Funktionen stehen allen Betreibern unter denselben GPL v3-Bedingungen
+zur Verfügung.
+
+
+3. DIENSTE DRITTER
+
+Die Software kann so konfiguriert werden, dass sie mit einem oder mehreren
+Drittanbieter-Datendiensten kommuniziert, einschließlich, aber nicht beschränkt auf:
+
+  - Aeris Weather (aerisweather.com) — Wetter- und Warnungsdaten
+  - National Weather Service / NOAA (weather.gov) — Wetter-, Warnungs- und Radardaten
+  - OpenWeatherMap (openweathermap.org) — Wetter- und Luftqualitätsdaten
+  - IQAir (iqair.com) — Luftqualitätsdaten
+  - Weather Underground / wunderground.com — Daten privater Wetterstationen
+  - United States Geological Survey (USGS) — Erdbebendaten
+  - Google Analytics / Google Tag Manager — Website-Nutzungsanalysen (vom Betreiber konfiguriert)
+  - Kartenkachelanbieter (OpenStreetMap, Mapbox oder andere) — Kartenrendering
+  - Jeden MQTT-Broker, den der Betreiber für die Echtzeitdatenübermittlung konfiguriert
+
+Durch die Konfiguration und Nutzung dieser Dienste über die Software erkennen Sie an:
+
+  (a) Jeder Drittanbieterdienst unterliegt ausschließlich den eigenen Nutzungsbedingungen,
+      Datenschutzrichtlinien und Nutzungsrichtlinien dieses Dienstes — nicht diesem Vertrag.
+  (b) Sie sind allein verantwortlich für die Beschaffung erforderlicher Konten, API-Schlüssel
+      oder Lizenzen von jedem Drittanbieterdienst, den Sie nutzen möchten.
+  (c) Sie sind allein verantwortlich für die Einhaltung der Bedingungen jedes Drittanbieterdienstes.
+  (d) Der Entwickler ist nicht verantwortlich für die Verfügbarkeit, Genauigkeit, Preisgestaltung
+      oder Bedingungen eines Drittanbieterdienstes und übernimmt keine Garantie für fortlaufende
+      Kompatibilität.
+  (e) Der Entwickler empfängt, speichert oder verarbeitet keine API-Zugangsdaten von Drittanbietern,
+      die Sie in die Software eingeben; diese Zugangsdaten werden lokal auf Ihrem Server gespeichert.
+
+
+4. DATENERHEBUNG UND DATENSCHUTZ
+
+Die Software selbst erhebt keine Telemetrie-, Nutzungs-, Analyse- oder
+personenbezogenen Daten. Es werden keine Daten an den Entwickler übermittelt.
+
+Als Betreiber verwalten Sie jedoch eine Webanwendung, die möglicherweise Daten von
+Website-Besuchern erhebt — einschließlich, aber nicht beschränkt auf IP-Adressen,
+Browser-Kennungen, Geolokalisierung, Wetterpräferenzen und Nutzungsmuster. Art und Umfang
+dieser Erhebung hängen vollständig davon ab, wie Sie die Software konfigurieren, welche
+Drittanbieterdienste Sie aktivieren und welche rechtlichen und technischen Entscheidungen
+Sie treffen.
+
+Sie sind allein verantwortlich für:
+
+  (a) Das Verstehen, welche Daten Ihre bereitgestellte Instanz erhebt und wie diese
+      verarbeitet werden.
+  (b) Die Umsetzung gesetzlich erforderlicher Richtlinien zur Datenspeicherung, -löschung
+      und zum Datenzugriff.
+  (c) Die Bereitstellung genauer, rechtmäßiger Datenschutzmitteilungen für Besucher.
+  (d) Die Konfiguration oder Deaktivierung von Analyse-, Tracking- und Cookie-Technologien
+      gemäß geltendem Recht und Ihren eigenen Richtlinien.
+
+Die von der Software bereitgestellten Standard-Konfigurationsvorlagen (Nutzungsbedingungen,
+Datenschutzrichtlinie, Cookie-Einwilligung) sind Ausgangspunkte für Ihre eigenen rechtlichen
+Dokumente, keine fertigen Rechtsinstrumente. Sie werden ohne Mängelgewähr bereitgestellt und
+stellen keine Rechtsberatung dar. Sie müssen diese vor der Veröffentlichung an Besucher
+auf Ihre spezifischen Umstände hin überprüfen und anpassen.
+
+
+5. KALIFORNISCHE DATENSCHUTZRECHTE (CalOPPA / CCPA / CPRA)
+
+Wenn Ihre Website Besucher hat, die in Kalifornien ansässig sind, können Sie Verpflichtungen
+gemäß dem California Online Privacy Protection Act (CalOPPA), dem California Consumer Privacy
+Act (CCPA) und dem California Privacy Rights Act (CPRA) haben, einschließlich, aber nicht
+beschränkt auf:
+
+  - Veröffentlichung einer auffälligen Datenschutzrichtlinie, die offenlegt, welche
+    Informationen erhoben und weitergegeben werden.
+  - Einräumung des Rechts für California-Einwohner, ihre personenbezogenen Daten einzusehen,
+    zu löschen, zu korrigieren und dem Verkauf oder der Weitergabe zu widersprechen.
+  - Keine Diskriminierung von Einwohnern, die ihre Datenschutzrechte ausüben.
+
+Die Software trifft diese rechtlichen Entscheidungen nicht für Sie. Sie sind allein
+verantwortlich für die Beurteilung Ihrer Verpflichtungen nach kalifornischem Datenschutzrecht
+und für die entsprechende Konfiguration und Offenlegung Ihrer Datenpraktiken.
+
+
+6. GEISTIGES EIGENTUM
+
+Die Software ist unter der GPL v3 lizenziert. Alle Rechte, die nicht ausdrücklich durch die
+GPL v3 gewährt werden, bleiben dem Entwickler vorbehalten. Nichts in diesem Vertrag gewährt
+Ihnen das Recht, den Namen, die Marken oder Dienstleistungsmarken des Entwicklers über das
+nach geltendem Recht oder der GPL v3 Erlaubte hinaus zu verwenden.
+
+Wetterdaten (Temperatur, Niederschlag, Wind, atmosphärische Messwerte) sind faktische
+Informationen und unterliegen im Allgemeinen keinem Urheberrechtsschutz. Anzeigeformate,
+Diagramme, UI-Elemente und vom Entwickler verfasster Quellcode sind urheberrechtlich
+geschützt und unter der GPL v3 lizenziert, wie in Abschnitt 2 dargelegt.
+
+
+7. HAFTUNGSAUSSCHLUSS FÜR GEWÄHRLEISTUNGEN
+
+DIE SOFTWARE WIRD „WIE BESEHEN" UND „WIE VERFÜGBAR" OHNE JEGLICHE AUSDRÜCKLICHE ODER
+STILLSCHWEIGENDE GEWÄHRLEISTUNG BEREITGESTELLT, EINSCHLIESSLICH, ABER NICHT BESCHRÄNKT AUF
+DIE GEWÄHRLEISTUNG DER MARKTGÄNGIGKEIT, EIGNUNG FÜR EINEN BESTIMMTEN ZWECK, TITEL UND
+NICHTVERLETZUNG. DIESER HAFTUNGSAUSSCHLUSS ÜBERNIMMT UND ERWEITERT DIE
+GEWÄHRLEISTUNGSAUSSCHLUSSBESTIMMUNGEN DER GPL v3 (ABSCHNITTE 15 UND 16).
+
+BESONDERE HAFTUNGSAUSSCHLÜSSE:
+
+  (a) Über die Software bezogene Wetterdaten werden ausschließlich zu allgemeinen
+      Informationszwecken bereitgestellt. Sie sind nicht für sicherheitskritische Anwendungen
+      zertifiziert und dürfen nicht als primäre Grundlage für Entscheidungen in der Luftfahrt,
+      Schifffahrt, im Notfallmanagement, bei Such- und Rettungsoperationen, beim Umgang mit
+      gefährlichen Materialien oder bei anderen lebensschutzrelevanten Entscheidungen
+      verwendet werden.
+
+  (b) Der Entwickler übernimmt keine Gewähr dafür, dass die Software oder ihre
+      Standardvorlagen (Nutzungsbedingungen, Datenschutzrichtlinie, Cookie-Einwilligung,
+      EULA) einem bestimmten Gesetz, einer Verordnung oder Gerichtsbarkeit entsprechen —
+      einschließlich, aber nicht beschränkt auf DSGVO, CCPA, CalOPPA, PIPEDA oder
+      branchenspezifische Vorschriften.
+
+  (c) Der Entwickler übernimmt keine Gewähr dafür, dass die Software Ihren Anforderungen
+      entspricht, unterbrechungsfrei oder fehlerfrei funktioniert oder Mängel behoben werden.
+
+  (d) Der Entwickler übernimmt keine Gewähr für die fortlaufende Verfügbarkeit, Genauigkeit
+      oder Eignung eines in die Software integrierten Drittanbieter-Datendienstleisters.
+
+
+8. HAFTUNGSBESCHRÄNKUNG
+
+IM GRÖSSTMÖGLICHEN GESETZLICH ZULÄSSIGEN UMFANG UND WIE IN DEN ABSCHNITTEN 15 UND 16 DER
+GPL v3 WEITER DARGELEGT, HAFTET DER ENTWICKLER IN KEINEM FALL FÜR INDIREKTE, ZUFÄLLIGE,
+BESONDERE, FOLGESCHÄDEN, BEISPIELHAFTE ODER STRAFENDE SCHÄDEN ODER VERLUSTE VON GEWINNEN,
+DATEN, FIRMENWERT ODER ANDERE IMMATERIELLE VERLUSTE, DIE ENTSTEHEN AUS ODER IM ZUSAMMENHANG
+MIT:
+
+  (a) Ihrer Nutzung oder Unfähigkeit zur Nutzung der Software.
+  (b) Ungenauigkeit, Unvollständigkeit oder Unaktualität von Wetterdaten, die von der
+      Software angezeigt werden.
+  (c) Jeder Entscheidung — finanzieller, sicherheitsrelevanter oder anderweitiger Art —
+      die auf Grundlage von durch oder über die Software bereitgestellten Daten getroffen
+      wurde.
+  (d) Jeglicher behördlicher, zivilrechtlicher oder strafrechtlicher Haftung, die aus Ihrem
+      Betrieb einer Wetterwebsite entsteht, einschließlich der Nichteinhaltung geltender
+      Datenschutzgesetze.
+  (e) Jeglichem Anspruch eines Besuchers Ihrer Website, der aus Ihrer Konfiguration oder
+      Nutzung der Software entsteht.
+  (f) Unterbrechung oder Beendigung eines Drittanbieter-Datendienstes.
+  (g) Unbefugtem Zugriff auf Ihren Server, Konfigurationsdateien oder API-Zugangsdaten.
+
+Die Gesamthaftung des Entwicklers Ihnen gegenüber für alle Ansprüche, die sich aus diesem
+Vertrag ergeben oder damit zusammenhängen, übersteigt null US-Dollar (0,00 USD) nicht, was
+widerspiegelt, dass die Software gemäß der GPL v3 kostenlos bereitgestellt wird.
+
+
+9. BETREIBERPFLICHTEN
+
+Sie erkennen an und stimmen zu, dass Sie als Betreiber einer öffentlich zugänglichen
+Wetterwebsite, die mit dieser Software erstellt wurde, die alleinige Verantwortung tragen
+für:
+
+  (a) RECHTLICHE KONFORMITÄT. Die Einhaltung aller für Ihre Website und deren Betrieb
+      geltenden Gesetze und Vorschriften, einschließlich, aber nicht beschränkt auf:
+        - Datenschutz- und Datensicherheitsgesetze (DSGVO, CCPA/CPRA, CalOPPA, PIPEDA und
+          Entsprechungen) in jeder Gerichtsbarkeit, in der sich Ihre Besucher befinden,
+          nicht nur dort, wo Sie ansässig sind.
+        - Verbraucherschutz, Barrierefreiheit (z.B. WCAG 2.1 AA) und E-Commerce-Recht.
+        - Alle branchenspezifischen Vorschriften, die für die Veröffentlichung von
+          Wetterdaten gelten.
+
+  (b) RECHTLICHE HINWEISE FÜR BESUCHER. Ausarbeitung, Veröffentlichung und
+      Aktualisierung aller für Ihre Website erforderlichen rechtlichen Hinweise und
+      Richtlinien, einschließlich einer Datenschutzrichtlinie, Nutzungsbedingungen und
+      erforderlicher Cookie-Einwilligungshinweise. Die von der Software bereitgestellten
+      Standardvorlagen sind Ausgangspunkte — sie erfordern Ihre Überprüfung und rechtliche
+      Anpassung.
+
+  (c) EINHALTUNG VON DRITTANBIETERDIENSTEN. Einhaltung der Nutzungsbedingungen,
+      Nutzungsrichtlinien und Ratenbeschränkungen jedes Drittanbieterdienstes, den Sie in
+      der Software konfigurieren. Dies umfasst die Beschaffung erforderlicher Konten,
+      Schlüssel und Berechtigungen vor der Aktivierung eines Datenanbieters.
+
+  (d) SICHERHEIT. Absicherung Ihres Servers, Ihrer Netzwerkkonfiguration, API-Zugangsdaten,
+      Datenbank und aller von der Software gespeicherten Geheimnisse. Der Entwickler prüft,
+      überwacht oder sichert Ihre Bereitstellung nicht.
+
+  (e) DATEN IHRER STATION. Wenn Ihre Wetterstation Daten über rohe meteorologische Messwerte
+      hinaus erhebt, speichert oder überträgt — einschließlich besuchergenerierter Daten —
+      sind Sie verantwortlich für den Umgang mit diesen Daten, deren Schutz, Aufbewahrung
+      und erforderliche Offenlegungen.
+
+  (f) GENAUIGKEITSHINWEIS AN BESUCHER. Veröffentlichung eines klaren Hinweises an
+      Website-Besucher, der darauf hinweist, dass Wetterdaten ausschließlich zu allgemeinen
+      Informationszwecken dienen und nicht für sicherheitskritische Entscheidungen geeignet
+      sind.
+
+  (g) BACKUPS UND NOTFALLWIEDERHERSTELLUNG. Aufrechterhaltung angemessener Backups Ihrer
+      Konfigurationsdateien, Datenbank und aller Anpassungen. Der Entwickler haftet nicht
+      für Datenverluste infolge von Hardware-Ausfällen, Software-Fehlern oder versehentlichem
+      Löschen.
+
+
+10. SCHADLOSHALTUNG
+
+Sie verpflichten sich, den Entwickler von allen Ansprüchen, Forderungen, Verbindlichkeiten,
+Schäden, Verlusten, Kosten und Ausgaben (einschließlich angemessener Anwaltsgebühren)
+freizustellen, zu verteidigen und schadlos zu halten, die entstehen aus oder im Zusammenhang
+mit:
+
+  (a) Ihrer Bereitstellung, Konfiguration, Ihrem Betrieb oder Ihrer Modifikation der Software.
+  (b) Ihrem Verstoß gegen diesen Vertrag.
+  (c) Ihrem Verstoß gegen geltende Gesetze oder Vorschriften.
+  (d) Ihrem Verstoß gegen die Nutzungsbedingungen eines Drittanbieterdienstes.
+  (e) Einem Anspruch eines Besuchers Ihrer Website.
+  (f) Ihrer Unterlassung, erforderliche rechtliche Hinweise oder Datenschutzmitteilungen
+      für Besucher bereitzustellen.
+
+
+11. KEINE SUPPORTVERPFLICHTUNG
+
+Die Software ist ein Gemeinschaftsprojekt, das auf Best-Effort-Basis von Freiwilligen
+gepflegt wird. Der Entwickler ist nicht verpflichtet:
+
+  (a) Updates, Fehlerbehebungen, Patches oder neue Funktionen bereitzustellen.
+  (b) Die Kompatibilität mit zukünftigen Versionen von weewx, Betriebssystemen,
+      Drittanbieterdiensten oder Webbrowsern aufrechtzuerhalten.
+  (c) Technischen Support, Dokumentation oder Unterstützung jeglicher Art zu leisten.
+  (d) Die Software weiterhin zu entwickeln, zu vertreiben oder zu hosten.
+
+Jede bereitgestellte Unterstützung oder Aktualisierung ist ein freiwilliger Akt des Wohlwollens
+und begründet keine fortlaufende Verpflichtung. Die GPL v3 stellt sicher, dass Sie stets das
+Recht haben, Ihren eigenen Fork der Software zu pflegen, falls der Entwickler die Entwicklung
+einstellt.
+
+
+12. ANWENDBARES RECHT
+
+Dieser Vertrag unterliegt den Gesetzen des Bundesstaates Kalifornien, Vereinigte Staaten von
+Amerika, und wird in Übereinstimmung mit diesen ausgelegt, ohne Rücksicht auf
+kollisionsrechtliche Bestimmungen.
+(Governing law: State of California, USA — applies regardless of the Operator's location.)
+
+
+13. SCHIEDSVERFAHREN
+
+Jede Streitigkeit, Kontroverse oder jeder Anspruch, der sich aus diesem Vertrag ergibt oder
+damit zusammenhängt oder dessen Verletzung betrifft, wird durch ein verbindliches
+Schiedsverfahren entschieden, das von einem einvernehmlich vereinbarten Schiedsdienstleister
+verwaltet und in Kalifornien, Vereinigte Staaten von Amerika, gemäß seinen jeweils aktuellen
+Regeln durchgeführt wird. Die Entscheidung des Schiedsrichters ist endgültig und bindend,
+und das Urteil über den Schiedsspruch kann bei jedem zuständigen Gericht vollstreckt werden.
+(Arbitration seat: California, USA — binding arbitration clause, waiver of jury trial.)
+
+Diese Schiedsklausel gilt nicht für einstweiligen Rechtsschutz bei Verletzungen des geistigen
+Eigentums, den jede Partei bei einem zuständigen Gericht beantragen kann.
+
+
+14. VERZICHT AUF SAMMELKLAGEN
+
+SIE UND DER ENTWICKLER VEREINBAREN, DASS VERFAHREN ZUR BEILEGUNG VON ANSPRÜCHEN, DIE SICH
+AUS DIESEM VERTRAG ERGEBEN ODER DAMIT ZUSAMMENHÄNGEN, AUSSCHLIESSLICH AUF INDIVIDUELLER
+BASIS GEFÜHRT WERDEN. WEDER SIE NOCH DER ENTWICKLER DÜRFEN EIN KLASSEN-, KOLLEKTIV-,
+KONSOLIDIERUNGS- ODER REPRÄSENTATIONSVERFAHREN EINLEITEN ODER DARAN TEILNEHMEN. Der
+Schiedsrichter darf ohne ausdrückliche schriftliche Zustimmung aller Parteien die Ansprüche
+mehrerer Personen nicht konsolidieren.
+(Class action waiver — applies under California law.)
+
+
+15. HÖHERE GEWALT / SALVATORISCHE KLAUSEL / VERZICHT / GESAMTER VERTRAG
+
+Höhere Gewalt. Der Entwickler haftet nicht für Verzögerungen oder Ausfälle, die durch Umstände
+verursacht werden, die außerhalb seiner zumutbaren Kontrolle liegen, einschließlich höherer
+Gewalt, Naturkatastrophen, Pandemien, Krieg, ziviler Unruhen oder Ausfälle der Infrastruktur
+Dritter.
+
+Salvatorische Klausel. Wenn eine Bestimmung dieses Vertrags für ungültig, rechtswidrig oder
+nicht durchsetzbar befunden wird, wird diese Bestimmung auf das notwendige Mindestmaß geändert,
+um sie durchsetzbar zu machen, oder bei Unmöglichkeit der Änderung herausgetrennt. Die
+verbleibenden Bestimmungen bleiben in vollem Umfang wirksam.
+
+Verzicht. Das Versäumnis, eine Bestimmung dieses Vertrags durchzusetzen, stellt keinen Verzicht
+auf diese Bestimmung oder das Recht dar, sie in Zukunft durchzusetzen.
+
+Gesamter Vertrag. Dieser Vertrag bildet zusammen mit der GPL v3 (die hiermit per Referenz
+einbezogen wird) die gesamte Vereinbarung zwischen den Parteien bezüglich der Software und
+ersetzt alle vorherigen Vereinbarungen, Zusicherungen oder Absprachen zu seinem Regelungsgegenstand.
+
+
+16. KÜNDIGUNG
+
+Dieser Vertrag tritt ab dem Datum in Kraft, an dem Sie die Software erstmals installieren oder
+verwenden, und gilt bis zur Kündigung.
+
+Ihre Rechte aus diesem Vertrag erlöschen automatisch — ohne Benachrichtigung durch den
+Entwickler —, wenn Sie eine wesentliche Bedingung dieses Vertrags nicht einhalten. Bei Beendigung
+müssen Sie den Betrieb der Software einstellen und alle in Ihrem Besitz befindlichen Kopien
+vernichten.
+
+Kündigung durch den Betreiber. Sie können diesen Vertrag jederzeit beenden, indem Sie die
+Software nicht mehr verwenden und deinstallieren. Ihre GPL v3-Rechte (einschließlich der Rechte
+zur Beibehaltung Ihrer eigenen modifizierten Kopie des Quellcodes) überleben die Beendigung
+dieses Vertrags.
+
+Widerruf durch den Entwickler. Der Entwickler kann Ihre Rechte aus diesem Vertrag (zusätzlich
+zu den GPL v3-Rechten, soweit nach dieser Lizenz zulässig) widerrufen, wenn Sie: (a) die Software
+in einer Weise verwenden, die gegen geltendes Recht verstößt; (b) den Entwickler imitieren oder
+die Software fälschlicherweise als vom Entwickler empfohlen darstellen; oder (c) die Software
+entgegen der GPL v3 verbreiten.
+
+Die Abschnitte 7 (Haftungsausschluss für Gewährleistungen), 8 (Haftungsbeschränkung), 9
+(Betreiberpflichten), 10 (Schadloshaltung), 12 (Anwendbares Recht), 13 (Schiedsverfahren), 14
+(Verzicht auf Sammelklagen) und 15 (Höhere Gewalt / Salvatorische Klausel / Verzicht / Gesamter
+Vertrag) überleben jede Beendigung dieses Vertrags.
+
+
+17. ÄNDERUNGEN DIESES VERTRAGS
+
+Der Entwickler behält sich das Recht vor, diesen Vertrag jederzeit zu aktualisieren. Aktualisierte
+Versionen werden durch eine neue Versionsnummer und ein aktualisiertes „Zuletzt aktualisiert"-Datum
+im Header dieser Datei gekennzeichnet. Die EULA-Versionsnummer wird bei Ihrer Annahme gespeichert;
+wenn sich die Version ändert, präsentiert der Einrichtungsassistent den neuen Vertrag zur erneuten
+Annahme, bevor fortgefahren wird.
+
+Der fortgesetzte Betrieb der Software nach Inkrafttreten einer neuen Version stellt die Annahme
+des geänderten Vertrags dar.
+
+
+18. KONTAKT
+
+Bei Fragen zu diesem Vertrag, zur Meldung von Verstößen oder zur Kontaktaufnahme mit dem
+Entwickler nutzen Sie bitte das GitHub-Repository des Projekts:
+
+  https://github.com/inguy24/weewx-clearskies-stack
+
+Über GitHub Issues sollte keine rechtliche Korrespondenz geführt werden. Für formelle
+Rechtsangelegenheiten wenden Sie sich über die im Repository angegebenen Kontaktmethoden an
+den Entwickler.
+
+
+INDEM SIE DAS ANNAHMEFELD IM EINRICHTUNGSASSISTENTEN AKTIVIEREN, BESTÄTIGEN SIE, DASS SIE
+DIESEN VERTRAG GELESEN HABEN, SEINE BEDINGUNGEN VERSTEHEN UND SICH AN DIESE GEBUNDEN ERKLÄREN,
+EINSCHLIESSLICH DER VERBINDLICHEN SCHIEDSKLAUSEL UND DES VERZICHTS AUF SAMMELKLAGEN IN
+DEN ABSCHNITTEN 13 UND 14.
