@@ -43,6 +43,7 @@ Route summary:
 
 from __future__ import annotations
 
+import getpass
 import json
 import logging
 import os
@@ -2179,6 +2180,32 @@ _PROVIDER_NAME_MAP: dict[str, str] = {
 }
 
 
+def _check_write_permissions(paths: list[str]) -> list[str]:
+    """Return a list of paths that are not writable by the current process.
+
+    For each path: if the path already exists, test it directly.  If it does
+    not exist yet, test the parent directory (which must be writable for the
+    file to be created).  Paths whose parent directory also does not exist are
+    checked at the nearest existing ancestor — the directory write must succeed
+    for os.makedirs to be able to create the missing chain.
+    """
+    failed: list[str] = []
+    for path in paths:
+        # Walk up to the nearest existing ancestor to test write access.
+        check = Path(path)
+        while not check.exists():
+            check = check.parent
+            if check == check.parent:
+                # Reached filesystem root without finding an existing path.
+                # Conservatively mark as failed.
+                failed.append(path)
+                break
+        else:
+            if not os.access(check, os.W_OK):
+                failed.append(path)
+    return failed
+
+
 @router.post("/apply", response_class=HTMLResponse)
 async def wizard_apply(request: Request) -> HTMLResponse:
     """Send config to the API, write local config files, display the completion page.
@@ -2359,6 +2386,53 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             except Exception:  # noqa: BLE001
                 logger.warning("Image API resolution failed", exc_info=True)
 
+    # ------------------------------------------------------------------
+    # Pre-flight permission check: verify every write target is accessible
+    # BEFORE any file is written.  A permission failure here means no files
+    # have been touched yet, so the operator sees a clean actionable error
+    # rather than a partial-write state.
+    # ------------------------------------------------------------------
+    _effective_config_dir_pre = _config_dir or Path("/etc/weewx-clearskies")
+    _write_targets: list[str] = [
+        str(_effective_config_dir_pre / "webcam.json"),
+        str(_effective_config_dir_pre / "branding.json"),
+        str(_effective_config_dir_pre / "realtime.conf"),
+        str(_effective_config_dir_pre / "stack.conf"),
+        str(_effective_config_dir_pre / "secrets.env"),
+        str(_effective_config_dir_pre / "bootstrap-summary.md"),
+    ]
+    if state.custom_terms_md:
+        _write_targets.append(str(_effective_config_dir_pre / "content" / "terms.md"))
+    if state.custom_privacy_md:
+        _write_targets.append(str(_effective_config_dir_pre / "content" / "privacy.md"))
+
+    _perm_failed = _check_write_permissions(_write_targets)
+    if _perm_failed:
+        try:
+            _proc_user = getpass.getuser()
+        except Exception:  # noqa: BLE001
+            _proc_user = "clearskies"
+        _failed_list = "\n".join(f"  • {p}" for p in _perm_failed)
+        _perm_error = (
+            "API configuration saved successfully.\n"
+            "Cannot write local config files — permission denied for:\n"
+            f"{_failed_list}\n\n"
+            "Fix: Run these commands on the server, then click Apply again:\n"
+            f"  sudo chown -R {_proc_user}:{_proc_user} {_effective_config_dir_pre}/\n"
+            f"  sudo chmod 750 {_effective_config_dir_pre}/"
+        )
+        logger.error(
+            "wizard_apply: pre-flight permission check failed for %d path(s): %s",
+            len(_perm_failed),
+            ", ".join(_perm_failed),
+        )
+        return _render(
+            request,
+            "step_review.html",
+            {"step": 14, "state": state, "error": _perm_error},
+            status_code=422,
+        )
+
     # Write webcam config as a static JSON file for the dashboard.
     # This is a UI concern — the API does not manage webcam settings.
     webcam_config = {
@@ -2436,10 +2510,18 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         # called here so the operator's passwords and API keys survive a restart.
         save_wizard_state(session_id, state)
     except OSError as exc:
+        try:
+            _exc_user = getpass.getuser()
+        except Exception:  # noqa: BLE001
+            _exc_user = "clearskies"
+        _exc_config_dir = _config_dir or Path("/etc/weewx-clearskies")
         local_error = (
             f"API configuration saved successfully. "
-            f"Local config write failed: {exc}. "
-            f"Fix the permissions and click Apply again."
+            f"Local config write failed for: {exc.filename or _exc_config_dir}.\n"
+            f"The API is configured but local files are out of sync.\n"
+            f"Fix permissions and click Apply again to write local files.\n\n"
+            f"Fix: sudo chown -R {_exc_user}:{_exc_user} {_exc_config_dir}/\n"
+            f"     sudo chmod 750 {_exc_config_dir}/"
         )
         logger.error("apply_wizard OSError: %s", exc)
         return _render(
