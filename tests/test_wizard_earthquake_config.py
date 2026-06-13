@@ -1,9 +1,9 @@
-"""Tests for earthquake configuration fields in wizard step 8 (appearance).
+"""Tests for earthquake configuration fields in wizard step 13 (feature settings).
 
 Covers:
   - WizardState earthquake field defaults
-  - POST /wizard/step/8 saves earthquake config fields to state
-  - POST /wizard/step/8 clamps and validates field values
+  - POST /wizard/features saves earthquake config fields to state
+  - POST /wizard/features clamps and validates field values
   - Apply payload uses 'default_radius_km' (not 'radius_km') for the API key name
 """
 
@@ -53,21 +53,21 @@ def _get_state(client) -> WizardState | None:
 
 
 # ---------------------------------------------------------------------------
-# Step 8 POST — earthquake config fields saved to state
+# Step 13 POST (/wizard/features) — earthquake config fields saved to state
 # ---------------------------------------------------------------------------
 
 
 def test_step8_post_saves_earthquake_radius_km(authed_client):
-    """POST to step 8 with earthquake_radius_km saves the value to state."""
+    """POST to /wizard/features with earthquake_radius_km saves the value to state."""
     resp = authed_client.post(
-        "/wizard/step/8",
+        "/wizard/features",
         data={
             "earthquake_radius_km": "250",
             "earthquake_min_magnitude": "2.0",
             "earthquake_default_days": "7",
         },
     )
-    # Step 8 POST advances to step 9 (review) — expect 200 HTML fragment.
+    # /wizard/features POST advances to step 14 (review) — expect 200 HTML fragment.
     assert resp.status_code == 200
 
     state = _get_state(authed_client)
@@ -76,9 +76,9 @@ def test_step8_post_saves_earthquake_radius_km(authed_client):
 
 
 def test_step8_post_saves_earthquake_min_magnitude(authed_client):
-    """POST to step 8 with earthquake_min_magnitude saves the value to state."""
+    """POST to /wizard/features with earthquake_min_magnitude saves the value to state."""
     authed_client.post(
-        "/wizard/step/8",
+        "/wizard/features",
         data={
             "earthquake_radius_km": "100",
             "earthquake_min_magnitude": "3.5",
@@ -92,9 +92,9 @@ def test_step8_post_saves_earthquake_min_magnitude(authed_client):
 
 
 def test_step8_post_saves_earthquake_default_days(authed_client):
-    """POST to step 8 with earthquake_default_days saves the value to state."""
+    """POST to /wizard/features with earthquake_default_days saves the value to state."""
     authed_client.post(
-        "/wizard/step/8",
+        "/wizard/features",
         data={
             "earthquake_radius_km": "100",
             "earthquake_min_magnitude": "2.0",
@@ -110,7 +110,7 @@ def test_step8_post_saves_earthquake_default_days(authed_client):
 def test_step8_post_defaults_radius_when_value_missing(authed_client):
     """Missing earthquake_radius_km falls back to 100."""
     authed_client.post(
-        "/wizard/step/8",
+        "/wizard/features",
         data={
             "earthquake_min_magnitude": "2.0",
             "earthquake_default_days": "7",
@@ -125,7 +125,7 @@ def test_step8_post_defaults_radius_when_value_missing(authed_client):
 def test_step8_post_rejects_invalid_days_and_falls_back_to_7(authed_client):
     """An invalid days value (not in 1/7/14/30) falls back to 7."""
     authed_client.post(
-        "/wizard/step/8",
+        "/wizard/features",
         data={
             "earthquake_radius_km": "100",
             "earthquake_min_magnitude": "2.0",
@@ -141,7 +141,7 @@ def test_step8_post_rejects_invalid_days_and_falls_back_to_7(authed_client):
 def test_step8_post_clamps_radius_to_minimum_of_1(authed_client):
     """earthquake_radius_km below 1 is clamped to 1.0."""
     authed_client.post(
-        "/wizard/step/8",
+        "/wizard/features",
         data={
             "earthquake_radius_km": "0",
             "earthquake_min_magnitude": "2.0",

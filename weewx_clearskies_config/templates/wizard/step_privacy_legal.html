@@ -1,0 +1,126 @@
+<article>
+  <header>
+    <h2>Step 12 of 14 — Privacy, Legal &amp; Analytics</h2>
+    <p>Configure analytics tracking, visitor region disclosures, and optional legal content overrides.</p>
+  </header>
+
+  {% if error %}
+  <div class="alert-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <form id="step-form"
+        hx-post="/wizard/privacy"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
+
+    {# ================================================================== #}
+    {# Section 1: Analytics                                                #}
+    {# ================================================================== #}
+
+    <h3>Analytics</h3>
+
+    <fieldset>
+      <legend>Google Analytics</legend>
+
+      <label for="google_analytics_id">Google Analytics Measurement ID</label>
+      <input type="text"
+             id="google_analytics_id"
+             name="google_analytics_id"
+             value="{{ state.google_analytics_id }}"
+             placeholder="G-XXXXXXXXXX"
+             pattern="G-[A-Za-z0-9]+"
+             aria-describedby="ga_id_help ga_id_setup">
+      <small id="ga_id_help">Enter your Google Analytics 4 Measurement ID. When configured, a cookie consent banner will appear for visitors. Only page views are tracked.</small>
+      <small id="ga_id_setup">To set up GA4: Create a property at <a href="https://analytics.google.com" target="_blank" rel="noopener">analytics.google.com</a> &rarr; Data Streams &rarr; Web &rarr; copy the Measurement ID.</small>
+    </fieldset>
+
+    {# ================================================================== #}
+    {# Section 2: Visitor Regions                                          #}
+    {# ================================================================== #}
+
+    <h3>Visitor Regions</h3>
+
+    <fieldset>
+      <legend>Privacy Law Disclosures</legend>
+      <p id="privacy_regions_help">
+        <small>Select the regions where your website visitors are located. This determines which privacy laws are shown on your Legal page. Choose "Global" if you are unsure.</small>
+      </p>
+
+      <fieldset aria-describedby="privacy_regions_help">
+        <legend>Visitor Regions</legend>
+
+        {# "Global" checkbox — JS toggles all others when this is checked #}
+        <label>
+          <input type="checkbox"
+                 id="privacy_region_global"
+                 name="privacy_regions"
+                 value="global"
+                 {% if "global" in state.privacy_regions %}checked{% endif %}
+                 onchange="(function(cb){var others=document.querySelectorAll('input[name=privacy_regions]:not(#privacy_region_global)');others.forEach(function(o){o.checked=cb.checked;});})(this)">
+          Global (all regions)
+        </label>
+
+        {% for region_value, region_label in [
+            ("north-america", "North America"),
+            ("south-america", "South America"),
+            ("europe",        "Europe"),
+            ("asia",          "Asia"),
+            ("oceania",       "Oceania"),
+            ("africa",        "Africa"),
+        ] %}
+        <label>
+          <input type="checkbox"
+                 name="privacy_regions"
+                 value="{{ region_value }}"
+                 {% if region_value in state.privacy_regions %}checked{% endif %}>
+          {{ region_label }}
+        </label>
+        {% endfor %}
+      </fieldset>
+    </fieldset>
+
+    {# ================================================================== #}
+    {# Section 3: Legal Content                                            #}
+    {# ================================================================== #}
+
+    <h3>Legal Content</h3>
+
+    <fieldset>
+      <legend>Legal Content Override</legend>
+      <p><small>Optional. Upload your own Terms of Use to replace the default content on your Legal page. Leave blank to use the built-in template.</small></p>
+
+      <label for="custom_terms_md">Custom Terms of Use (Markdown)</label>
+      <textarea id="custom_terms_md"
+                name="custom_terms_md"
+                rows="10"
+                placeholder="# Terms of Use&#10;&#10;Enter your custom Terms of Use in Markdown format..."
+                aria-describedby="custom_terms_md_help">{{ state.custom_terms_md }}</textarea>
+      <small id="custom_terms_md_help">Markdown content that replaces the default Terms of Use on your Legal page. Leave blank to use the built-in template.</small>
+
+      <label for="custom_privacy_md">Custom Privacy Policy (Markdown)</label>
+      <textarea id="custom_privacy_md"
+                name="custom_privacy_md"
+                rows="10"
+                placeholder="# Privacy Policy&#10;&#10;Enter your custom Privacy Policy in Markdown format..."
+                aria-describedby="custom_privacy_md_help">{{ state.custom_privacy_md }}</textarea>
+      <small id="custom_privacy_md_help">Markdown content that replaces the default Privacy Policy on your Legal page. Leave blank to use the built-in template.</small>
+    </fieldset>
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/step/8"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML show:window:top"
+              hx-indicator="#wizard-spinner">
+        &#8592; Previous: Branding
+      </button>
+      <button type="submit">Next: Feature Settings &#8594;</button>
+    </div>
+  </form>
+</article>
+
+{# OOB: update the progress bar to reflect the current step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

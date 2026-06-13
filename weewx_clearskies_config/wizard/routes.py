@@ -1,4 +1,4 @@
-"""FastAPI router for the 12-step setup wizard.
+"""FastAPI router for the 14-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -30,10 +30,14 @@ Route summary:
   POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
   POST /wizard/step/6           — save provider choices + keys, return step 10 fragment (webcam)
   GET  /wizard/step/7           — step 10 fragment (webcam configuration)
-  POST /wizard/step/7           — save webcam settings, return step 11 fragment (appearance)
-  GET  /wizard/step/8           — step 11 fragment (appearance: branding + seismic)
-  POST /wizard/step/8           — save appearance settings, return step 12 fragment (review)
-  GET  /wizard/step/9           — step 12 fragment (review summary)
+  POST /wizard/step/7           — save webcam settings, return step 11 fragment (branding)
+  GET  /wizard/step/8           — step 11 fragment (appearance: branding + social)
+  POST /wizard/step/8           — save branding settings, return step 12 fragment (privacy)
+  GET  /wizard/privacy          — step 12 fragment (privacy, legal & analytics)
+  POST /wizard/privacy          — save privacy/legal settings, return step 13 fragment (features)
+  GET  /wizard/features         — step 13 fragment (feature settings: seismic page)
+  POST /wizard/features         — save feature settings, return step 14 fragment (review)
+  GET  /wizard/step/9           — step 14 fragment (review summary)
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -1997,7 +2001,7 @@ async def step8_appearance_get(request: Request) -> HTMLResponse:
 
 @router.post("/step/8", response_class=HTMLResponse)
 async def step8_appearance_post(request: Request) -> HTMLResponse:
-    """Save branding and earthquake config; advance to step 9 (review)."""
+    """Save branding and social settings; advance to step 12 (privacy)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -2058,6 +2062,30 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
     state.instagram_url = str(form.get("instagram_url", "")).strip()
     state.youtube_url = str(form.get("youtube_url", "")).strip()
 
+    save_wizard_state(session_id, state)
+    return await step_privacy_legal_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Step 12: Privacy, Legal & Analytics
+# ---------------------------------------------------------------------------
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+async def step_privacy_legal_get(request: Request) -> HTMLResponse:
+    """Step 12: Privacy, Legal & Analytics — render the form."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(request, "step_privacy_legal.html", {"step": 12, "state": state, "error": None})
+
+
+@router.post("/privacy", response_class=HTMLResponse)
+async def step_privacy_legal_post(request: Request) -> HTMLResponse:
+    """Save analytics and privacy/legal settings; advance to step 13 (features)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
     # --- Analytics ---
     # Stored for future Phase 4 API support; not sent to the API yet.
     state.google_analytics_id = str(form.get("google_analytics_id", "")).strip()
@@ -2071,6 +2099,34 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
         if str(v).strip()
     ]
     state.privacy_regions = ",".join(privacy_values)
+
+    # --- Legal Content Overrides ---
+    state.custom_terms_md = str(form.get("custom_terms_md", "")).strip()
+    state.custom_privacy_md = str(form.get("custom_privacy_md", "")).strip()
+
+    save_wizard_state(session_id, state)
+    return await step_feature_settings_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Step 13: Feature Settings (seismic page)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/features", response_class=HTMLResponse)
+async def step_feature_settings_get(request: Request) -> HTMLResponse:
+    """Step 13: Feature Settings — render the seismic page settings form."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(request, "step_feature_settings.html", {"step": 13, "state": state, "error": None})
+
+
+@router.post("/features", response_class=HTMLResponse)
+async def step_feature_settings_post(request: Request) -> HTMLResponse:
+    """Save feature settings; advance to step 14 (review)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
 
     # --- Earthquake / Seismic Page Settings ---
     radius_raw = str(form.get("earthquake_radius_km", "100")).strip()
@@ -2092,10 +2148,6 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
     except (ValueError, TypeError):
         state.earthquake_default_days = 7
 
-    # --- Legal Content Overrides (T4.2) ---
-    state.custom_terms_md = str(form.get("custom_terms_md", "")).strip()
-    state.custom_privacy_md = str(form.get("custom_privacy_md", "")).strip()
-
     save_wizard_state(session_id, state)
     return await step9_review_get(request)
 
@@ -2114,7 +2166,7 @@ async def step9_review_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 12, "state": state, "error": None},
+        {"step": 14, "state": state, "error": None},
     )
 
 
@@ -2248,7 +2300,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 12,
+                "step": 14,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -2261,7 +2313,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 12,
+                "step": 14,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -2273,7 +2325,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 12,
+                "step": 14,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
@@ -2393,7 +2445,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 12, "state": state, "error": local_error},
+            {"step": 14, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -2406,7 +2458,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 12, "state": state, "error": local_error},
+            {"step": 14, "state": state, "error": local_error},
             status_code=422,
         )
 

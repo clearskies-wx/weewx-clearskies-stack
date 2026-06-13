@@ -1,7 +1,7 @@
 <article>
   <header>
-    <h2>Step 11 of 12 — Appearance</h2>
-    <p>Customise your site's branding and earthquake display settings.</p>
+    <h2>Step 11 of 14 — Appearance &amp; Branding</h2>
+    <p>Customise your site's identity, logos, colours, and social media links.</p>
   </header>
 
   {% if error %}
@@ -17,11 +17,13 @@
         autocomplete="off">
 
     {# ================================================================== #}
-    {# Section 1: Branding                                                 #}
+    {# Section 1: Site Identity                                            #}
     {# ================================================================== #}
 
+    <h3>Site Identity</h3>
+
     <fieldset>
-      <legend>Branding</legend>
+      <legend>Basic Identity</legend>
       <p><small>How your weather site identifies itself to visitors.</small></p>
 
       <label for="site_title">Site Title</label>
@@ -39,145 +41,157 @@
              value="{{ state.copyright_entity }}"
              placeholder="Your Name or Organization">
       <small>Name shown in the footer copyright line (e.g. your name or organization). Leave blank to omit.</small>
+    </fieldset>
 
-      {# Logo — light theme #}
-      <fieldset>
-        <legend>Logo (light theme)</legend>
-        <p><small>Shown when the visitor uses a light colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
+    {# ================================================================== #}
+    {# Section 2: Logos                                                    #}
+    {# ================================================================== #}
 
-        {% if state.logo_light_url %}
-        <p>
-          <small>
-            Current:
-            {% if state.logo_light_url.startswith('/wizard/branding/') %}
-              <strong>uploaded file</strong> — {{ state.logo_light_url.split('/')[-1] }}
-            {% else %}
-              <a href="{{ state.logo_light_url }}" target="_blank" rel="noopener">{{ state.logo_light_url }}</a>
-            {% endif %}
-          </small>
-        </p>
-        {% endif %}
+    <h3>Logos</h3>
 
-        <label for="logo_light_file">Upload a file</label>
-        <input type="file"
-               id="logo_light_file"
-               name="logo_light_file"
-               accept=".png,.svg,image/png,image/svg+xml">
-        <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+    <fieldset>
+      <legend>Logo (light theme)</legend>
+      <p><small>Shown when the visitor uses a light colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
 
-        <label for="logo_light_url">— or enter a URL</label>
-        <input type="text"
-               id="logo_light_url"
-               name="logo_light_url"
-               value="{{ state.logo_light_url }}"
-               placeholder="https://example.com/logo-light.png">
-        <small>Leave blank if uploading a file above.</small>
-      </fieldset>
-
-      {# Logo — dark theme #}
-      <fieldset>
-        <legend>Logo (dark theme)</legend>
-        <p><small>Shown when the visitor uses a dark colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
-
-        {% if state.logo_dark_url %}
-        <p>
-          <small>
-            Current:
-            {% if state.logo_dark_url.startswith('/wizard/branding/') %}
-              <strong>uploaded file</strong> — {{ state.logo_dark_url.split('/')[-1] }}
-            {% else %}
-              <a href="{{ state.logo_dark_url }}" target="_blank" rel="noopener">{{ state.logo_dark_url }}</a>
-            {% endif %}
-          </small>
-        </p>
-        {% endif %}
-
-        <label for="logo_dark_file">Upload a file</label>
-        <input type="file"
-               id="logo_dark_file"
-               name="logo_dark_file"
-               accept=".png,.svg,image/png,image/svg+xml">
-        <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
-
-        <label for="logo_dark_url">— or enter a URL</label>
-        <input type="text"
-               id="logo_dark_url"
-               name="logo_dark_url"
-               value="{{ state.logo_dark_url }}"
-               placeholder="https://example.com/logo-dark.png">
-        <small>Leave blank if uploading a file above.</small>
-      </fieldset>
-
-      {# Single-logo advisory (ADR-022).  Providing only one logo variant is
-         valid; the dashboard automatically CSS-inverts it for the opposite
-         colour scheme.  Warn the operator that the inverted result may not
-         look right, and how to avoid it.  Non-blocking — this never prevents
-         advancing the wizard. #}
-      {% if state.logo_light_url and not state.logo_dark_url %}
-      <div class="alert-error" role="status" aria-live="polite">
-        <span>
-          <strong>Note:</strong> You have a light-theme logo but no dark-theme logo.
-          Visitors using a dark colour scheme will see your light logo automatically
-          colour-inverted, which may not look correct. Upload a dark-theme logo above
-          to control how it appears.
-        </span>
-      </div>
-      {% elif state.logo_dark_url and not state.logo_light_url %}
-      <div class="alert-error" role="status" aria-live="polite">
-        <span>
-          <strong>Note:</strong> You have a dark-theme logo but no light-theme logo.
-          Visitors using a light colour scheme will see your dark logo automatically
-          colour-inverted, which may not look correct. Upload a light-theme logo above
-          to control how it appears.
-        </span>
-      </div>
+      {% if state.logo_light_url %}
+      <p>
+        <small>
+          Current:
+          {% if state.logo_light_url.startswith('/wizard/branding/') %}
+            <strong>uploaded file</strong> — {{ state.logo_light_url.split('/')[-1] }}
+          {% else %}
+            <a href="{{ state.logo_light_url }}" target="_blank" rel="noopener">{{ state.logo_light_url }}</a>
+          {% endif %}
+        </small>
+      </p>
       {% endif %}
 
-      {# Favicon #}
-      <fieldset>
-        <legend>Favicon</legend>
-        <p><small>Small icon shown in the browser tab. ICO or PNG, max 100&nbsp;KB. Leave blank to use the default Clear Skies icon.</small></p>
+      <label for="logo_light_file">Upload a file</label>
+      <input type="file"
+             id="logo_light_file"
+             name="logo_light_file"
+             accept=".png,.svg,image/png,image/svg+xml">
+      <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
 
-        {% if state.favicon_url %}
-        <p>
-          <small>
-            Current:
-            {% if state.favicon_url.startswith('/wizard/branding/') %}
-              <strong>uploaded file</strong> — {{ state.favicon_url.split('/')[-1] }}
-            {% else %}
-              <a href="{{ state.favicon_url }}" target="_blank" rel="noopener">{{ state.favicon_url }}</a>
-            {% endif %}
-          </small>
-        </p>
-        {% endif %}
-
-        <label for="favicon_file">Upload a file</label>
-        <input type="file"
-               id="favicon_file"
-               name="favicon_file"
-               accept=".ico,.png,image/x-icon,image/vnd.microsoft.icon,image/png">
-        <small>ICO or PNG, max 100&nbsp;KB. Replaces the URL below when a file is chosen.</small>
-
-        <label for="favicon_url">— or enter a URL</label>
-        <input type="text"
-               id="favicon_url"
-               name="favicon_url"
-               value="{{ state.favicon_url }}"
-               placeholder="https://example.com/favicon.ico">
-        <small>Leave blank if uploading a file above.</small>
-      </fieldset>
-
-      {# Logo alt text #}
-      <label for="logo_alt">Logo Alt Text</label>
+      <label for="logo_light_url">— or enter a URL</label>
       <input type="text"
-             id="logo_alt"
-             name="logo_alt"
-             value="{{ state.logo_alt }}"
-             placeholder="My Weather Station logo"
-             aria-describedby="logo_alt_help">
-      <small id="logo_alt_help">Alternative text for the logo image, read aloud by screen readers (WCAG requirement). Describe the logo briefly, e.g. "Riverside Weather Station logo".</small>
+             id="logo_light_url"
+             name="logo_light_url"
+             value="{{ state.logo_light_url }}"
+             placeholder="https://example.com/logo-light.png">
+      <small>Leave blank if uploading a file above.</small>
+    </fieldset>
 
-      {# Accent color #}
+    <fieldset>
+      <legend>Logo (dark theme)</legend>
+      <p><small>Shown when the visitor uses a dark colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
+
+      {% if state.logo_dark_url %}
+      <p>
+        <small>
+          Current:
+          {% if state.logo_dark_url.startswith('/wizard/branding/') %}
+            <strong>uploaded file</strong> — {{ state.logo_dark_url.split('/')[-1] }}
+          {% else %}
+            <a href="{{ state.logo_dark_url }}" target="_blank" rel="noopener">{{ state.logo_dark_url }}</a>
+          {% endif %}
+        </small>
+      </p>
+      {% endif %}
+
+      <label for="logo_dark_file">Upload a file</label>
+      <input type="file"
+             id="logo_dark_file"
+             name="logo_dark_file"
+             accept=".png,.svg,image/png,image/svg+xml">
+      <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+
+      <label for="logo_dark_url">— or enter a URL</label>
+      <input type="text"
+             id="logo_dark_url"
+             name="logo_dark_url"
+             value="{{ state.logo_dark_url }}"
+             placeholder="https://example.com/logo-dark.png">
+      <small>Leave blank if uploading a file above.</small>
+    </fieldset>
+
+    {# Single-logo advisory (ADR-022).  Providing only one logo variant is
+       valid; the dashboard automatically CSS-inverts it for the opposite
+       colour scheme.  Warn the operator that the inverted result may not
+       look right, and how to avoid it.  Non-blocking — this never prevents
+       advancing the wizard. #}
+    {% if state.logo_light_url and not state.logo_dark_url %}
+    <div class="alert-error" role="status" aria-live="polite">
+      <span>
+        <strong>Note:</strong> You have a light-theme logo but no dark-theme logo.
+        Visitors using a dark colour scheme will see your light logo automatically
+        colour-inverted, which may not look correct. Upload a dark-theme logo above
+        to control how it appears.
+      </span>
+    </div>
+    {% elif state.logo_dark_url and not state.logo_light_url %}
+    <div class="alert-error" role="status" aria-live="polite">
+      <span>
+        <strong>Note:</strong> You have a dark-theme logo but no light-theme logo.
+        Visitors using a light colour scheme will see your dark logo automatically
+        colour-inverted, which may not look correct. Upload a light-theme logo above
+        to control how it appears.
+      </span>
+    </div>
+    {% endif %}
+
+    <fieldset>
+      <legend>Favicon</legend>
+      <p><small>Small icon shown in the browser tab. ICO or PNG, max 100&nbsp;KB. Leave blank to use the default Clear Skies icon.</small></p>
+
+      {% if state.favicon_url %}
+      <p>
+        <small>
+          Current:
+          {% if state.favicon_url.startswith('/wizard/branding/') %}
+            <strong>uploaded file</strong> — {{ state.favicon_url.split('/')[-1] }}
+          {% else %}
+            <a href="{{ state.favicon_url }}" target="_blank" rel="noopener">{{ state.favicon_url }}</a>
+          {% endif %}
+        </small>
+      </p>
+      {% endif %}
+
+      <label for="favicon_file">Upload a file</label>
+      <input type="file"
+             id="favicon_file"
+             name="favicon_file"
+             accept=".ico,.png,image/x-icon,image/vnd.microsoft.icon,image/png">
+      <small>ICO or PNG, max 100&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+
+      <label for="favicon_url">— or enter a URL</label>
+      <input type="text"
+             id="favicon_url"
+             name="favicon_url"
+             value="{{ state.favicon_url }}"
+             placeholder="https://example.com/favicon.ico">
+      <small>Leave blank if uploading a file above.</small>
+    </fieldset>
+
+    {# Logo alt text #}
+    <label for="logo_alt">Logo Alt Text</label>
+    <input type="text"
+           id="logo_alt"
+           name="logo_alt"
+           value="{{ state.logo_alt }}"
+           placeholder="My Weather Station logo"
+           aria-describedby="logo_alt_help">
+    <small id="logo_alt_help">Alternative text for the logo image, read aloud by screen readers (WCAG requirement). Describe the logo briefly, e.g. "Riverside Weather Station logo".</small>
+
+    {# ================================================================== #}
+    {# Section 3: Colors &amp; Theme                                       #}
+    {# ================================================================== #}
+
+    <h3>Colors &amp; Theme</h3>
+
+    <fieldset>
+      <legend>Theme Options</legend>
+
       <label for="accent">Accent Color</label>
       <select id="accent" name="accent" aria-describedby="accent_help">
         {% for color_value, color_label in [
@@ -195,7 +209,6 @@
       </select>
       <small id="accent_help">Primary highlight color used throughout the dashboard. Defaults to Blue if not set.</small>
 
-      {# Theme mode #}
       <label for="default_theme_mode">Default Theme Mode</label>
       <select id="default_theme_mode" name="default_theme_mode" aria-describedby="theme_mode_help">
         {% for mode_value, mode_label in [
@@ -211,7 +224,6 @@
       </select>
       <small id="theme_mode_help">How the dashboard selects light or dark mode for visitors. "Match device" follows the visitor's OS setting. "Match sunrise/sunset" switches automatically based on your station's local sunrise and sunset times. Defaults to "Match device" if not set.</small>
 
-      {# Custom CSS URL #}
       <label for="custom_css_url">Custom CSS URL</label>
       <input type="url"
              id="custom_css_url"
@@ -223,11 +235,13 @@
     </fieldset>
 
     {# ================================================================== #}
-    {# Section 2: Social Media                                             #}
+    {# Section 4: Social Media                                             #}
     {# ================================================================== #}
 
+    <h3>Social Media</h3>
+
     <fieldset>
-      <legend>Social Media</legend>
+      <legend>Social Media Links</legend>
       <p><small>Optional. Leave blank if not used. When provided, social media links appear in the dashboard footer.</small></p>
 
       <label for="facebook_url">Facebook Page URL</label>
@@ -259,134 +273,6 @@
              placeholder="https://www.youtube.com/channel/yourchannel">
     </fieldset>
 
-    {# ================================================================== #}
-    {# Section: Analytics                                                  #}
-    {# ================================================================== #}
-
-    <fieldset>
-      <legend>Analytics</legend>
-
-      <label for="google_analytics_id">Google Analytics Measurement ID</label>
-      <input type="text"
-             id="google_analytics_id"
-             name="google_analytics_id"
-             value="{{ state.google_analytics_id }}"
-             placeholder="G-XXXXXXXXXX"
-             pattern="G-[A-Za-z0-9]+"
-             aria-describedby="ga_id_help ga_id_setup">
-      <small id="ga_id_help">Enter your Google Analytics 4 Measurement ID. When configured, a cookie consent banner will appear for visitors. Only page views are tracked.</small>
-      <small id="ga_id_setup">To set up GA4: Create a property at <a href="https://analytics.google.com" target="_blank" rel="noopener">analytics.google.com</a> &rarr; Data Streams &rarr; Web &rarr; copy the Measurement ID.</small>
-    </fieldset>
-
-    {# ================================================================== #}
-    {# Section: Privacy &amp; Legal                                        #}
-    {# ================================================================== #}
-
-    <fieldset>
-      <legend>Privacy &amp; Legal</legend>
-      <p id="privacy_regions_help">
-        <small>Select the regions where your website visitors are located. This determines which privacy laws are shown on your Legal page. Choose "Global" if you are unsure.</small>
-      </p>
-
-      <fieldset aria-describedby="privacy_regions_help">
-        <legend>Visitor Regions</legend>
-
-        {# "Global" checkbox — JS toggles all others when this is checked #}
-        <label>
-          <input type="checkbox"
-                 id="privacy_region_global"
-                 name="privacy_regions"
-                 value="global"
-                 {% if "global" in state.privacy_regions %}checked{% endif %}
-                 onchange="(function(cb){var others=document.querySelectorAll('input[name=privacy_regions]:not(#privacy_region_global)');others.forEach(function(o){o.checked=cb.checked;});})(this)">
-          Global (all regions)
-        </label>
-
-        {% for region_value, region_label in [
-            ("north-america", "North America"),
-            ("south-america", "South America"),
-            ("europe",        "Europe"),
-            ("asia",          "Asia"),
-            ("oceania",       "Oceania"),
-            ("africa",        "Africa"),
-        ] %}
-        <label>
-          <input type="checkbox"
-                 name="privacy_regions"
-                 value="{{ region_value }}"
-                 {% if region_value in state.privacy_regions %}checked{% endif %}>
-          {{ region_label }}
-        </label>
-        {% endfor %}
-      </fieldset>
-    </fieldset>
-
-    {# ================================================================== #}
-    {# Section: Legal Content Override                                     #}
-    {# ================================================================== #}
-
-    <fieldset>
-      <legend>Legal Content Override</legend>
-      <p><small>Optional. Leave blank to use the default templates. If provided, this markdown will replace the default content on your Legal page.</small></p>
-
-      <label for="custom_terms_md">Custom Terms of Use (Markdown)</label>
-      <textarea id="custom_terms_md"
-                name="custom_terms_md"
-                rows="10"
-                placeholder="# Terms of Use&#10;&#10;Enter your custom Terms of Use in Markdown format..."
-                aria-describedby="custom_terms_md_help">{{ state.custom_terms_md }}</textarea>
-      <small id="custom_terms_md_help">Markdown content that replaces the default Terms of Use on your Legal page. Leave blank to use the built-in template.</small>
-
-      <label for="custom_privacy_md">Custom Privacy Policy (Markdown)</label>
-      <textarea id="custom_privacy_md"
-                name="custom_privacy_md"
-                rows="10"
-                placeholder="# Privacy Policy&#10;&#10;Enter your custom Privacy Policy in Markdown format..."
-                aria-describedby="custom_privacy_md_help">{{ state.custom_privacy_md }}</textarea>
-      <small id="custom_privacy_md_help">Markdown content that replaces the default Privacy Policy on your Legal page. Leave blank to use the built-in template.</small>
-    </fieldset>
-
-    {# ================================================================== #}
-    {# Section 3: Seismic Page Settings                                    #}
-    {# ================================================================== #}
-
-    {% if state.providers.get("earthquakes") or true %}
-    <fieldset>
-      <legend>Seismic Page Settings</legend>
-      <p><small>Controls how earthquake data is fetched and displayed on the seismic page. These settings apply when an earthquake data provider is configured.</small></p>
-
-      <label for="earthquake_radius_km">Search Radius (km)</label>
-      <input type="number"
-             id="earthquake_radius_km"
-             name="earthquake_radius_km"
-             value="{{ state.earthquake_radius_km }}"
-             min="1"
-             max="20000"
-             step="1">
-      <small>Radius around your station to search for earthquakes. Default: 100 km.</small>
-
-      <label for="earthquake_min_magnitude">Minimum Magnitude</label>
-      <input type="number"
-             id="earthquake_min_magnitude"
-             name="earthquake_min_magnitude"
-             value="{{ state.earthquake_min_magnitude }}"
-             min="0"
-             max="10"
-             step="0.1">
-      <small>Only show earthquakes at or above this magnitude. Default: 2.0.</small>
-
-      <label for="earthquake_default_days">Time Period (days)</label>
-      <select id="earthquake_default_days" name="earthquake_default_days">
-        {% for days in [1, 7, 14, 30] %}
-        <option value="{{ days }}" {% if state.earthquake_default_days == days %}selected{% endif %}>
-          {{ days }} day{{ "s" if days != 1 else "" }}
-        </option>
-        {% endfor %}
-      </select>
-      <small>How far back to look for earthquakes. Default: 7 days.</small>
-    </fieldset>
-    {% endif %}
-
     <div role="group">
       <button type="button"
               hx-get="/wizard/step/7"
@@ -395,7 +281,7 @@
               hx-indicator="#wizard-spinner">
         &#8592; Previous: Webcam
       </button>
-      <button type="submit">Next: Review &#8594;</button>
+      <button type="submit">Next: Privacy &amp; Legal &#8594;</button>
     </div>
   </form>
 </article>

@@ -1,6 +1,6 @@
 <article>
   <header>
-    <h2>Step 12 of 12 — Review &amp; Apply</h2>
+    <h2>Step 14 of 14 — Review &amp; Apply</h2>
     <p>Review your configuration before applying.
        Applying will send the API configuration to the remote API, then write
        <code>realtime.conf</code>, <code>stack.conf</code>, and <code>secrets.env</code>
@@ -306,20 +306,20 @@
     </table>
   </section>
 
-  {# 8. Appearance (branding + seismic) ------------------------------ #}
-  <section class="review-section" aria-labelledby="review-appearance">
-    <h3 id="review-appearance">
-      Appearance
+  {# 8. Branding ---------------------------------------------------- #}
+  <section class="review-section" aria-labelledby="review-branding">
+    <h3 id="review-branding">
+      Branding
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/8"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit appearance settings">Edit</a>
+         aria-label="Edit branding settings">Edit</a>
     </h3>
 
-    <h4>Branding</h4>
+    <h4>Site Identity</h4>
     <table class="review-table">
       <caption class="sr-only">Branding configuration</caption>
       <tbody>
@@ -369,8 +369,22 @@
         <tr><th scope="row">YouTube</th><td>{{ state.youtube_url or '<em>Not configured</em>' | safe }}</td></tr>
       </tbody>
     </table>
+  </section>
 
-    <h4>Analytics &amp; Privacy</h4>
+  {# 9. Privacy, Legal & Analytics ---------------------------------- #}
+  <section class="review-section" aria-labelledby="review-privacy">
+    <h3 id="review-privacy">
+      Privacy, Legal &amp; Analytics
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/privacy"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML show:window:top"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit privacy and analytics settings">Edit</a>
+    </h3>
+
+    <h4>Analytics</h4>
     <table class="review-table">
       <caption class="sr-only">Analytics and privacy settings</caption>
       <tbody>
@@ -423,9 +437,22 @@
         </tr>
       </tbody>
     </table>
+  </section>
 
-    {% if state.providers.get("earthquakes") %}
-    <h4>Seismic Page Settings</h4>
+  {# 10. Feature Settings ------------------------------------------- #}
+  <section class="review-section" aria-labelledby="review-features">
+    <h3 id="review-features">
+      Feature Settings
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/features"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML show:window:top"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit feature settings">Edit</a>
+    </h3>
+
+    <h4>Seismic Page</h4>
     <table class="review-table">
       <caption class="sr-only">Earthquake data configuration</caption>
       <tbody>
@@ -434,7 +461,6 @@
         <tr><th scope="row">Time window</th><td>{{ state.earthquake_default_days }} day{{ "s" if state.earthquake_default_days != 1 else "" }}</td></tr>
       </tbody>
     </table>
-    {% endif %}
   </section>
 
   <form hx-post="/wizard/apply"
@@ -444,7 +470,7 @@
         autocomplete="off">
     <div role="group">
       <button type="button"
-              hx-get="/wizard/step/8"
+              hx-get="/wizard/features"
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
