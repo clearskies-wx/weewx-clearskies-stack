@@ -19,8 +19,6 @@ services:
     depends_on:
       dashboard:
         condition: service_completed_successfully
-      realtime:
-        condition: service_healthy
       config:
         condition: service_healthy
     restart: unless-stopped
@@ -32,21 +30,6 @@ services:
     volumes:
       - dashboard-dist:/dist
     restart: "no"
-
-  realtime:
-    image: ghcr.io/inguy24/weewx-clearskies-realtime:${CLEARSKIES_VERSION:-0.1.0}
-    build:
-      context: ../../weewx-clearskies-realtime
-    volumes:
-      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies:ro
-    env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
-    healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8082/health/ready')"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-      start_period: 15s
-    restart: unless-stopped
 
   config:
     image: ghcr.io/inguy24/weewx-clearskies-config:${CLEARSKIES_VERSION:-0.1.0}

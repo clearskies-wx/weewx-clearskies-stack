@@ -1,5 +1,9 @@
-# Clear Skies Realtime configuration
-# Copy to realtime.conf in your deployment's config directory.
+# DEPRECATED — clearskies-realtime has been merged into clearskies-api (ADR-058).
+# The [input] and [units] settings that were here are now configured in api.conf.
+# See the [input] and [units] sections in config/api.conf.example.
+# This file is kept as a reference only. Do not deploy it.
+#
+# Clear Skies Realtime configuration (historical reference — deprecated)
 # Format: configobj INI with subsections ([[name]] inside [section])
 
 [input]

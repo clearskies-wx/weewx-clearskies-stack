@@ -2,11 +2,11 @@
     encode gzip
 
     handle /api/v1/* {
-        reverse_proxy realtime:8766
+        reverse_proxy {$CLEARSKIES_API_URL}
     }
 
     handle /sse {
-        reverse_proxy realtime:8766
+        reverse_proxy {$CLEARSKIES_API_URL}
     }
 
     handle /wizard* {

@@ -1,6 +1,7 @@
 # Caddy reverse proxy config for a native (pip-installed) Clear Skies deployment.
-# Both clearskies-api (port 8765) and clearskies-realtime (port 8766) run as
-# systemd services on the same host as Caddy.
+# clearskies-api (port 8765) runs as a systemd service on the same host as Caddy.
+# /api/v1/* and /sse both route to the API — realtime/BFF is merged into the API
+# as of ADR-058.
 #
 # Replace the domain and static file path before use.
 # Caddy obtains and renews TLS certificates automatically via ACME.
@@ -8,9 +9,9 @@
 weather.example.com {
     encode gzip
 
-    reverse_proxy /api/v1/* localhost:8766
+    reverse_proxy /api/v1/* localhost:8765
 
-    reverse_proxy /sse localhost:8766
+    reverse_proxy /sse localhost:8765
 
     handle /webcam.json {
         root * /etc/weewx-clearskies
