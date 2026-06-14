@@ -1,12 +1,35 @@
+{
+	servers {
+		protocols h1 h2
+	}
+}
+
 {$CLEARSKIES_DOMAIN:localhost} {
     encode gzip
 
+    header -Server
+
+    request_body {
+        max_size 2MB
+    }
+
     handle /api/v1/* {
-        reverse_proxy {$CLEARSKIES_API_URL}
+        reverse_proxy {$CLEARSKIES_API_URL} {
+            transport http {
+                tls_insecure_skip_verify
+                dial_timeout 10s
+                response_header_timeout 120s
+            }
+        }
     }
 
     handle /sse {
-        reverse_proxy {$CLEARSKIES_API_URL}
+        reverse_proxy {$CLEARSKIES_API_URL} {
+            transport http {
+                tls_insecure_skip_verify
+                flush_interval -1
+            }
+        }
     }
 
     handle /wizard* {
@@ -53,6 +76,9 @@
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
         Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
         -Server
     }
 }

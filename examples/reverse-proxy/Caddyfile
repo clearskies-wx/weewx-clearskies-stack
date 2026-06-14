@@ -6,12 +6,37 @@
 # Replace the domain and static file path before use.
 # Caddy obtains and renews TLS certificates automatically via ACME.
 
+{
+	servers {
+		protocols h1 h2
+	}
+}
+
 weather.example.com {
     encode gzip
 
-    reverse_proxy /api/v1/* localhost:8765
+    header -Server
 
-    reverse_proxy /sse localhost:8765
+    request_body {
+        max_size 2MB
+    }
+
+    handle /api/v1/* {
+        reverse_proxy localhost:8765 {
+            transport http {
+                dial_timeout 10s
+                response_header_timeout 120s
+            }
+        }
+    }
+
+    handle /sse {
+        reverse_proxy localhost:8765 {
+            transport http {
+                flush_interval -1
+            }
+        }
+    }
 
     handle /webcam.json {
         root * /etc/weewx-clearskies
@@ -33,6 +58,9 @@ weather.example.com {
         X-Content-Type-Options nosniff
         X-Frame-Options DENY
         Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+        Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'"
+        Permissions-Policy "geolocation=(), microphone=(), camera=()"
         -Server
     }
 }
