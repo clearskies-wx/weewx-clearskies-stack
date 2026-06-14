@@ -68,7 +68,10 @@
                hx-target="#key-fields-{{ domain }}"
                hx-swap="innerHTML"
                hx-trigger="change"
-               hx-indicator="#wizard-spinner">
+               hx-indicator="#wizard-spinner"
+               {% if domain == "aqi" %}
+               hx-on:change="htmx.ajax('GET', '/wizard/step/6/aqi-regional/{{ provider.provider_id }}', {target: '#aqi-regional-fields', swap: 'innerHTML'})"
+               {% endif %}>
         <strong>{{ provider.display_name }}</strong>
         {% if is_recommended %}
         <span class="provider-recommended" aria-label="Matches your location">Selected for your location</span>
@@ -96,6 +99,17 @@
         {% endif %}
         {% endfor %}
       </div>
+
+      {# AQI regional config — swapped by HTMX when an AQI provider is selected.
+         Pre-rendered on page load for the currently-selected AQI provider. #}
+      {% if domain == "aqi" %}
+      <div id="aqi-regional-fields">
+        {% if selected_id %}
+        {% set provider_id = selected_id %}
+        {% include "wizard/step_aqi_regional_fields.html" %}
+        {% endif %}
+      </div>
+      {% endif %}
     </fieldset>
     {% endfor %}
 

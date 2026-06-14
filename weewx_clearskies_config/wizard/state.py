@@ -163,6 +163,18 @@ class WizardState:
     custom_terms_md: str = ""
     custom_privacy_md: str = ""
 
+    # AQI regional configuration (ADR-059) — provider-specific scale selectors.
+    # Persisted in wizard state and sent to the API via POST /setup/apply under
+    # the providers.aqi entry so the API can write them to [providers.aqi] in
+    # api.conf.
+    #
+    # aeris_aqi_filter: one of airnow|china|india|eaqi|caqi|uk|de|cai
+    aeris_aqi_filter: str = "airnow"
+    # openmeteo_aqi_index: one of us_aqi|european_aqi
+    openmeteo_aqi_index: str = "us_aqi"
+    # iqair_aqi_scale: one of us|cn
+    iqair_aqi_scale: str = "us"
+
 
 # ---------------------------------------------------------------------------
 # In-memory session store

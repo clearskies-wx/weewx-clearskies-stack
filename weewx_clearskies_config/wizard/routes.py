@@ -848,6 +848,13 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.custom_terms_md = prior.custom_terms_md
             if not state.custom_privacy_md and prior.custom_privacy_md:
                 state.custom_privacy_md = prior.custom_privacy_md
+            # AQI regional configuration (ADR-059)
+            if state.aeris_aqi_filter == "airnow" and prior.aeris_aqi_filter != "airnow":
+                state.aeris_aqi_filter = prior.aeris_aqi_filter
+            if state.openmeteo_aqi_index == "us_aqi" and prior.openmeteo_aqi_index != "us_aqi":
+                state.openmeteo_aqi_index = prior.openmeteo_aqi_index
+            if state.iqair_aqi_scale == "us" and prior.iqair_aqi_scale != "us":
+                state.iqair_aqi_scale = prior.iqair_aqi_scale
             save_wizard_state(session_id, state)
             logger.info("Restored wizard progress from prior session into session %s", session_id[:8])
         else:
@@ -1772,6 +1779,8 @@ async def step6_get(request: Request) -> HTMLResponse:
     if state.latitude is not None and state.longitude is not None:
         recommendations = recommend_providers(state.latitude, state.longitude)
 
+    aqi_suggestion = _aqi_suggestion_from_state(state)
+
     return _render(
         request,
         "step_providers.html",
@@ -1780,6 +1789,7 @@ async def step6_get(request: Request) -> HTMLResponse:
             "state": state,
             "providers_by_domain": by_domain,
             "recommendations": recommendations,
+            "aqi_suggestion": aqi_suggestion,
             "error": None,
         },
     )
@@ -1800,6 +1810,109 @@ async def step6_key_fields(request: Request, domain: str, provider_id: str) -> H
         request,
         "step_provider_key_fields.html",
         {"provider": info, "state": state},
+    )
+
+
+# ---------------------------------------------------------------------------
+# AQI regional configuration — lat/lon-based suggestion helpers (ADR-059)
+# ---------------------------------------------------------------------------
+
+# Bounding boxes for regional AQI scale suggestions.
+# These are coarse checks; the operator can always override.
+# Each region is (lat_min, lat_max, lon_min, lon_max).
+_AQI_REGIONS: list[tuple[str, float, float, float, float]] = [
+    # North America: covers CONUS, Canada, Mexico, and Caribbean
+    ("north_america", 15.0,  72.0, -170.0,  -50.0),
+    # Europe: covers EU + UK + surrounding
+    ("europe",        35.0,  72.0,  -25.0,   45.0),
+    # China
+    ("china",         18.0,  54.0,   73.0,  135.0),
+    # India
+    ("india",          6.0,  36.0,   68.0,   98.0),
+]
+
+
+def _suggest_aqi_region(lat: float, lon: float) -> str:
+    """Return a region name for the given lat/lon using bounding box checks.
+
+    Returns one of: "north_america", "europe", "china", "india", or "other".
+    The first matching region wins (north_america is checked first so the US
+    default applies across the Americas).
+    """
+    for region_name, lat_min, lat_max, lon_min, lon_max in _AQI_REGIONS:
+        if lat_min <= lat <= lat_max and lon_min <= lon <= lon_max:
+            return region_name
+    return "other"
+
+
+def _aqi_suggestion_from_state(state: "WizardState") -> dict[str, str]:
+    """Build provider-specific AQI default suggestions from station coordinates.
+
+    Returns a dict with keys "filter", "index", "scale" containing the
+    suggested values for Aeris, Open-Meteo, and IQAir respectively.
+    Returns an empty dict when coordinates are not yet known.
+    """
+    if state.latitude is None or state.longitude is None:
+        return {}
+
+    region = _suggest_aqi_region(state.latitude, state.longitude)
+
+    _AERIS_FILTER: dict[str, str] = {
+        "north_america": "airnow",
+        "europe":        "eaqi",
+        "china":         "china",
+        "india":         "india",
+        "other":         "airnow",  # US EPA is the broadest global fallback
+    }
+    _OPENMETEO_INDEX: dict[str, str] = {
+        "north_america": "us_aqi",
+        "europe":        "european_aqi",
+        "china":         "us_aqi",   # Open-Meteo has no Chinese index
+        "india":         "us_aqi",   # Open-Meteo has no Indian index
+        "other":         "us_aqi",
+    }
+    _IQAIR_SCALE: dict[str, str] = {
+        "north_america": "us",
+        "europe":        "us",   # IQAir only offers us/cn
+        "china":         "cn",
+        "india":         "us",
+        "other":         "us",
+    }
+
+    return {
+        "filter": _AERIS_FILTER[region],
+        "index":  _OPENMETEO_INDEX[region],
+        "scale":  _IQAIR_SCALE[region],
+    }
+
+
+@router.get("/step/6/aqi-regional/{provider_id}", response_class=HTMLResponse)
+async def step6_aqi_regional(request: Request, provider_id: str) -> HTMLResponse:
+    """Return the AQI regional configuration fragment for the selected AQI provider.
+
+    Called by HTMX when the operator selects an AQI provider on step 6.
+    Also pre-rendered on page load via the step_providers.html template.
+    Responds with an HTML fragment that is swapped into #aqi-regional-fields.
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+
+    # Validate provider_id is an AQI provider to prevent arbitrary template injection.
+    _VALID_AQI_PROVIDERS = {"aeris", "openmeteo", "iqair", "openweathermap"}
+    if provider_id not in _VALID_AQI_PROVIDERS:
+        assert _templates is not None
+        return HTMLResponse(content="", status_code=200)
+
+    aqi_suggestion = _aqi_suggestion_from_state(state)
+
+    return _render(
+        request,
+        "step_aqi_regional_fields.html",
+        {
+            "provider_id": provider_id,
+            "state": state,
+            "aqi_suggestion": aqi_suggestion,
+        },
     )
 
 
@@ -1885,6 +1998,25 @@ async def step6_post(request: Request) -> HTMLResponse:
             if creds:
                 api_keys[provider_id] = creds
     state.api_keys = api_keys
+
+    # Collect AQI regional configuration (ADR-059).
+    # Fields are present only when the operator has selected an AQI provider that
+    # supports regional configuration.  Missing fields keep their state defaults.
+    _VALID_AERIS_FILTERS = {"airnow", "china", "india", "eaqi", "caqi", "uk", "de", "cai"}
+    _VALID_OPENMETEO_INDEXES = {"us_aqi", "european_aqi"}
+    _VALID_IQAIR_SCALES = {"us", "cn"}
+
+    submitted_aeris_filter = str(form.get("aeris_aqi_filter", "")).strip()
+    if submitted_aeris_filter in _VALID_AERIS_FILTERS:
+        state.aeris_aqi_filter = submitted_aeris_filter
+
+    submitted_openmeteo_index = str(form.get("openmeteo_aqi_index", "")).strip()
+    if submitted_openmeteo_index in _VALID_OPENMETEO_INDEXES:
+        state.openmeteo_aqi_index = submitted_openmeteo_index
+
+    submitted_iqair_scale = str(form.get("iqair_aqi_scale", "")).strip()
+    if submitted_iqair_scale in _VALID_IQAIR_SCALES:
+        state.iqair_aqi_scale = submitted_iqair_scale
 
     save_wizard_state(session_id, state)
     return await step7_get(request)
@@ -2286,6 +2418,15 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             provider_entry["nws_user_agent_contact"] = creds["nws_user_agent_contact"]
         if creds.get("iframe_url"):
             provider_entry["iframe_url"] = creds["iframe_url"]
+        # AQI regional configuration (ADR-059) — included in the provider entry
+        # so the API can write them under [providers.aqi] in api.conf.
+        if domain == "aqi":
+            if api_provider_name == "aeris":
+                provider_entry["aqi_filter"] = state.aeris_aqi_filter
+            elif api_provider_name == "openmeteo":
+                provider_entry["aqi_index"] = state.openmeteo_aqi_index
+            elif api_provider_name in ("iqair", "iq_air"):
+                provider_entry["aqi_scale"] = state.iqair_aqi_scale
         api_providers[domain] = provider_entry
 
     api_payload: dict[str, Any] = {
@@ -2933,6 +3074,14 @@ def _merge_from_existing_config(state: WizardState) -> None:
     if not state.custom_privacy_md and existing.custom_privacy_md:
         state.custom_privacy_md = existing.custom_privacy_md
 
+    # AQI regional configuration (ADR-059)
+    if state.aeris_aqi_filter == "airnow" and existing.aeris_aqi_filter != "airnow":
+        state.aeris_aqi_filter = existing.aeris_aqi_filter
+    if state.openmeteo_aqi_index == "us_aqi" and existing.openmeteo_aqi_index != "us_aqi":
+        state.openmeteo_aqi_index = existing.openmeteo_aqi_index
+    if state.iqair_aqi_scale == "us" and existing.iqair_aqi_scale != "us":
+        state.iqair_aqi_scale = existing.iqair_aqi_scale
+
 
 def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> None:
     """Call GET /setup/current-config and merge the response into *state*.
@@ -3014,6 +3163,24 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                     merged_keys[provider_id] = existing_creds
         state.providers = merged_providers
         state.api_keys = merged_keys
+
+        # AQI regional configuration (ADR-059) — restore from API config on re-run.
+        aqi_pd = api_providers.get("aqi", {})
+        if isinstance(aqi_pd, dict):
+            aqi_provider_name = str(aqi_pd.get("provider", "")).strip()
+            if aqi_provider_name == "aeris":
+                val = str(aqi_pd.get("aqi_filter", "")).strip()
+                _VALID_AERIS = {"airnow", "china", "india", "eaqi", "caqi", "uk", "de", "cai"}
+                if val in _VALID_AERIS and state.aeris_aqi_filter == "airnow":
+                    state.aeris_aqi_filter = val
+            elif aqi_provider_name == "openmeteo":
+                val = str(aqi_pd.get("aqi_index", "")).strip()
+                if val in {"us_aqi", "european_aqi"} and state.openmeteo_aqi_index == "us_aqi":
+                    state.openmeteo_aqi_index = val
+            elif aqi_provider_name in ("iqair", "iq_air"):
+                val = str(aqi_pd.get("aqi_scale", "")).strip()
+                if val in {"us", "cn"} and state.iqair_aqi_scale == "us":
+                    state.iqair_aqi_scale = val
 
     # --- Station ---
     station = config.get("station", {})

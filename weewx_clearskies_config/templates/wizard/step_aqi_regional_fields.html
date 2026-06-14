@@ -1,0 +1,94 @@
+{# AQI regional configuration fields — swapped in by HTMX when an AQI provider
+   is selected on step 6.  The fragment is also pre-rendered on page load when
+   an AQI provider is already selected.
+
+   Context variables:
+     provider_id  — the selected AQI provider ID (aeris, openmeteo, iqair, openweathermap)
+     state        — WizardState (used to pre-select saved values)
+     aqi_suggestion — dict with "filter", "index", "scale" suggestions from lat/lon
+                       (may be empty if coordinates are unknown)
+#}
+
+{% if provider_id == "aeris" %}
+<div class="aqi-regional-fields" aria-label="AQI regional scale for Aeris">
+  {% set filter_options = [
+    ("airnow", "US EPA (AirNow)"),
+    ("china",  "China (MEP/CAAQS)"),
+    ("india",  "India (NAQI)"),
+    ("eaqi",   "European AQI (EAQI)"),
+    ("caqi",   "Common AQI (CAQI)"),
+    ("uk",     "United Kingdom (DAQI)"),
+    ("de",     "Germany (LQI)"),
+    ("cai",    "South Korea (CAI)"),
+  ] %}
+  {% set current = state.aeris_aqi_filter or aqi_suggestion.get("filter", "airnow") %}
+  <label for="aeris_aqi_filter">AQI Regional Scale</label>
+  <select id="aeris_aqi_filter" name="aeris_aqi_filter"
+          aria-describedby="aeris-aqi-filter-hint">
+    {% for value, label in filter_options %}
+    <option value="{{ value }}" {% if current == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <small id="aeris-aqi-filter-hint">
+    Selects the regional AQI standard returned by Aeris.
+    {% if aqi_suggestion.get("filter") %}
+    Auto-suggested from your station location.
+    {% endif %}
+    You can change this at any time.
+  </small>
+</div>
+
+{% elif provider_id == "openmeteo" %}
+<div class="aqi-regional-fields" aria-label="AQI index for Open-Meteo">
+  {% set index_options = [
+    ("us_aqi",       "US AQI (EPA)"),
+    ("european_aqi", "European AQI (EAQI)"),
+  ] %}
+  {% set current = state.openmeteo_aqi_index or aqi_suggestion.get("index", "us_aqi") %}
+  <label for="openmeteo_aqi_index">AQI Index</label>
+  <select id="openmeteo_aqi_index" name="openmeteo_aqi_index"
+          aria-describedby="openmeteo-aqi-index-hint">
+    {% for value, label in index_options %}
+    <option value="{{ value }}" {% if current == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <small id="openmeteo-aqi-index-hint">
+    Open-Meteo computes both US and European AQI server-side.
+    {% if aqi_suggestion.get("index") %}
+    Auto-suggested from your station location.
+    {% endif %}
+    You can change this at any time.
+  </small>
+</div>
+
+{% elif provider_id == "iqair" %}
+<div class="aqi-regional-fields" aria-label="AQI scale for IQAir">
+  {% set scale_options = [
+    ("us", "US EPA (AQI)"),
+    ("cn", "China MEP (AQICN)"),
+  ] %}
+  {% set current = state.iqair_aqi_scale or aqi_suggestion.get("scale", "us") %}
+  <label for="iqair_aqi_scale">AQI Scale</label>
+  <select id="iqair_aqi_scale" name="iqair_aqi_scale"
+          aria-describedby="iqair-aqi-scale-hint">
+    {% for value, label in scale_options %}
+    <option value="{{ value }}" {% if current == value %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <small id="iqair-aqi-scale-hint">
+    IQAir returns both US EPA and China MEP indices.
+    {% if aqi_suggestion.get("scale") %}
+    Auto-suggested from your station location.
+    {% endif %}
+    You can change this at any time.
+  </small>
+</div>
+
+{% elif provider_id == "openweathermap" %}
+<div class="aqi-regional-fields aqi-regional-note"
+     aria-label="AQI note for OpenWeatherMap">
+  <p><small>OpenWeatherMap uses its own 1&ndash;5 air quality scale.
+     No regional configuration is required.</small></p>
+</div>
+
+{% endif %}
