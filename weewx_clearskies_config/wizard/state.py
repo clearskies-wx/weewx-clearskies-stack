@@ -31,6 +31,12 @@ class WizardState:
     # Column mapping — key=db_column_name, value=canonical_name or None (unmapped/skip)
     column_mapping: dict[str, str | None] = field(default_factory=dict)
 
+    # Confirmed unit assignments — key=db_column_name, value=unit string
+    # (e.g. "degree_F", "microgram_per_meter_cubed").  Populated in step 3
+    # from auto-detected / heuristic / operator-entered values.  Sent to the
+    # API as part of the apply payload so it can write [column_units] in api.conf.
+    column_units: dict[str, str] = field(default_factory=dict)
+
     # Processed schema data cached between step 2 POST and step 3 GET.
     # Shape: {"stock_columns": [...], "unmapped_columns": [...], "total_columns": int, "stock_mapped": int}
     # Set by step 2 POST after calling ApiClient.get_schema(); cleared after step 3 advances.

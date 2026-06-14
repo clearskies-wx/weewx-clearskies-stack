@@ -309,6 +309,14 @@ def populate_from_config(config_dir: Path) -> WizardState:
             for col in excluded:
                 state.column_mapping[col] = None
 
+        # [column_units] in api.conf stores db_col = unit (e.g. outTemp = degree_F).
+        # Written by the API on apply (T2.6); read here on re-run to pre-populate.
+        units_section = api_cfg.get("column_units", {})
+        if isinstance(units_section, dict):
+            state.column_units = {
+                str(k): str(v) for k, v in units_section.items() if v
+            }
+
         providers: dict[str, str] = {}
         for domain in _PROVIDER_DOMAINS:
             domain_section = api_cfg.get(domain, {})
@@ -626,6 +634,9 @@ def _state_from_dict(raw: dict[str, Any]) -> WizardState:
         elif f.name == "column_mapping":
             if isinstance(val, dict):
                 kwargs[f.name] = {str(k): (str(v) if v is not None else None) for k, v in val.items()}
+        elif f.name == "column_units":
+            if isinstance(val, dict):
+                kwargs[f.name] = {str(k): str(v) for k, v in val.items() if v}
         elif f.name == "providers":
             if isinstance(val, dict):
                 kwargs[f.name] = {str(k): str(v) for k, v in val.items()}

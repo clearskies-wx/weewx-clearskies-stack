@@ -24,18 +24,20 @@
         <span class="col-unmapped">{{ schema.unmapped_columns | length }} need review</span>{% endif %}.
       </p>
 
+      {# ── Stock columns (shown prominently, not collapsible) ── #}
       {% if schema.stock_columns %}
-      <details>
-        <summary>
+      <section aria-labelledby="stock-heading">
+        <h3 id="stock-heading">
           Auto-mapped stock columns ({{ schema.stock_columns | length }})
-          <span class="col-mapped" aria-hidden="true">✓</span>
-        </summary>
+          <span class="col-mapped" aria-hidden="true">&#10003;</span>
+        </h3>
         <table>
           <caption class="sr-only">Stock columns automatically mapped to canonical names</caption>
           <thead>
             <tr>
               <th scope="col">DB column</th>
               <th scope="col">Canonical name</th>
+              <th scope="col">Detected Unit</th>
               <th scope="col">Status</th>
             </tr>
           </thead>
@@ -45,16 +47,41 @@
               <td><code>{{ col.db_name }}</code></td>
               <td><code>{{ col.canonical }}</code></td>
               <td>
-                <span class="col-mapped" aria-label="Auto-mapped">✓ Auto</span>
+                {% if col.resolved_unit %}
+                  <code>{{ col.resolved_unit }}</code>
+                  {% if col.unit_source == "weewx" %}
+                  <span class="confidence-badge high" aria-label="Detected from weewx configuration">&#10003; weewx</span>
+                  {% elif col.unit_source == "heuristic" %}
+                  <span class="confidence-badge medium" aria-label="Suggested by heuristic pattern matching">heuristic</span>
+                  {% endif %}
+                {% else %}
+                  <span class="pico-color-muted" aria-label="No unit detected">&mdash;</span>
+                {% endif %}
+                <input type="hidden"
+                       name="unit_{{ col.db_name }}"
+                       value="{{ col.resolved_unit or '' }}">
+              </td>
+              <td>
+                <span class="col-mapped" aria-label="Auto-mapped">&#10003; Auto</span>
               </td>
             </tr>
             {% endfor %}
           </tbody>
         </table>
-      </details>
+      </section>
       {% endif %}
 
+      {# ── Custom columns ── #}
       {% if schema.unmapped_columns %}
+
+      {# Determine whether any custom column has unit detection data #}
+      {% set ns = namespace(has_suggestions=false) %}
+      {% for col in schema.unmapped_columns %}
+        {% if col.unit_source %}
+          {% set ns.has_suggestions = true %}
+        {% endif %}
+      {% endfor %}
+
       <fieldset>
         <legend>Custom columns — assign canonical names</legend>
         <p>
@@ -63,6 +90,34 @@
             Columns with a suggested match are pre-selected — verify and adjust as needed.
           </small>
         </p>
+
+        {# Opt-in toggle for mapping assistance #}
+        <fieldset role="group" aria-labelledby="assist-legend">
+          <legend id="assist-legend">Would you like mapping assistance for custom columns?</legend>
+          <label for="assist-yes">
+            <input type="radio"
+                   id="assist-yes"
+                   name="mapping_assistance"
+                   value="yes"
+                   {% if ns.has_suggestions %}checked{% endif %}
+                   aria-describedby="assist-yes-hint"
+                   onchange="toggleAssistance(true)">
+            Yes, show suggestions
+          </label>
+          <small id="assist-yes-hint" class="sr-only">Show auto-detected and heuristic unit suggestions pre-filled where available.</small>
+          <label for="assist-no">
+            <input type="radio"
+                   id="assist-no"
+                   name="mapping_assistance"
+                   value="no"
+                   {% if not ns.has_suggestions %}checked{% endif %}
+                   aria-describedby="assist-no-hint"
+                   onchange="toggleAssistance(false)">
+            No, I'll map manually
+          </label>
+          <small id="assist-no-hint" class="sr-only">Show empty fields for manual unit entry.</small>
+        </fieldset>
+
         <table>
           <caption class="sr-only">Custom columns requiring canonical name assignment</caption>
           <thead>
@@ -73,6 +128,7 @@
                 Canonical name
                 <span class="sr-only">(choose from dropdown; leave blank to exclude from API)</span>
               </th>
+              <th scope="col">Unit</th>
             </tr>
           </thead>
           <tbody>
@@ -96,7 +152,7 @@
                 {% elif col.suggested %}
                 <span class="confidence-badge medium">Suggested</span>
                 {% else %}
-                <span class="pico-color-muted">—</span>
+                <span class="pico-color-muted">&mdash;</span>
                 {% endif %}
               </td>
               <td>
@@ -123,6 +179,73 @@
                   Leave blank to exclude {{ col.db_name }} from the API output.
                 </small>
               </td>
+              <td data-unit-col="{{ col.db_name }}"
+                  data-resolved-unit="{{ col.resolved_unit or '' }}"
+                  data-unit-source="{{ col.unit_source or '' }}">
+                {# ── Assisted view: shown when "Yes, show suggestions" is active ── #}
+                {% if col.resolved_unit %}
+                  {# Display detected unit with source badge and Override link #}
+                  <span class="unit-assisted"
+                        {% if not ns.has_suggestions %}style="display:none"{% endif %}>
+                    <code>{{ col.resolved_unit }}</code>
+                    {% if col.unit_source == "weewx" %}
+                    <span class="confidence-badge high" aria-label="Detected from weewx">&#10003; weewx</span>
+                    {% elif col.unit_source == "heuristic" %}
+                    <span class="confidence-badge medium" aria-label="Suggested by heuristic">heuristic</span>
+                    {% endif %}
+                    <input type="hidden"
+                           class="unit-hidden-input"
+                           name="unit_{{ col.db_name }}"
+                           value="{{ col.resolved_unit }}"
+                           {% if not ns.has_suggestions %}disabled{% endif %}>
+                    <br>
+                    <a href="#"
+                       class="unit-override-link"
+                       role="button"
+                       aria-label="Override detected unit for {{ col.db_name }}"
+                       onclick="overrideUnit(this, '{{ col.db_name }}', '{{ col.resolved_unit }}'); return false;">
+                      <small>Override</small>
+                    </a>
+                  </span>
+                  {# Override text input — hidden until Override is clicked #}
+                  <span class="unit-override"
+                        style="display:none">
+                    <label for="unit-override-{{ col.db_name }}" class="sr-only">
+                      Override unit for {{ col.db_name }}
+                    </label>
+                    <input type="text"
+                           id="unit-override-{{ col.db_name }}"
+                           class="unit-override-input"
+                           name="unit_{{ col.db_name }}"
+                           value="{{ col.resolved_unit }}"
+                           placeholder="e.g. degree_F"
+                           aria-label="Override unit for {{ col.db_name }}"
+                           disabled>
+                  </span>
+                {% else %}
+                  {# No detected unit — show "Unknown" label with text input in assisted mode #}
+                  <span class="unit-assisted"
+                        {% if not ns.has_suggestions %}style="display:none"{% endif %}>
+                    <span class="pico-color-muted">Unknown</span>
+                  </span>
+                {% endif %}
+
+                {# ── Manual view: shown when "No, I'll map manually" is active,
+                     or as fallback text input for unknown-unit columns in assisted mode ── #}
+                <span class="unit-manual">
+                  <label for="unit-manual-{{ col.db_name }}" class="sr-only">
+                    Unit for {{ col.db_name }}
+                  </label>
+                  <input type="text"
+                         id="unit-manual-{{ col.db_name }}"
+                         class="unit-manual-input"
+                         name="unit_{{ col.db_name }}"
+                         value=""
+                         placeholder="e.g. degree_F"
+                         aria-label="Enter unit for {{ col.db_name }}"
+                         {% if ns.has_suggestions and col.resolved_unit %}disabled{% endif %}>
+                </span>
+              </td>
             </tr>
             {% endfor %}
           </tbody>
@@ -136,15 +259,18 @@
       <p>No schema data available. Check your database connection in step 2.</p>
     {% endif %}
 
+    <p>
+      <small>By clicking Confirm, you accept the column mappings and unit assignments shown above.</small>
+    </p>
     <div role="group">
       <button type="button"
               hx-get="/wizard/step/2"
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        ← Previous
+        &larr; Previous
       </button>
-      <button type="submit">Next: Station Identity →</button>
+      <button type="submit">Confirm Mappings &rarr;</button>
     </div>
   </form>
 
@@ -156,6 +282,81 @@
   })();
 </script>
 {% endif %}
+
+<script>
+  /**
+   * Toggle between assisted and manual unit entry for custom columns.
+   * Ensures only one set of unit inputs is enabled at a time to prevent
+   * duplicate form field submission.
+   */
+  function toggleAssistance(showAssisted) {
+    document.querySelectorAll('[data-unit-col]').forEach(function (td) {
+      var resolvedUnit = td.getAttribute('data-resolved-unit');
+      var assisted = td.querySelector('.unit-assisted');
+      var overrideSpan = td.querySelector('.unit-override');
+      var hiddenInput = td.querySelector('.unit-hidden-input');
+      var overrideInput = td.querySelector('.unit-override-input');
+      var manualInput = td.querySelector('.unit-manual-input');
+      var wasOverridden = overrideSpan && overrideSpan.getAttribute('data-active') === '1';
+
+      if (showAssisted) {
+        if (resolvedUnit) {
+          if (wasOverridden) {
+            // Override was previously clicked — keep override input active
+            if (assisted) { assisted.style.display = 'none'; }
+            if (hiddenInput) { hiddenInput.disabled = true; }
+            if (overrideSpan) { overrideSpan.style.display = ''; }
+            if (overrideInput) { overrideInput.disabled = false; }
+          } else {
+            // Normal assisted display with hidden input
+            if (assisted) { assisted.style.display = ''; }
+            if (hiddenInput) { hiddenInput.disabled = false; }
+            if (overrideSpan) { overrideSpan.style.display = 'none'; }
+            if (overrideInput) { overrideInput.disabled = true; }
+          }
+          if (manualInput) { manualInput.disabled = true; }
+        } else {
+          // No resolved unit — show "Unknown" label, enable manual input
+          if (assisted) { assisted.style.display = ''; }
+          if (manualInput) { manualInput.disabled = false; }
+        }
+      } else {
+        // Manual mode — hide assisted/override, enable manual input
+        if (assisted) { assisted.style.display = 'none'; }
+        if (hiddenInput) { hiddenInput.disabled = true; }
+        if (overrideSpan) { overrideSpan.style.display = 'none'; }
+        if (overrideInput) { overrideInput.disabled = true; }
+        if (manualInput) { manualInput.disabled = false; }
+      }
+    });
+  }
+
+  /**
+   * Switch a column's unit cell from the read-only assisted display
+   * to an editable text input pre-filled with the detected value.
+   */
+  function overrideUnit(link, dbName, currentUnit) {
+    var td = link.closest('td');
+    // Hide the assisted display (with the hidden input)
+    var assisted = td.querySelector('.unit-assisted');
+    if (assisted) {
+      assisted.style.display = 'none';
+      var hiddenInput = assisted.querySelector('.unit-hidden-input');
+      if (hiddenInput) { hiddenInput.disabled = true; }
+    }
+    // Show and enable the override text input, mark as active
+    var overrideSpan = td.querySelector('.unit-override');
+    if (overrideSpan) {
+      overrideSpan.style.display = '';
+      overrideSpan.setAttribute('data-active', '1');
+      var overrideInput = overrideSpan.querySelector('.unit-override-input');
+      if (overrideInput) {
+        overrideInput.disabled = false;
+        overrideInput.focus();
+      }
+    }
+  }
+</script>
 </article>
 
 {# OOB: update the progress bar to reflect the current step. #}

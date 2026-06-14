@@ -289,11 +289,29 @@ def process_api_schema(api_response: dict[str, Any]) -> dict[str, Any]:
     and returns::
 
         {
-            "stock_columns": [{"db_name": ..., "canonical": ..., "auto_mapped": True}, ...],
-            "unmapped_columns": [{"db_name": ..., "suggested": ..., "confidence": ...}, ...],
+            "stock_columns": [
+                {
+                    "db_name": ..., "canonical": ..., "auto_mapped": True,
+                    "auto_detected_unit": str|None, "suggested_unit": str|None,
+                    "unit_source": str|None, "resolved_unit": str|None,
+                },
+                ...
+            ],
+            "unmapped_columns": [
+                {
+                    "db_name": ..., "suggested": ..., "confidence": ...,
+                    "auto_detected_unit": str|None, "suggested_unit": str|None,
+                    "unit_source": str|None, "resolved_unit": str|None,
+                },
+                ...
+            ],
             "total_columns": int,
             "stock_mapped": int,
         }
+
+    Unit fields come from the API's enriched ``/setup/schema`` response
+    (T2.3/T2.4).  ``resolved_unit`` is the best available unit:
+    ``auto_detected_unit`` if present, else ``suggested_unit``, else None.
 
     Only columns the API flags as ``stock`` are auto-mapped.  Non-stock columns
     always appear in the unmapped list for operator review, even when the API
@@ -322,11 +340,18 @@ def process_api_schema(api_response: dict[str, Any]) -> dict[str, Any]:
 
         if is_stock:
             effective_canonical = canonical or name
+            auto_unit = col.get("auto_detected_unit") or None
+            suggested_unit = col.get("suggested_unit") or None
+            unit_source = col.get("unit_source") or None
             stock_columns.append(
                 {
                     "db_name": name,
                     "canonical": effective_canonical,
                     "auto_mapped": True,
+                    "auto_detected_unit": auto_unit,
+                    "suggested_unit": suggested_unit,
+                    "unit_source": unit_source,
+                    "resolved_unit": auto_unit or suggested_unit,
                 }
             )
             claimed[effective_canonical] = (99, name)
@@ -343,12 +368,20 @@ def process_api_schema(api_response: dict[str, Any]) -> dict[str, Any]:
         if any(p in lower_name for p in _DIAGNOSTIC_PATTERNS):
             continue  # skip diagnostic/battery/status columns
 
+        auto_unit = col.get("auto_detected_unit") or None
+        suggested_unit = col.get("suggested_unit") or None
+        unit_source = col.get("unit_source") or None
+
         suggested, confidence = suggest_canonical(name, canonical_field_names)
         unmapped_columns.append(
             {
                 "db_name": name,
                 "suggested": suggested,
                 "confidence": confidence,
+                "auto_detected_unit": auto_unit,
+                "suggested_unit": suggested_unit,
+                "unit_source": unit_source,
+                "resolved_unit": auto_unit or suggested_unit,
             }
         )
         if suggested:

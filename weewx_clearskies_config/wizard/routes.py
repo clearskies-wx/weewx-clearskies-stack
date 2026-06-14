@@ -1580,6 +1580,17 @@ async def step3_post(request: Request) -> HTMLResponse:
             status_code=422,
         )
 
+    # Collect confirmed unit assignments from form fields named "unit_<db_name>".
+    # Both stock columns (hidden inputs) and custom columns submit their units.
+    column_units: dict[str, str] = {}
+    for key, value in form.multi_items():
+        if key.startswith("unit_"):
+            db_col = key[5:]  # strip "unit_" prefix
+            unit_str = str(value).strip()
+            if unit_str:
+                column_units[db_col] = unit_str
+    state.column_units = column_units
+
     # Merge form submissions with pre-existing state (e.g. stock columns set by
     # step 2, or custom mappings loaded from api.conf on re-run).  Form fields
     # only cover the unmapped columns, so existing entries must be preserved.
@@ -2295,6 +2306,11 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             "default_locale": state.default_locale,
         },
     }
+
+    # Confirmed unit assignments from step 3 — the API writes these to
+    # [column_units] in api.conf (T2.6).
+    if state.column_units:
+        api_payload["column_units"] = state.column_units
 
     if api_providers:
         api_payload["providers"] = api_providers
