@@ -175,6 +175,17 @@ class WizardState:
     # iqair_aqi_scale: one of us|cn
     iqair_aqi_scale: str = "us"
 
+    # TLS configuration (step 14)
+    # tls_mode: one of "acme_http01", "acme_dns01", "behind_proxy"
+    tls_mode: str = ""
+    tls_domain: str = ""
+    tls_acme_email: str = ""
+    # tls_dns_provider: one of cloudflare|route53|googlecloud|digitalocean|namecheap
+    tls_dns_provider: str = ""
+    # tls_dns_api_token is stored in state for session recovery but written
+    # only to secrets.env (mode 0600), never to stack.conf.
+    tls_dns_api_token: str = ""
+
 
 # ---------------------------------------------------------------------------
 # In-memory session store

@@ -1,0 +1,138 @@
+<article>
+  <header>
+    <h2>Step 14 of 15 — TLS / HTTPS Configuration</h2>
+    <p>How should Clear Skies handle browser-facing HTTPS? This configures the Caddy reverse proxy's TLS certificate.</p>
+  </header>
+
+  {% if error %}
+  <div class="alert-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <form id="step-form"
+        hx-post="/wizard/tls"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        autocomplete="off">
+
+    <fieldset>
+      <legend>Certificate Mode</legend>
+
+      <label>
+        <input type="radio" name="tls_mode" value="acme_http01"
+               {% if state.tls_mode == 'acme_http01' %}checked{% endif %}>
+        <strong>Let's Encrypt (HTTP-01)</strong><br>
+        <small>Server must be publicly reachable on ports 80 and 443. Caddy auto-issues and auto-renews certificates.</small>
+      </label>
+
+      <label>
+        <input type="radio" name="tls_mode" value="acme_dns01"
+               {% if state.tls_mode == 'acme_dns01' %}checked{% endif %}>
+        <strong>Let's Encrypt (DNS-01)</strong><br>
+        <small>Server behind NAT or firewall. Requires a domain with DNS provider API access (Cloudflare, Route53, etc.).</small>
+      </label>
+
+      <label>
+        <input type="radio" name="tls_mode" value="behind_proxy"
+               {% if state.tls_mode == 'behind_proxy' %}checked{% endif %}>
+        <strong>Behind existing reverse proxy</strong><br>
+        <small>An external proxy (Nginx Proxy Manager, Traefik, HAProxy, Cloudflare) already handles TLS. Caddy listens HTTP-only.</small>
+      </label>
+    </fieldset>
+
+    {# ============================================================ #}
+    {# Domain — shown for both ACME modes                           #}
+    {# ============================================================ #}
+    <div id="acme-fields"
+         style="{% if state.tls_mode in ('acme_http01', 'acme_dns01') %}{% else %}display:none{% endif %}">
+      <label for="tls_domain">Domain name</label>
+      <input type="text"
+             id="tls_domain"
+             name="tls_domain"
+             value="{{ state.tls_domain }}"
+             placeholder="weather.example.com">
+      <small>The public domain name for your weather site.</small>
+    </div>
+
+    {# ============================================================ #}
+    {# HTTP-01 specific fields                                       #}
+    {# ============================================================ #}
+    <div id="http01-fields"
+         style="{% if state.tls_mode == 'acme_http01' %}{% else %}display:none{% endif %}">
+      <label for="tls_acme_email">Email for Let's Encrypt account</label>
+      <input type="email"
+             id="tls_acme_email"
+             name="tls_acme_email"
+             value="{{ state.tls_acme_email }}"
+             placeholder="you@example.com">
+      <small>Used for certificate expiry notifications. Not shared publicly.</small>
+    </div>
+
+    {# ============================================================ #}
+    {# DNS-01 specific fields                                        #}
+    {# ============================================================ #}
+    <div id="dns01-fields"
+         style="{% if state.tls_mode == 'acme_dns01' %}{% else %}display:none{% endif %}">
+      <label for="tls_acme_email_dns">Email for Let's Encrypt account</label>
+      <input type="email"
+             id="tls_acme_email_dns"
+             name="tls_acme_email"
+             value="{{ state.tls_acme_email }}"
+             placeholder="you@example.com">
+      <small>Used for certificate expiry notifications. Not shared publicly.</small>
+
+      <label for="tls_dns_provider">DNS Provider</label>
+      <select id="tls_dns_provider" name="tls_dns_provider">
+        <option value="">-- Select provider --</option>
+        <option value="cloudflare" {% if state.tls_dns_provider == 'cloudflare' %}selected{% endif %}>Cloudflare</option>
+        <option value="route53" {% if state.tls_dns_provider == 'route53' %}selected{% endif %}>AWS Route 53</option>
+        <option value="googlecloud" {% if state.tls_dns_provider == 'googlecloud' %}selected{% endif %}>Google Cloud DNS</option>
+        <option value="digitalocean" {% if state.tls_dns_provider == 'digitalocean' %}selected{% endif %}>DigitalOcean</option>
+        <option value="namecheap" {% if state.tls_dns_provider == 'namecheap' %}selected{% endif %}>Namecheap</option>
+      </select>
+
+      <label for="tls_dns_api_token">DNS Provider API Token</label>
+      <input type="password"
+             id="tls_dns_api_token"
+             name="tls_dns_api_token"
+             value="{{ state.tls_dns_api_token }}"
+             placeholder="Your API token or key">
+      <small>Stored in secrets.env (mode 0600). Never written to config files.</small>
+    </div>
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/features"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML show:window:top"
+              hx-indicator="#wizard-spinner">
+        &#8592; Previous: Feature Settings
+      </button>
+      <button type="submit">Next: Review &#8594;</button>
+    </div>
+  </form>
+</article>
+
+<script>
+// Show/hide conditional fields based on the selected TLS mode radio button.
+(function () {
+  function applyMode(mode) {
+    var acme = document.getElementById('acme-fields');
+    var http01 = document.getElementById('http01-fields');
+    var dns01 = document.getElementById('dns01-fields');
+    if (acme)  acme.style.display  = (mode === 'acme_http01' || mode === 'acme_dns01') ? '' : 'none';
+    if (http01) http01.style.display = mode === 'acme_http01' ? '' : 'none';
+    if (dns01)  dns01.style.display  = mode === 'acme_dns01'  ? '' : 'none';
+  }
+
+  document.querySelectorAll('input[name="tls_mode"]').forEach(function (radio) {
+    radio.addEventListener('change', function () {
+      applyMode(this.value);
+    });
+  });
+}());
+</script>
+
+{# OOB: update the progress bar to reflect the current step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

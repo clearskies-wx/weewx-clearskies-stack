@@ -1,6 +1,6 @@
 <article>
   <header>
-    <h2>Step 14 of 14 — Review &amp; Apply</h2>
+    <h2>Step 15 of 15 — Review &amp; Apply</h2>
     <p>Review your configuration before applying.
        Applying will send the API configuration to the remote API, then write
        <code>realtime.conf</code>, <code>stack.conf</code>, and <code>secrets.env</code>
@@ -463,6 +463,47 @@
     </table>
   </section>
 
+  {# 11. TLS / HTTPS --------------------------------------------------- #}
+  <section class="review-section" aria-labelledby="review-tls">
+    <h3 id="review-tls">
+      TLS / HTTPS
+      <a class="review-edit-link"
+         href="#"
+         hx-get="/wizard/tls"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML show:window:top"
+         hx-indicator="#wizard-spinner"
+         aria-label="Edit TLS settings">Edit</a>
+    </h3>
+    <table class="review-table">
+      <caption class="sr-only">TLS / HTTPS configuration</caption>
+      <tbody>
+        <tr>
+          <th scope="row">Mode</th>
+          <td>
+            {% if state.tls_mode == 'acme_http01' %}
+              Let's Encrypt (HTTP-01) — auto-issued, public server
+            {% elif state.tls_mode == 'acme_dns01' %}
+              Let's Encrypt (DNS-01) — DNS provider challenge
+            {% elif state.tls_mode == 'behind_proxy' %}
+              Behind existing reverse proxy — HTTP-only Caddy
+            {% else %}
+              <em>(not configured)</em>
+            {% endif %}
+          </td>
+        </tr>
+        {% if state.tls_mode in ('acme_http01', 'acme_dns01') %}
+        <tr><th scope="row">Domain</th><td>{{ state.tls_domain or '<em>(not set)</em>' | safe }}</td></tr>
+        <tr><th scope="row">ACME email</th><td>{{ state.tls_acme_email or '<em>(not set)</em>' | safe }}</td></tr>
+        {% endif %}
+        {% if state.tls_mode == 'acme_dns01' %}
+        <tr><th scope="row">DNS provider</th><td>{{ state.tls_dns_provider or '<em>(not set)</em>' | safe }}</td></tr>
+        <tr><th scope="row">API token</th><td><em>stored in secrets.env</em></td></tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </section>
+
   <form hx-post="/wizard/apply"
         hx-target="#wizard-content"
         hx-swap="innerHTML show:window:top"
@@ -470,7 +511,7 @@
         autocomplete="off">
     <div role="group">
       <button type="button"
-              hx-get="/wizard/features"
+              hx-get="/wizard/tls"
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">

@@ -246,6 +246,17 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
         "default_days": str(state.earthquake_default_days),
     }
 
+    # TLS configuration (step 14) — API token is never written here;
+    # it is stored in secrets.env (mode 0600) only.
+    tls_section: dict[str, str] = {"mode": state.tls_mode}
+    if state.tls_mode in ("acme_http01", "acme_dns01"):
+        tls_section["domain"] = state.tls_domain
+        tls_section["acme_email"] = state.tls_acme_email
+    if state.tls_mode == "acme_dns01":
+        tls_section["dns_provider"] = state.tls_dns_provider
+        # dns_api_token intentionally omitted — lives in secrets.env only.
+    cfg["tls"] = tls_section
+
     content = _wrap_with_managed_region(cfg)
     dest = config_dir / "stack.conf"
     if dest.exists():
@@ -343,6 +354,13 @@ def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
         existing["WEEWX_CLEARSKIES_MQTT_PASSWORD"] = state.mqtt_password
     elif "WEEWX_CLEARSKIES_MQTT_PASSWORD" in existing:
         del existing["WEEWX_CLEARSKIES_MQTT_PASSWORD"]
+
+    # TLS DNS API token — only written for DNS-01 mode; cleared otherwise so
+    # stale tokens are not left behind if the operator switches to a different mode.
+    if state.tls_mode == "acme_dns01" and state.tls_dns_api_token:
+        existing["WEEWX_CLEARSKIES_TLS_DNS_API_TOKEN"] = state.tls_dns_api_token
+    elif "WEEWX_CLEARSKIES_TLS_DNS_API_TOKEN" in existing:
+        del existing["WEEWX_CLEARSKIES_TLS_DNS_API_TOKEN"]
 
     lines = [
         "# weewx-clearskies secrets — do not commit this file to version control.\n",

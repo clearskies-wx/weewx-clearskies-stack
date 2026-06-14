@@ -12,10 +12,11 @@
   "Branding",
   "Privacy",
   "Features",
+  "TLS",
   "Review"
 ] %}
 {#
-  Display step → URL mapping (14 steps total):
+  Display step → URL mapping (15 steps total):
     1  → /wizard/step/1   (API Connection)
     2  → /wizard/import   (Import)
     3  → /wizard/eula     (EULA)
@@ -29,7 +30,8 @@
    11  → /wizard/step/8   (Branding)
    12  → /wizard/privacy  (Privacy)
    13  → /wizard/features (Features)
-   14  → /wizard/step/9   (Review)
+   14  → /wizard/tls      (TLS)
+   15  → /wizard/step/9   (Review)
 #}
 {% macro step_url(i) %}
   {%- if i == 1 %}/wizard/step/1
@@ -45,15 +47,16 @@
   {%- elif i == 11 %}/wizard/step/8
   {%- elif i == 12 %}/wizard/privacy
   {%- elif i == 13 %}/wizard/features
+  {%- elif i == 14 %}/wizard/tls
   {%- else %}/wizard/step/9
   {%- endif %}
 {% endmacro %}
 <nav id="wizard-nav" aria-label="Wizard progress"{% if oob %} hx-swap-oob="true"{% endif %}>
   <ol class="wizard-progress" role="list">
-    {% for i in range(1, 15) %}
+    {% for i in range(1, 16) %}
     <li
-      {% if i == step and step <= 14 %}aria-current="step"{% endif %}
-      {% if i < step or step > 14 %}class="is-complete"{% endif %}
+      {% if i == step and step <= 15 %}aria-current="step"{% endif %}
+      {% if i < step or step > 15 %}class="is-complete"{% endif %}
     >
       {% if i < step %}
       <a href="#"

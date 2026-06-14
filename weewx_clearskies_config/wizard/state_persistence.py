@@ -449,6 +449,23 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 except (ValueError, TypeError):
                     pass
 
+        tls_section = stack_cfg.get("tls", {})
+        if isinstance(tls_section, dict):
+            _VALID_TLS_MODES = {"acme_http01", "acme_dns01", "behind_proxy"}
+            mode_val = str(tls_section.get("mode", "")).strip()
+            if mode_val in _VALID_TLS_MODES:
+                state.tls_mode = mode_val
+            if tls_section.get("domain"):
+                state.tls_domain = str(tls_section["domain"])
+            if tls_section.get("acme_email"):
+                state.tls_acme_email = str(tls_section["acme_email"])
+            if tls_section.get("dns_provider"):
+                state.tls_dns_provider = str(tls_section["dns_provider"])
+        # DNS API token lives in secrets.env only — never in stack.conf.
+        tls_token = secrets.get("WEEWX_CLEARSKIES_TLS_DNS_API_TOKEN", "")
+        if tls_token:
+            state.tls_dns_api_token = tls_token
+
     realtime_cfg = read_config("realtime", config_dir)
     if realtime_cfg is not None:
         server_section = realtime_cfg.get("server", {})

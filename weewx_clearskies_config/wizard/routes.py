@@ -36,8 +36,10 @@ Route summary:
   GET  /wizard/privacy          — step 12 fragment (privacy, legal & analytics)
   POST /wizard/privacy          — save privacy/legal settings, return step 13 fragment (features)
   GET  /wizard/features         — step 13 fragment (feature settings: seismic page)
-  POST /wizard/features         — save feature settings, return step 14 fragment (review)
-  GET  /wizard/step/9           — step 14 fragment (review summary)
+  POST /wizard/features         — save feature settings, return step 14 fragment (TLS)
+  GET  /wizard/tls              — step 14 fragment (TLS / HTTPS configuration)
+  POST /wizard/tls              — save TLS config, return step 15 fragment (review)
+  GET  /wizard/step/9           — step 15 fragment (review summary)
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -855,6 +857,17 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.openmeteo_aqi_index = prior.openmeteo_aqi_index
             if state.iqair_aqi_scale == "us" and prior.iqair_aqi_scale != "us":
                 state.iqair_aqi_scale = prior.iqair_aqi_scale
+            # TLS configuration (step 14)
+            if not state.tls_mode and prior.tls_mode:
+                state.tls_mode = prior.tls_mode
+            if not state.tls_domain and prior.tls_domain:
+                state.tls_domain = prior.tls_domain
+            if not state.tls_acme_email and prior.tls_acme_email:
+                state.tls_acme_email = prior.tls_acme_email
+            if not state.tls_dns_provider and prior.tls_dns_provider:
+                state.tls_dns_provider = prior.tls_dns_provider
+            if not state.tls_dns_api_token and prior.tls_dns_api_token:
+                state.tls_dns_api_token = prior.tls_dns_api_token
             save_wizard_state(session_id, state)
             logger.info("Restored wizard progress from prior session into session %s", session_id[:8])
         else:
@@ -2293,11 +2306,82 @@ async def step_feature_settings_post(request: Request) -> HTMLResponse:
         state.earthquake_default_days = 7
 
     save_wizard_state(session_id, state)
+    return await step_tls_get(request)
+
+
+# ---------------------------------------------------------------------------
+# Step 14: TLS / HTTPS Configuration
+# ---------------------------------------------------------------------------
+
+
+@router.get("/tls", response_class=HTMLResponse)
+async def step_tls_get(request: Request) -> HTMLResponse:
+    """Step 14: TLS — render the certificate mode selection form."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(request, "step_tls.html", {"step": 14, "state": state, "error": None})
+
+
+@router.post("/tls", response_class=HTMLResponse)
+async def step_tls_post(request: Request) -> HTMLResponse:
+    """Save TLS configuration and advance to step 15 (review)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    state.tls_mode = str(form.get("tls_mode", "")).strip()
+    state.tls_domain = str(form.get("tls_domain", "")).strip()
+    state.tls_acme_email = str(form.get("tls_acme_email", "")).strip()
+    state.tls_dns_provider = str(form.get("tls_dns_provider", "")).strip()
+    state.tls_dns_api_token = str(form.get("tls_dns_api_token", "")).strip()
+
+    _VALID_TLS_MODES = ("acme_http01", "acme_dns01", "behind_proxy")
+    if state.tls_mode not in _VALID_TLS_MODES:
+        return _render(
+            request,
+            "step_tls.html",
+            {"step": 14, "state": state, "error": "Please select a TLS configuration mode."},
+            status_code=422,
+        )
+
+    if state.tls_mode in ("acme_http01", "acme_dns01") and not state.tls_domain:
+        return _render(
+            request,
+            "step_tls.html",
+            {"step": 14, "state": state, "error": "Domain name is required for automated TLS."},
+            status_code=422,
+        )
+
+    if state.tls_mode == "acme_http01" and not state.tls_acme_email:
+        return _render(
+            request,
+            "step_tls.html",
+            {"step": 14, "state": state, "error": "Email address is required for Let's Encrypt."},
+            status_code=422,
+        )
+
+    if state.tls_mode == "acme_dns01" and not state.tls_dns_provider:
+        return _render(
+            request,
+            "step_tls.html",
+            {"step": 14, "state": state, "error": "DNS provider is required for DNS-01 challenge."},
+            status_code=422,
+        )
+
+    if state.tls_mode == "acme_dns01" and not state.tls_dns_api_token:
+        return _render(
+            request,
+            "step_tls.html",
+            {"step": 14, "state": state, "error": "DNS provider API token is required."},
+            status_code=422,
+        )
+
+    save_wizard_state(session_id, state)
     return await step9_review_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 9: Review + Apply
+# Step 9 (display 15): Review + Apply
 # ---------------------------------------------------------------------------
 
 
@@ -2310,7 +2394,7 @@ async def step9_review_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 14, "state": state, "error": None},
+        {"step": 15, "state": state, "error": None},
     )
 
 
@@ -2484,7 +2568,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 14,
+                "step": 15,
                 "state": state,
                 "error": "API not connected. Go back to step 1 and reconnect before applying.",
             },
@@ -2497,7 +2581,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 14,
+                "step": 15,
                 "state": state,
                 "error": f"Failed to apply API configuration: {error_msg}",
             },
@@ -2509,7 +2593,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 14,
+                "step": 15,
                 "state": state,
                 "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
             },
@@ -2586,7 +2670,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 14, "state": state, "error": _perm_error},
+            {"step": 15, "state": state, "error": _perm_error},
             status_code=422,
         )
 
@@ -2684,7 +2768,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 14, "state": state, "error": local_error},
+            {"step": 15, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -2697,7 +2781,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 14, "state": state, "error": local_error},
+            {"step": 15, "state": state, "error": local_error},
             status_code=422,
         )
 
@@ -3081,6 +3165,18 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.openmeteo_aqi_index = existing.openmeteo_aqi_index
     if state.iqair_aqi_scale == "us" and existing.iqair_aqi_scale != "us":
         state.iqair_aqi_scale = existing.iqair_aqi_scale
+
+    # TLS configuration (step 14)
+    if not state.tls_mode and existing.tls_mode:
+        state.tls_mode = existing.tls_mode
+    if not state.tls_domain and existing.tls_domain:
+        state.tls_domain = existing.tls_domain
+    if not state.tls_acme_email and existing.tls_acme_email:
+        state.tls_acme_email = existing.tls_acme_email
+    if not state.tls_dns_provider and existing.tls_dns_provider:
+        state.tls_dns_provider = existing.tls_dns_provider
+    if not state.tls_dns_api_token and existing.tls_dns_api_token:
+        state.tls_dns_api_token = existing.tls_dns_api_token
 
 
 def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> None:
