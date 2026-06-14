@@ -7,11 +7,18 @@ services:
       context: ../../weewx-clearskies-api
     network_mode: host
     volumes:
-      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies
+      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies:rw
       - ${WEEWX_CONF_PATH:-/etc/weewx/weewx.conf}:/etc/weewx/weewx.conf:ro
       - ${WEEWX_DB_PATH:-/var/lib/weewx/weewx.sdb}:/data/weewx.sdb:ro
       - clearskies-cache:/var/cache/weewx-clearskies
     env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health/ready')"]
       interval: 10s
@@ -24,6 +31,13 @@ services:
     image: redis:7-alpine
     ports:
       - "127.0.0.1:6379:6379"
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     volumes:
       - redis-data:/data
     healthcheck:

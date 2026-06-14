@@ -16,6 +16,11 @@ services:
     environment:
       - CLEARSKIES_DOMAIN=${CLEARSKIES_DOMAIN:-localhost}
       - CLEARSKIES_API_URL=${CLEARSKIES_API_URL}
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       dashboard:
         condition: service_completed_successfully
@@ -29,6 +34,10 @@ services:
       context: ../../weewx-clearskies-dashboard
     volumes:
       - dashboard-dist:/dist
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     restart: "no"
 
   config:

@@ -15,6 +15,11 @@ services:
       - ${CLEARSKIES_WWW_DIR:-/var/www/clearskies}:/var/www/clearskies:ro
     environment:
       - CLEARSKIES_DOMAIN=${CLEARSKIES_DOMAIN:-localhost}
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
     depends_on:
       dashboard:
         condition: service_completed_successfully
@@ -30,6 +35,10 @@ services:
       context: ../../weewx-clearskies-dashboard
     volumes:
       - dashboard-dist:/dist
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     restart: "no"
 
   api:
@@ -37,11 +46,18 @@ services:
     build:
       context: ../../weewx-clearskies-api
     volumes:
-      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies
+      - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies:rw
       - ${WEEWX_CONF_PATH:-/etc/weewx/weewx.conf}:/etc/weewx/weewx.conf:ro
       - ${WEEWX_DB_PATH:-/var/lib/weewx/weewx.sdb}:/data/weewx.sdb:ro
       - clearskies-cache:/var/cache/weewx-clearskies
     env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/health/ready')"]
       interval: 10s
@@ -70,6 +86,13 @@ services:
 
   redis:
     image: redis:7-alpine
+    cap_drop:
+      - ALL
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp
     volumes:
       - redis-data:/data
     healthcheck:
