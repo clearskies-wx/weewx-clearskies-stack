@@ -64,110 +64,6 @@ def _write_file(path: Path, content: str, mode: int = 0o644) -> None:
     os.chmod(path, mode)
 
 
-def write_realtime_conf(state: WizardState, config_dir: Path) -> Path:
-    """Write realtime.conf from *state*.
-
-    Sections written:
-      [sse]      — bind address and port for the realtime SSE service
-      [input]    — input mode; if mqtt, includes nested [[mqtt]] subsection
-      [units]    — unit group selections (falls back to US defaults if not set)
-      [station]  — latitude, longitude, altitude, and timezone for solar
-                   position and day/night determination (ADR-044).
-                   Written only when both latitude and longitude are set.
-      [api]      — upstream API URL and connection settings (when api_address
-                   is set)
-
-    The MQTT password is never written here — only the env var name
-    (WEEWX_CLEARSKIES_MQTT_PASSWORD) is stored, and the password itself
-    goes into secrets.env.
-
-    Returns the path to the written file.
-    """
-    cfg = ConfigObj()
-
-    cfg["sse"] = {
-        "bind_host": state.realtime_bind_host,
-        "bind_port": str(state.realtime_bind_port),
-    }
-
-    if state.input_mode == "mqtt":
-        cfg["input"] = {"mode": "mqtt"}
-        cfg["input"]["mqtt"] = {
-            "broker_host": state.mqtt_broker_host,
-            "broker_port": str(state.mqtt_broker_port),
-            "topic": state.mqtt_topic,
-            "client_id": state.mqtt_client_id,
-            "username": state.mqtt_username,
-            # Store the env var name, never the password value.
-            "password_env": "WEEWX_CLEARSKIES_MQTT_PASSWORD",
-            "tls": "true" if state.mqtt_tls else "false",
-            "ca_file": "",
-            "qos": str(state.mqtt_qos),
-            "keepalive": str(state.mqtt_keepalive),
-        }
-    else:
-        cfg["input"] = {"mode": "direct"}
-
-    # Write [units][[groups]] when the operator has completed the unit step.
-    # If the step was skipped (units is None), fall back to US defaults so the
-    # realtime service always has a complete unit configuration.
-    from weewx_clearskies_config.wizard.units import UNIT_PRESETS
-
-    unit_groups = state.units if state.units is not None else UNIT_PRESETS["us"]
-    cfg["units"] = {}
-    cfg["units"]["groups"] = {k: v for k, v in unit_groups.items()}
-
-    # Write imported [Units] subsections when a skin.conf import was performed.
-    # Only write subsections that have actual data — don't emit empty sections.
-    # The BFF (settings.py) reads [[string_formats]], [[labels]], and
-    # [[ordinates]] from the [units] section of realtime.conf.
-    if state.imported_config is not None:
-        imp_units = state.imported_config.get("units", {})
-
-        string_formats = imp_units.get("string_formats", {})
-        if string_formats:
-            cfg["units"]["string_formats"] = {k: v for k, v in string_formats.items()}
-
-        labels = imp_units.get("labels", {})
-        if labels:
-            cfg["units"]["labels"] = {k: v for k, v in labels.items()}
-
-        # [[ordinates]] stores a "directions" key (comma-separated or list) that
-        # the BFF parses via ordinates_raw.get("directions", "").  Emit only when
-        # the imported config has a non-empty directions list.
-        ordinates = imp_units.get("ordinates", {})
-        directions = ordinates.get("directions", [])
-        if directions:
-            directions_str = (
-                ", ".join(directions) if isinstance(directions, list) else str(directions)
-            )
-            cfg["units"]["ordinates"] = {"directions": directions_str}
-
-    # [station] — required by the realtime BFF for solar position and
-    # day/night determination (ADR-044).  Only written when both lat and lon
-    # are present; altitude and timezone have safe defaults (0 and "").
-    if state.latitude is not None and state.longitude is not None:
-        cfg["station"] = {
-            "latitude": str(state.latitude),
-            "longitude": str(state.longitude),
-            "altitude_meters": str(state.altitude_meters) if state.altitude_meters is not None else "0",
-            "timezone": state.timezone or "",
-        }
-
-    if state.api_address:
-        cfg["api"] = {
-            "upstream_url": state.api_address,
-            "timeout": "30",
-            "tls_verify": "false",
-        }
-
-    content = _wrap_with_managed_region(cfg)
-    dest = config_dir / "realtime.conf"
-    if dest.exists():
-        shutil.copy2(dest, dest.with_suffix(dest.suffix + ".bak"))
-    _write_file(dest, content)
-    return dest
-
 
 def write_api_conf(state: WizardState, config_dir: Path) -> Path:
     """Write api.conf from *state*.
@@ -320,14 +216,13 @@ def _shell_quote_value(value: str) -> str:
 def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
     """Write secrets.env with local service secrets.
 
-    Writes only secrets consumed by local services (realtime, stack).
+    Writes only secrets consumed by local services (stack).
     Database passwords and provider API keys are sent to the API via
     POST /setup/apply and are managed in the API's own secrets.env.
 
     Local secrets written:
       - WEEWX_CLEARSKIES_PROXY_SECRET (shared with API for HMAC validation;
         also written by the API — both sides need the same value)
-      - WEEWX_CLEARSKIES_MQTT_PASSWORD (consumed by the realtime service)
 
     Not written here:
       - WEEWX_CLEARSKIES_DB_PASSWORD (managed by the API)
@@ -349,11 +244,6 @@ def write_secrets_env(state: WizardState, config_dir: Path) -> Path:
         existing["WEEWX_CLEARSKIES_PROXY_SECRET"] = state.proxy_secret
     elif "WEEWX_CLEARSKIES_PROXY_SECRET" in existing:
         del existing["WEEWX_CLEARSKIES_PROXY_SECRET"]
-
-    if state.input_mode == "mqtt" and state.mqtt_password:
-        existing["WEEWX_CLEARSKIES_MQTT_PASSWORD"] = state.mqtt_password
-    elif "WEEWX_CLEARSKIES_MQTT_PASSWORD" in existing:
-        del existing["WEEWX_CLEARSKIES_MQTT_PASSWORD"]
 
     # TLS DNS API token — only written for DNS-01 mode; cleared otherwise so
     # stale tokens are not left behind if the operator switches to a different mode.
@@ -426,7 +316,7 @@ def write_bootstrap_summary(
             "## Proxy secret (cross-host topology)\n",
             "\n",
             "A shared proxy secret was generated.  Copy it to both the API host and\n",
-            "the realtime host so the HMAC validation succeeds:\n",
+            "the dashboard host so the HMAC validation succeeds:\n",
             "\n",
             "```\n",
             f"WEEWX_CLEARSKIES_PROXY_SECRET=<value in secrets.env>\n",
@@ -442,14 +332,12 @@ def write_bootstrap_summary(
         "Copy the local config files to the stack host (api.conf is written by the API itself):\n",
         "\n",
         "```sh\n",
-        f"scp {config_dir}/realtime.conf user@server:/etc/weewx-clearskies/\n",
         f"scp {config_dir}/stack.conf user@server:/etc/weewx-clearskies/\n",
         f"scp {config_dir}/secrets.env user@server:/etc/weewx-clearskies/\n",
         "```\n",
         "\n",
         "Ensure `secrets.env` is chmod 0600 on the target server.\n",
         "Restart the API on the weewx host to load the configuration it received during setup.\n",
-        "Restart the realtime service to apply realtime.conf.\n",
     ]
 
     dest = config_dir / "bootstrap-summary.md"
@@ -530,10 +418,10 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
 
     api.conf is written by the API itself when the wizard sends the apply
     payload via POST /setup/apply (ADR-038).  This function writes only the
-    locally-consumed config files.
+    locally-consumed config files: stack.conf, branding.json, and secrets.env.
 
-    Orchestrates calls to write_realtime_conf, write_stack_conf, and
-    write_secrets_env.  Returns a summary dict:
+    Orchestrates calls to write_stack_conf and write_secrets_env.
+    Returns a summary dict:
       {
         "files_written": [<path>, ...],
         "secrets_written": [<path>, ...],
@@ -543,7 +431,6 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
     files_written = []
     secrets_written = []
 
-    files_written.append(str(write_realtime_conf(state, config_dir)))
     files_written.append(str(write_stack_conf(state, config_dir)))
     files_written.append(str(write_branding_json(state, config_dir)))
     secrets_written.append(str(write_secrets_env(state, config_dir)))

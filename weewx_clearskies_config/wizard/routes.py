@@ -21,11 +21,8 @@ Route summary:
   POST /wizard/step/4/timezone  — lookup timezone from lat/lon, return input fragment
   POST /wizard/step/4           — save station info, return step 7 (units) fragment
   GET  /wizard/units            — step 7 fragment (display units)
-  POST /wizard/units            — save unit selections, return step 8 (MQTT) fragment
-  GET  /wizard/step/5           — step 8 fragment (data pipeline / MQTT)
-  POST /wizard/step/5/test      — test MQTT broker connection, return result fragment
-  POST /wizard/step/5           — save input mode + MQTT settings, return step 9 fragment
-  GET  /wizard/step/6           — step 9 fragment (provider selection + inline key entry)
+  POST /wizard/units            — save unit selections, return step 8 (providers) fragment
+  GET  /wizard/step/6           — step 8 fragment (provider selection + inline key entry)
   GET  /wizard/step/6/key-fields/{domain}/{provider_id} — inline key fields fragment
   POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
   POST /wizard/step/6           — save provider choices + keys, return step 10 fragment (webcam)
@@ -512,7 +509,7 @@ async def step_units_get(request: Request) -> HTMLResponse:
 
 @router.post("/units", response_class=HTMLResponse)
 async def step_units_post(request: Request) -> HTMLResponse:
-    """Save unit selections and advance to step 6 (data pipeline / MQTT)."""
+    """Save unit selections and advance to step 6 (providers)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -543,7 +540,7 @@ async def step_units_post(request: Request) -> HTMLResponse:
 
     state.units = submitted_units
     save_wizard_state(session_id, state)
-    return await step5_get(request)
+    return await step6_get(request)
 
 
 def _get_api_client(state: WizardState) -> ApiClient:
@@ -772,22 +769,6 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.providers = prior.providers
             if not state.api_keys and prior.api_keys:
                 state.api_keys = prior.api_keys
-            if state.input_mode == "direct" and prior.input_mode != "direct":
-                state.input_mode = prior.input_mode
-            if not state.mqtt_broker_host and prior.mqtt_broker_host:
-                state.mqtt_broker_host = prior.mqtt_broker_host
-            if state.mqtt_broker_port == 1883 and prior.mqtt_broker_port != 1883:
-                state.mqtt_broker_port = prior.mqtt_broker_port
-            if state.mqtt_topic == "weewx/loop" and prior.mqtt_topic != "weewx/loop":
-                state.mqtt_topic = prior.mqtt_topic
-            if state.mqtt_client_id == "weewx-clearskies-realtime" and prior.mqtt_client_id != "weewx-clearskies-realtime":
-                state.mqtt_client_id = prior.mqtt_client_id
-            if not state.mqtt_username and prior.mqtt_username:
-                state.mqtt_username = prior.mqtt_username
-            if not state.mqtt_password and prior.mqtt_password:
-                state.mqtt_password = prior.mqtt_password
-            if not state.mqtt_tls and prior.mqtt_tls:
-                state.mqtt_tls = prior.mqtt_tls
             if state.topology == "same-host" and prior.topology != "same-host":
                 state.topology = prior.topology
             if state.proxy_secret is None and prior.proxy_secret is not None:
@@ -798,10 +779,6 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.api_bind_host = prior.api_bind_host
             if state.api_bind_port == 8765 and prior.api_bind_port != 8765:
                 state.api_bind_port = prior.api_bind_port
-            if state.realtime_bind_host == "127.0.0.1" and prior.realtime_bind_host != "127.0.0.1":
-                state.realtime_bind_host = prior.realtime_bind_host
-            if state.realtime_bind_port == 8766 and prior.realtime_bind_port != 8766:
-                state.realtime_bind_port = prior.realtime_bind_port
             if not state.webcam_enabled and prior.webcam_enabled:
                 state.webcam_enabled = prior.webcam_enabled
             if state.webcam_image_url == "/webcam/weather_cam.jpg" and prior.webcam_image_url != "/webcam/weather_cam.jpg":
@@ -1057,15 +1034,6 @@ async def step1_api_post(request: Request) -> HTMLResponse:
         # doesn't have to re-enter every password and API key on re-run.
         _merge_from_api_current_config(client, state)
 
-        # Also read MQTT password from the local secrets.env (it lives here, not
-        # on the API side, because the realtime service is on weather-dev).
-        if not state.mqtt_password and _config_dir is not None:
-            from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
-            local_secrets = _read_secrets_env(_config_dir)
-            mqtt_pw = local_secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
-            if mqtt_pw:
-                state.mqtt_password = mqtt_pw
-
         save_wizard_state(session_id, state)
         return _render(
             request,
@@ -1268,15 +1236,12 @@ async def step2_db_post(request: Request) -> HTMLResponse:
     if (state.db_host or "").lower() in _LOOPBACK:
         state.topology = "same-host"
         state.api_bind_host = "127.0.0.1"
-        state.realtime_bind_host = "127.0.0.1"
     else:
         state.topology = "cross-host"
         if not state.proxy_secret:
             state.proxy_secret = generate_proxy_secret()
         state.api_bind_host = "0.0.0.0"
-        state.realtime_bind_host = "0.0.0.0"
     state.api_bind_port = 8765
-    state.realtime_bind_port = 8766
 
     # Persist the DB fields entered by the user so partial progress survives even
     # if the connection test or schema fetch fails (user can adjust and retry).
@@ -1339,169 +1304,6 @@ async def step2_db_post(request: Request) -> HTMLResponse:
     state.schema_skipped = False
     save_wizard_state(session_id, state)
     return await step3_get(request)
-
-
-# ---------------------------------------------------------------------------
-# Step 5: Data Pipeline (input mode / MQTT)
-# ---------------------------------------------------------------------------
-
-
-def _is_loopback(host: str) -> bool:
-    """Return True if *host* refers to the local machine."""
-    _LOOPBACK = {"localhost", "127.0.0.1", "::1", ""}
-    return host.strip().lower() in _LOOPBACK
-
-
-def _extract_host_from_url(url: str) -> str:
-    """Extract the bare hostname from a ``https://host:port`` URL.
-
-    Returns an empty string if the URL cannot be parsed.
-    """
-    addr = url or ""
-    if addr.startswith("https://"):
-        addr = addr[len("https://"):]
-    if addr.startswith("["):
-        close = addr.find("]")
-        if close != -1:
-            return addr[1:close]
-        return ""
-    host = addr.split(":")[0] if ":" in addr else addr
-    return host.strip()
-
-
-@router.get("/step/5", response_class=HTMLResponse)
-async def step5_get(request: Request) -> HTMLResponse:
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-
-    # On re-run, pre-populate MQTT settings from the existing realtime.conf if
-    # the state does not already have them.  _merge_from_existing_config only
-    # fills fields that are still at their defaults, so user edits are safe.
-    if not state.mqtt_broker_host:
-        _merge_from_existing_config(state)
-
-    # Auto-detect the recommended live-update mode from what the wizard already knows.
-    # Skip the auto-detect when existing config files are present — in re-run mode
-    # _merge_from_existing_config already set state.input_mode from realtime.conf, and
-    # overwriting that here would replace the user's configured value with the topology
-    # heuristic (which might differ, e.g. a remote API host that uses direct-pipe mode).
-    #
-    # The relevant question is whether the API (weewx / loop-packet source) is on
-    # the same physical machine as the config UI / realtime service (weather-dev).
-    # The DB host is irrelevant — it may co-locate with the API on a completely
-    # different machine and still require MQTT.
-    #
-    # Decision rule (first-run only):
-    #   API host is loopback (localhost / 127.0.0.1 / ::1)
-    #     → the API is on the same machine as the config UI → direct is possible
-    #   API host is any non-loopback address
-    #     → the API is on a remote machine → MQTT is required
-    pipeline_hint: str | None = None
-    if not _existing_configs_present():
-        api_host = _extract_host_from_url(state.api_address or "").lower()
-        if api_host:
-            if _is_loopback(api_host):
-                state.input_mode = "direct"
-                pipeline_hint = (
-                    "The Clear Skies API is on the same server as the config UI, "
-                    "so live updates can connect directly."
-                )
-            else:
-                state.input_mode = "mqtt"
-                pipeline_hint = (
-                    "The Clear Skies API is on a different server than the config UI, "
-                    "so live updates need an MQTT message broker to bridge them."
-                )
-
-    return _render(
-        request,
-        "step_mqtt.html",
-        {"step": 8, "state": state, "error": None, "test_result": None,
-         "pipeline_hint": pipeline_hint},
-    )
-
-
-@router.post("/step/5/test", response_class=HTMLResponse)
-async def step5_mqtt_test(request: Request) -> HTMLResponse:
-    """Test MQTT broker reachability without saving; return a result fragment."""
-    _require_session(request)
-    form = await request.form()
-    host = str(form.get("mqtt_broker_host", "")).strip()
-    port = _parse_int(str(form.get("mqtt_broker_port", "1883")), default=1883)
-    username = str(form.get("mqtt_username", "")).strip()
-    password = str(form.get("mqtt_password", ""))
-    tls = str(form.get("mqtt_tls", "false")).lower() in ("true", "on", "1", "yes")
-
-    result = _test_mqtt_connection(host, port, username, password, tls)
-    return _render(
-        request,
-        "step_mqtt_test_result.html",
-        {"result": result},
-    )
-
-
-@router.post("/step/5", response_class=HTMLResponse)
-async def step5_post(request: Request) -> HTMLResponse:
-    """Save input mode + MQTT settings and advance to step 6 (providers)."""
-    session_id = _require_session(request)
-    form = await request.form()
-    state = get_wizard_state(session_id)
-
-    state.input_mode = str(form.get("input_mode", "direct")).strip()
-    if state.input_mode not in ("direct", "mqtt"):
-        state.input_mode = "direct"
-
-    if state.input_mode == "mqtt":
-        state.mqtt_broker_host = str(form.get("mqtt_broker_host", "")).strip()
-        port_raw = _parse_int(str(form.get("mqtt_broker_port", "1883")), default=1883)
-        state.mqtt_broker_port = max(1, min(65535, port_raw))
-        state.mqtt_topic = str(form.get("mqtt_topic", "weewx/loop")).strip() or "weewx/loop"
-        state.mqtt_client_id = (
-            str(form.get("mqtt_client_id", "weewx-clearskies-realtime")).strip()
-            or "weewx-clearskies-realtime"
-        )
-        state.mqtt_username = str(form.get("mqtt_username", "")).strip()
-        # Password handling: the template sends password_unchanged=1 and an empty
-        # password field when the user has not re-typed a password on re-render.
-        # Only overwrite the stored secret when the user actually supplies a value.
-        submitted_password = str(form.get("mqtt_password", ""))
-        password_unchanged = str(form.get("password_unchanged", "0")).strip() == "1"
-        if submitted_password:
-            state.mqtt_password = submitted_password
-        elif not password_unchanged:
-            # Explicit blank entry with the flag cleared — user cleared the password.
-            state.mqtt_password = ""
-        # else: flag is set and field is empty — keep existing state.mqtt_password.
-        state.mqtt_tls = str(form.get("mqtt_tls", "false")).lower() in ("true", "on", "1", "yes")
-        qos_raw = _parse_int(str(form.get("mqtt_qos", "0")), default=0)
-        state.mqtt_qos = qos_raw if qos_raw in (0, 1, 2) else 0
-        keepalive_raw = _parse_int(str(form.get("mqtt_keepalive", "60")), default=60)
-        state.mqtt_keepalive = max(1, keepalive_raw)
-
-        errors = _validate_mqtt_settings(state)
-        if errors:
-            return _render(
-                request,
-                "step_mqtt.html",
-                {"step": 8, "state": state, "error": "; ".join(errors.values()),
-                 "test_result": None, "pipeline_hint": None},
-                status_code=422,
-            )
-    else:
-        # Direct mode: reset all MQTT fields to defaults so stale values do not
-        # bleed into the generated config if the user switches back to MQTT later.
-        state.mqtt_broker_host = ""
-        state.mqtt_broker_port = 1883
-        state.mqtt_topic = "weewx/loop"
-        state.mqtt_client_id = "weewx-clearskies-realtime"
-        state.mqtt_username = ""
-        state.mqtt_password = ""
-        state.mqtt_tls = False
-        state.mqtt_qos = 0
-        state.mqtt_keepalive = 60
-
-    save_wizard_state(session_id, state)
-    return await step6_get(request)
 
 
 # ---------------------------------------------------------------------------
@@ -2442,8 +2244,8 @@ async def wizard_apply(request: Request) -> HTMLResponse:
          The API writes its own api.conf and secrets.env (DB password, provider
          API keys).  If this step fails, render the review page with the error so
          the operator can retry without re-entering all settings.
-      2. Write local config files (realtime.conf, stack.conf, secrets.env with
-         local secrets only — proxy secret and MQTT password).
+      2. Write local config files (stack.conf, secrets.env with
+         local secrets only — proxy secret).
       3. Clear wizard state and render the completion page.
     """
     session_id = _require_session(request)
@@ -2659,7 +2461,6 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     _write_targets: list[str] = [
         str(_effective_config_dir_pre / "webcam.json"),
         str(_effective_config_dir_pre / "branding.json"),
-        str(_effective_config_dir_pre / "realtime.conf"),
         str(_effective_config_dir_pre / "stack.conf"),
         str(_effective_config_dir_pre / "secrets.env"),
         str(_effective_config_dir_pre / "bootstrap-summary.md"),
@@ -2754,8 +2555,8 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             )
 
     # ------------------------------------------------------------------
-    # Step 2: Write local config files (realtime.conf, stack.conf,
-    # secrets.env with local secrets only).
+    # Step 2: Write local config files (stack.conf, secrets.env with
+    # local secrets only).
     #
     # If this step fails, the API side is already done — its config was
     # consumed by the apply call above.  We return the *review page* (not
@@ -2813,14 +2614,8 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     # API restart: POST /setup/restart.  The API may drop the connection
     # before the response completes (it exits and lets systemd restart it).
     # Both outcomes are treated as success.
-    #
-    # Realtime restart: SIGTERM to the local weewx-clearskies-realtime
-    # service.  If the service is not installed or not running (e.g. first
-    # setup before MQTT is configured), the result is False and the UI
-    # shows "not running" rather than an error.
     # ------------------------------------------------------------------
     api_restart_triggered = False
-    realtime_restart_triggered = False
     try:
         restart_client = _get_api_client(state)
         # Pass the one-time restart_token so the API can authenticate the
@@ -2829,8 +2624,6 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         api_restart_triggered = restart_client.restart(restart_token=restart_token)
     except Exception:  # noqa: BLE001
         logger.warning("wizard_apply: could not send restart request to API", exc_info=True)
-
-    realtime_restart_triggered = _restart_local_realtime()
 
     assert _templates is not None
     return _templates.TemplateResponse(
@@ -2841,7 +2634,6 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             "error": None,
             "result": result,
             "api_restart_triggered": api_restart_triggered,
-            "realtime_restart_triggered": realtime_restart_triggered,
             "imported_images": state.imported_images,
         },
         status_code=200,
@@ -2855,16 +2647,15 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
 @router.get("/restart-status", response_class=HTMLResponse)
 async def wizard_restart_status(request: Request) -> HTMLResponse:
-    """Return an HTML fragment reporting the current state of both services.
+    """Return an HTML fragment reporting the current state of the API service.
 
-    Called repeatedly by HTMX on the completion page until both services are
-    up.  The fragment wraps its content in a ``<div class="all-done">`` only
-    when both services are confirmed active, which is the condition the HTMX
+    Called repeatedly by HTMX on the completion page until the API is up.
+    The fragment wraps its content in a ``<div class="all-done">`` only
+    when the API is confirmed active, which is the condition the HTMX
     polling expression watches to stop polling.
 
     The API health check is unauthenticated (GET /health) so it works even
-    after the setup session has expired.  The realtime service state is read
-    from systemctl on the local machine.
+    after the setup session has expired.
     """
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
@@ -2877,90 +2668,13 @@ async def wizard_restart_status(request: Request) -> HTMLResponse:
         except Exception:  # noqa: BLE001
             api_up = False
 
-    realtime_status = _realtime_service_status()
-    # "active" means systemd confirmed the service is running.
-    # "unknown" means systemctl is not available (dev environment) — treat as
-    # not-applicable rather than failed so the UI doesn't spin forever.
-    realtime_up = realtime_status == "active"
-    realtime_unknown = realtime_status == "unknown"
-
     return _render(
         request,
         "restart_status_fragment.html",
         {
             "api_up": api_up,
-            "realtime_up": realtime_up,
-            "realtime_unknown": realtime_unknown,
         },
     )
-
-
-# ---------------------------------------------------------------------------
-# Service restart helpers
-# ---------------------------------------------------------------------------
-
-_REALTIME_SERVICE = "weewx-clearskies-realtime"
-
-
-def _restart_local_realtime() -> bool:
-    """Signal the local realtime service to restart via SIGTERM.
-
-    Uses ``systemctl show`` to retrieve the service's MainPID, then sends
-    SIGTERM.  The service supervisor (systemd) will restart it automatically
-    if the unit is configured with ``Restart=on-failure`` or ``Restart=always``.
-
-    Returns True if SIGTERM was delivered, False if the service is not
-    running, not found, or if any step fails.  Failures are logged and
-    swallowed — a missing realtime service (e.g. first setup before MQTT
-    is configured) is not an error condition.
-    """
-    try:
-        result = subprocess.run(
-            ["systemctl", "show", "-p", "MainPID", _REALTIME_SERVICE],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        for line in result.stdout.splitlines():
-            if line.startswith("MainPID="):
-                pid_str = line.split("=", 1)[1].strip()
-                pid = int(pid_str)
-                if pid > 0:
-                    os.kill(pid, signal.SIGTERM)
-                    logger.info("Sent SIGTERM to %s (PID %d)", _REALTIME_SERVICE, pid)
-                    return True
-                # pid == 0 means the service is not running.
-                logger.info("%s is not running (MainPID=0); skipping SIGTERM", _REALTIME_SERVICE)
-                return False
-    except FileNotFoundError:
-        # systemctl not available on this platform (e.g. macOS dev environment).
-        logger.info("systemctl not found; skipping %s restart", _REALTIME_SERVICE)
-    except (ValueError, PermissionError, ProcessLookupError) as exc:
-        logger.warning("Could not signal %s: %s", _REALTIME_SERVICE, exc)
-    except Exception:  # noqa: BLE001
-        logger.warning("Unexpected error restarting %s", _REALTIME_SERVICE, exc_info=True)
-    return False
-
-
-def _realtime_service_status() -> str:
-    """Return the systemd active state of the realtime service.
-
-    Returns one of: "active", "inactive", "failed", "unknown".
-    "unknown" covers cases where systemctl is unavailable or the unit does
-    not exist (first-run before MQTT is configured).
-    """
-    try:
-        result = subprocess.run(
-            ["systemctl", "is-active", _REALTIME_SERVICE],
-            capture_output=True,
-            text=True,
-            timeout=5,
-        )
-        return result.stdout.strip() or "unknown"
-    except FileNotFoundError:
-        return "unknown"
-    except Exception:  # noqa: BLE001
-        return "unknown"
 
 
 # ---------------------------------------------------------------------------
@@ -3038,13 +2752,14 @@ def _to_float(value: Any) -> float | None:
 
 
 def _existing_configs_present() -> bool:
-    """Return True if realtime.conf or stack.conf exists in config_dir (wizard has run before).
+    """Return True if stack.conf exists in config_dir (wizard has run before).
 
     api.conf is written by the API itself (ADR-038) and is not a reliable sentinel.
+    realtime.conf is deprecated (ADR-058) but checked for backward compatibility.
     """
     if _config_dir is None:
         return False
-    return (_config_dir / "realtime.conf").exists() or (_config_dir / "stack.conf").exists()
+    return (_config_dir / "stack.conf").exists() or (_config_dir / "realtime.conf").exists()
 
 
 def _merge_from_existing_config(state: WizardState) -> None:
@@ -3107,28 +2822,6 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.api_bind_host = existing.api_bind_host
     if state.api_bind_port == 8765 and existing.api_bind_port != 8765:
         state.api_bind_port = existing.api_bind_port
-    if state.realtime_bind_host == "127.0.0.1" and existing.realtime_bind_host != "127.0.0.1":
-        state.realtime_bind_host = existing.realtime_bind_host
-    if state.realtime_bind_port == 8766 and existing.realtime_bind_port != 8766:
-        state.realtime_bind_port = existing.realtime_bind_port
-
-    if state.input_mode == "direct" and existing.input_mode != "direct":
-        state.input_mode = existing.input_mode
-    if not state.mqtt_broker_host and existing.mqtt_broker_host:
-        state.mqtt_broker_host = existing.mqtt_broker_host
-    if state.mqtt_broker_port == 1883 and existing.mqtt_broker_port != 1883:
-        state.mqtt_broker_port = existing.mqtt_broker_port
-    if state.mqtt_topic == "weewx/loop" and existing.mqtt_topic != "weewx/loop":
-        state.mqtt_topic = existing.mqtt_topic
-    if state.mqtt_client_id == "weewx-clearskies-realtime" and existing.mqtt_client_id != "weewx-clearskies-realtime":
-        state.mqtt_client_id = existing.mqtt_client_id
-    if not state.mqtt_username and existing.mqtt_username:
-        state.mqtt_username = existing.mqtt_username
-    if not state.mqtt_password and existing.mqtt_password:
-        state.mqtt_password = existing.mqtt_password
-    if not state.mqtt_tls and existing.mqtt_tls:
-        state.mqtt_tls = existing.mqtt_tls
-
     if not state.webcam_enabled and existing.webcam_enabled:
         state.webcam_enabled = existing.webcam_enabled
     if state.webcam_image_url == "/webcam/weather_cam.jpg" and existing.webcam_image_url != "/webcam/weather_cam.jpg":
@@ -3384,96 +3077,3 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 imp_units["ordinates"] = {"directions": ords}
 
 
-def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:
-    """Validate MQTT fields when input_mode is 'mqtt'.
-
-    Returns a dict of {field_name: error_message}.  Empty dict = valid.
-    """
-    errors: dict[str, str] = {}
-    if not state.mqtt_broker_host:
-        errors["mqtt_broker_host"] = "Please enter a broker hostname or IP address."
-    if not (1 <= state.mqtt_broker_port <= 65535):
-        errors["mqtt_broker_port"] = "Please enter a valid port number between 1 and 65535."
-    if state.mqtt_qos not in (0, 1, 2):
-        errors["mqtt_qos"] = "Quality of Service level must be 0, 1, or 2."
-    return errors
-
-
-def _test_mqtt_connection(
-    host: str,
-    port: int,
-    username: str,
-    password: str,
-    tls: bool,
-) -> dict[str, Any]:
-    """Attempt a full MQTT CONNECT handshake to verify credentials.
-
-    Uses paho-mqtt (v2 API) to perform a real MQTT connection including
-    authentication so that bad credentials are detected, not just TCP
-    reachability.
-
-    Returns: {"success": bool, "error": str | None, "note": str | None}
-    """
-    import socket
-    import threading
-    import uuid
-
-    import paho.mqtt.client as mqtt_client
-
-    if not host:
-        return {"success": False, "error": "Please enter a broker hostname or IP address.", "note": None}
-
-    connected_event = threading.Event()
-    connect_result: dict[str, Any] = {"rc": None}
-
-    def on_connect(client: Any, userdata: Any, flags: Any, reason_code: Any, properties: Any) -> None:  # noqa: ANN401
-        connect_result["rc"] = reason_code
-        connected_event.set()
-
-    client_id = f"clearskies-test-{uuid.uuid4().hex[:8]}"
-    client = mqtt_client.Client(
-        client_id=client_id,
-        callback_api_version=mqtt_client.CallbackAPIVersion.VERSION2,
-    )
-    client.on_connect = on_connect
-
-    if username:
-        client.username_pw_set(username, password or None)
-
-    if tls:
-        client.tls_set()
-
-    try:
-        try:
-            client.connect(host, port, keepalive=5)
-        except socket.timeout:
-            return {"success": False, "error": f"Connection to '{host}:{port}' timed out. Check that the host and port are correct and the broker is running.", "note": None}
-        except socket.gaierror:
-            return {"success": False, "error": f"Could not find a broker at '{host}' — check that the hostname or IP address is correct.", "note": None}
-        except ConnectionRefusedError:
-            return {"success": False, "error": f"Connection to '{host}:{port}' was refused. Check that the broker is running and the port is correct.", "note": None}
-        except OSError as exc:
-            return {"success": False, "error": f"Could not connect to the broker at '{host}:{port}': {exc}", "note": None}
-
-        client.loop_start()
-        event_fired = connected_event.wait(timeout=5)
-        client.loop_stop()
-
-        if not event_fired:
-            return {"success": False, "error": f"No response from broker at '{host}:{port}' within 5 seconds. The broker may be overloaded or unreachable.", "note": None}
-
-        rc = connect_result["rc"]
-        # ReasonCode objects compare equal to their integer value.
-        if rc == 0:
-            return {"success": True, "error": None, "note": "MQTT connection and authentication verified."}
-        if rc == 4:
-            return {"success": False, "error": "MQTT broker rejected the username/password. Check credentials.", "note": None}
-        if rc == 5:
-            return {"success": False, "error": "MQTT broker refused authorization. The user may lack permissions.", "note": None}
-        return {"success": False, "error": f"MQTT broker refused connection (code {rc}).", "note": None}
-
-    finally:
-        try:
-            client.disconnect()
-        except Exception:  # noqa: BLE001
-            pass

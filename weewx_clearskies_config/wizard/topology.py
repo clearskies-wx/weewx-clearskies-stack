@@ -1,8 +1,8 @@
 """Deployment topology helpers and shared-secret generation.
 
 Two supported topologies:
-  same-host  — API, realtime, and dashboard all on one host.  Services
-               bind loopback; no shared secret needed.
+  same-host  — API and dashboard on one host.  Services bind loopback;
+               no shared secret needed.
   cross-host — Dashboard on a separate host.  Services bind 0.0.0.0
                (all IPv4 interfaces); a shared secret is required to
                authenticate the dashboard proxy to the API.
@@ -31,14 +31,11 @@ def topology_defaults(same_host: bool) -> dict[str, Any]:
 
     Returns a dict with keys:
         api_bind_host, api_bind_port,
-        realtime_bind_host, realtime_bind_port,
         needs_proxy_secret.
     """
     bind_host = "127.0.0.1" if same_host else "0.0.0.0"
     return {
         "api_bind_host": bind_host,
         "api_bind_port": 8765,
-        "realtime_bind_host": bind_host,
-        "realtime_bind_port": 8766,
         "needs_proxy_secret": not same_host,
     }
