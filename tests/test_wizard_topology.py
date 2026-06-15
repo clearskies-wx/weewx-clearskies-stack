@@ -15,7 +15,6 @@ from weewx_clearskies_config.wizard.topology import generate_proxy_secret, topol
 def test_topology_defaults_same_host_binds_loopback():
     defaults = topology_defaults(same_host=True)
     assert defaults["api_bind_host"] == "127.0.0.1"
-    assert defaults["realtime_bind_host"] == "127.0.0.1"
 
 
 def test_topology_defaults_cross_host_binds_all_ipv4_interfaces():
@@ -23,7 +22,6 @@ def test_topology_defaults_cross_host_binds_all_ipv4_interfaces():
     # IPv6-only in practice.  0.0.0.0 gives reliable all-interfaces behaviour.
     defaults = topology_defaults(same_host=False)
     assert defaults["api_bind_host"] == "0.0.0.0"
-    assert defaults["realtime_bind_host"] == "0.0.0.0"
 
 
 def test_topology_defaults_same_host_does_not_need_proxy_secret():
@@ -41,17 +39,10 @@ def test_topology_defaults_api_port_is_8765():
     assert defaults["api_bind_port"] == 8765
 
 
-def test_topology_defaults_realtime_port_is_8766():
-    defaults = topology_defaults(same_host=True)
-    assert defaults["realtime_bind_port"] == 8766
-
-
 def test_topology_defaults_returns_all_expected_keys():
     expected_keys = {
         "api_bind_host",
         "api_bind_port",
-        "realtime_bind_host",
-        "realtime_bind_port",
         "needs_proxy_secret",
     }
     defaults = topology_defaults(same_host=True)

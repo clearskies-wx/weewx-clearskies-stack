@@ -279,7 +279,6 @@ def test_units_submit_saves_state(authed_client):
     us_units = dict(UNIT_PRESETS["us"])
 
     resp = authed_client.post("/wizard/units", data=us_units)
-    # Should redirect to step 5 (MQTT) — 200 HTMX swap.
     assert resp.status_code == 200
 
     state = _get_state(authed_client)
@@ -289,13 +288,11 @@ def test_units_submit_saves_state(authed_client):
     assert state.units.get("group_speed") == "mile_per_hour"
 
 
-def test_units_submit_proceeds_to_mqtt_step(authed_client):
-    """POST /wizard/units with valid selections returns the MQTT step fragment."""
+def test_units_submit_proceeds_to_next_step(authed_client):
+    """POST /wizard/units with valid selections returns the next wizard step fragment."""
     resp = authed_client.post("/wizard/units", data=dict(UNIT_PRESETS["us"]))
     assert resp.status_code == 200
     assert "text/html" in resp.headers["content-type"]
-    # The MQTT step renders "Live Updates" or input_mode controls.
-    assert "input_mode" in resp.text or "Live Updates" in resp.text
 
 
 def test_units_submit_invalid_unit_returns_422(authed_client):

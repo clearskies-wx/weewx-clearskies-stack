@@ -13,7 +13,6 @@ import pytest
 from weewx_clearskies_config.wizard.config_writer import (
     apply_wizard,
     write_api_conf,
-    write_realtime_conf,
     write_secrets_env,
     write_stack_conf,
 )
@@ -39,8 +38,6 @@ def _minimal_state(**overrides) -> WizardState:
         topology="same-host",
         api_bind_host="127.0.0.1",
         api_bind_port=8765,
-        realtime_bind_host="127.0.0.1",
-        realtime_bind_port=8766,
         providers={
             "forecast": "nws",
             "alerts": "nws_alerts",
@@ -126,205 +123,6 @@ def test_write_api_conf_writes_all_five_provider_domain_sections(tmp_path: Path)
 def test_write_api_conf_returns_path_to_written_file(tmp_path: Path):
     result = write_api_conf(_minimal_state(), tmp_path)
     assert result == tmp_path / "api.conf"
-
-
-# ---------------------------------------------------------------------------
-# write_realtime_conf — all xfail due to BUG A7
-# ---------------------------------------------------------------------------
-
-
-
-def test_write_realtime_conf_creates_realtime_conf_file(tmp_path: Path):
-    write_realtime_conf(_minimal_state(), tmp_path)
-    assert (tmp_path / "realtime.conf").exists()
-
-
-
-def test_write_realtime_conf_includes_managed_region_markers(tmp_path: Path):
-    write_realtime_conf(_minimal_state(), tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert _MANAGED_BEGIN in content
-    assert _MANAGED_END in content
-
-
-
-def test_write_realtime_conf_writes_server_bind_address_and_port(tmp_path: Path):
-    state = _minimal_state(realtime_bind_host="127.0.0.1", realtime_bind_port=8766)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "bind_host = 127.0.0.1" in content
-    assert "bind_port = 8766" in content
-
-
-def test_write_realtime_conf_writes_station_section_when_lat_lon_set(tmp_path: Path):
-    """[station] section is written when both latitude and longitude are present (ADR-044)."""
-    state = _minimal_state(
-        latitude=38.8894,
-        longitude=-77.0352,
-        altitude_meters=15.24,
-        timezone="America/New_York",
-    )
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[station]" in content
-    assert "38.8894" in content
-    assert "-77.0352" in content
-    assert "15.24" in content
-    assert "America/New_York" in content
-
-
-def test_write_realtime_conf_omits_station_section_when_lat_lon_are_none(tmp_path: Path):
-    """[station] section must not be written when latitude or longitude is None (ADR-044)."""
-    state = _minimal_state(latitude=None, longitude=None)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[station]" not in content
-
-
-def test_write_realtime_conf_omits_station_section_when_only_lat_is_none(tmp_path: Path):
-    """Both lat and lon required; missing either means no [station] section (ADR-044)."""
-    state = _minimal_state(latitude=None, longitude=-77.0352)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[station]" not in content
-
-
-def test_write_realtime_conf_station_altitude_defaults_to_zero_when_none(tmp_path: Path):
-    """altitude_meters defaults to '0' in [station] when not provided (ADR-044)."""
-    state = _minimal_state(latitude=38.8894, longitude=-77.0352, altitude_meters=None)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[station]" in content
-    assert "altitude_meters = 0" in content
-
-
-def test_write_realtime_conf_station_section_appears_after_units_and_before_api(tmp_path: Path):
-    """[station] must appear after [units] and before [api] in realtime.conf (ADR-044)."""
-    state = _minimal_state(latitude=38.8894, longitude=-77.0352, api_address="http://127.0.0.1:8765")
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    units_pos = content.index("[units]")
-    station_pos = content.index("[station]")
-    api_pos = content.index("[api]")
-    assert units_pos < station_pos < api_pos, (
-        f"Expected [units] < [station] < [api], got positions {units_pos}, {station_pos}, {api_pos}"
-    )
-
-
-# ---------------------------------------------------------------------------
-# write_realtime_conf — imported [units] subsections
-# ---------------------------------------------------------------------------
-
-_IMPORTED_CONFIG_FULL = {
-    "units": {
-        "groups": {"group_temperature": "degree_F", "group_speed": "mile_per_hour"},
-        "string_formats": {"degree_F": "%.1f", "mile_per_hour": "%.0f"},
-        "labels": {"degree_F": " °F", "mile_per_hour": " mph"},
-        "ordinates": {
-            "directions": [
-                "N", "NNE", "NE", "ENE",
-                "E", "ESE", "SE", "SSE",
-                "S", "SSW", "SW", "WSW",
-                "W", "WNW", "NW", "NNW",
-            ],
-            "na": "N/A",
-        },
-        "time_formats": {},
-        "degree_days": {},
-        "trend": {},
-        "timezone": None,
-    },
-    "labels": {},
-    "extras": {},
-    "almanac": {},
-    "warnings": [],
-}
-
-
-def test_write_realtime_conf_writes_string_formats_when_imported(tmp_path: Path):
-    """[[string_formats]] written under [units] when imported_config contains them."""
-    state = _minimal_state(imported_config=_IMPORTED_CONFIG_FULL)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[string_formats]]" in content
-    assert "degree_F = %.1f" in content
-    assert "mile_per_hour = %.0f" in content
-
-
-def test_write_realtime_conf_writes_labels_when_imported(tmp_path: Path):
-    """[[labels]] written under [units] when imported_config contains them."""
-    state = _minimal_state(imported_config=_IMPORTED_CONFIG_FULL)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[labels]]" in content
-    # ConfigObj quotes values that contain leading spaces or special chars.
-    assert "degree_F" in content and "°F" in content
-    assert "mile_per_hour" in content and "mph" in content
-
-
-def test_write_realtime_conf_writes_ordinates_directions_when_imported(tmp_path: Path):
-    """[[ordinates]] written under [units] with a 'directions' key when imported."""
-    state = _minimal_state(imported_config=_IMPORTED_CONFIG_FULL)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[ordinates]]" in content
-    assert "directions" in content
-    assert "NNE" in content
-
-
-def test_write_realtime_conf_omits_string_formats_when_not_imported(tmp_path: Path):
-    """[[string_formats]] must NOT appear when imported_config is None."""
-    state = _minimal_state(imported_config=None)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[string_formats]]" not in content
-
-
-def test_write_realtime_conf_omits_labels_when_not_imported(tmp_path: Path):
-    """[[labels]] must NOT appear when imported_config is None."""
-    state = _minimal_state(imported_config=None)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[labels]]" not in content
-
-
-def test_write_realtime_conf_omits_ordinates_when_not_imported(tmp_path: Path):
-    """[[ordinates]] must NOT appear when imported_config is None."""
-    state = _minimal_state(imported_config=None)
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[ordinates]]" not in content
-
-
-def test_write_realtime_conf_omits_subsections_when_imported_units_empty(tmp_path: Path):
-    """No [[string_formats]], [[labels]], or [[ordinates]] when imported units dicts are empty."""
-    state = _minimal_state(
-        imported_config={
-            "units": {
-                "groups": {},
-                "string_formats": {},
-                "labels": {},
-                "ordinates": {"directions": [], "na": "N/A"},
-            }
-        }
-    )
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[string_formats]]" not in content
-    assert "[[labels]]" not in content
-    assert "[[ordinates]]" not in content
-
-
-def test_write_realtime_conf_groups_still_present_when_subsections_imported(tmp_path: Path):
-    """[[groups]] must still be written alongside the new subsections."""
-    state = _minimal_state(
-        units={"group_temperature": "degree_C"},
-        imported_config=_IMPORTED_CONFIG_FULL,
-    )
-    write_realtime_conf(state, tmp_path)
-    content = (tmp_path / "realtime.conf").read_text(encoding="utf-8")
-    assert "[[groups]]" in content
-    assert "group_temperature = degree_C" in content
 
 
 # ---------------------------------------------------------------------------
@@ -417,8 +215,7 @@ def test_write_secrets_env_returns_path_to_written_file(tmp_path: Path):
 def test_apply_wizard_writes_all_expected_conf_files(tmp_path: Path):
     result = apply_wizard(_minimal_state(), tmp_path)
     files = [Path(p).name for p in result["files_written"]]
-    # api.conf is written by the API itself (ADR-038); wizard only writes local config files.
-    assert "realtime.conf" in files
+    # api.conf and realtime.conf are no longer written by the wizard (ADR-058).
     assert "stack.conf" in files
 
 

@@ -93,8 +93,8 @@ def test_read_config_raises_for_unknown_component(config_dir: Path):
         read_config("nonexistent", config_dir)
 
 
-def test_read_config_valid_components_are_api_realtime_stack(config_dir: Path):
-    assert set(COMPONENTS) == {"api", "realtime", "stack"}
+def test_read_config_valid_components_are_api_and_stack(config_dir: Path):
+    assert set(COMPONENTS) == {"api", "stack"}
 
 
 # ---------------------------------------------------------------------------
@@ -116,7 +116,7 @@ def test_get_section_returns_empty_dict_when_section_absent(config_dir: Path):
 
 
 def test_get_section_returns_empty_dict_when_file_absent(config_dir: Path):
-    result = get_section("realtime", "server", config_dir)
+    result = get_section("stack", "server", config_dir)
     assert result == {}
 
 
@@ -130,7 +130,6 @@ def test_get_all_sections_returns_dict_keyed_by_component(config_dir: Path):
     (config_dir / "stack.conf").write_text(_SAMPLE_STACK_CONF, encoding="utf-8")
     result = get_all_sections(config_dir)
     assert "api" in result
-    assert "realtime" in result
     assert "stack" in result
 
 
@@ -142,10 +141,9 @@ def test_get_all_sections_contains_top_level_sections_from_api_conf(config_dir: 
 
 
 def test_get_all_sections_absent_component_returns_empty_dict(config_dir: Path):
-    # Only write api.conf; realtime and stack are absent
+    # Only write api.conf; stack is absent
     (config_dir / "api.conf").write_text(_SAMPLE_API_CONF, encoding="utf-8")
     result = get_all_sections(config_dir)
-    assert result["realtime"] == {}
     assert result["stack"] == {}
 
 
