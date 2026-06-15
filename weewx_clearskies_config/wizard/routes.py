@@ -2558,6 +2558,28 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "default_days": state.earthquake_default_days,
     }
 
+    # Unit configuration — sent to the API so it writes to api.conf [units].
+    # This is the single unit authority (T2A.5, ADR-042).
+    if state.units is not None:
+        units_payload: dict[str, Any] = {"groups": state.units}
+        # Include imported string_formats, labels, ordinates if available
+        if state.imported_config is not None:
+            imp_units = state.imported_config.get("units", {})
+            sf = imp_units.get("string_formats")
+            if sf:
+                units_payload["string_formats"] = sf
+            lb = imp_units.get("labels")
+            if lb:
+                units_payload["labels"] = lb
+            ords = imp_units.get("ordinates", {})
+            dirs = ords.get("directions", [])
+            if dirs:
+                if isinstance(dirs, str):
+                    units_payload["ordinates"] = [d.strip() for d in dirs.split(",")]
+                else:
+                    units_payload["ordinates"] = list(dirs)
+        api_payload["units"] = units_payload
+
     apply_response: dict[str, Any] | None = None
     try:
         client = _get_api_client(state)
@@ -3337,6 +3359,29 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
         api_col_mapping = config.get("column_mapping")
         if isinstance(api_col_mapping, dict) and api_col_mapping:
             state.column_mapping = {str(v): str(k) for k, v in api_col_mapping.items() if v}
+
+    # --- Units (T2B-A.3) ---
+    # Restore state.units from api.conf [units] so the unit step is pre-filled
+    # on wizard re-run.  Only populate if state has no units set yet.
+    if state.units is None:
+        api_units = config.get("units")
+        if api_units is not None:
+            groups = api_units.get("groups")
+            if groups:
+                state.units = dict(groups)
+            # Also restore imported_config units subsections for round-trip fidelity.
+            if state.imported_config is None:
+                state.imported_config = {}
+            imp_units = state.imported_config.setdefault("units", {})
+            sf = api_units.get("string_formats")
+            if sf:
+                imp_units["string_formats"] = dict(sf)
+            lb = api_units.get("labels")
+            if lb:
+                imp_units["labels"] = dict(lb)
+            ords = api_units.get("ordinates")
+            if ords:
+                imp_units["ordinates"] = {"directions": ords}
 
 
 def _validate_mqtt_settings(state: WizardState) -> dict[str, str]:
