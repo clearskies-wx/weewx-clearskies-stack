@@ -4,8 +4,8 @@ After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
+User=clearskies
+Group=clearskies
 ExecStart=/home/ubuntu/repos/weewx-clearskies-stack/.venv/bin/weewx-clearskies-config --bind :: --port 9876
 Restart=on-failure
 RestartSec=5
