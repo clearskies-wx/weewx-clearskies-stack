@@ -54,9 +54,6 @@ _SECTION_META: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("api", "aqi", "AQI Provider", ()),
     ("api", "earthquakes", "Earthquakes Provider", ()),
     ("api", "radar", "Radar Provider", ()),
-    # realtime.conf sections
-    ("realtime", "server", "Realtime Server", ()),
-    ("realtime", "mqtt", "MQTT Settings", ("password",)),
     # stack.conf sections — webcam is a UI concern, written by the wizard to stack.conf
     ("stack", "ui", "UI Settings", ()),
     ("stack", "webcam", "Webcam", ()),
@@ -79,12 +76,6 @@ _SECTION_ALLOWED_KEYS: dict[tuple[str, str], frozenset[str]] = {
     ("api", "earthquakes"): frozenset({"provider"}),
     ("api", "radar"):       frozenset({"provider"}),
     ("stack", "webcam"):    frozenset({"enabled", "image_url", "video_url", "refresh_interval"}),
-    ("realtime", "server"): frozenset({"bind_host", "bind_port"}),
-    ("realtime", "mqtt"):   frozenset({
-        "enabled", "broker_host", "broker_port", "topic", "username", "password",
-        # Also accept legacy keys written by the wizard
-        "broker", "port",
-    }),
     ("stack", "ui"):        frozenset({
         "enabled", "bind_host", "bind_port", "tls_cert_path", "tls_key_path",
         "station_name", "latitude", "longitude", "altitude_meters", "timezone",

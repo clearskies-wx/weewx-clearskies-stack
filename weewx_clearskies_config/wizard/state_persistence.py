@@ -55,7 +55,7 @@ def save_progress(session_id: str, state: WizardState, config_dir: Path) -> None
     """Serialize WizardState to a JSON progress file. Atomic write.
 
     The progress file is written with mode 0600 so only the service user
-    can read it.  Secrets (db_password, api_keys, mqtt_password, proxy_secret)
+    can read it.  Secrets (db_password, api_keys, proxy_secret)
     are stored as-is to allow session recovery without re-entry.
     """
     raw = dataclasses.asdict(state)
@@ -111,9 +111,6 @@ def load_progress(session_id: str, config_dir: Path) -> WizardState | None:
 
     if raw.get("proxy_secret") == _SECRET_SENTINEL:
         raw["proxy_secret"] = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
-
-    if raw.get("mqtt_password") == _SECRET_SENTINEL:
-        raw["mqtt_password"] = secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
 
     providers: dict[str, str] = raw.get("providers", {}) if isinstance(raw.get("providers"), dict) else {}
     api_keys: dict[str, dict[str, str]] = {}
@@ -209,9 +206,6 @@ def load_most_recent_progress(config_dir: Path) -> WizardState | None:
     if raw.get("proxy_secret") == _SECRET_SENTINEL:
         raw["proxy_secret"] = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
 
-    if raw.get("mqtt_password") == _SECRET_SENTINEL:
-        raw["mqtt_password"] = secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
-
     providers: dict[str, str] = raw.get("providers", {}) if isinstance(raw.get("providers"), dict) else {}
     api_keys: dict[str, dict[str, str]] = {}
     raw_api_keys = raw.get("api_keys", {})
@@ -268,7 +262,7 @@ def cleanup_stale_progress(config_dir: Path, max_age_hours: int = 72) -> None:
 def populate_from_config(config_dir: Path) -> WizardState:
     """Build a WizardState from existing config files.
 
-    Reads api.conf, stack.conf, realtime.conf, and secrets.env if they exist.
+    Reads api.conf, stack.conf, and secrets.env if they exist.
     Returns a WizardState with whatever fields could be populated; fields that
     cannot be read remain at their dataclass defaults.
     """
@@ -466,57 +460,6 @@ def populate_from_config(config_dir: Path) -> WizardState:
         if tls_token:
             state.tls_dns_api_token = tls_token
 
-    realtime_cfg = read_config("realtime", config_dir)
-    if realtime_cfg is not None:
-        server_section = realtime_cfg.get("server", {})
-        if isinstance(server_section, dict):
-            if server_section.get("bind_host"):
-                state.realtime_bind_host = str(server_section["bind_host"])
-            if server_section.get("bind_port"):
-                try:
-                    state.realtime_bind_port = int(server_section["bind_port"])
-                except (ValueError, TypeError):
-                    pass
-
-        input_section = realtime_cfg.get("input", {})
-        if isinstance(input_section, dict):
-            mode = str(input_section.get("mode", "direct")).strip()
-            if mode in ("direct", "mqtt"):
-                state.input_mode = mode
-            mqtt_section = input_section.get("mqtt", {})
-            if isinstance(mqtt_section, dict):
-                if mqtt_section.get("broker_host"):
-                    state.mqtt_broker_host = str(mqtt_section["broker_host"])
-                if mqtt_section.get("broker_port"):
-                    try:
-                        state.mqtt_broker_port = int(mqtt_section["broker_port"])
-                    except (ValueError, TypeError):
-                        pass
-                if mqtt_section.get("topic"):
-                    state.mqtt_topic = str(mqtt_section["topic"])
-                if mqtt_section.get("client_id"):
-                    state.mqtt_client_id = str(mqtt_section["client_id"])
-                if mqtt_section.get("username"):
-                    state.mqtt_username = str(mqtt_section["username"])
-                tls_val = str(mqtt_section.get("tls", "false")).lower()
-                state.mqtt_tls = tls_val in ("true", "1", "yes")
-                if mqtt_section.get("qos"):
-                    try:
-                        qos = int(mqtt_section["qos"])
-                        if qos in (0, 1, 2):
-                            state.mqtt_qos = qos
-                    except (ValueError, TypeError):
-                        pass
-                if mqtt_section.get("keepalive"):
-                    try:
-                        state.mqtt_keepalive = int(mqtt_section["keepalive"])
-                    except (ValueError, TypeError):
-                        pass
-        # MQTT password comes from secrets.env (stored as env var).
-        mqtt_password = secrets.get("WEEWX_CLEARSKIES_MQTT_PASSWORD", "")
-        if mqtt_password:
-            state.mqtt_password = mqtt_password
-
     state.proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
 
     # Pre-populate branding fields from branding.json (ADR-022 amendment).
@@ -626,9 +569,9 @@ def _domain_for_provider(provider_id: str, providers: dict[str, str]) -> str | N
 
 def _state_from_dict(raw: dict[str, Any]) -> WizardState:
     """Construct a WizardState from a plain dict, validating types."""
-    _INT_FIELDS = {"db_port", "api_bind_port", "realtime_bind_port", "mqtt_broker_port", "mqtt_qos", "mqtt_keepalive", "webcam_refresh_interval", "earthquake_default_days"}
+    _INT_FIELDS = {"db_port", "api_bind_port", "webcam_refresh_interval", "earthquake_default_days"}
     _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters", "earthquake_radius_km", "earthquake_min_magnitude"}
-    _BOOL_FIELDS = {"mqtt_tls", "schema_skipped", "webcam_enabled"}
+    _BOOL_FIELDS = {"schema_skipped", "webcam_enabled"}
 
     kwargs: dict[str, Any] = {}
     for f in dataclasses.fields(WizardState):

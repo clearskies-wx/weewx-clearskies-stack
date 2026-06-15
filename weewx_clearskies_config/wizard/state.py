@@ -58,19 +58,6 @@ class WizardState:
     # API keys — key=provider_id, value=dict of credential field names → values
     api_keys: dict[str, dict[str, str]] = field(default_factory=dict)
 
-    # MQTT / data pipeline
-    input_mode: str = "direct"  # "direct" or "mqtt"
-    mqtt_broker_host: str = ""
-    mqtt_broker_port: int = 1883
-    mqtt_topic: str = "weewx/loop"
-    mqtt_client_id: str = "weewx-clearskies-realtime"
-    mqtt_username: str = ""
-    # mqtt_password is never stored in progress JSON — only in secrets.env.
-    mqtt_password: str = ""
-    mqtt_tls: bool = False
-    mqtt_qos: int = 0
-    mqtt_keepalive: int = 60
-
     # Topology
     topology: str = "same-host"  # "same-host" or "cross-host"
     proxy_secret: str | None = None
@@ -78,8 +65,6 @@ class WizardState:
     # Bind addresses
     api_bind_host: str = "127.0.0.1"
     api_bind_port: int = 8765
-    realtime_bind_host: str = "127.0.0.1"
-    realtime_bind_port: int = 8766
 
     # Navigation: True when step 3 (schema) was skipped due to all-stock columns.
     # Used by step 4 to render the correct Previous button target.

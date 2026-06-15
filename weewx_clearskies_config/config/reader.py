@@ -18,7 +18,7 @@ from configobj import ConfigObj  # type: ignore[import-untyped]
 _REGION_BEGIN = "# MANAGED REGION BEGIN"
 _REGION_END = "# MANAGED REGION END"
 
-COMPONENTS = ("api", "realtime", "stack")
+COMPONENTS = ("api", "stack")
 
 
 def find_config_dir() -> Path:
@@ -109,7 +109,7 @@ def get_section(
 def get_all_sections(config_dir: Path) -> dict[str, dict[str, Any]]:
     """Return all sections across all component configs.
 
-    Grouped by component: ``{"api": {"server": {...}, ...}, "realtime": {...}, ...}``
+    Grouped by component: ``{"api": {"server": {...}, ...}, "stack": {...}, ...}``
     Top-level sections only — does not recurse into nested sub-sections.
     """
     result: dict[str, dict[str, Any]] = {}
