@@ -343,8 +343,6 @@ def _step_topology(state: Any) -> None:
     defaults = topology_defaults(topology_choice == "same-host")
     state.api_bind_host = defaults["api_bind_host"]
     state.api_bind_port = defaults["api_bind_port"]
-    state.realtime_bind_host = defaults["realtime_bind_host"]
-    state.realtime_bind_port = defaults["realtime_bind_port"]
 
     if defaults["needs_proxy_secret"]:
         secret = generate_proxy_secret()
@@ -359,8 +357,7 @@ def _step_bind_addresses(state: Any) -> None:
     _step_header(7, "Bind Addresses")
     click.echo(
         f"  Defaults based on topology ({state.topology}):\n"
-        f"    API:      {state.api_bind_host}:{state.api_bind_port}\n"
-        f"    Realtime: {state.realtime_bind_host}:{state.realtime_bind_port}"
+        f"    API:      {state.api_bind_host}:{state.api_bind_port}"
     )
 
     if click.confirm("  Override bind addresses?", default=False):
@@ -369,12 +366,6 @@ def _step_bind_addresses(state: Any) -> None:
         )
         state.api_bind_port = click.prompt(
             "    API bind port", default=state.api_bind_port, type=int
-        )
-        state.realtime_bind_host = click.prompt(
-            "    Realtime bind host", default=state.realtime_bind_host
-        )
-        state.realtime_bind_port = click.prompt(
-            "    Realtime bind port", default=state.realtime_bind_port, type=int
         )
     else:
         _ok("Using defaults.")
@@ -393,7 +384,6 @@ def _step_review_apply(state: Any, config_dir: Path) -> None:
     click.echo(f"    Timezone: {state.timezone}")
     click.echo(f"    Topology: {state.topology}")
     click.echo(f"    API bind: {state.api_bind_host}:{state.api_bind_port}")
-    click.echo(f"    Realtime: {state.realtime_bind_host}:{state.realtime_bind_port}")
     if state.providers:
         click.echo("    Providers:")
         for domain, pid in state.providers.items():
@@ -493,8 +483,6 @@ def run_headless(
     defaults = topology_defaults(resolved_topology == "same-host")
     state.api_bind_host = defaults["api_bind_host"]
     state.api_bind_port = defaults["api_bind_port"]
-    state.realtime_bind_host = defaults["realtime_bind_host"]
-    state.realtime_bind_port = defaults["realtime_bind_port"]
 
     if defaults["needs_proxy_secret"]:
         state.proxy_secret = generate_proxy_secret()
