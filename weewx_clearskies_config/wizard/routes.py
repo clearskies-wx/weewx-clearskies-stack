@@ -2327,15 +2327,18 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             provider_entry["nws_user_agent_contact"] = creds["nws_user_agent_contact"]
         if creds.get("iframe_url"):
             provider_entry["iframe_url"] = creds["iframe_url"]
-        # AQI regional configuration (ADR-059) — included in the provider entry
-        # so the API can write them under [providers.aqi] in api.conf.
-        if domain == "aqi":
-            if api_provider_name == "aeris":
-                provider_entry["aqi_filter"] = state.aeris_aqi_filter
-            elif api_provider_name == "openmeteo":
-                provider_entry["aqi_index"] = state.openmeteo_aqi_index
-            elif api_provider_name in ("iqair", "iq_air"):
-                provider_entry["aqi_scale"] = state.iqair_aqi_scale
+        # AQI regional configuration (ADR-059) — saved locally in stack.conf
+        # for wizard re-run persistence.  NOT sent in the API payload because
+        # the API's ApplyRequest schema uses extra="forbid" and doesn't accept
+        # these fields yet.  When the API schema is updated, uncomment the
+        # lines below to pass them through.
+        # if domain == "aqi":
+        #     if api_provider_name == "aeris":
+        #         provider_entry["aqi_filter"] = state.aeris_aqi_filter
+        #     elif api_provider_name == "openmeteo":
+        #         provider_entry["aqi_index"] = state.openmeteo_aqi_index
+        #     elif api_provider_name in ("iqair", "iq_air"):
+        #         provider_entry["aqi_scale"] = state.iqair_aqi_scale
         api_providers[domain] = provider_entry
 
     api_payload: dict[str, Any] = {
