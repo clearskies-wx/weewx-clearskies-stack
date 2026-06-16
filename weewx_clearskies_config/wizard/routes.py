@@ -2195,6 +2195,9 @@ async def step_privacy_legal_post(request: Request) -> HTMLResponse:
     text_errors: list[str] = []
     for field_name, (state_attr, doc_type) in _TEXT_UPLOAD_FIELDS.items():
         upload = form.get(field_name)
+        logger.info("Legal upload field %s: type=%s, has_filename=%s, filename=%r",
+                     field_name, type(upload).__name__,
+                     hasattr(upload, "filename"), getattr(upload, "filename", None))
         if upload is None or not hasattr(upload, "filename") or not upload.filename:
             # No file chosen — keep existing state value unchanged.
             continue
