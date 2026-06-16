@@ -574,6 +574,12 @@ def populate_from_branding_json(state: WizardState, config_dir: Path) -> None:
         if social.get("youtube"):
             state.youtube_url = str(social["youtube"])
 
+    # Station photo (optional)
+    if data.get("stationPhotoUrl"):
+        state.station_photo_url = str(data["stationPhotoUrl"])
+    if data.get("stationPhotoAlt"):
+        state.station_photo_alt = str(data["stationPhotoAlt"])
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers

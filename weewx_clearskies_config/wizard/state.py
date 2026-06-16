@@ -148,6 +148,12 @@ class WizardState:
     custom_terms_md: str = ""
     custom_privacy_md: str = ""
 
+    # Station photo (optional) — displayed on the About page.
+    # station_photo_url: served URL (e.g. /wizard/branding/photo.jpg) or empty.
+    # station_photo_alt: WCAG-required alt text for the station photo image.
+    station_photo_url: str = ""
+    station_photo_alt: str = ""
+
     # AQI regional configuration (ADR-059) — provider-specific scale selectors.
     # Persisted in wizard state and sent to the API via POST /setup/apply under
     # the providers.aqi entry so the API can write them to [providers.aqi] in

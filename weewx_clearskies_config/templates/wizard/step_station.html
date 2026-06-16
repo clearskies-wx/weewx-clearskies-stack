@@ -16,6 +16,8 @@
         hx-target="#wizard-content"
         hx-swap="innerHTML show:window:top"
         hx-indicator="#wizard-spinner"
+        hx-encoding="multipart/form-data"
+        enctype="multipart/form-data"
         autocomplete="off">
 
     <input type="hidden" id="altitude_unit" name="altitude_unit" value="{{ state.altitude_unit }}">
@@ -157,6 +159,41 @@
         {% endfor %}
       </select>
       <small id="locale-hint">The default display language for the dashboard. Operators and visitors can override this in the UI.</small>
+    </fieldset>
+
+    {# ================================================================== #}
+    {# Station Photo (optional)                                            #}
+    {# ================================================================== #}
+
+    <fieldset>
+      <legend>Station Photo</legend>
+
+      <label for="station_photo_file">Upload station photo (optional)</label>
+      <input type="file"
+             id="station_photo_file"
+             name="station_photo_file"
+             accept=".jpg,.jpeg,.png,.webp"
+             aria-describedby="station_photo_file_help">
+      <small id="station_photo_file_help">Optional. JPG, PNG, or WebP, max 2 MB. Displayed on the About page.</small>
+
+      {% if state.station_photo_url %}
+      <div id="station_photo_preview">
+        <p><small><strong>Current station photo:</strong></small></p>
+        <img src="{{ state.station_photo_url }}"
+             alt="{{ state.station_photo_alt or 'Station photo preview' }}"
+             style="max-width: 200px; max-height: 150px; display: block; border-radius: 0.25rem;">
+      </div>
+      {% endif %}
+
+      <label for="station_photo_alt">Station photo description (alt text)</label>
+      <input type="text"
+             id="station_photo_alt"
+             name="station_photo_alt"
+             value="{{ state.station_photo_alt }}"
+             maxlength="200"
+             placeholder="Describe your weather station"
+             aria-describedby="station_photo_alt_help">
+      <small id="station_photo_alt_help">Required for accessibility when a photo is uploaded. Describe what is shown in the image (e.g. "Rooftop weather station with anemometer and rain gauge").</small>
     </fieldset>
 
     <div role="group">

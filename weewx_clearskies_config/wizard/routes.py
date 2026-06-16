@@ -829,6 +829,10 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.custom_terms_md = prior.custom_terms_md
             if not state.custom_privacy_md and prior.custom_privacy_md:
                 state.custom_privacy_md = prior.custom_privacy_md
+            if not state.station_photo_url and prior.station_photo_url:
+                state.station_photo_url = prior.station_photo_url
+            if not state.station_photo_alt and prior.station_photo_alt:
+                state.station_photo_alt = prior.station_photo_alt
             # AQI regional configuration (ADR-059)
             if state.aeris_aqi_filter == "airnow" and prior.aeris_aqi_filter != "airnow":
                 state.aeris_aqi_filter = prior.aeris_aqi_filter
@@ -1559,6 +1563,26 @@ async def step4_post(request: Request) -> HTMLResponse:
     submitted_locale = str(form.get("default_locale", "en")).strip()
     state.default_locale = submitted_locale if submitted_locale in _VALID_LOCALES else "en"
 
+    # --- Station photo (optional) ---
+    photo_url, photo_err = await _handle_branding_upload(form, "station_photo_file")
+    if photo_err:
+        return _render(
+            request,
+            "step_station.html",
+            {
+                "step": 6,
+                "state": state,
+                "error": photo_err,
+                "schema_skipped": state.schema_skipped,
+                "timezones": _TIMEZONE_LIST,
+                "locales": _SUPPORTED_LOCALES,
+            },
+            status_code=422,
+        )
+    if photo_url is not None:
+        state.station_photo_url = photo_url
+    state.station_photo_alt = str(form.get("station_photo_alt", "")).strip()
+
     save_wizard_state(session_id, state)
     return await step_units_get(request)
 
@@ -1899,6 +1923,11 @@ _BRANDING_UPLOAD_RULES: dict[str, tuple[frozenset[str], frozenset[str], int]] = 
         frozenset({"image/x-icon", "image/vnd.microsoft.icon", "image/png"}),
         100 * 1024,  # 100 KB
     ),
+    "station_photo_file": (
+        frozenset({".jpg", ".jpeg", ".png", ".webp"}),
+        frozenset({"image/jpeg", "image/png", "image/webp"}),
+        2 * 1024 * 1024,  # 2 MB
+    ),
 }
 
 # Sanitise a filename: keep only alphanumerics, hyphens, underscores, dots.
@@ -2047,6 +2076,71 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------
 
 
+def _format_txt_to_markdown(text: str, doc_type: str = "terms") -> str:
+    """Convert a plain text legal document to basic Markdown.
+
+    Adds heading structure so the document renders properly on the Legal page
+    with correct typography. Lines that look like section headers (all caps,
+    or numbered sections like "1. ACCEPTANCE") get ## heading markup.
+    Paragraphs are separated by blank lines. Existing markdown is left as-is.
+
+    Rules:
+    - First non-empty line becomes ``# {line}`` (h1 title).
+    - Lines that are ALL CAPS and longer than 3 characters become ``## {line}``.
+    - Lines starting with a number followed by a period and space
+      (e.g. "1. ACCEPTANCE") become ``## {line}``.
+    - All other lines are left as regular paragraphs.
+    - Existing blank lines are preserved as paragraph breaks.
+    - Trailing whitespace is stripped from each line.
+
+    Args:
+        text: Raw plain-text content of the legal document.
+        doc_type: Informational label ("terms" or "privacy") — not used for
+                  formatting, reserved for future caller-provided context.
+
+    Returns:
+        A string containing valid Markdown derived from *text*.
+    """
+    import re as _re
+
+    _NUMBERED_SECTION_RE = _re.compile(r"^\d+\.\s+\S")
+
+    output_lines: list[str] = []
+    first_non_empty_seen = False
+
+    for raw_line in text.splitlines():
+        line = raw_line.rstrip()
+
+        # First non-empty line → h1 title.
+        if not first_non_empty_seen:
+            if not line:
+                output_lines.append("")
+                continue
+            first_non_empty_seen = True
+            output_lines.append(f"# {line}")
+            continue
+
+        # Blank line — preserve as paragraph separator.
+        if not line:
+            output_lines.append("")
+            continue
+
+        # ALL CAPS lines longer than 3 chars → h2 section header.
+        if line == line.upper() and len(line.strip()) > 3 and not line.strip().startswith("#"):
+            output_lines.append(f"## {line}")
+            continue
+
+        # Numbered section header (e.g. "1. ACCEPTANCE") → h2.
+        if _NUMBERED_SECTION_RE.match(line):
+            output_lines.append(f"## {line}")
+            continue
+
+        # Ordinary line — pass through.
+        output_lines.append(line)
+
+    return "\n".join(output_lines)
+
+
 @router.get("/privacy", response_class=HTMLResponse)
 async def step_privacy_legal_get(request: Request) -> HTMLResponse:
     """Step 12: Privacy, Legal & Analytics — render the form."""
@@ -2078,9 +2172,51 @@ async def step_privacy_legal_post(request: Request) -> HTMLResponse:
     ]
     state.privacy_regions = ",".join(privacy_values)
 
-    # --- Legal Content Overrides ---
-    state.custom_terms_md = str(form.get("custom_terms_md", "")).strip()
-    state.custom_privacy_md = str(form.get("custom_privacy_md", "")).strip()
+    # --- Legal Content Overrides (file upload) ---
+    # For each text file field: if a file was uploaded, read its content as
+    # UTF-8 text and convert .txt files to Markdown.  If no file was uploaded
+    # the existing state value is left unchanged (operator can clear it only by
+    # uploading a new file or removing it manually).
+    _TEXT_UPLOAD_FIELDS: dict[str, tuple[str, str]] = {
+        "custom_terms_file": ("custom_terms_md", "terms"),
+        "custom_privacy_file": ("custom_privacy_md", "privacy"),
+    }
+    _ALLOWED_TEXT_EXTS = frozenset({".md", ".txt"})
+    _MAX_TEXT_BYTES = 100 * 1024  # 100 KB
+
+    text_errors: list[str] = []
+    for field_name, (state_attr, doc_type) in _TEXT_UPLOAD_FIELDS.items():
+        upload = form.get(field_name)
+        if upload is None or not hasattr(upload, "filename") or not upload.filename:
+            # No file chosen — keep existing state value unchanged.
+            continue
+        raw_filename = str(upload.filename)
+        suffix = Path(raw_filename).suffix.lower()
+        if suffix not in _ALLOWED_TEXT_EXTS:
+            text_errors.append(
+                f"Unsupported file type \"{suffix}\" for {field_name.replace('_file', '')}. "
+                f"Allowed: .md, .txt."
+            )
+            continue
+        data: bytes = await upload.read()
+        if len(data) > _MAX_TEXT_BYTES:
+            text_errors.append(
+                f"{field_name.replace('_file', '').replace('_', ' ').title()}: "
+                f"file is {len(data) // 1024} KB, exceeds the 100 KB limit."
+            )
+            continue
+        content = data.decode("utf-8", errors="replace")
+        if suffix == ".txt":
+            content = _format_txt_to_markdown(content, doc_type=doc_type)
+        setattr(state, state_attr, content)
+
+    if text_errors:
+        return _render(
+            request,
+            "step_privacy_legal.html",
+            {"step": 12, "state": state, "error": " ".join(text_errors)},
+            status_code=422,
+        )
 
     save_wizard_state(session_id, state)
     return await step_feature_settings_get(request)
@@ -2898,6 +3034,10 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.custom_terms_md = existing.custom_terms_md
     if not state.custom_privacy_md and existing.custom_privacy_md:
         state.custom_privacy_md = existing.custom_privacy_md
+    if not state.station_photo_url and existing.station_photo_url:
+        state.station_photo_url = existing.station_photo_url
+    if not state.station_photo_alt and existing.station_photo_alt:
+        state.station_photo_alt = existing.station_photo_alt
 
     # AQI regional configuration (ADR-059)
     if state.aeris_aqi_filter == "airnow" and existing.aeris_aqi_filter != "airnow":

@@ -193,6 +193,8 @@ def write_branding_json(state: WizardState, config_dir: Path) -> Path:
         },
         "googleAnalyticsId": state.google_analytics_id or "",
         "privacyRegions": state.privacy_regions or "global",
+        "stationPhotoUrl": state.station_photo_url or "",
+        "stationPhotoAlt": state.station_photo_alt or "",
     }
     dest = config_dir / "branding.json"
     if dest.exists():
