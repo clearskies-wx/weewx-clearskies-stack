@@ -424,9 +424,17 @@ def _load_eula_text(locale: str) -> str:
 
 @router.get("/eula", response_class=HTMLResponse)
 async def step_eula_get(request: Request) -> HTMLResponse:
-    """Step 3: EULA — render the Operator License Agreement acceptance step."""
+    """Step 3: EULA — render the Operator License Agreement acceptance step.
+
+    Auto-advances to step 4 (DB) on re-run if the EULA was previously accepted
+    and the version hasn't changed.  Re-acceptance is required on version change.
+    """
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.eula_accepted_at:
+        _merge_from_existing_config(state)
+    if state.eula_accepted_at:
+        return await step2_db_get(request)
     eula_text = _load_eula_text(state.default_locale)
     return _render(
         request,
