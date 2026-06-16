@@ -24,7 +24,7 @@
   <div role="status" aria-live="polite">
     <p>
       Your weather dashboard is being configured.
-      Both services are restarting to load the new settings — this may take a moment.
+      The API service is restarting to load the new settings — this may take a moment.
     </p>
     <p>
       Your dashboard will be available at the address you configured.
@@ -47,10 +47,6 @@
       <div class="restart-item">
         <span class="cs-spinner" aria-hidden="true"></span>
         Restarting API service...
-      </div>
-      <div class="restart-item">
-        <span class="cs-spinner" aria-hidden="true"></span>
-        Restarting realtime service...
       </div>
     </div>
   </section>
@@ -77,8 +73,7 @@
     </ul>
     <p>
       <strong>Keep these files secure.</strong>
-      They contain the proxy shared secret (<code>WEEWX_CLEARSKIES_PROXY_SECRET</code>)
-      and (if MQTT is enabled) the MQTT password.
+      They contain the proxy shared secret (<code>WEEWX_CLEARSKIES_PROXY_SECRET</code>).
       The database password and provider API keys are stored in the API's own secrets file on the weewx host.
       Do not commit any secrets file to version control.
     </p>
@@ -123,11 +118,6 @@
         <br>
         <small>Or: <code>clearskies-stack restart api</code> if you are using Docker Compose.</small>
       </li>
-      <li>
-        <strong>Restart the realtime service</strong> to apply <code>realtime.conf</code>:
-        <br>
-        <code>systemctl restart clearskies-realtime</code>
-      </li>
     </ol>
     {% if result and result.proxy_secret %}
     <p>
@@ -155,14 +145,17 @@
   <ol class="wizard-progress" role="list">
     <li class="is-complete"><span class="step-label" aria-hidden="true">API Connection</span><span class="sr-only">Step 1: API Connection (complete)</span></li>
     <li class="is-complete"><span class="step-label" aria-hidden="true">Import</span><span class="sr-only">Step 2: Import (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Database</span><span class="sr-only">Step 3: Database (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Columns</span><span class="sr-only">Step 4: Columns (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Station</span><span class="sr-only">Step 5: Station (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Units</span><span class="sr-only">Step 6: Units (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Realtime</span><span class="sr-only">Step 7: Realtime (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">EULA</span><span class="sr-only">Step 3: EULA (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Database</span><span class="sr-only">Step 4: Database (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Columns</span><span class="sr-only">Step 5: Columns (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Station</span><span class="sr-only">Step 6: Station (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Units</span><span class="sr-only">Step 7: Units (complete)</span></li>
     <li class="is-complete"><span class="step-label" aria-hidden="true">Providers</span><span class="sr-only">Step 8: Providers (complete)</span></li>
     <li class="is-complete"><span class="step-label" aria-hidden="true">Webcam</span><span class="sr-only">Step 9: Webcam (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Appearance</span><span class="sr-only">Step 10: Appearance (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Review</span><span class="sr-only">Step 11: Review (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Branding</span><span class="sr-only">Step 10: Branding (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Privacy</span><span class="sr-only">Step 11: Privacy (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Features</span><span class="sr-only">Step 12: Features (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">TLS</span><span class="sr-only">Step 13: TLS (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">Review</span><span class="sr-only">Step 14: Review (complete)</span></li>
   </ol>
 </nav>
