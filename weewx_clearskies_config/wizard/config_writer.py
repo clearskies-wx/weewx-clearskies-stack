@@ -97,8 +97,10 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
         "altitude_meters": (
             str(state.altitude_meters) if state.altitude_meters is not None else ""
         ),
+        "altitude_unit": state.altitude_unit,
         "timezone": state.timezone or "",
         "topology": state.topology,
+        "eula_accepted_at": state.eula_accepted_at,
     }
 
     cfg["webcam"] = {

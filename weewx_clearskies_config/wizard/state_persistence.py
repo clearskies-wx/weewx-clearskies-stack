@@ -362,6 +362,10 @@ def populate_from_config(config_dir: Path) -> WizardState:
                     state.altitude_meters = float(ui_section["altitude_meters"])
                 except (ValueError, TypeError):
                     pass
+            if ui_section.get("altitude_unit") in ("meters", "feet"):
+                state.altitude_unit = str(ui_section["altitude_unit"])
+            if ui_section.get("eula_accepted_at"):
+                state.eula_accepted_at = str(ui_section["eula_accepted_at"])
             if ui_section.get("timezone"):
                 state.timezone = str(ui_section["timezone"])
             if ui_section.get("topology") in ("same-host", "cross-host"):
@@ -461,6 +465,23 @@ def populate_from_config(config_dir: Path) -> WizardState:
             state.tls_dns_api_token = tls_token
 
     state.proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
+
+    # Read custom legal markdown files written by the wizard on apply.
+    content_dir = config_dir / "content"
+    if not state.custom_terms_md:
+        terms_path = content_dir / "terms.md"
+        if terms_path.exists():
+            try:
+                state.custom_terms_md = terms_path.read_text(encoding="utf-8")
+            except OSError:
+                pass
+    if not state.custom_privacy_md:
+        privacy_path = content_dir / "privacy.md"
+        if privacy_path.exists():
+            try:
+                state.custom_privacy_md = privacy_path.read_text(encoding="utf-8")
+            except OSError:
+                pass
 
     # Pre-populate branding fields from branding.json (ADR-022 amendment).
     # branding.json is the authoritative source; stack.conf [branding] is kept

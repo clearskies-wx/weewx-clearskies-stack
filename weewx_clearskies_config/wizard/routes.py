@@ -476,6 +476,8 @@ async def step_units_get(request: Request) -> HTMLResponse:
     """Unit configuration step: choose display units per group."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if state.units is None:
+        _merge_from_existing_config(state)
 
     # Determine the units to pre-fill the dropdowns with.
     # Priority: 1) already-saved in state, 2) imported skin.conf, 3) US defaults.
@@ -1846,6 +1848,8 @@ async def step6_post(request: Request) -> HTMLResponse:
 async def step7_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.webcam_enabled and state.webcam_image_url == "/webcam/weather_cam.jpg":
+        _merge_from_existing_config(state)
     return _render(request, "step_webcam.html", {"step": 10, "state": state, "error": None})
 
 
@@ -1955,6 +1959,8 @@ async def _handle_branding_upload(
 async def step8_appearance_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.site_title and not state.accent:
+        _merge_from_existing_config(state)
     return _render(request, "step_appearance.html", {"step": 11, "state": state, "error": None})
 
 
@@ -2035,6 +2041,8 @@ async def step_privacy_legal_get(request: Request) -> HTMLResponse:
     """Step 12: Privacy, Legal & Analytics — render the form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.google_analytics_id and not state.privacy_regions:
+        _merge_from_existing_config(state)
     return _render(request, "step_privacy_legal.html", {"step": 12, "state": state, "error": None})
 
 
@@ -2077,6 +2085,8 @@ async def step_feature_settings_get(request: Request) -> HTMLResponse:
     """Step 13: Feature Settings — render the seismic page settings form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if state.earthquake_radius_km == 100.0 and state.earthquake_default_days == 7:
+        _merge_from_existing_config(state)
     return _render(request, "step_feature_settings.html", {"step": 13, "state": state, "error": None})
 
 
@@ -2121,6 +2131,8 @@ async def step_tls_get(request: Request) -> HTMLResponse:
     """Step 14: TLS — render the certificate mode selection form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.tls_mode:
+        _merge_from_existing_config(state)
     return _render(request, "step_tls.html", {"step": 14, "state": state, "error": None})
 
 
