@@ -1348,25 +1348,22 @@ async def step3_get(request: Request) -> HTMLResponse:
     # schema's suggested values so the dropdowns pre-select what they chose rather
     # than the heuristic suggestion.
     if schema_data is not None and state.column_mapping:
-        # Build the set of canonical names already claimed by saved mappings
-        # so we can clear conflicting heuristic suggestions.
         saved_canonicals: set[str] = {
             v for v in state.column_mapping.values() if v
         }
         for col in schema_data.get("unmapped_columns", []):
-            saved = state.column_mapping.get(col["db_name"])
-            if saved is not None:
-                # saved may be "" or None (excluded) or a canonical name.
-                col["suggested"] = saved or None
-                col["confidence"] = "saved"
-            elif col["db_name"] not in state.column_mapping:
-                # Column not in saved mapping at all — it was either excluded
-                # on the previous run or is new.  If its heuristic suggestion
-                # conflicts with a saved mapping, clear the suggestion to
-                # prevent duplicate-mapping errors on submit.
-                if col.get("suggested") and col["suggested"] in saved_canonicals:
-                    col["suggested"] = None
-                    col["confidence"] = "none"
+            if col["db_name"] in state.column_mapping:
+                # Column has a saved mapping (canonical name) or was explicitly
+                # excluded (None).  Either way, use the saved value.
+                saved = state.column_mapping[col["db_name"]]
+                col["suggested"] = saved if saved else None
+                col["confidence"] = "saved" if saved else "none"
+            elif col.get("suggested") and col["suggested"] in saved_canonicals:
+                # Column is NEW (not in saved mapping) but its heuristic
+                # suggestion conflicts with a canonical name already claimed
+                # by a saved mapping.  Clear to prevent duplicate errors.
+                col["suggested"] = None
+                col["confidence"] = "none"
 
     return _render(
         request,
