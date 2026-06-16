@@ -2,18 +2,14 @@
   restart_status_fragment.html — HTMX polling fragment for service restart status.
 
   Context variables:
-    api_up         (bool) — True if GET /health returned 2xx.
-    realtime_up    (bool) — True if systemctl reports the realtime unit as "active".
-    realtime_unknown (bool) — True if systemctl is unavailable (non-systemd host / dev env).
+    api_up  (bool) — True if GET /health returned 2xx.
 
-  The outer .all-done wrapper is emitted only when both services are confirmed
-  up.  The HTMX trigger on the parent div watches for this class to stop polling:
+  The outer .all-done wrapper is emitted only when the API is confirmed up.
+  The HTMX trigger on the parent div watches for this class to stop polling:
     hx-trigger="every 2s [!document.querySelector('#restart-status .all-done')]"
 #}
 
-{% set both_done = api_up and (realtime_up or realtime_unknown) %}
-
-{% if both_done %}<div class="all-done">{% endif %}
+{% if api_up %}<div class="all-done">{% endif %}
 
 <div class="restart-item">
   {% if api_up %}
@@ -26,17 +22,4 @@
   {% endif %}
 </div>
 
-{% if not realtime_unknown %}
-<div class="restart-item" style="margin-top:0.5rem;">
-  {% if realtime_up %}
-  <span class="alert-success" style="display:inline-flex; padding:0.3rem 0.6rem; margin-bottom:0; gap:0.4rem;">
-    <span aria-hidden="true">&#10003;</span> Realtime service &#8212; running
-  </span>
-  {% else %}
-  <span class="cs-spinner" aria-hidden="true"></span>
-  Restarting realtime service&#8230;
-  {% endif %}
-</div>
-{% endif %}
-
-{% if both_done %}</div>{% endif %}
+{% if api_up %}</div>{% endif %}
