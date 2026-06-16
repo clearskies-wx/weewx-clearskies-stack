@@ -120,9 +120,15 @@
     var acme = document.getElementById('acme-fields');
     var http01 = document.getElementById('http01-fields');
     var dns01 = document.getElementById('dns01-fields');
-    if (acme)  acme.style.display  = (mode === 'acme_http01' || mode === 'acme_dns01') ? '' : 'none';
+    var showAcme = (mode === 'acme_http01' || mode === 'acme_dns01');
+    if (acme)  acme.style.display  = showAcme ? '' : 'none';
     if (http01) http01.style.display = mode === 'acme_http01' ? '' : 'none';
     if (dns01)  dns01.style.display  = mode === 'acme_dns01'  ? '' : 'none';
+    // Disable hidden inputs so the browser skips validation on them.
+    // Without this, hidden type="email" fields block form submission.
+    if (acme)  acme.querySelectorAll('input,select').forEach(function(el) { el.disabled = !showAcme; });
+    if (http01) http01.querySelectorAll('input,select').forEach(function(el) { el.disabled = mode !== 'acme_http01'; });
+    if (dns01)  dns01.querySelectorAll('input,select').forEach(function(el) { el.disabled = mode !== 'acme_dns01'; });
   }
 
   document.querySelectorAll('input[name="tls_mode"]').forEach(function (radio) {
@@ -130,6 +136,9 @@
       applyMode(this.value);
     });
   });
+  // Apply on load so hidden fields start disabled.
+  var checked = document.querySelector('input[name="tls_mode"]:checked');
+  if (checked) applyMode(checked.value);
 }());
 </script>
 
