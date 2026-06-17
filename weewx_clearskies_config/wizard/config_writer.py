@@ -195,6 +195,9 @@ def write_branding_json(state: WizardState, config_dir: Path) -> Path:
         "privacyRegions": state.privacy_regions or "global",
         "stationPhotoUrl": state.station_photo_url or "",
         "stationPhotoAlt": state.station_photo_alt or "",
+        "aboutContent": state.about_content or "",
+        "customTermsMd": state.custom_terms_md or "",
+        "customPrivacyMd": state.custom_privacy_md or "",
     }
     dest = config_dir / "branding.json"
     if dest.exists():
