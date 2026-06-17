@@ -190,39 +190,73 @@
     <h3>Colors &amp; Theme</h3>
 
     <fieldset>
-      <legend>Theme Options</legend>
-
-      <label for="accent">Accent Color</label>
-      <select id="accent" name="accent" aria-describedby="accent_help">
-        {% for color_value, color_label in [
-            ("blue",   "Blue"),
-            ("teal",   "Teal"),
-            ("indigo", "Indigo"),
-            ("purple", "Purple"),
-            ("green",  "Green"),
-            ("amber",  "Amber"),
-        ] %}
-        <option value="{{ color_value }}" {% if state.accent == color_value %}selected{% endif %}>
-          {{ color_label }}
-        </option>
-        {% endfor %}
-      </select>
+      <legend>Accent Color</legend>
       <small id="accent_help">Primary highlight color used throughout the dashboard. Defaults to Blue if not set.</small>
-
-      <label for="default_theme_mode">Default Theme Mode</label>
-      <select id="default_theme_mode" name="default_theme_mode" aria-describedby="theme_mode_help">
-        {% for mode_value, mode_label in [
-            ("light",               "Light"),
-            ("dark",                "Dark"),
-            ("auto-os",             "Match device"),
-            ("auto-sunrise-sunset", "Match sunrise/sunset"),
+      <div class="accent-swatch-group" aria-describedby="accent_help">
+        {% for color_value, color_label, color_hex in [
+            ("blue",   "Blue",   "#2563eb"),
+            ("teal",   "Teal",   "#0d9488"),
+            ("indigo", "Indigo", "#4f46e5"),
+            ("purple", "Purple", "#7c3aed"),
+            ("green",  "Green",  "#16a34a"),
+            ("amber",  "Amber",  "#d97706"),
         ] %}
-        <option value="{{ mode_value }}" {% if state.default_theme_mode == mode_value %}selected{% endif %}>
-          {{ mode_label }}
-        </option>
+        <label class="accent-swatch-label">
+          <input type="radio"
+                 name="accent"
+                 value="{{ color_value }}"
+                 {% if state.accent == color_value or (not state.accent and color_value == 'blue') %}checked{% endif %}
+                 aria-label="{{ color_label }} accent color">
+          <span class="accent-swatch-circle"
+                style="background: {{ color_hex }};"
+                aria-hidden="true"></span>
+          <span class="accent-swatch-name">{{ color_label }}</span>
+        </label>
         {% endfor %}
-      </select>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Default Theme Mode</legend>
       <small id="theme_mode_help">How the dashboard selects light or dark mode for visitors. "Match device" follows the visitor's OS setting. "Match sunrise/sunset" switches automatically based on your station's local sunrise and sunset times. Defaults to "Match device" if not set.</small>
+      <div class="theme-radio-group" aria-describedby="theme_mode_help">
+        <label class="theme-radio-card">
+          <input type="radio"
+                 name="default_theme_mode"
+                 value="light"
+                 {% if state.default_theme_mode == 'light' %}checked{% endif %}>
+          <span class="theme-radio-icon" aria-hidden="true">&#9728;&#65039;</span>
+          <span class="theme-radio-label">Light</span>
+        </label>
+        <label class="theme-radio-card">
+          <input type="radio"
+                 name="default_theme_mode"
+                 value="dark"
+                 {% if state.default_theme_mode == 'dark' %}checked{% endif %}>
+          <span class="theme-radio-icon" aria-hidden="true">&#127769;</span>
+          <span class="theme-radio-label">Dark</span>
+        </label>
+        <label class="theme-radio-card">
+          <input type="radio"
+                 name="default_theme_mode"
+                 value="auto-os"
+                 {% if state.default_theme_mode == 'auto-os' or not state.default_theme_mode %}checked{% endif %}>
+          <span class="theme-radio-icon" aria-hidden="true">&#128187;</span>
+          <span class="theme-radio-label">Match device</span>
+        </label>
+        <label class="theme-radio-card">
+          <input type="radio"
+                 name="default_theme_mode"
+                 value="auto-sunrise-sunset"
+                 {% if state.default_theme_mode == 'auto-sunrise-sunset' %}checked{% endif %}>
+          <span class="theme-radio-icon" aria-hidden="true">&#127749;</span>
+          <span class="theme-radio-label">Match sunrise/sunset</span>
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Custom CSS</legend>
 
       <label for="custom_css_url">Custom CSS URL</label>
       <input type="url"

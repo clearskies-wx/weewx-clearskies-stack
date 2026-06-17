@@ -363,6 +363,96 @@
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
   overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border-width: 0;
 }
+
+/* ----- Accent color swatch group (step_appearance) ----------------- */
+.accent-swatch-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-block-start: 0.5rem;
+}
+.accent-swatch-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  gap: 0.25rem;
+}
+/* Visually hide the native radio but keep it keyboard-accessible */
+.accent-swatch-label input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.accent-swatch-circle {
+  display: block;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  outline: 2px solid transparent;
+  outline-offset: 2px;
+  transition: border-color 0.15s, outline-color 0.15s;
+}
+.accent-swatch-label input[type="radio"]:checked + .accent-swatch-circle {
+  border-color: var(--pico-primary);
+}
+.accent-swatch-label input[type="radio"]:focus-visible + .accent-swatch-circle {
+  outline-color: var(--pico-primary);
+}
+.accent-swatch-name {
+  font-size: 0.75rem;
+  text-transform: capitalize;
+}
+
+/* ----- Theme mode radio cards (step_appearance) -------------------- */
+.theme-radio-group {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-block-start: 0.5rem;
+}
+@media (min-width: 36rem) {
+  .theme-radio-group {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+.theme-radio-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.75rem 0.5rem;
+  border: 2px solid var(--pico-muted-border-color);
+  border-radius: 0.5rem;
+  cursor: pointer;
+  text-align: center;
+  gap: 0.25rem;
+  transition: border-color 0.15s;
+}
+.theme-radio-card:has(input[type="radio"]:checked) {
+  border-color: var(--pico-primary);
+  background: var(--pico-primary-background, var(--pico-muted-border-color));
+}
+.theme-radio-card:has(input[type="radio"]:focus-visible) {
+  outline: 2px solid var(--pico-primary);
+  outline-offset: 2px;
+}
+/* Visually hide the native radio but keep it keyboard-accessible */
+.theme-radio-card input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.theme-radio-icon {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+.theme-radio-label {
+  font-size: 0.8rem;
+  line-height: 1.3;
+}
 </style>
 
 <header style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
