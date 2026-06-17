@@ -148,6 +148,11 @@ class WizardState:
     custom_terms_md: str = ""
     custom_privacy_md: str = ""
 
+    # About This Station content (FIX-008) — optional Markdown displayed on
+    # the dashboard's About page.  Empty string means "use the default template."
+    # Written to /etc/weewx-clearskies/content/about.md on apply.
+    about_content: str = ""
+
     # Station photo (optional) — displayed on the About page.
     # station_photo_url: served URL (e.g. /wizard/branding/photo.jpg) or empty.
     # station_photo_alt: WCAG-required alt text for the station photo image.

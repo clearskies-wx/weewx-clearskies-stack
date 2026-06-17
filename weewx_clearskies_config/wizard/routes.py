@@ -837,6 +837,8 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.custom_terms_md = prior.custom_terms_md
             if not state.custom_privacy_md and prior.custom_privacy_md:
                 state.custom_privacy_md = prior.custom_privacy_md
+            if not state.about_content and prior.about_content:
+                state.about_content = prior.about_content
             if not state.station_photo_url and prior.station_photo_url:
                 state.station_photo_url = prior.station_photo_url
             if not state.station_photo_alt and prior.station_photo_alt:
@@ -1590,6 +1592,9 @@ async def step4_post(request: Request) -> HTMLResponse:
     if photo_url is not None:
         state.station_photo_url = photo_url
     state.station_photo_alt = str(form.get("station_photo_alt", "")).strip()
+
+    # About This Station content (FIX-008) — textarea present in the template.
+    state.about_content = str(form.get("about_content", "")).strip()
 
     save_wizard_state(session_id, state)
     return await step_units_get(request)
@@ -2642,6 +2647,8 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         _write_targets.append(str(_effective_config_dir_pre / "content" / "terms.md"))
     if state.custom_privacy_md:
         _write_targets.append(str(_effective_config_dir_pre / "content" / "privacy.md"))
+    if state.about_content:
+        _write_targets.append(str(_effective_config_dir_pre / "content" / "about.md"))
 
     _perm_failed = _check_write_permissions(_write_targets)
     if _perm_failed:
@@ -2724,6 +2731,23 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             logger.warning(
                 "Failed to write policy override files to %s",
                 content_dir,
+                exc_info=True,
+            )
+
+    # Write About This Station content if provided (FIX-008).
+    # /etc/weewx-clearskies/content/about.md is served by the dashboard's
+    # About page when present; absent means the default template is used.
+    if state.about_content:
+        about_content_dir = _effective_config_dir / "content"
+        try:
+            os.makedirs(about_content_dir, exist_ok=True)
+            about_path = about_content_dir / "about.md"
+            about_path.write_text(state.about_content, encoding="utf-8")
+            logger.info("Wrote about.md to %s", about_path)
+        except OSError:
+            logger.warning(
+                "Failed to write about.md to %s",
+                about_content_dir,
                 exc_info=True,
             )
 
@@ -3045,6 +3069,8 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.custom_terms_md = existing.custom_terms_md
     if not state.custom_privacy_md and existing.custom_privacy_md:
         state.custom_privacy_md = existing.custom_privacy_md
+    if not state.about_content and existing.about_content:
+        state.about_content = existing.about_content
     if not state.station_photo_url and existing.station_photo_url:
         state.station_photo_url = existing.station_photo_url
     if not state.station_photo_alt and existing.station_photo_alt:
