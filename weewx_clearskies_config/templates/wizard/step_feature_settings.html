@@ -46,14 +46,15 @@
       <small>Only show earthquakes at or above this magnitude. Default: 2.0.</small>
 
       <label for="earthquake_default_days">Time Period (days)</label>
-      <select id="earthquake_default_days" name="earthquake_default_days">
+      <select id="earthquake_default_days" name="earthquake_default_days"
+              aria-describedby="earthquake-default-days-hint">
         {% for days in [1, 7, 14, 30] %}
         <option value="{{ days }}" {% if state.earthquake_default_days == days %}selected{% endif %}>
           {{ days }} day{{ "s" if days != 1 else "" }}
         </option>
         {% endfor %}
       </select>
-      <small>How far back to look for earthquakes. Default: 7 days.</small>
+      <small id="earthquake-default-days-hint">How far back to look for earthquakes. Default: 7 days.</small>
     </fieldset>
 
     <div role="group">

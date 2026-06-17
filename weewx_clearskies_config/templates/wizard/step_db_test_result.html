@@ -1,9 +1,9 @@
 {% if result.success %}
-<div class="alert-success">
+<div class="alert-success" role="status">
   Connected{% if result.version %} — server version: {{ result.version }}{% endif %}
 </div>
 {% else %}
-<div class="alert-error">
+<div class="alert-error" role="alert">
   {{ result.error }}
 </div>
 {% endif %}

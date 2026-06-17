@@ -104,6 +104,12 @@
   </script>
 </article>
 
-{# OOB: update the progress bar to reflect the current step. #}
+{# OOB: update the progress bar to reflect the current step.
+   Skip when rendered inside layout.html on the initial page load —
+   the nav is already correct from layout.html's own include above.
+   The OOB fragment is only needed when this file is served as an
+   HTMX fragment response (i.e. GET /wizard/eula navigation). #}
+{% if not _in_layout %}
 {% set oob = true %}
 {% include "wizard/_progress_bar.html" %}
+{% endif %}

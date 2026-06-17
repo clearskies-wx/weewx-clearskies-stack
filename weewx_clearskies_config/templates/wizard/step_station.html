@@ -77,7 +77,7 @@
       <button type="button"
               onclick="useMyLocation()"
               aria-label="Use browser location to fill latitude and longitude">
-        📍 Use my location
+        <span aria-hidden="true">📍</span> Use my location
       </button>
       <div id="geolocation-status"
            role="status"
@@ -194,6 +194,22 @@
              placeholder="Describe your weather station"
              aria-describedby="station_photo_alt_help">
       <small id="station_photo_alt_help">Required for accessibility when a photo is uploaded. Describe what is shown in the image (e.g. "Rooftop weather station with anemometer and rain gauge").</small>
+    </fieldset>
+
+    {# ================================================================== #}
+    {# About This Station (optional)                                       #}
+    {# ================================================================== #}
+
+    <fieldset>
+      <legend>About This Station (Optional)</legend>
+
+      <label for="about_content">Station description</label>
+      <small id="about_content_hint">Shown on the About page. Supports plain text. Leave empty to skip.</small>
+      <textarea id="about_content"
+                name="about_content"
+                rows="4"
+                aria-describedby="about_content_hint"
+                style="resize: vertical;">{{ about_content|default('', true) }}</textarea>
     </fieldset>
 
     <div role="group">

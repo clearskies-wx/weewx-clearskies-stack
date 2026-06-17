@@ -50,8 +50,9 @@
              id="tls_domain"
              name="tls_domain"
              value="{{ state.tls_domain }}"
-             placeholder="weather.example.com">
-      <small>The public domain name for your weather site.</small>
+             placeholder="weather.example.com"
+             aria-describedby="tls-domain-hint">
+      <small id="tls-domain-hint">The public domain name for your weather site.</small>
     </div>
 
     {# ============================================================ #}
@@ -64,8 +65,9 @@
              id="tls_acme_email"
              name="tls_acme_email"
              value="{{ state.tls_acme_email }}"
-             placeholder="you@example.com">
-      <small>Used for certificate expiry notifications. Not shared publicly.</small>
+             placeholder="you@example.com"
+             aria-describedby="tls-acme-email-hint">
+      <small id="tls-acme-email-hint">Used for certificate expiry notifications. Not shared publicly.</small>
     </div>
 
     {# ============================================================ #}
@@ -78,8 +80,9 @@
              id="tls_acme_email_dns"
              name="tls_acme_email"
              value="{{ state.tls_acme_email }}"
-             placeholder="you@example.com">
-      <small>Used for certificate expiry notifications. Not shared publicly.</small>
+             placeholder="you@example.com"
+             aria-describedby="tls-acme-email-dns-hint">
+      <small id="tls-acme-email-dns-hint">Used for certificate expiry notifications. Not shared publicly.</small>
 
       <label for="tls_dns_provider">DNS Provider</label>
       <select id="tls_dns_provider" name="tls_dns_provider">
@@ -92,12 +95,26 @@
       </select>
 
       <label for="tls_dns_api_token">DNS Provider API Token</label>
-      <input type="password"
-             id="tls_dns_api_token"
-             name="tls_dns_api_token"
-             value="{{ state.tls_dns_api_token }}"
-             placeholder="Your API token or key">
-      <small>Stored in secrets.env (mode 0600). Never written to config files.</small>
+      <div class="password-field">
+        <input type="password"
+               id="tls_dns_api_token"
+               name="tls_dns_api_token"
+               value="{{ state.tls_dns_api_token }}"
+               placeholder="Your API token or key"
+               aria-describedby="tls-dns-api-token-hint">
+        <button type="button"
+                class="password-toggle"
+                aria-label="Show DNS Provider API Token"
+                aria-controls="tls_dns_api_token"
+                onclick="togglePassword(this)">
+          <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
+               fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+      </div>
+      <small id="tls-dns-api-token-hint">Stored in secrets.env (mode 0600). Never written to config files.</small>
     </div>
 
     <div role="group">

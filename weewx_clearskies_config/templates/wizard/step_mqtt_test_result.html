@@ -1,9 +1,9 @@
 {% if result.success %}
-<div class="alert-success">
+<div class="alert-success" role="status">
   {{ result.note or "Connection succeeded." }}
 </div>
 {% else %}
-<div class="alert-error">
+<div class="alert-error" role="alert">
   {{ result.error }}
 </div>
 {% endif %}

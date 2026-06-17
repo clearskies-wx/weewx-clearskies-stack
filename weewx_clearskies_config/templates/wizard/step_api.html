@@ -46,8 +46,8 @@
       <legend>API connection settings</legend>
 
       <div class="grid">
-        <label for="api_host">
-          API host <span aria-hidden="true">*</span>
+        <div>
+          <label for="api_host">API host <span aria-hidden="true">*</span></label>
           <input type="text"
                  id="api_host"
                  name="api_host"
@@ -57,10 +57,10 @@
                  autocomplete="off"
                  aria-describedby="api-host-hint">
           <small id="api-host-hint">IP address or hostname of the server running the Clear Skies API.</small>
-        </label>
+        </div>
 
-        <label for="api_port">
-          Port
+        <div>
+          <label for="api_port">Port</label>
           <input type="number"
                  id="api_port"
                  name="api_port"
@@ -69,7 +69,7 @@
                  max="65535"
                  aria-describedby="api-port-hint">
           <small id="api-port-hint">Default: 8765</small>
-        </label>
+        </div>
       </div>
 
       {% if not rerun_mode %}

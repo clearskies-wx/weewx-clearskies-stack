@@ -30,7 +30,9 @@
                  required
                  autocomplete="off"
                  placeholder="localhost or IP address"
+                 aria-describedby="db-host-hint"
                  {% if error and not state.db_host %}aria-invalid="true"{% endif %}>
+          <small id="db-host-hint">Hostname or IP address of the MariaDB/MySQL server. Use <code>localhost</code> if the database is on the same machine.</small>
         </div>
         <div>
           <label for="db_port">Port <span aria-hidden="true">*</span></label>
