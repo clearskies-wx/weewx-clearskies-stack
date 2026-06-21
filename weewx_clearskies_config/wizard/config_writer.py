@@ -420,14 +420,33 @@ def build_skin_conf_payload(state: WizardState) -> dict[str, Any]:
     return payload
 
 
+def write_pages_json(config_dir: Path) -> None:
+    """Write default pages.json — all pages visible.
+
+    Only writes the file if it does not already exist.  Operators may have
+    customised page visibility via the admin UI; those customisations must
+    not be overwritten on wizard re-run.
+
+    Format: {"hidden": []}  — empty hidden list means all pages are visible.
+    """
+    pages_path = config_dir / "pages.json"
+    if pages_path.exists():
+        return  # Don't overwrite operator customisations.
+    pages_path.parent.mkdir(parents=True, exist_ok=True)
+    pages_path.write_text(json.dumps({"hidden": []}, indent=2) + "\n", encoding="utf-8")
+    pages_path.chmod(0o644)
+
+
 def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
     """Write local config files and secrets.env from *state*.
 
     api.conf is written by the API itself when the wizard sends the apply
     payload via POST /setup/apply (ADR-038).  This function writes only the
-    locally-consumed config files: stack.conf, branding.json, and secrets.env.
+    locally-consumed config files: stack.conf, branding.json, secrets.env,
+    and (on first run) pages.json.
 
-    Orchestrates calls to write_stack_conf and write_secrets_env.
+    Orchestrates calls to write_stack_conf, write_branding_json,
+    write_secrets_env, and write_pages_json.
     Returns a summary dict:
       {
         "files_written": [<path>, ...],
@@ -440,6 +459,7 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
 
     files_written.append(str(write_stack_conf(state, config_dir)))
     files_written.append(str(write_branding_json(state, config_dir)))
+    write_pages_json(config_dir)
     secrets_written.append(str(write_secrets_env(state, config_dir)))
 
     result: dict[str, Any] = {

@@ -66,6 +66,33 @@
         file_server
     }
 
+    handle /pages.json {
+        header Cache-Control no-cache
+        root * /etc/weewx-clearskies
+        file_server
+    }
+
+    handle /now-layout.json {
+        header Cache-Control no-cache
+        root * /etc/weewx-clearskies
+        file_server
+    }
+
+    handle /card-manifest.json {
+        root * /srv/dashboard
+        file_server
+    }
+
+    handle /webcam/* {
+        root * /var/www/clearskies
+        file_server
+    }
+
+    handle /cards/* {
+        root * /var/www/clearskies
+        file_server
+    }
+
     handle {
         root * /srv/dashboard
         try_files {path} /index.html

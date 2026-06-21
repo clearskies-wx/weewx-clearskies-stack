@@ -48,6 +48,33 @@ weather.example.com {
         file_server
     }
 
+    handle /pages.json {
+        header Cache-Control no-cache
+        root * /etc/weewx-clearskies
+        file_server
+    }
+
+    handle /now-layout.json {
+        header Cache-Control no-cache
+        root * /etc/weewx-clearskies
+        file_server
+    }
+
+    handle /card-manifest.json {
+        root * /var/www/clearskies
+        file_server
+    }
+
+    handle /webcam/* {
+        root * /var/www/clearskies
+        file_server
+    }
+
+    handle /cards/* {
+        root * /var/www/clearskies
+        file_server
+    }
+
     handle {
         root * /var/www/clearskies
         try_files {path} /index.html
