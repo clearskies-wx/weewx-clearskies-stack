@@ -586,9 +586,16 @@
       <article class="admin-section-card">
         <header>
           <h3>Now Page Layout</h3>
-          <span class="coming-soon" aria-label="Not yet available">Coming soon — Phase 4</span>
+          <a href="/admin/now-layout"
+             hx-get="/admin/now-layout"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
         </header>
-        <p class="empty-note">Drag-and-drop card layout editor will be available in Phase 4.</p>
+        <p style="font-size:0.85rem;margin:0.25rem 0 0">
+          Drag-and-drop card arrangement for the Now page.
+        </p>
       </article>
 
       <article class="admin-section-card">

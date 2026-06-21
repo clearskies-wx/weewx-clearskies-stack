@@ -1,0 +1,275 @@
+{# -------------------------------------------------------------------------
+   Now Page card layout editor fragment.
+   Loaded via HTMX into #admin-content.
+   Context:
+     active_cards  — list of card dicts currently in the layout (ordered).
+                     Each dict: type, displayName, thumbnail, allowedLayouts,
+                     currentFootprint, currentRowSpan.
+     palette_cards — list of card dicts NOT in the layout.
+                     Each dict: type, displayName, thumbnail, allowedLayouts.
+   Writes now-layout.json to config_dir on POST /admin/now-layout.
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Now Page Layout</li>
+      </ul>
+    </nav>
+    <h2>Now Page Card Layout</h2>
+  </header>
+
+  <p style="margin-block-end:1rem;font-size:0.875rem">
+    Drag cards between the zones to build your Now page layout, or use the
+    keyboard buttons. Changes take effect when you click <strong>Save Layout</strong>.
+  </p>
+
+  <form hx-post="/admin/now-layout"
+        hx-target="#admin-content"
+        hx-swap="innerHTML">
+
+    {# --- Active grid --- #}
+    <fieldset>
+      <legend>Active Cards (drag to reorder)</legend>
+      <p id="active-grid-hint" style="font-size:0.8rem;color:var(--pico-muted-color);margin:0 0 0.5rem">
+        Cards shown here appear on the Now page in this order. Drag to reorder,
+        or use the ↑ ↓ buttons.
+      </p>
+      <div id="active-grid"
+           class="card-editor-zone"
+           aria-label="Active cards — drag or use buttons to reorder"
+           aria-describedby="active-grid-hint"
+           role="list">
+        {% for card in active_cards %}
+        <div class="card-editor-item"
+             data-type="{{ card.type | e }}"
+             data-footprint="{{ card.currentFootprint | e }}"
+             data-rowspan="{{ card.currentRowSpan }}"
+             data-allowed-layouts="{{ card.allowedLayouts | tojson | e }}"
+             role="listitem">
+          {# Drag handle — decorative, hidden from AT #}
+          <span class="drag-handle" aria-hidden="true" title="Drag to reorder">&#x2807;</span>
+
+          {# Thumbnail — decorative (card name provides the label) #}
+          <img src="{{ card.thumbnail | e }}"
+               alt=""
+               class="card-thumb"
+               width="60"
+               height="45"
+               onerror="this.style.display='none'">
+
+          <span class="card-name">{{ card.displayName | e }}</span>
+
+          {# Footprint / row-span selector #}
+          {% if card.allowedLayouts | length > 1 %}
+          <select class="footprint-select"
+                  aria-label="Layout for {{ card.displayName | e }}">
+            {% for layout in card.allowedLayouts %}
+            <option value="{{ layout.footprint | e }}:{{ layout.rowSpan }}"
+              {% if layout.footprint == card.currentFootprint and layout.rowSpan == card.currentRowSpan %}selected{% endif %}>
+              {{ layout.footprint | e }} {{ layout.rowSpan }}×
+            </option>
+            {% endfor %}
+          </select>
+          {% else %}
+          {# Only one layout option — render as read-only text so the select
+             doesn't add noise for single-layout cards. #}
+          <span class="footprint-label"
+                style="font-size:0.8rem;color:var(--pico-muted-color)">
+            {{ card.currentFootprint | e }} {{ card.currentRowSpan }}×
+          </span>
+          {# Hidden input carries the value for serialisation #}
+          <input type="hidden"
+                 class="footprint-select"
+                 value="{{ card.currentFootprint | e }}:{{ card.currentRowSpan }}">
+          {% endif %}
+
+          <button type="button"
+                  class="btn-move-up outline secondary"
+                  aria-label="Move {{ card.displayName | e }} up">&#x2191;</button>
+          <button type="button"
+                  class="btn-move-down outline secondary"
+                  aria-label="Move {{ card.displayName | e }} down">&#x2193;</button>
+          <button type="button"
+                  class="btn-remove outline contrast"
+                  aria-label="Remove {{ card.displayName | e }} from layout">&#x2715;</button>
+        </div>
+        {% else %}
+        <p class="empty-zone-note" aria-live="polite">
+          No cards in the active layout yet. Drag from the palette below or
+          click <strong>+ Add</strong> on a card.
+        </p>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    {# --- Card palette --- #}
+    <fieldset>
+      <legend>Available Cards (drag to add)</legend>
+      <p id="palette-hint" style="font-size:0.8rem;color:var(--pico-muted-color);margin:0 0 0.5rem">
+        Cards shown here are available but not in the current layout.
+        Drag into the Active zone above, or click <strong>+ Add</strong>.
+      </p>
+      <div id="card-palette"
+           class="card-editor-zone"
+           aria-label="Available cards — drag or click Add to include"
+           aria-describedby="palette-hint"
+           role="list">
+        {% for card in palette_cards %}
+        <div class="card-editor-item"
+             data-type="{{ card.type | e }}"
+             data-footprint="{{ card.allowedLayouts[0].footprint | e }}"
+             data-rowspan="{{ card.allowedLayouts[0].rowSpan }}"
+             data-allowed-layouts="{{ card.allowedLayouts | tojson | e }}"
+             role="listitem">
+          <img src="{{ card.thumbnail | e }}"
+               alt=""
+               class="card-thumb"
+               width="60"
+               height="45"
+               onerror="this.style.display='none'">
+          <span class="card-name">{{ card.displayName | e }}</span>
+          <button type="button"
+                  class="btn-add outline"
+                  aria-label="Add {{ card.displayName | e }} to layout">+ Add</button>
+        </div>
+        {% else %}
+        <p class="empty-zone-note">
+          All available cards are already in the active layout.
+        </p>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    {# Hidden textarea carries the serialised layout JSON #}
+    <textarea name="layout_json"
+              id="layout-json"
+              aria-hidden="true"
+              tabindex="-1"
+              style="display:none"></textarea>
+
+    <div role="group" style="display:flex;gap:0.5rem;margin-block-start:1rem">
+      <button type="button"
+              class="outline secondary"
+              hx-get="/admin"
+              hx-target="#admin-content"
+              hx-swap="innerHTML"
+              hx-push-url="true">Cancel</button>
+      <button type="submit">Save Layout</button>
+    </div>
+
+  </form>
+</article>
+
+<style>
+/* Card layout editor styles — scoped to this fragment */
+.card-editor-zone {
+  min-height: 4rem;
+  border: 2px dashed var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  padding: 0.5rem;
+  margin-block-end: 0.25rem;
+}
+
+.card-editor-zone:focus-within {
+  border-color: var(--pico-primary);
+}
+
+.card-editor-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  margin-block-end: 0.25rem;
+  background: var(--pico-card-background-color, var(--pico-background-color));
+  border: 1px solid var(--pico-muted-border-color);
+  border-radius: var(--pico-border-radius);
+  cursor: grab;
+  /* Ensure a minimum touch target height */
+  min-height: 3rem;
+}
+
+.card-editor-item:active {
+  cursor: grabbing;
+}
+
+/* Sortable ghost placeholder */
+.sortable-ghost {
+  opacity: 0.4;
+  background: var(--pico-primary-background);
+}
+
+.drag-handle {
+  cursor: grab;
+  font-size: 1.25rem;
+  color: var(--pico-muted-color);
+  flex-shrink: 0;
+  /* Minimum touch target */
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.drag-handle:focus {
+  outline: 2px solid var(--pico-primary);
+  border-radius: 2px;
+}
+
+.card-thumb {
+  border-radius: calc(var(--pico-border-radius) / 2);
+  object-fit: cover;
+  flex-shrink: 0;
+  /* Image hides itself via onerror if missing — no layout shift */
+}
+
+.card-name {
+  flex: 1;
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.footprint-select {
+  width: auto;
+  max-width: 9rem;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  flex-shrink: 0;
+}
+
+/* Override Pico default button margins for inline use */
+.btn-move-up,
+.btn-move-down,
+.btn-remove,
+.btn-add {
+  padding: 0.25rem 0.5rem;
+  margin: 0;
+  font-size: 0.85rem;
+  /* WCAG 2.5.5: minimum 44×44 CSS px touch target */
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  flex-shrink: 0;
+}
+
+.empty-zone-note {
+  font-size: 0.85rem;
+  color: var(--pico-muted-color);
+  text-align: center;
+  padding: 0.75rem;
+  margin: 0;
+}
+</style>
+
+<script src="/static/vendor/Sortable.min.js"></script>
+<script src="/static/card-layout-editor.js"></script>

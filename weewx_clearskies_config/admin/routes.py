@@ -20,10 +20,13 @@ Route summary:
   POST /admin/tls                     — save stack.conf [tls]
   GET  /admin/sky-classification      — sky classification calibration form
   POST /admin/sky-classification      — save api.conf [sky_classification]
+  GET  /admin/now-layout              — card layout editor form
+  POST /admin/now-layout              — save now-layout.json to config dir
 """
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any, NoReturn
@@ -106,6 +109,7 @@ _TLS_MODES = [
 _templates: Jinja2Templates | None = None
 _session_manager: SessionManager | None = None
 _config_dir: Path | None = None
+_dashboard_root: Path | None = None
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -114,12 +118,14 @@ def create_admin_router(
     templates: Jinja2Templates,
     session_manager: SessionManager,
     config_dir: Path,
+    dashboard_root: Path,
 ) -> APIRouter:
     """Configure the admin router with shared app objects and return it."""
-    global _templates, _session_manager, _config_dir  # noqa: PLW0603
+    global _templates, _session_manager, _config_dir, _dashboard_root  # noqa: PLW0603
     _templates = templates
     _session_manager = session_manager
     _config_dir = config_dir
+    _dashboard_root = dashboard_root
     return router
 
 
@@ -745,6 +751,146 @@ async def sky_classification_post(request: Request) -> HTMLResponse:
         request,
         section_slug="sky-classification",
         display_name="Sky Classification",
+        success=success,
+        error=error,
+        status_code=500 if error else 200,
+    )
+
+
+# ---------------------------------------------------------------------------
+# T4.2 — Card layout editor helpers
+# ---------------------------------------------------------------------------
+
+
+def _read_card_manifest() -> list[dict]:
+    """Read card-manifest.json from the dashboard web root."""
+    if _dashboard_root is None:
+        return []
+    manifest_path = _dashboard_root / "card-manifest.json"
+    if not manifest_path.exists():
+        return []
+    try:
+        with open(manifest_path) as f:
+            data = json.load(f)
+        return data.get("cards", [])
+    except (OSError, json.JSONDecodeError):
+        logger.warning("Failed to read card-manifest.json from %s", manifest_path)
+        return []
+
+
+def _read_now_layout() -> dict:
+    """Read now-layout.json from config dir, or return default empty layout."""
+    if _config_dir is None:
+        return {"version": 1, "cards": []}
+    layout_path = _config_dir / "now-layout.json"
+    if not layout_path.exists():
+        return {"version": 1, "cards": []}
+    try:
+        with open(layout_path) as f:
+            return json.load(f)
+    except (OSError, json.JSONDecodeError):
+        logger.warning("Failed to read now-layout.json from %s", layout_path)
+        return {"version": 1, "cards": []}
+
+
+# ---------------------------------------------------------------------------
+# T4.2 — Card layout editor routes
+# ---------------------------------------------------------------------------
+
+
+@router.get("/now-layout", response_class=HTMLResponse)
+async def now_layout_get(request: Request) -> HTMLResponse:
+    """Render the Now Page card layout editor."""
+    _require_session(request)
+
+    manifest_cards = _read_card_manifest()
+    current_layout = _read_now_layout()
+
+    # Build active card list (in layout order) with manifest metadata
+    active_types = [c["type"] for c in current_layout.get("cards", [])]
+    manifest_by_type = {c["type"]: c for c in manifest_cards}
+
+    active_cards = []
+    for entry in current_layout.get("cards", []):
+        meta = manifest_by_type.get(entry["type"])
+        if meta:
+            allowed = meta.get("allowedLayouts", [])
+            default_footprint = allowed[0]["footprint"] if allowed else "tile"
+            default_row_span = allowed[0]["rowSpan"] if allowed else 1
+            active_cards.append({
+                **meta,
+                "currentFootprint": entry.get("footprint", default_footprint),
+                "currentRowSpan": entry.get("rowSpan", default_row_span),
+            })
+
+    # Palette = manifest cards NOT in active layout
+    palette_cards = [c for c in manifest_cards if c["type"] not in active_types]
+
+    return _render(request, "card_layout.html", {
+        "active_cards": active_cards,
+        "palette_cards": palette_cards,
+    })
+
+
+@router.post("/now-layout", response_class=HTMLResponse)
+async def now_layout_post(request: Request) -> HTMLResponse:
+    """Save the card layout to now-layout.json in the config directory."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    form = await request.form()
+    layout_json_str = str(form.get("layout_json", "{}"))
+
+    try:
+        layout_data = json.loads(layout_json_str)
+    except json.JSONDecodeError:
+        return _render_result(
+            request,
+            section_slug="now-layout",
+            display_name="Now Page Layout",
+            success=False,
+            error="Invalid layout data",
+            status_code=422,
+        )
+
+    # Validate card types against manifest
+    manifest_cards = _read_card_manifest()
+    valid_types = {c["type"] for c in manifest_cards}
+
+    cards = []
+    for entry in layout_data.get("cards", []):
+        card_type = entry.get("type", "")
+        if card_type not in valid_types:
+            # Skip unknown types — don't fail the whole save
+            logger.warning("now_layout_post: skipping unknown card type %r", card_type)
+            continue
+        cards.append({
+            "type": card_type,
+            "footprint": entry.get("footprint", "tile"),
+            "rowSpan": entry.get("rowSpan", 1),
+        })
+
+    config = {"version": 1, "cards": cards}
+    layout_path = _config_dir / "now-layout.json"
+
+    error: str | None = None
+    success = False
+    try:
+        with open(layout_path, "w") as f:
+            json.dump(config, f, indent=2)
+            f.write("\n")
+        success = True
+    except OSError as exc:
+        error = f"File write error: {exc}"
+        logger.error("now_layout_post OSError: %s", exc)
+    except Exception as exc:  # noqa: BLE001
+        error = f"Unexpected error saving card layout: {exc}"
+        logger.exception("now_layout_post unexpected error")
+
+    return _render_result(
+        request,
+        section_slug="now-layout",
+        display_name="Now Page Layout",
         success=success,
         error=error,
         status_code=500 if error else 200,

@@ -109,13 +109,14 @@ def create_app(config: AppConfig) -> FastAPI:
     app.include_router(config_router)
 
     # Mount the admin router.  create_admin_router() injects shared objects
-    # (templates, session_manager, config_dir) that the router endpoints need.
-    # The admin router handles the top-level /admin landing page and all
-    # domain-organized admin sections.
+    # (templates, session_manager, config_dir, dashboard_root) that the router
+    # endpoints need.  The admin router handles the top-level /admin landing
+    # page and all domain-organized admin sections.
     admin_router = create_admin_router(
         templates=templates,
         session_manager=session_manager,
         config_dir=config.config_dir,
+        dashboard_root=config.dashboard_root,
     )
     app.include_router(admin_router)
 
