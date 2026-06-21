@@ -1,0 +1,237 @@
+{# -------------------------------------------------------------------------
+   Sky classification calibration form fragment.
+   Loaded via HTMX into #admin-content.
+   Context:
+     values     — dict of current thresholds (str values)
+     kc_reference — list of {km_range, okta, nws} for the K-C reference table
+     defaults   — dict of default threshold values
+   Writes to api.conf [sky_classification] via MANAGED REGION update.
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Sky Classification</li>
+      </ul>
+    </nav>
+    <h2>Sky Classification Calibration</h2>
+  </header>
+
+  <p>The sky cover classifier uses the Kasten-Czeplak clearness index (K<sub>m</sub>) —
+     the ratio of measured solar irradiance to the clear-sky theoretical maximum.
+     Adjust the thresholds below to match your sensor's characteristics.</p>
+
+  {# Sensor accuracy note #}
+  <aside aria-label="Sensor accuracy note"
+         style="background:var(--pico-secondary-background);
+                border-left:3px solid var(--pico-muted-border-color);
+                padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
+                margin-block-end:1rem;font-size:0.875rem">
+    <strong>Sensor accuracy note:</strong>
+    Davis VP2 pyranometers: &plusmn;3&ndash;5%.
+    Ambient Weather stations: approximately &plusmn;15%.
+    If you use consumer-grade equipment, tight threshold values may produce
+    unreliable classifications during marginal sky conditions.
+    Consider relaxing the thresholds by 0.05&ndash;0.10 for less precise sensors.
+  </aside>
+
+  {# Kasten-Czeplak reference table #}
+  <section aria-labelledby="kc-table-heading">
+    <h3 id="kc-table-heading">Kasten-Czeplak K<sub>m</sub> reference</h3>
+    <div style="overflow-x:auto">
+      <table role="table" aria-label="Kasten-Czeplak clearness index to sky cover mapping">
+        <thead>
+          <tr>
+            <th scope="col">K<sub>m</sub> range</th>
+            <th scope="col">Oktas (coverage)</th>
+            <th scope="col">NWS label</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in kc_reference %}
+          <tr>
+            <td>{{ row.km_range }}</td>
+            <td>{{ row.okta }}</td>
+            <td><code>{{ row.nws }}</code></td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <form hx-post="/admin/sky-classification"
+        hx-target="#admin-content"
+        hx-swap="innerHTML">
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>SCATTER_CLOUDS K<sub>m</sub> sub-split thresholds</legend>
+      <p style="font-size:0.85rem;color:var(--pico-muted-color);margin-block-end:0.75rem">
+        These thresholds divide the K<sub>m</sub> range for partly-cloudy conditions
+        into FEW, SCT, and BKN sub-categories.
+        Relationship must hold: scatter_bkn_max &lt; scatter_sct_max &lt; scatter_few_max.
+      </p>
+
+      <label for="scatter_few_max">
+        FEW / clear threshold (K<sub>m</sub> &ge; this &rarr; FEW or CLR)
+        <input
+          type="number"
+          id="scatter_few_max"
+          name="scatter_few_max"
+          value="{{ values.get('scatter_few_max', defaults.scatter_few_max) }}"
+          min="0"
+          max="1"
+          step="0.01"
+          required
+          aria-describedby="few-max-hint"
+        >
+      </label>
+      <small id="few-max-hint">
+        Default: {{ defaults.scatter_few_max }}.
+        Above this K<sub>m</sub> value, sky is classified as FEW or CLR.
+      </small>
+
+      <label for="scatter_sct_max" style="margin-block-start:0.75rem">
+        SCT / FEW boundary (K<sub>m</sub> &ge; this &rarr; SCT or FEW)
+        <input
+          type="number"
+          id="scatter_sct_max"
+          name="scatter_sct_max"
+          value="{{ values.get('scatter_sct_max', defaults.scatter_sct_max) }}"
+          min="0"
+          max="1"
+          step="0.01"
+          required
+          aria-describedby="sct-max-hint"
+        >
+      </label>
+      <small id="sct-max-hint">
+        Default: {{ defaults.scatter_sct_max }}.
+        Between this and scatter_few_max, sky is classified as SCT.
+      </small>
+
+      <label for="scatter_bkn_max" style="margin-block-start:0.75rem">
+        BKN / SCT boundary (K<sub>m</sub> &ge; this &rarr; BKN or SCT)
+        <input
+          type="number"
+          id="scatter_bkn_max"
+          name="scatter_bkn_max"
+          value="{{ values.get('scatter_bkn_max', defaults.scatter_bkn_max) }}"
+          min="0"
+          max="1"
+          step="0.01"
+          required
+          aria-describedby="bkn-max-hint"
+        >
+      </label>
+      <small id="bkn-max-hint">
+        Default: {{ defaults.scatter_bkn_max }}.
+        Between this and scatter_sct_max, sky is classified as BKN.
+        Below this, sky enters the OVERCAST thresholds.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>OVERCAST sub-split thresholds</legend>
+      <p style="font-size:0.85rem;color:var(--pico-muted-color);margin-block-end:0.75rem">
+        Below scatter_bkn_max, the classifier checks both K<sub>m</sub> and K<sub>v</sub>
+        (variability index) to distinguish broken-to-overcast from fully overcast sky.
+      </p>
+
+      <label for="overcast_km_threshold">
+        Overcast K<sub>m</sub> threshold
+        <input
+          type="number"
+          id="overcast_km_threshold"
+          name="overcast_km_threshold"
+          value="{{ values.get('overcast_km_threshold', defaults.overcast_km_threshold) }}"
+          min="0"
+          max="1"
+          step="0.01"
+          required
+          aria-describedby="ovc-km-hint"
+        >
+      </label>
+      <small id="ovc-km-hint">
+        Default: {{ defaults.overcast_km_threshold }}.
+        K<sub>m</sub> below this value is candidate for OVC classification.
+      </small>
+
+      <label for="overcast_kv_threshold" style="margin-block-start:0.75rem">
+        Overcast K<sub>v</sub> (variability) threshold
+        <input
+          type="number"
+          id="overcast_kv_threshold"
+          name="overcast_kv_threshold"
+          value="{{ values.get('overcast_kv_threshold', defaults.overcast_kv_threshold) }}"
+          min="0"
+          max="1"
+          step="0.001"
+          required
+          aria-describedby="ovc-kv-hint"
+        >
+      </label>
+      <small id="ovc-kv-hint">
+        Default: {{ defaults.overcast_kv_threshold }}.
+        K<sub>v</sub> below this value (combined with low K<sub>m</sub>) confirms OVC.
+        Higher K<sub>v</sub> at low K<sub>m</sub> suggests broken cloud rather than solid overcast.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Solar zenith angle guard</legend>
+
+      <label for="sza_min_elevation">
+        Minimum solar elevation angle (&deg;)
+        <input
+          type="number"
+          id="sza_min_elevation"
+          name="sza_min_elevation"
+          value="{{ values.get('sza_min_elevation', defaults.sza_min_elevation) }}"
+          min="0"
+          max="30"
+          step="0.5"
+          required
+          aria-describedby="sza-hint"
+        >
+      </label>
+      <small id="sza-hint">
+        Default: {{ defaults.sza_min_elevation }}&deg;.
+        Below this sun elevation the classifier skips the K<sub>m</sub> method
+        (sunrise/sunset atmospheric path length distorts the index).
+        Typical range: 3&deg;&ndash;10&deg;.
+      </small>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save</button>
+
+      {# Reset to defaults — sets a hidden field and submits #}
+      <button type="submit"
+              name="reset"
+              value="1"
+              class="secondary outline"
+              aria-describedby="reset-hint">
+        Reset to defaults
+      </button>
+
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="outline">Cancel</a>
+    </div>
+    <small id="reset-hint" style="display:block;margin-block-start:0.5rem">
+      Reset restores all thresholds to the factory defaults listed above.
+    </small>
+  </form>
+</article>

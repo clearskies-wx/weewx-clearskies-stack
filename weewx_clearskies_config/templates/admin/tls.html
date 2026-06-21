@@ -1,0 +1,182 @@
+{# -------------------------------------------------------------------------
+   TLS settings edit form fragment.
+   Loaded via HTMX into #admin-content.
+   Context: values (dict from stack.conf [tls]), tls_modes (list of {value, label})
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>TLS Settings</li>
+      </ul>
+    </nav>
+    <h2>TLS Settings</h2>
+  </header>
+
+  <p>Configure HTTPS for the configuration UI and dashboard. After changing TLS mode,
+     restart the stack service for the change to take effect.
+     The DNS API token (if using ACME DNS-01) is stored in <code>secrets.env</code> —
+     not editable here.</p>
+
+  <form hx-post="/admin/tls"
+        hx-target="#admin-content"
+        hx-swap="innerHTML"
+        id="tls-form">
+
+    <fieldset>
+      <legend>TLS mode</legend>
+
+      <label for="mode">
+        Mode
+        <select id="mode" name="mode"
+                aria-describedby="mode-hint"
+                onchange="document.getElementById('tls-form').dataset.mode = this.value;
+                          document.querySelectorAll('[data-tls-show]').forEach(el => {
+                            const modes = el.dataset.tlsShow.split(',');
+                            el.hidden = !modes.includes(this.value);
+                          });">
+          {% for m in tls_modes %}
+          <option value="{{ m.value }}"
+            {% if values.get("mode") == m.value %}selected{% endif %}>
+            {{ m.label }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <small id="mode-hint">
+        <strong>Self-signed</strong>: browser will show a security warning. Development use only.
+        <strong>ACME HTTP-01</strong>: automated Let's Encrypt certificate via HTTP challenge
+        (requires port 80 to be publicly reachable).
+        <strong>ACME DNS-01</strong>: automated Let's Encrypt certificate via DNS challenge
+        (no public port required; requires a supported DNS provider).
+        <strong>Manual</strong>: provide paths to an existing certificate and private key.
+      </small>
+    </fieldset>
+
+    {# ACME fields — shown for HTTP-01 and DNS-01 #}
+    {% set current_mode = values.get("mode", "self-signed") %}
+    <fieldset
+      id="acme-fields"
+      data-tls-show="acme_http01,acme_dns01"
+      {% if current_mode not in ("acme_http01", "acme_dns01") %}hidden{% endif %}
+      style="margin-block-start:1rem">
+      <legend>ACME (Let's Encrypt) settings</legend>
+
+      <label for="domain">
+        Domain name
+        <input
+          type="text"
+          id="domain"
+          name="domain"
+          value="{{ values.get('domain', '') }}"
+          placeholder="weather.example.com"
+          aria-describedby="domain-hint"
+        >
+      </label>
+      <small id="domain-hint">
+        Fully-qualified domain name for the certificate. Must match the public DNS name
+        your server is reachable at.
+      </small>
+
+      <label for="acme_email" style="margin-block-start:0.75rem">
+        ACME email address
+        <input
+          type="email"
+          id="acme_email"
+          name="acme_email"
+          value="{{ values.get('acme_email', '') }}"
+          placeholder="you@example.com"
+          aria-describedby="acme-email-hint"
+        >
+      </label>
+      <small id="acme-email-hint">
+        Email address for Let's Encrypt renewal notifications and recovery.
+      </small>
+    </fieldset>
+
+    {# DNS provider — shown for DNS-01 only #}
+    <fieldset
+      id="dns-fields"
+      data-tls-show="acme_dns01"
+      {% if current_mode != "acme_dns01" %}hidden{% endif %}
+      style="margin-block-start:1rem">
+      <legend>DNS-01 provider</legend>
+
+      <label for="dns_provider">
+        DNS provider
+        <input
+          type="text"
+          id="dns_provider"
+          name="dns_provider"
+          value="{{ values.get('dns_provider', '') }}"
+          placeholder="cloudflare"
+          aria-describedby="dns-provider-hint"
+        >
+      </label>
+      <small id="dns-provider-hint">
+        Identifier for the DNS provider used to complete the DNS-01 challenge.
+        Supported providers depend on the Caddy DNS plugin installed.
+        Example: <code>cloudflare</code>, <code>route53</code>.
+        The DNS API token is stored in <code>secrets.env</code> — not configurable here.
+      </small>
+    </fieldset>
+
+    {# Manual cert/key paths — shown for manual mode only #}
+    <fieldset
+      id="manual-fields"
+      data-tls-show="manual"
+      {% if current_mode != "manual" %}hidden{% endif %}
+      style="margin-block-start:1rem">
+      <legend>Manual certificate paths</legend>
+
+      <label for="tls_cert_path">
+        Certificate path
+        <input
+          type="text"
+          id="tls_cert_path"
+          name="tls_cert_path"
+          value="{{ values.get('tls_cert_path', '') }}"
+          placeholder="/etc/ssl/certs/clearskies.crt"
+          aria-describedby="cert-path-hint"
+        >
+      </label>
+      <small id="cert-path-hint">
+        Absolute path to the PEM-encoded certificate file on the server.
+      </small>
+
+      <label for="tls_key_path" style="margin-block-start:0.75rem">
+        Private key path
+        <input
+          type="text"
+          id="tls_key_path"
+          name="tls_key_path"
+          value="{{ values.get('tls_key_path', '') }}"
+          placeholder="/etc/ssl/private/clearskies.key"
+          aria-describedby="key-path-hint"
+        >
+      </label>
+      <small id="key-path-hint">
+        Absolute path to the PEM-encoded private key file on the server.
+        Ensure the file is readable by the Caddy service user.
+      </small>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">Cancel</a>
+    </div>
+  </form>
+</article>
