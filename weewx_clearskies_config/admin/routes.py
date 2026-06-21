@@ -343,8 +343,7 @@ async def branding_post(request: Request) -> HTMLResponse:
     # Allowed keys only — input validation at trust boundary
     updates: dict[str, Any] = {}
     site_title = str(form.get("siteTitle", "")).strip()
-    if site_title is not None:
-        updates["siteTitle"] = site_title
+    updates["siteTitle"] = site_title
 
     copyright_entity = str(form.get("copyrightEntity", "")).strip()
     updates["copyrightEntity"] = copyright_entity
