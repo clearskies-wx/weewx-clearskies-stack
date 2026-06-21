@@ -1,0 +1,679 @@
+{% extends "base.html" %}
+{% block title %}Clear Skies — Admin{% endblock %}
+{% block content %}
+
+<style>
+  /* Admin landing layout — mirrors config/dashboard.html grid pattern */
+  .admin-layout {
+    display: grid;
+    grid-template-columns: 16rem 1fr;
+    gap: 1.5rem;
+    align-items: start;
+  }
+  .admin-sidebar {
+    position: sticky;
+    top: 1rem;
+  }
+  .admin-sidebar nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .admin-sidebar nav li {
+    margin: 0;
+  }
+  .admin-sidebar a {
+    display: block;
+    padding: 0.35rem 0.5rem;
+    border-radius: var(--pico-border-radius);
+    text-decoration: none;
+    color: var(--pico-color);
+    font-size: 0.9rem;
+    transition: background-color 0.1s;
+  }
+  .admin-sidebar a:hover,
+  .admin-sidebar a:focus {
+    background-color: var(--pico-secondary-background);
+    outline: none;
+  }
+  .admin-sidebar a:focus-visible {
+    outline: 2px solid var(--pico-primary);
+    outline-offset: 1px;
+  }
+  .admin-sidebar .nav-group-label {
+    display: block;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--pico-muted-color);
+    padding: 0.5rem 0.5rem 0.25rem;
+    margin-block-start: 0.75rem;
+  }
+  .admin-sidebar-footer {
+    border-block-start: 1px solid var(--pico-muted-border-color);
+    padding-block-start: 0.75rem;
+    margin-block-start: 1rem;
+  }
+  @media (max-width: 768px) {
+    .admin-layout {
+      grid-template-columns: 1fr;
+    }
+    .admin-sidebar {
+      position: static;
+    }
+  }
+
+  /* Section cards on the landing overview */
+  .admin-section-card {
+    margin-block-end: 1rem;
+  }
+  .admin-section-card header {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+  .admin-section-card header h2 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .admin-section-card .edit-link {
+    font-size: 0.8rem;
+    font-weight: 400;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .admin-section-card dl {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 0.15rem 1rem;
+    font-size: 0.85rem;
+    margin: 0.5rem 0 0;
+  }
+  .admin-section-card dt {
+    font-weight: 600;
+    color: var(--pico-muted-color);
+  }
+  .admin-section-card dd {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .admin-section-card .empty-note {
+    font-size: 0.85rem;
+    color: var(--pico-muted-color);
+    font-style: italic;
+    margin-block-start: 0.25rem;
+  }
+  .admin-domain-group {
+    margin-block-end: 0.5rem;
+  }
+  .admin-domain-heading {
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--pico-muted-color);
+    margin-block-end: 0.5rem;
+    padding-block-end: 0.25rem;
+    border-block-end: 1px solid var(--pico-muted-border-color);
+  }
+  .page-badge-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-block-start: 0.35rem;
+  }
+  .page-badge {
+    font-size: 0.75rem;
+    padding: 0.15rem 0.5rem;
+    border-radius: 1rem;
+    background-color: var(--pico-secondary-background);
+    border: 1px solid var(--pico-muted-border-color);
+  }
+  .page-badge.hidden {
+    color: var(--pico-muted-color);
+    text-decoration: line-through;
+  }
+  .coming-soon {
+    font-size: 0.8rem;
+    color: var(--pico-muted-color);
+    font-style: italic;
+  }
+</style>
+
+<header>
+  <h1>Clear Skies Admin</h1>
+  <p>Manage your Clear Skies configuration. Click <strong>Edit</strong> on any section to update settings.</p>
+</header>
+
+<div class="admin-layout">
+
+  {# ------------------------------------------------------------------ #}
+  {# Left sidebar — quick nav to each domain section                     #}
+  {# ------------------------------------------------------------------ #}
+  <aside class="admin-sidebar">
+    <nav aria-label="Admin sections">
+      <span class="nav-group-label">Station</span>
+      <ul>
+        <li>
+          <a href="/admin/config/stack/ui"
+             hx-get="/admin/config/stack/ui"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Station Identity</a>
+        </li>
+        <li>
+          <a href="/admin/config/api/database"
+             hx-get="/admin/config/api/database"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Database</a>
+        </li>
+      </ul>
+
+      <span class="nav-group-label">Providers</span>
+      <ul>
+        <li>
+          <a href="/admin/config/api/forecast"
+             hx-get="/admin/config/api/forecast"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Forecast</a>
+        </li>
+        <li>
+          <a href="/admin/config/api/alerts"
+             hx-get="/admin/config/api/alerts"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Alerts</a>
+        </li>
+        <li>
+          <a href="/admin/config/api/aqi"
+             hx-get="/admin/config/api/aqi"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">AQI</a>
+        </li>
+        <li>
+          <a href="/admin/config/api/earthquakes"
+             hx-get="/admin/config/api/earthquakes"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Earthquakes Provider</a>
+        </li>
+        <li>
+          <a href="/admin/config/api/radar"
+             hx-get="/admin/config/api/radar"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Radar</a>
+        </li>
+      </ul>
+
+      <span class="nav-group-label">Appearance</span>
+      <ul>
+        <li>
+          <a href="/admin/branding"
+             hx-get="/admin/branding"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Appearance</a>
+        </li>
+        <li>
+          <a href="/admin/social"
+             hx-get="/admin/social"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Social Links</a>
+        </li>
+        <li>
+          <a href="/admin/analytics"
+             hx-get="/admin/analytics"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Analytics &amp; Privacy</a>
+        </li>
+      </ul>
+
+      <span class="nav-group-label">Dashboard</span>
+      <ul>
+        <li>
+          <a href="/admin/config/stack/webcam"
+             hx-get="/admin/config/stack/webcam"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Webcam</a>
+        </li>
+        <li>
+          <a href="/admin/pages"
+             hx-get="/admin/pages"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Page Visibility</a>
+        </li>
+        <li>
+          <a href="/admin/config/column-mapping"
+             hx-get="/admin/config/column-mapping"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Column Mapping</a>
+        </li>
+      </ul>
+
+      <span class="nav-group-label">Advanced</span>
+      <ul>
+        <li>
+          <a href="/admin/earthquakes"
+             hx-get="/admin/earthquakes"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Earthquake Settings</a>
+        </li>
+        <li>
+          <a href="/admin/sky-classification"
+             hx-get="/admin/sky-classification"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Sky Classification</a>
+        </li>
+        <li>
+          <a href="/admin/tls"
+             hx-get="/admin/tls"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">TLS</a>
+        </li>
+      </ul>
+    </nav>
+
+    <div class="admin-sidebar-footer">
+      <a href="/admin/config"
+         style="display:block;font-size:0.85rem;margin-block-end:0.5rem">
+        Advanced config editor
+      </a>
+      <a href="/wizard"
+         style="display:block;font-size:0.85rem;margin-block-end:0.75rem">
+        Re-run Setup Wizard
+      </a>
+      <form action="/logout" method="post">
+        <button type="submit" class="secondary outline" style="width:100%;font-size:0.85rem">
+          Log out
+        </button>
+      </form>
+    </div>
+  </aside>
+
+  {# ------------------------------------------------------------------ #}
+  {# Right content area — section overviews + HTMX edit form target      #}
+  {# ------------------------------------------------------------------ #}
+  <div id="admin-content" aria-label="Admin configuration">
+
+    {# ---- Station Identity ---- #}
+    <div class="admin-domain-group">
+      <h2 class="admin-domain-heading">Station</h2>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Station Identity</h2>
+          <a href="/admin/config/stack/ui"
+             hx-get="/admin/config/stack/ui"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        {% if ui_values %}
+        <dl>
+          {% if ui_values.get("station_name") %}
+          <dt>Name</dt>
+          <dd>{{ ui_values.station_name }}</dd>
+          {% endif %}
+          {% if ui_values.get("timezone") %}
+          <dt>Timezone</dt>
+          <dd>{{ ui_values.timezone }}</dd>
+          {% endif %}
+          {% if ui_values.get("latitude") and ui_values.get("longitude") %}
+          <dt>Coordinates</dt>
+          <dd>{{ ui_values.latitude }}, {{ ui_values.longitude }}</dd>
+          {% endif %}
+        </dl>
+        {% else %}
+        <p class="empty-note">No values configured — run the setup wizard first.</p>
+        {% endif %}
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Database</h2>
+          <a href="/admin/config/api/database"
+             hx-get="/admin/config/api/database"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        {% if db_values %}
+        <dl>
+          {% if db_values.get("host") %}
+          <dt>Host</dt>
+          <dd>{{ db_values.host }}{% if db_values.get("port") %}:{{ db_values.port }}{% endif %}</dd>
+          {% endif %}
+          {% if db_values.get("name") %}
+          <dt>Database</dt>
+          <dd>{{ db_values.name }}</dd>
+          {% endif %}
+          {% if db_values.get("user") %}
+          <dt>User</dt>
+          <dd>{{ db_values.user }}</dd>
+          {% endif %}
+        </dl>
+        {% else %}
+        <p class="empty-note">No values configured — run the setup wizard first.</p>
+        {% endif %}
+      </article>
+    </div>
+
+    {# ---- Providers ---- #}
+    <div class="admin-domain-group">
+      <h2 class="admin-domain-heading">Providers</h2>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Forecast</h2>
+          <a href="/admin/config/api/forecast"
+             hx-get="/admin/config/api/forecast"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Provider</dt>
+          <dd>{{ forecast_values.get("provider") or "not set" }}</dd>
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Alerts</h2>
+          <a href="/admin/config/api/alerts"
+             hx-get="/admin/config/api/alerts"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Provider</dt>
+          <dd>{{ alerts_values.get("provider") or "not set" }}</dd>
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>AQI</h2>
+          <a href="/admin/config/api/aqi"
+             hx-get="/admin/config/api/aqi"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Provider</dt>
+          <dd>{{ aqi_values.get("provider") or "not set" }}</dd>
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Earthquakes Provider</h2>
+          <a href="/admin/config/api/earthquakes"
+             hx-get="/admin/config/api/earthquakes"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Provider</dt>
+          <dd>{{ earthquakes_provider.get("provider") or "not set" }}</dd>
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Radar</h2>
+          <a href="/admin/config/api/radar"
+             hx-get="/admin/config/api/radar"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Provider</dt>
+          <dd>{{ radar_values.get("provider") or "not set" }}</dd>
+        </dl>
+      </article>
+    </div>
+
+    {# ---- Appearance ---- #}
+    <div class="admin-domain-group">
+      <h2 class="admin-domain-heading">Appearance</h2>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Appearance</h2>
+          <a href="/admin/branding"
+             hx-get="/admin/branding"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        {% if branding %}
+        <dl>
+          {% if branding.get("siteTitle") %}
+          <dt>Site title</dt>
+          <dd>{{ branding.siteTitle }}</dd>
+          {% endif %}
+          {% if branding.get("accent") %}
+          <dt>Accent</dt>
+          <dd>{{ branding.accent }}</dd>
+          {% endif %}
+          {% if branding.get("defaultThemeMode") %}
+          <dt>Theme</dt>
+          <dd>{{ branding.defaultThemeMode }}</dd>
+          {% endif %}
+        </dl>
+        {% else %}
+        <p class="empty-note">No branding configured — run the setup wizard first.</p>
+        {% endif %}
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Social Links</h2>
+          <a href="/admin/social"
+             hx-get="/admin/social"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        {% set social = branding.get("social", {}) %}
+        {% set social_set = [] %}
+        {% for k in ["facebook", "twitter", "instagram", "youtube"] %}
+          {% if social.get(k) %}{% set _ = social_set.append(k) %}{% endif %}
+        {% endfor %}
+        {% if social_set %}
+        <p style="font-size:0.85rem;margin:0.25rem 0 0">
+          {{ social_set | join(", ") | capitalize }}
+        </p>
+        {% else %}
+        <p class="empty-note">No social links configured.</p>
+        {% endif %}
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Analytics &amp; Privacy</h2>
+          <a href="/admin/analytics"
+             hx-get="/admin/analytics"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>GA ID</dt>
+          <dd>{{ branding.get("googleAnalyticsId") or "(none)" }}</dd>
+          <dt>Privacy regions</dt>
+          <dd>{{ branding.get("privacyRegions") or "global" }}</dd>
+        </dl>
+      </article>
+    </div>
+
+    {# ---- Dashboard ---- #}
+    <div class="admin-domain-group">
+      <h2 class="admin-domain-heading">Dashboard</h2>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Webcam</h2>
+          <a href="/admin/config/stack/webcam"
+             hx-get="/admin/config/stack/webcam"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Enabled</dt>
+          <dd>{{ webcam_values.get("enabled", "false") }}</dd>
+          {% if webcam_values.get("image_url") %}
+          <dt>Image URL</dt>
+          <dd>{{ webcam_values.image_url }}</dd>
+          {% endif %}
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Page Visibility</h2>
+          <a href="/admin/pages"
+             hx-get="/admin/pages"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <div class="page-badge-list" aria-label="Page visibility">
+          {% for page in all_pages %}
+          <span class="page-badge {% if page.slug in hidden_pages %}hidden{% endif %}"
+                title="{% if page.slug in hidden_pages %}Hidden{% else %}Visible{% endif %}">
+            {{ page.name }}
+          </span>
+          {% endfor %}
+        </div>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Now Page Layout</h2>
+          <span class="coming-soon" aria-label="Not yet available">Coming soon — Phase 4</span>
+        </header>
+        <p class="empty-note">Drag-and-drop card layout editor will be available in Phase 4.</p>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Column Mapping</h2>
+          <a href="/admin/config/column-mapping"
+             hx-get="/admin/config/column-mapping"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <p style="font-size:0.85rem;margin:0.25rem 0 0">
+          Map database columns to weewx canonical field names.
+        </p>
+      </article>
+    </div>
+
+    {# ---- Advanced ---- #}
+    <div class="admin-domain-group">
+      <h2 class="admin-domain-heading">Advanced</h2>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Earthquake Settings</h2>
+          <a href="/admin/earthquakes"
+             hx-get="/admin/earthquakes"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Radius</dt>
+          <dd>{{ stack_earthquakes.get("radius_km", "500") }} km</dd>
+          <dt>Min magnitude</dt>
+          <dd>{{ stack_earthquakes.get("min_magnitude", "2.5") }}</dd>
+          <dt>Default days</dt>
+          <dd>{{ stack_earthquakes.get("default_days", "30") }}</dd>
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>Sky Classification</h2>
+          <a href="/admin/sky-classification"
+             hx-get="/admin/sky-classification"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Few/clear Km</dt>
+          <dd>&ge; {{ sky_values.get("scatter_few_max", "0.97") }}</dd>
+          <dt>Sct Km</dt>
+          <dd>{{ sky_values.get("scatter_sct_max", "0.85") }} – {{ sky_values.get("scatter_few_max", "0.97") }}</dd>
+          <dt>Bkn Km</dt>
+          <dd>{{ sky_values.get("scatter_bkn_max", "0.52") }} – {{ sky_values.get("scatter_sct_max", "0.85") }}</dd>
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h2>TLS</h2>
+          <a href="/admin/tls"
+             hx-get="/admin/tls"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Mode</dt>
+          <dd>{{ tls_values.get("mode", "(not set)") }}</dd>
+          {% if tls_values.get("domain") %}
+          <dt>Domain</dt>
+          <dd>{{ tls_values.domain }}</dd>
+          {% endif %}
+        </dl>
+      </article>
+    </div>
+
+  </div>{# /#admin-content #}
+
+</div>{# /.admin-layout #}
+
+{% endblock %}

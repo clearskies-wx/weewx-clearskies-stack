@@ -1,0 +1,69 @@
+{# -------------------------------------------------------------------------
+   Page visibility edit form fragment.
+   Loaded via HTMX into #admin-content.
+   Context: pages (list of {slug, name}), hidden (list of hidden slugs)
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Page Visibility</li>
+      </ul>
+    </nav>
+    <h2>Page Visibility</h2>
+  </header>
+
+  <p>Choose which pages are accessible from the dashboard navigation. Hidden pages
+     are not removed — they simply do not appear in the nav.</p>
+
+  <form hx-post="/admin/pages"
+        hx-target="#admin-content"
+        hx-swap="innerHTML">
+
+    <fieldset>
+      <legend>Visible pages</legend>
+
+      {% for page in pages %}
+      <div style="margin-block-end:0.5rem">
+        <label for="page-{{ page.slug }}">
+          <input
+            type="checkbox"
+            id="page-{{ page.slug }}"
+            name="visible"
+            value="{{ page.slug }}"
+            {% if page.slug not in hidden %}checked{% endif %}
+            {% if page.slug == "now" %}disabled aria-disabled="true"{% endif %}
+            aria-describedby="page-hint-{{ page.slug }}"
+          >
+          {{ page.name }}
+        </label>
+        <small id="page-hint-{{ page.slug }}" style="display:block;margin-inline-start:1.75rem;color:var(--pico-muted-color)">
+          {% if page.slug == "now" %}
+            Always visible — the Now page cannot be hidden.
+          {% else %}
+            {% if page.slug in hidden %}Currently hidden.{% else %}Currently visible.{% endif %}
+          {% endif %}
+        </small>
+      </div>
+      {% endfor %}
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">Cancel</a>
+    </div>
+  </form>
+</article>

@@ -22,6 +22,7 @@ from weewx_clearskies_config.auth import (
     verify_password,
     write_secrets,
 )
+from weewx_clearskies_config.admin.routes import create_admin_router
 from weewx_clearskies_config.config.routes import create_config_router
 from weewx_clearskies_config.wizard.routes import create_wizard_router
 
@@ -107,6 +108,17 @@ def create_app(config: AppConfig) -> FastAPI:
     )
     app.include_router(config_router)
 
+    # Mount the admin router.  create_admin_router() injects shared objects
+    # (templates, session_manager, config_dir) that the router endpoints need.
+    # The admin router handles the top-level /admin landing page and all
+    # domain-organized admin sections.
+    admin_router = create_admin_router(
+        templates=templates,
+        session_manager=session_manager,
+        config_dir=config.config_dir,
+    )
+    app.include_router(admin_router)
+
     @app.exception_handler(401)
     async def _on_401(request: Request, _exc: Exception) -> Response:
         # First-run: if no admin credentials exist yet, bootstrap is the only
@@ -186,7 +198,7 @@ def create_app(config: AppConfig) -> FastAPI:
             ):
                 redirect_url = next_raw
             elif (config.config_dir / "api.conf").exists():
-                redirect_url = "/admin/config"
+                redirect_url = "/admin"
             else:
                 redirect_url = "/wizard"
             response = RedirectResponse(url=redirect_url, status_code=303)

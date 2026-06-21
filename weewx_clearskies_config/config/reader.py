@@ -3,11 +3,15 @@
 Uses ConfigObj to parse the MANAGED REGION of each component config.
 The free-form region below the MANAGED REGION END marker is ignored —
 only the managed section is surfaced to the edit UI.
+
+Also provides helpers for JSON-based config files (branding.json,
+pages.json) used by the admin landing page.
 """
 
 from __future__ import annotations
 
 import io
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -155,3 +159,50 @@ def get_column_mapping(config_dir: Path) -> dict[str, str | None]:
             result[db_col] = None
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# JSON-based config helpers (branding.json, pages.json)
+# ---------------------------------------------------------------------------
+
+
+def read_branding(config_dir: Path) -> dict[str, Any]:
+    """Read branding.json from *config_dir*.
+
+    Returns the parsed dict, or ``{}`` if the file is absent or unparseable.
+    The schema follows config_writer.write_branding_json():
+      siteTitle, copyrightEntity,
+      logo: {lightUrl, darkUrl, alt},
+      faviconUrl, accent, defaultThemeMode, customCssUrl,
+      social: {facebook, twitter, instagram, youtube},
+      googleAnalyticsId, privacyRegions,
+      stationPhotoUrl, stationPhotoAlt, aboutContent,
+      customTermsMd, customPrivacyMd
+    """
+    path = config_dir / "branding.json"
+    if not path.exists():
+        return {}
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+
+
+def read_pages(config_dir: Path) -> dict[str, Any]:
+    """Read pages.json from *config_dir*.
+
+    Returns the parsed dict, defaulting to ``{"hidden": []}`` if absent or
+    unparseable.  Format: ``{"hidden": ["seismic", "reports", ...]}``.
+    """
+    path = config_dir / "pages.json"
+    if not path.exists():
+        return {"hidden": []}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if not isinstance(data, dict):
+            return {"hidden": []}
+        if "hidden" not in data or not isinstance(data["hidden"], list):
+            data["hidden"] = []
+        return data
+    except (OSError, json.JSONDecodeError):
+        return {"hidden": []}

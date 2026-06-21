@@ -17,6 +17,7 @@ text back in — the free-form region is never touched.
 from __future__ import annotations
 
 import io
+import json
 import os
 import stat
 from datetime import datetime, timezone
@@ -240,3 +241,59 @@ def update_column_mapping(
             cfg.write(outfile=buf)
             new_managed_text = buf.getvalue().decode("utf-8")
             api_conf.write_text(pre_text + new_managed_text + post_text, encoding="utf-8")
+
+
+# ---------------------------------------------------------------------------
+# JSON-based config helpers (branding.json, pages.json)
+# ---------------------------------------------------------------------------
+
+
+def update_branding(config_dir: Path, updates: dict[str, Any]) -> None:
+    """Merge *updates* into branding.json in *config_dir*.
+
+    Reads the current branding.json (if present), deep-merges *updates* into
+    it (one level deep for nested dicts such as "logo" and "social"), then
+    writes back with indent=2.
+
+    Raises:
+        OSError: on file read/write failure.
+    """
+    path = config_dir / "branding.json"
+    current: dict[str, Any] = {}
+    if path.exists():
+        try:
+            raw = json.loads(path.read_text(encoding="utf-8"))
+            if isinstance(raw, dict):
+                current = raw
+        except (OSError, json.JSONDecodeError):
+            pass  # Start fresh if unreadable
+
+    # Deep-merge one level: nested dicts are merged, not replaced.
+    for key, value in updates.items():
+        if isinstance(value, dict) and isinstance(current.get(key), dict):
+            current[key] = {**current[key], **value}
+        else:
+            current[key] = value
+
+    config_dir.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(current, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+
+
+def update_pages(config_dir: Path, hidden: list[str]) -> None:
+    """Write *hidden* list to pages.json in *config_dir*.
+
+    "now" is never added to the hidden list regardless of what is passed —
+    the Now page cannot be hidden.
+
+    Raises:
+        OSError: on file write failure.
+    """
+    # Defense in depth: ensure "now" is never hidden.
+    safe_hidden = [slug for slug in hidden if slug != "now"]
+
+    config_dir.mkdir(parents=True, exist_ok=True)
+    path = config_dir / "pages.json"
+    path.write_text(
+        json.dumps({"hidden": safe_hidden}, indent=2, ensure_ascii=False) + "\n",
+        encoding="utf-8",
+    )

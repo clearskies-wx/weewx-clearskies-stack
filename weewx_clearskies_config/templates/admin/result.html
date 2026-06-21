@@ -1,0 +1,75 @@
+{# -------------------------------------------------------------------------
+   Admin result fragment — rendered after a save POST.
+   Replaces #admin-content via HTMX innerHTML swap.
+   Context: section_slug, display_name, success, error
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">
+            Admin
+          </a>
+        </li>
+        <li>{{ display_name }}</li>
+      </ul>
+    </nav>
+    <h2>{{ display_name }}</h2>
+  </header>
+
+  {# ------------------------------------------------------------------ #}
+  {# Feedback banner                                                      #}
+  {# ------------------------------------------------------------------ #}
+  <div id="result-banner"
+       {% if success %}
+       role="status"
+       aria-live="polite"
+       {% else %}
+       role="alert"
+       aria-live="assertive"
+       {% endif %}
+       aria-atomic="true"
+       style="border-radius:var(--pico-border-radius);padding:0.75rem 1rem;margin-block-end:1rem;
+              {% if success %}
+              background-color:var(--pico-ins-color, #d4edda);border:1px solid #a3cfaa;color:#155724;
+              {% else %}
+              background-color:var(--pico-del-color, #f8d7da);border:1px solid #f5c6cb;color:#721c24;
+              {% endif %}">
+    {% if success %}
+    <strong>Saved.</strong>
+    {{ display_name }} settings updated successfully.
+    {% else %}
+    <strong>Error saving {{ display_name }}:</strong>
+    {{ error }}
+    {% endif %}
+  </div>
+
+  {# ------------------------------------------------------------------ #}
+  {# Action buttons                                                       #}
+  {# ------------------------------------------------------------------ #}
+  <div role="group">
+    <a href="/admin/{{ section_slug }}"
+       hx-get="/admin/{{ section_slug }}"
+       hx-target="#admin-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       role="button"
+       class="secondary outline">
+      {% if success %}Edit again{% else %}Try again{% endif %}
+    </a>
+    <a href="/admin"
+       hx-get="/admin"
+       hx-target="#admin-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       role="button"
+       class="outline">
+      Back to overview
+    </a>
+  </div>
+</article>
