@@ -50,6 +50,9 @@ path = /data/weewx.sdb
 
 [forecast]
 # provider = nws
+# Aeris forecast model: "standard" (/forecasts) or "xcast" (/xcast/forecasts,
+# ML-enhanced temp/wind). Only applies when provider = aeris. Default: xcast.
+# aeris_forecast_model = xcast
 
 [alerts]
 # provider = nws
