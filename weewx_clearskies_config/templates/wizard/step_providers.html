@@ -110,6 +110,40 @@
         {% endif %}
       </div>
       {% endif %}
+
+      {# Aeris forecast model selection (ADR-063) — only when Aeris is the forecast provider #}
+      {% if domain == "forecast" %}
+      <div id="aeris-forecast-model"
+           {% if selected_id != "aeris" %}style="display: none;"{% endif %}>
+        <fieldset>
+          <legend>Aeris Forecast Model</legend>
+          <label>
+            <input type="radio"
+                   name="aeris_forecast_model"
+                   value="xcast"
+                   {% if state.aeris_forecast_model == "xcast" %}checked{% endif %}
+                   aria-describedby="aeris-model-xcast-desc">
+            <strong>Xcast (ML-enhanced)</strong>
+            <br>
+            <span id="aeris-model-xcast-desc">
+              <small>Uses machine learning to enhance temperature and wind speed predictions. Recommended for most operators.</small>
+            </span>
+          </label>
+          <label>
+            <input type="radio"
+                   name="aeris_forecast_model"
+                   value="standard"
+                   {% if state.aeris_forecast_model == "standard" %}checked{% endif %}
+                   aria-describedby="aeris-model-standard-desc">
+            <strong>Standard</strong>
+            <br>
+            <span id="aeris-model-standard-desc">
+              <small>Traditional XWeather forecast model.</small>
+            </span>
+          </label>
+        </fieldset>
+      </div>
+      {% endif %}
     </fieldset>
     {% endfor %}
 
@@ -123,6 +157,18 @@
       </button>
       <button type="submit">Next: Webcam &#8594;</button>
     </div>
+
+    <script>
+      // Show/hide Aeris forecast model selection based on forecast provider choice
+      document.querySelectorAll('input[name="provider_forecast"]').forEach(function(radio) {
+        radio.addEventListener('change', function() {
+          var modelDiv = document.getElementById('aeris-forecast-model');
+          if (modelDiv) {
+            modelDiv.style.display = (this.value === 'aeris') ? '' : 'none';
+          }
+        });
+      });
+    </script>
   </form>
 </article>
 

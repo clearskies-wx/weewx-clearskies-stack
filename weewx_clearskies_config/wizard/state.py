@@ -159,6 +159,13 @@ class WizardState:
     station_photo_url: str = ""
     station_photo_alt: str = ""
 
+    # Aeris forecast model selection (ADR-063)
+    # aeris_forecast_model: one of xcast|standard
+    # Persisted in wizard state and sent to the API via POST /setup/apply under
+    # the providers.forecast entry so the API can write it to [forecast]
+    # aeris_forecast_model in api.conf.
+    aeris_forecast_model: str = "xcast"
+
     # AQI regional configuration (ADR-059) — provider-specific scale selectors.
     # Persisted in wizard state and sent to the API via POST /setup/apply under
     # the providers.aqi entry so the API can write them to [providers.aqi] in

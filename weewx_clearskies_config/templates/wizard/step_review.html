@@ -206,6 +206,15 @@
     {% else %}
     <p>No providers selected.</p>
     {% endif %}
+    {% if state.providers.get("forecast") == "aeris" %}
+    <p><small><strong>Aeris Forecast Model:</strong>
+      {% if state.aeris_forecast_model == "xcast" %}
+        Xcast (ML-enhanced)
+      {% else %}
+        Standard
+      {% endif %}
+    </small></p>
+    {% endif %}
   </section>
 
   {# 6. API Keys ---------------------------------------------------- #}

@@ -1883,6 +1883,11 @@ async def step6_post(request: Request) -> HTMLResponse:
     if submitted_iqair_scale in _VALID_IQAIR_SCALES:
         state.iqair_aqi_scale = submitted_iqair_scale
 
+    # Aeris forecast model selection (ADR-063)
+    submitted_forecast_model = str(form.get("aeris_forecast_model", "")).strip()
+    if submitted_forecast_model in ("standard", "xcast"):
+        state.aeris_forecast_model = submitted_forecast_model
+
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -2491,6 +2496,10 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         #         provider_entry["aqi_index"] = state.openmeteo_aqi_index
         #     elif api_provider_name in ("iqair", "iq_air"):
         #         provider_entry["aqi_scale"] = state.iqair_aqi_scale
+        # Aeris forecast model selection (ADR-063) — written to [forecast]
+        # aeris_forecast_model in api.conf via the API's apply handler.
+        if domain == "forecast" and api_provider_name == "aeris":
+            provider_entry["aeris_forecast_model"] = state.aeris_forecast_model
         api_providers[domain] = provider_entry
 
     api_payload: dict[str, Any] = {
