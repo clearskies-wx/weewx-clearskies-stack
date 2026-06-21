@@ -1,5 +1,6 @@
 # Expected volume mounts:
-#   /etc/weewx-clearskies/          config dir shared with the API and realtime containers
+#   /etc/weewx-clearskies/          config dir shared with the API container
+#   /srv/dashboard:ro               dashboard build output (card-manifest.json for layout editor)
 
 # ── builder ──────────────────────────────────────────────────────────────────
 FROM python:3.12-slim-bookworm AS builder

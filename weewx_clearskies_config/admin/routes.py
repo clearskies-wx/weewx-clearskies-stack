@@ -853,21 +853,28 @@ async def now_layout_post(request: Request) -> HTMLResponse:
             status_code=422,
         )
 
-    # Validate card types against manifest
+    # Validate card types and layouts against manifest
     manifest_cards = _read_card_manifest()
     valid_types = {c["type"] for c in manifest_cards}
+    _VALID_FOOTPRINTS = {"tile", "wide", "panel", "full"}
+    _VALID_ROWSPANS = {1, 2, 2.5}
 
     cards = []
     for entry in layout_data.get("cards", []):
         card_type = entry.get("type", "")
         if card_type not in valid_types:
-            # Skip unknown types — don't fail the whole save
             logger.warning("now_layout_post: skipping unknown card type %r", card_type)
             continue
+        footprint = entry.get("footprint", "tile")
+        if footprint not in _VALID_FOOTPRINTS:
+            footprint = "tile"
+        row_span = entry.get("rowSpan", 1)
+        if row_span not in _VALID_ROWSPANS:
+            row_span = 1
         cards.append({
             "type": card_type,
-            "footprint": entry.get("footprint", "tile"),
-            "rowSpan": entry.get("rowSpan", 1),
+            "footprint": footprint,
+            "rowSpan": row_span,
         })
 
     config = {"version": 1, "cards": cards}

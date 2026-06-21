@@ -46,6 +46,27 @@
     }
   }
 
+  /** Update the empty-state message visibility in the active grid. */
+  function updateEmptyState() {
+    var grid = document.getElementById("active-grid");
+    if (!grid) return;
+    var items = grid.querySelectorAll(".card-editor-item");
+    var emptyMsg = grid.querySelector(".empty-grid-msg");
+    if (items.length === 0) {
+      if (!emptyMsg) {
+        var p = document.createElement("p");
+        p.className = "empty-grid-msg";
+        p.setAttribute("role", "status");
+        p.setAttribute("aria-live", "polite");
+        p.setAttribute("aria-atomic", "true");
+        p.textContent = "No cards in the layout. Add cards from the palette below.";
+        grid.appendChild(p);
+      }
+    } else if (emptyMsg) {
+      emptyMsg.remove();
+    }
+  }
+
   /**
    * Move a card item from the palette to the active grid.
    * Duplicate prevention: if the type is already present in the active grid
@@ -59,11 +80,11 @@
       '[data-type="' + CSS.escape(existingType) + '"]'
     );
     if (alreadyActive) {
-      // Duplicate — do nothing; leave the item in the palette.
       return;
     }
     grid.appendChild(item);
     serializeLayout();
+    updateEmptyState();
   }
 
   /** Move a card item from the active grid back to the palette. */
@@ -73,6 +94,7 @@
       palette.appendChild(item);
     }
     serializeLayout();
+    updateEmptyState();
   }
 
   // ---------------------------------------------------------------------------

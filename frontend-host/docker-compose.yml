@@ -47,9 +47,14 @@ services:
       dockerfile: weewx-clearskies-stack/Dockerfile
     volumes:
       - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies
+      - dashboard-dist:/srv/dashboard:ro
     env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
     environment:
       - CLEARSKIES_API_URL=${CLEARSKIES_API_URL}
+    command: ["--bind", "0.0.0.0", "--port", "9876", "--dashboard-root", "/srv/dashboard"]
+    depends_on:
+      dashboard:
+        condition: service_completed_successfully
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:9876/health')"]
       interval: 10s
