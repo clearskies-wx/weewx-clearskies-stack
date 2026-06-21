@@ -1,0 +1,197 @@
+{# -------------------------------------------------------------------------
+   Appearance / branding edit form fragment.
+   Loaded via HTMX into #admin-content.
+   Context: branding (dict from branding.json), accent_options (list), theme_options (list)
+   ------------------------------------------------------------------------- #}
+{% set logo = branding.get("logo", {}) %}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Appearance</li>
+      </ul>
+    </nav>
+    <h2>Appearance</h2>
+  </header>
+
+  <form hx-post="/admin/branding"
+        hx-target="#admin-content"
+        hx-swap="innerHTML">
+
+    <fieldset>
+      <legend>Site identity</legend>
+
+      <label for="siteTitle">
+        Site title
+        <input
+          type="text"
+          id="siteTitle"
+          name="siteTitle"
+          value="{{ branding.get('siteTitle', '') }}"
+          placeholder="My Weather Station"
+          aria-describedby="siteTitle-hint"
+        >
+      </label>
+      <small id="siteTitle-hint">
+        Displayed in the browser tab and dashboard header.
+      </small>
+
+      <label for="copyrightEntity" style="margin-block-start:0.75rem">
+        Copyright entity
+        <input
+          type="text"
+          id="copyrightEntity"
+          name="copyrightEntity"
+          value="{{ branding.get('copyrightEntity', '') }}"
+          placeholder="Your Name or Organization"
+          aria-describedby="copyrightEntity-hint"
+        >
+      </label>
+      <small id="copyrightEntity-hint">
+        Shown in the dashboard footer copyright notice.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Theme</legend>
+
+      <label for="accent">
+        Accent colour
+        <select id="accent" name="accent" aria-describedby="accent-hint">
+          {% for opt in accent_options %}
+          <option value="{{ opt }}"
+            {% if branding.get("accent") == opt %}selected{% endif %}>
+            {{ opt | capitalize }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <small id="accent-hint">
+        Primary colour used for buttons, links, and interactive elements.
+      </small>
+
+      <label for="defaultThemeMode" style="margin-block-start:0.75rem">
+        Default theme mode
+        <select id="defaultThemeMode" name="defaultThemeMode" aria-describedby="themeMode-hint">
+          {% for opt in theme_options %}
+          <option value="{{ opt }}"
+            {% if branding.get("defaultThemeMode") == opt %}selected{% endif %}>
+            {{ opt | replace("-", " ") | capitalize }}
+          </option>
+          {% endfor %}
+        </select>
+      </label>
+      <small id="themeMode-hint">
+        <strong>auto-os</strong>: follow the operating system preference.
+        <strong>auto-sunrise</strong>: light during the day, dark at night based on station location.
+        <strong>light</strong> or <strong>dark</strong>: always use that theme.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Logos</legend>
+      <p style="font-size:0.85rem;color:var(--pico-muted-color)">
+        Enter URLs to image files. Full logo upload support is a future enhancement.
+      </p>
+
+      <label for="logo-lightUrl">
+        Logo URL (light theme)
+        <input
+          type="url"
+          id="logo-lightUrl"
+          name="logo.lightUrl"
+          value="{{ logo.get('lightUrl', '') }}"
+          placeholder="https://example.com/logo-light.svg"
+          aria-describedby="logo-lightUrl-hint"
+        >
+      </label>
+      <small id="logo-lightUrl-hint">
+        Used when the dashboard is in light mode. Leave blank to use the site title text.
+      </small>
+
+      <label for="logo-darkUrl" style="margin-block-start:0.75rem">
+        Logo URL (dark theme)
+        <input
+          type="url"
+          id="logo-darkUrl"
+          name="logo.darkUrl"
+          value="{{ logo.get('darkUrl', '') }}"
+          placeholder="https://example.com/logo-dark.svg"
+          aria-describedby="logo-darkUrl-hint"
+        >
+      </label>
+      <small id="logo-darkUrl-hint">
+        Used when the dashboard is in dark mode. Falls back to light logo if blank.
+      </small>
+
+      <label for="logo-alt" style="margin-block-start:0.75rem">
+        Logo alt text
+        <input
+          type="text"
+          id="logo-alt"
+          name="logo.alt"
+          value="{{ logo.get('alt', '') }}"
+          placeholder="My Weather Station logo"
+          aria-describedby="logo-alt-hint"
+        >
+      </label>
+      <small id="logo-alt-hint">
+        Accessible description of the logo image shown to screen reader users.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Custom assets</legend>
+
+      <label for="faviconUrl">
+        Favicon URL
+        <input
+          type="url"
+          id="faviconUrl"
+          name="faviconUrl"
+          value="{{ branding.get('faviconUrl', '') }}"
+          placeholder="https://example.com/favicon.ico"
+          aria-describedby="faviconUrl-hint"
+        >
+      </label>
+      <small id="faviconUrl-hint">
+        Browser tab icon. Recommended size: 32&times;32 or 64&times;64 px.
+        Leave blank to use the default Clear Skies icon.
+      </small>
+
+      <label for="customCssUrl" style="margin-block-start:0.75rem">
+        Custom CSS URL
+        <input
+          type="url"
+          id="customCssUrl"
+          name="customCssUrl"
+          value="{{ branding.get('customCssUrl', '') or '' }}"
+          placeholder="https://example.com/custom.css"
+          aria-describedby="customCssUrl-hint"
+        >
+      </label>
+      <small id="customCssUrl-hint">
+        Optional stylesheet appended after the dashboard's default styles.
+        Leave blank to disable.
+      </small>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">Cancel</a>
+    </div>
+  </form>
+</article>

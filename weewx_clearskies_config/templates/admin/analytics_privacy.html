@@ -1,0 +1,87 @@
+{# -------------------------------------------------------------------------
+   Analytics & Privacy edit form fragment.
+   Loaded via HTMX into #admin-content.
+   Context: ga_id (str), privacy_regions (str)
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Analytics &amp; Privacy</li>
+      </ul>
+    </nav>
+    <h2>Analytics &amp; Privacy</h2>
+  </header>
+
+  <form hx-post="/admin/analytics"
+        hx-target="#admin-content"
+        hx-swap="innerHTML">
+
+    <fieldset>
+      <legend>Analytics</legend>
+
+      <label for="googleAnalyticsId">
+        Google Analytics measurement ID
+        <input
+          type="text"
+          id="googleAnalyticsId"
+          name="googleAnalyticsId"
+          value="{{ ga_id }}"
+          placeholder="G-XXXXXXXXXX"
+          autocomplete="off"
+          aria-describedby="ga-id-hint"
+        >
+      </label>
+      <small id="ga-id-hint">
+        Google Analytics 4 measurement ID (starts with <code>G-</code>).
+        Leave blank to disable analytics tracking.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Privacy regions</legend>
+
+      <label for="privacyRegions">
+        Privacy region scope
+        <select id="privacyRegions" name="privacyRegions" aria-describedby="privacy-regions-hint">
+          <option value="global" {% if privacy_regions == "global" %}selected{% endif %}>
+            Global (no regional restrictions)
+          </option>
+          <option value="EU" {% if privacy_regions == "EU" %}selected{% endif %}>
+            EU — apply GDPR consent banner for EU visitors
+          </option>
+          <option value="US" {% if privacy_regions == "US" %}selected{% endif %}>
+            US — apply CCPA/CPRA notice for California visitors
+          </option>
+          <option value="EU,US" {% if privacy_regions == "EU,US" %}selected{% endif %}>
+            EU + US — apply both GDPR and CCPA/CPRA banners
+          </option>
+        </select>
+      </label>
+      <small id="privacy-regions-hint">
+        Controls which privacy consent banners are shown to visitors.
+        Select the regions where your site has users subject to privacy regulations.
+        This setting does not provide legal advice — consult a qualified attorney
+        to confirm your obligations.
+      </small>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">Cancel</a>
+    </div>
+  </form>
+</article>

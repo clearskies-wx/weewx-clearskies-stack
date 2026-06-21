@@ -1,0 +1,98 @@
+{# -------------------------------------------------------------------------
+   Social links edit form fragment.
+   Loaded via HTMX into #admin-content.
+   Context: social (dict from branding.json "social" key)
+   Keys: facebook, twitter, instagram, youtube
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Social Links</li>
+      </ul>
+    </nav>
+    <h2>Social Links</h2>
+  </header>
+
+  <p>Provide full URLs (including <code>https://</code>) for each social profile.
+     Leave a field blank to hide that link from the dashboard footer.</p>
+
+  <form hx-post="/admin/social"
+        hx-target="#admin-content"
+        hx-swap="innerHTML">
+
+    <fieldset>
+      <legend>Social profiles</legend>
+
+      <label for="facebook">
+        Facebook page URL
+        <input
+          type="url"
+          id="facebook"
+          name="facebook"
+          value="{{ social.get('facebook', '') }}"
+          placeholder="https://www.facebook.com/yourpage"
+          aria-describedby="facebook-hint"
+        >
+      </label>
+      <small id="facebook-hint">Your Facebook page or profile URL.</small>
+
+      <label for="twitter" style="margin-block-start:0.75rem">
+        Twitter / X profile URL
+        <input
+          type="url"
+          id="twitter"
+          name="twitter"
+          value="{{ social.get('twitter', '') }}"
+          placeholder="https://twitter.com/yourhandle"
+          aria-describedby="twitter-hint"
+        >
+      </label>
+      <small id="twitter-hint">Your Twitter or X profile URL.</small>
+
+      <label for="instagram" style="margin-block-start:0.75rem">
+        Instagram profile URL
+        <input
+          type="url"
+          id="instagram"
+          name="instagram"
+          value="{{ social.get('instagram', '') }}"
+          placeholder="https://www.instagram.com/yourhandle"
+          aria-describedby="instagram-hint"
+        >
+      </label>
+      <small id="instagram-hint">Your Instagram profile URL.</small>
+
+      <label for="youtube" style="margin-block-start:0.75rem">
+        YouTube channel URL
+        <input
+          type="url"
+          id="youtube"
+          name="youtube"
+          value="{{ social.get('youtube', '') }}"
+          placeholder="https://www.youtube.com/@yourchannel"
+          aria-describedby="youtube-hint"
+        >
+      </label>
+      <small id="youtube-hint">Your YouTube channel URL.</small>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">Cancel</a>
+    </div>
+  </form>
+</article>
