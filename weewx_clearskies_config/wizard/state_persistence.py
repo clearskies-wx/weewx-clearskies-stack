@@ -580,6 +580,14 @@ def populate_from_branding_json(state: WizardState, config_dir: Path) -> None:
     if data.get("stationPhotoAlt"):
         state.station_photo_alt = str(data["stationPhotoAlt"])
 
+    # About / legal content
+    if data.get("aboutContent"):
+        state.about_content = str(data["aboutContent"])
+    if data.get("customTermsMd"):
+        state.custom_terms_md = str(data["customTermsMd"])
+    if data.get("customPrivacyMd"):
+        state.custom_privacy_md = str(data["customPrivacyMd"])
+
 
 # ---------------------------------------------------------------------------
 # Internal helpers
