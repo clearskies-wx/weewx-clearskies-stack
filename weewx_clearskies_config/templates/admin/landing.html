@@ -673,13 +673,14 @@
         <dl>
           <dt>Detection</dt>
           <dd>{{ haze_values.get("haze_detection", "true") }}</dd>
+          {% if haze_calibration is none %}
           <dt>Status</dt>
-          <dd>{{ haze_calibration.get("state", "no data") | capitalize }}</dd>
-          <dt>Samples (90-day)</dt>
-          <dd>{{ haze_calibration.get("sample_count", 0) }}</dd>
-          {% if haze_calibration.get("baseline_kcs") is not none %}
-          <dt>Baseline K<sub>cs</sub></dt>
-          <dd>{{ haze_calibration.get("baseline_kcs") }}</dd>
+          <dd style="color:var(--pico-muted-color)">API unreachable</dd>
+          {% else %}
+          <dt>Status</dt>
+          <dd>{{ haze_calibration.get("overall_state", "no-data") | replace("-", " ") | capitalize }}</dd>
+          <dt>Months calibrated</dt>
+          <dd>{{ haze_calibration.get("months_calibrated", 0) }} / 12</dd>
           {% endif %}
         </dl>
       </article>

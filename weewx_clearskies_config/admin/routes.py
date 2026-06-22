@@ -22,6 +22,7 @@ Route summary:
   POST /admin/sky-classification      — save api.conf [sky_classification]
   GET  /admin/haze-calibration        — haze calibration settings + status
   POST /admin/haze-calibration        — save api.conf [conditions] haze keys
+  POST /admin/haze-calibration/reset  — reset calibration data via API
   GET  /admin/now-layout              — card layout editor form
   POST /admin/now-layout              — save now-layout.json to config dir
 """
@@ -30,7 +31,6 @@ from __future__ import annotations
 
 import json
 import logging
-import time
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -93,9 +93,6 @@ _SKY_DEFAULTS = {
 # Haze calibration defaults
 _HAZE_DEFAULTS: dict[str, str] = {
     "haze_detection": "true",
-    "calibration_percentile": "0.92",
-    "calibration_window_days": "90",
-    "calibration_min_samples": "22",
     "gamma": "0.45",
 }
 
@@ -207,31 +204,42 @@ def _get_with_defaults(section_values: dict[str, str], defaults: dict[str, str])
     return result
 
 
-def _read_calibration_state(config_dir: Path) -> dict:
-    """Read calibration state from calibration.json."""
-    cal_path = config_dir / "calibration.json"
-    if not cal_path.exists():
-        return {"state": "no data", "sample_count": 0, "baseline_kcs": None}
+def _get_api_client():  # type: ignore[return]
+    """Build an ApiClient for the known API using proxy-auth mode.
+
+    Returns None if no known API is configured or proxy secret is missing.
+    """
+    if _config_dir is None:
+        return None
+    from weewx_clearskies_config.wizard.known_apis import load_known_apis
+    from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
+    known = load_known_apis(_config_dir)
+    if not known:
+        return None
+    api_url = next(iter(known))
+    secrets = _read_secrets_env(_config_dir)
+    proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
+    if not proxy_secret:
+        return None
+    from weewx_clearskies_config.wizard.api_client import ApiClient
+    return ApiClient(api_url, proxy_secret=proxy_secret)
+
+
+def _read_calibration_state() -> dict | None:
+    """Fetch calibration state from the API.
+
+    Returns the API's calibration-state response dict, or None if the
+    API is unreachable or not configured.
+    """
+    client = _get_api_client()
+    if client is None:
+        return None
     try:
-        data = json.loads(cal_path.read_text(encoding="utf-8"))
-        samples = data.get("samples", [])
-        baseline = data.get("baseline_kcs")
-        now = time.time()
-        cutoff_90 = now - (90 * 86400)
-        count_90 = sum(1 for ts, _ in samples if ts >= cutoff_90)
-        if count_90 > 50:
-            state = "well-calibrated"
-        elif count_90 >= 22:
-            state = "calibrated"
-        else:
-            state = "bootstrapping"
-        return {
-            "state": state,
-            "sample_count": count_90,
-            "baseline_kcs": round(baseline, 4) if baseline else None,
-        }
+        response = client._request("GET", "/setup/calibration-state")
+        return response.json()
     except Exception:  # noqa: BLE001
-        return {"state": "error reading", "sample_count": 0, "baseline_kcs": None}
+        logger.warning("Could not fetch calibration state from API", exc_info=True)
+        return None
 
 
 def _safe_float_range(form: Any, key: str, lo: float, hi: float, defaults: dict) -> str:
@@ -297,7 +305,7 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
     haze_values = _get_with_defaults(
         get_section("api", "conditions", _config_dir), _HAZE_DEFAULTS
     )
-    haze_calibration = _read_calibration_state(_config_dir)
+    haze_calibration = _read_calibration_state()
     hidden_pages: list[str] = pages_data.get("hidden", [])
 
     return _render(
@@ -841,7 +849,7 @@ async def haze_calibration_get(request: Request) -> HTMLResponse:
     values = _get_with_defaults(
         get_section("api", "conditions", _config_dir), _HAZE_DEFAULTS
     )
-    cal_state = _read_calibration_state(_config_dir)
+    cal_state = _read_calibration_state()
     return _render(request, "haze_calibration.html", {
         "values": values,
         "defaults": _HAZE_DEFAULTS,
@@ -855,16 +863,10 @@ async def haze_calibration_post(request: Request) -> HTMLResponse:
     _require_session(request)
     assert _config_dir is not None
     form = await request.form()
-    if form.get("reset") == "1":
-        values = dict(_HAZE_DEFAULTS)
-    else:
-        values = {
-            "haze_detection": "true" if form.get("haze_detection") else "false",
-            "calibration_percentile": _safe_float_range(form, "calibration_percentile", 0.90, 0.95, _HAZE_DEFAULTS),
-            "calibration_window_days": _safe_int_range(form, "calibration_window_days", 30, 365, _HAZE_DEFAULTS),
-            "calibration_min_samples": _safe_int_range(form, "calibration_min_samples", 10, 100, _HAZE_DEFAULTS),
-            "gamma": _safe_float_range(form, "gamma", 0.1, 1.0, _HAZE_DEFAULTS),
-        }
+    values = {
+        "haze_detection": "true" if form.get("haze_detection") else "false",
+        "gamma": _safe_float_range(form, "gamma", 0.1, 1.0, _HAZE_DEFAULTS),
+    }
     api_conf = _config_dir / "api.conf"
     error: str | None = None
     success = False
@@ -882,6 +884,30 @@ async def haze_calibration_post(request: Request) -> HTMLResponse:
     except Exception as exc:  # noqa: BLE001
         error = f"Unexpected error: {exc}"
         logger.exception("haze_calibration_post unexpected error")
+    return _render_result(request, section_slug="haze-calibration",
+        display_name="Haze Calibration", success=success, error=error,
+        status_code=500 if error else 200)
+
+
+@router.post("/haze-calibration/reset", response_class=HTMLResponse)
+async def haze_calibration_reset(request: Request) -> HTMLResponse:
+    """Reset calibration data via the API and return result fragment."""
+    _require_session(request)
+    client = _get_api_client()
+    error: str | None = None
+    success = False
+    if client is None:
+        error = "Cannot connect to API — check that the API is running and configured."
+    else:
+        try:
+            response = client._request("POST", "/setup/calibration-reset")
+            data = response.json()
+            success = data.get("success", False)
+            if not success:
+                error = data.get("message", "Reset failed — unknown error.")
+        except Exception as exc:  # noqa: BLE001
+            error = f"API error: {exc}"
+            logger.warning("calibration_reset API error: %s", exc)
     return _render_result(request, section_slug="haze-calibration",
         display_name="Haze Calibration", success=success, error=error,
         status_code=500 if error else 200)
