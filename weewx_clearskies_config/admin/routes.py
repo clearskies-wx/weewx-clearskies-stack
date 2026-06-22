@@ -20,6 +20,8 @@ Route summary:
   POST /admin/tls                     — save stack.conf [tls]
   GET  /admin/sky-classification      — sky classification calibration form
   POST /admin/sky-classification      — save api.conf [sky_classification]
+  GET  /admin/haze-calibration        — haze calibration settings + status
+  POST /admin/haze-calibration        — save api.conf [conditions] haze keys
   GET  /admin/now-layout              — card layout editor form
   POST /admin/now-layout              — save now-layout.json to config dir
 """
@@ -28,6 +30,7 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -85,6 +88,15 @@ _SKY_DEFAULTS = {
     "overcast_km_threshold": "0.15",
     "overcast_kv_threshold": "0.03",
     "sza_min_elevation": "5.0",
+}
+
+# Haze calibration defaults
+_HAZE_DEFAULTS: dict[str, str] = {
+    "haze_detection": "true",
+    "calibration_percentile": "0.92",
+    "calibration_window_days": "90",
+    "calibration_min_samples": "22",
+    "gamma": "0.45",
 }
 
 # Earthquake section defaults
@@ -195,6 +207,59 @@ def _get_with_defaults(section_values: dict[str, str], defaults: dict[str, str])
     return result
 
 
+def _read_calibration_state(config_dir: Path) -> dict:
+    """Read calibration state from calibration.json."""
+    cal_path = config_dir / "calibration.json"
+    if not cal_path.exists():
+        return {"state": "no data", "sample_count": 0, "baseline_kcs": None}
+    try:
+        data = json.loads(cal_path.read_text(encoding="utf-8"))
+        samples = data.get("samples", [])
+        baseline = data.get("baseline_kcs")
+        now = time.time()
+        cutoff_90 = now - (90 * 86400)
+        count_90 = sum(1 for ts, _ in samples if ts >= cutoff_90)
+        if count_90 > 50:
+            state = "well-calibrated"
+        elif count_90 >= 22:
+            state = "calibrated"
+        else:
+            state = "bootstrapping"
+        return {
+            "state": state,
+            "sample_count": count_90,
+            "baseline_kcs": round(baseline, 4) if baseline else None,
+        }
+    except Exception:  # noqa: BLE001
+        return {"state": "error reading", "sample_count": 0, "baseline_kcs": None}
+
+
+def _safe_float_range(form: Any, key: str, lo: float, hi: float, defaults: dict) -> str:
+    """Return a validated float string from form data within [lo, hi], or the default."""
+    raw = str(form.get(key, "")).strip()
+    if raw:
+        try:
+            val = float(raw)
+            if lo <= val <= hi:
+                return raw
+        except ValueError:
+            pass
+    return defaults[key]
+
+
+def _safe_int_range(form: Any, key: str, lo: int, hi: int, defaults: dict) -> str:
+    """Return a validated int string from form data within [lo, hi], or the default."""
+    raw = str(form.get(key, "")).strip()
+    if raw:
+        try:
+            val = int(raw)
+            if lo <= val <= hi:
+                return str(val)
+        except ValueError:
+            pass
+    return defaults[key]
+
+
 # ---------------------------------------------------------------------------
 # Landing page
 # ---------------------------------------------------------------------------
@@ -229,6 +294,10 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
     sky_values = _get_with_defaults(
         get_section("api", "sky_classification", _config_dir), _SKY_DEFAULTS
     )
+    haze_values = _get_with_defaults(
+        get_section("api", "conditions", _config_dir), _HAZE_DEFAULTS
+    )
+    haze_calibration = _read_calibration_state(_config_dir)
     hidden_pages: list[str] = pages_data.get("hidden", [])
 
     return _render(
@@ -249,6 +318,8 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
             "stack_earthquakes": stack_earthquakes,
             "tls_values": tls_values,
             "sky_values": sky_values,
+            "haze_values": haze_values,
+            "haze_calibration": haze_calibration,
         },
     )
 
@@ -755,6 +826,65 @@ async def sky_classification_post(request: Request) -> HTMLResponse:
         error=error,
         status_code=500 if error else 200,
     )
+
+
+# ---------------------------------------------------------------------------
+# T8.2b — Haze calibration
+# ---------------------------------------------------------------------------
+
+
+@router.get("/haze-calibration", response_class=HTMLResponse)
+async def haze_calibration_get(request: Request) -> HTMLResponse:
+    """Render the haze calibration settings and status form."""
+    _require_session(request)
+    assert _config_dir is not None
+    values = _get_with_defaults(
+        get_section("api", "conditions", _config_dir), _HAZE_DEFAULTS
+    )
+    cal_state = _read_calibration_state(_config_dir)
+    return _render(request, "haze_calibration.html", {
+        "values": values,
+        "defaults": _HAZE_DEFAULTS,
+        "calibration": cal_state,
+    })
+
+
+@router.post("/haze-calibration", response_class=HTMLResponse)
+async def haze_calibration_post(request: Request) -> HTMLResponse:
+    """Save haze calibration settings and return result fragment."""
+    _require_session(request)
+    assert _config_dir is not None
+    form = await request.form()
+    if form.get("reset") == "1":
+        values = dict(_HAZE_DEFAULTS)
+    else:
+        values = {
+            "haze_detection": "true" if form.get("haze_detection") else "false",
+            "calibration_percentile": _safe_float_range(form, "calibration_percentile", 0.90, 0.95, _HAZE_DEFAULTS),
+            "calibration_window_days": _safe_int_range(form, "calibration_window_days", 30, 365, _HAZE_DEFAULTS),
+            "calibration_min_samples": _safe_int_range(form, "calibration_min_samples", 10, 100, _HAZE_DEFAULTS),
+            "gamma": _safe_float_range(form, "gamma", 0.1, 1.0, _HAZE_DEFAULTS),
+        }
+    api_conf = _config_dir / "api.conf"
+    error: str | None = None
+    success = False
+    try:
+        if not api_conf.exists():
+            raise FileNotFoundError("api.conf not found — run the setup wizard first.")
+        update_managed_region(api_conf, "conditions", values)
+        success = True
+    except FileNotFoundError as exc:
+        error = str(exc)
+        logger.warning("haze_calibration_post FileNotFoundError: %s", exc)
+    except OSError as exc:
+        error = f"File write error: {exc}"
+        logger.error("haze_calibration_post OSError: %s", exc)
+    except Exception as exc:  # noqa: BLE001
+        error = f"Unexpected error: {exc}"
+        logger.exception("haze_calibration_post unexpected error")
+    return _render_result(request, section_slug="haze-calibration",
+        display_name="Haze Calibration", success=success, error=error,
+        status_code=500 if error else 200)
 
 
 # ---------------------------------------------------------------------------

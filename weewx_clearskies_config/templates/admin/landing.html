@@ -276,6 +276,13 @@
              hx-push-url="true">Sky Classification</a>
         </li>
         <li>
+          <a href="/admin/haze-calibration"
+             hx-get="/admin/haze-calibration"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Haze Calibration</a>
+        </li>
+        <li>
           <a href="/admin/tls"
              hx-get="/admin/tls"
              hx-target="#admin-content"
@@ -650,6 +657,30 @@
           <dd>{{ sky_values.get("scatter_sct_max", "0.85") }} – {{ sky_values.get("scatter_few_max", "0.97") }}</dd>
           <dt>Bkn Km</dt>
           <dd>{{ sky_values.get("scatter_bkn_max", "0.52") }} – {{ sky_values.get("scatter_sct_max", "0.85") }}</dd>
+        </dl>
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h3>Haze Calibration</h3>
+          <a href="/admin/haze-calibration"
+             hx-get="/admin/haze-calibration"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        <dl>
+          <dt>Detection</dt>
+          <dd>{{ haze_values.get("haze_detection", "true") }}</dd>
+          <dt>Status</dt>
+          <dd>{{ haze_calibration.get("state", "no data") | capitalize }}</dd>
+          <dt>Samples (90-day)</dt>
+          <dd>{{ haze_calibration.get("sample_count", 0) }}</dd>
+          {% if haze_calibration.get("baseline_kcs") is not none %}
+          <dt>Baseline K<sub>cs</sub></dt>
+          <dd>{{ haze_calibration.get("baseline_kcs") }}</dd>
+          {% endif %}
         </dl>
       </article>
 

@@ -1,0 +1,255 @@
+{# -------------------------------------------------------------------------
+   Haze calibration settings and status form fragment.
+   Loaded via HTMX into #admin-content.
+   Context:
+     values       — dict of current settings (str values)
+     defaults     — dict of default setting values (_HAZE_DEFAULTS)
+     calibration  — dict with keys: state, sample_count, baseline_kcs
+   Writes to api.conf [conditions] via MANAGED REGION update.
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Haze Calibration</li>
+      </ul>
+    </nav>
+    <h2>Haze Calibration</h2>
+  </header>
+
+  <p>The haze detection system uses particulate matter (PM2.5) data and a
+     hygroscopic scattering model to identify haze conditions. Calibration
+     collects clear-sky solar transmittance samples over time to establish
+     a local baseline.</p>
+
+  {# Calibration status section #}
+  <section aria-labelledby="cal-status-heading">
+    <h3 id="cal-status-heading">Calibration Status</h3>
+
+    {% set state = calibration.get("state", "no data") %}
+    {% set count = calibration.get("sample_count", 0) %}
+    {% set baseline = calibration.get("baseline_kcs") %}
+
+    <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem">
+      <dt>State</dt>
+      <dd>
+        {% if state == "well-calibrated" %}
+          <span aria-label="Well calibrated"
+                style="display:inline-flex;align-items:center;gap:0.4rem">
+            <span aria-hidden="true"
+                  style="display:inline-block;width:0.7rem;height:0.7rem;
+                         border-radius:50%;background:var(--pico-color-green-500,#22c55e)"></span>
+            Well-calibrated
+          </span>
+        {% elif state == "calibrated" %}
+          <span aria-label="Calibrated"
+                style="display:inline-flex;align-items:center;gap:0.4rem">
+            <span aria-hidden="true"
+                  style="display:inline-block;width:0.7rem;height:0.7rem;
+                         border-radius:50%;background:var(--pico-color-blue-500,#3b82f6)"></span>
+            Calibrated
+          </span>
+        {% elif state == "bootstrapping" %}
+          <span aria-label="Bootstrapping — still collecting samples"
+                style="display:inline-flex;align-items:center;gap:0.4rem">
+            <span aria-hidden="true"
+                  style="display:inline-block;width:0.7rem;height:0.7rem;
+                         border-radius:50%;background:var(--pico-color-amber-500,#f59e0b)"></span>
+            Bootstrapping
+          </span>
+        {% elif state == "no data" %}
+          <span aria-label="No calibration data yet"
+                style="display:inline-flex;align-items:center;gap:0.4rem">
+            <span aria-hidden="true"
+                  style="display:inline-block;width:0.7rem;height:0.7rem;
+                         border-radius:50%;background:var(--pico-muted-color,#9ca3af)"></span>
+            No data
+          </span>
+        {% else %}
+          <span aria-label="Status: {{ state }}"
+                style="display:inline-flex;align-items:center;gap:0.4rem">
+            <span aria-hidden="true"
+                  style="display:inline-block;width:0.7rem;height:0.7rem;
+                         border-radius:50%;background:var(--pico-color-red-500,#ef4444)"></span>
+            {{ state | capitalize }}
+          </span>
+        {% endif %}
+      </dd>
+
+      <dt>Samples (90-day window)</dt>
+      <dd>{{ count }}</dd>
+
+      <dt>Baseline K<sub>cs</sub></dt>
+      <dd>{% if baseline is not none %}{{ baseline }}{% else %}&mdash;{% endif %}</dd>
+    </dl>
+
+    <p style="font-size:0.85rem;color:var(--pico-muted-color);margin-block-start:0.5rem">
+      States: <strong>Bootstrapping</strong> (&lt; 22 samples) &rarr;
+      <strong>Calibrated</strong> (22–50 samples) &rarr;
+      <strong>Well-calibrated</strong> (&gt; 50 samples).
+      The 90-day rolling window is used for all counts.
+    </p>
+  </section>
+
+  {# Bootstrap CLI note #}
+  <aside aria-label="Bootstrap note"
+         style="background:var(--pico-secondary-background);
+                border-left:3px solid var(--pico-muted-border-color);
+                padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
+                margin-block:1rem;font-size:0.875rem">
+    <strong>Faster calibration:</strong>
+    To import historical PM2.5 data for faster calibration, run
+    <code>clearskies-api bootstrap</code> on the weewx host. This pulls data
+    from the nearest PM2.5 monitor via OpenAQ.
+  </aside>
+
+  {# Settings form #}
+  <form hx-post="/admin/haze-calibration"
+        hx-target="#admin-content"
+        hx-swap="innerHTML">
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Haze detection</legend>
+
+      <label for="haze_detection" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+        <input
+          type="checkbox"
+          id="haze_detection"
+          name="haze_detection"
+          value="true"
+          {% if values.get("haze_detection", defaults.haze_detection) == "true" %}checked{% endif %}
+          aria-describedby="haze-detection-hint"
+        >
+        Enable haze detection
+      </label>
+      <small id="haze-detection-hint" style="display:block;margin-block-start:0.25rem">
+        Default: enabled. When disabled, haze conditions will not be reported
+        regardless of PM2.5 levels.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Calibration parameters</legend>
+      <p style="font-size:0.85rem;color:var(--pico-muted-color);margin-block-end:0.75rem">
+        These settings control how the system collects and uses clear-sky
+        transmittance samples to build a local baseline.
+      </p>
+
+      <label for="calibration_percentile">
+        Calibration percentile (0.90 &ndash; 0.95)
+        <input
+          type="number"
+          id="calibration_percentile"
+          name="calibration_percentile"
+          value="{{ values.get('calibration_percentile', defaults.calibration_percentile) }}"
+          min="0.90"
+          max="0.95"
+          step="0.01"
+          required
+          aria-describedby="percentile-hint"
+        >
+      </label>
+      <small id="percentile-hint">
+        Default: {{ defaults.calibration_percentile }}.
+        The percentile of clear-sky samples used to set the baseline K<sub>cs</sub>.
+        Higher values select only the clearest days.
+      </small>
+
+      <label for="calibration_window_days" style="margin-block-start:0.75rem">
+        Calibration window (days, 30 &ndash; 365)
+        <input
+          type="number"
+          id="calibration_window_days"
+          name="calibration_window_days"
+          value="{{ values.get('calibration_window_days', defaults.calibration_window_days) }}"
+          min="30"
+          max="365"
+          step="1"
+          required
+          aria-describedby="window-hint"
+        >
+      </label>
+      <small id="window-hint">
+        Default: {{ defaults.calibration_window_days }} days.
+        Samples older than this window are discarded from calibration.
+        Shorter windows adapt faster to sensor drift; longer windows are more stable.
+      </small>
+
+      <label for="calibration_min_samples" style="margin-block-start:0.75rem">
+        Minimum samples required (10 &ndash; 100)
+        <input
+          type="number"
+          id="calibration_min_samples"
+          name="calibration_min_samples"
+          value="{{ values.get('calibration_min_samples', defaults.calibration_min_samples) }}"
+          min="10"
+          max="100"
+          step="1"
+          required
+          aria-describedby="min-samples-hint"
+        >
+      </label>
+      <small id="min-samples-hint">
+        Default: {{ defaults.calibration_min_samples }}.
+        Haze detection is suppressed until this many samples have been collected.
+        Too few samples can produce unreliable baselines.
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Hygroscopic correction</legend>
+
+      <label for="gamma">
+        Gamma exponent (&gamma;, 0.1 &ndash; 1.0)
+        <input
+          type="number"
+          id="gamma"
+          name="gamma"
+          value="{{ values.get('gamma', defaults.gamma) }}"
+          min="0.1"
+          max="1.0"
+          step="0.01"
+          required
+          aria-describedby="gamma-hint"
+        >
+      </label>
+      <small id="gamma-hint">
+        Default: {{ defaults.gamma }}.
+        Hygroscopic correction exponent (H&auml;nel 1976). Default 0.45 is suitable
+        for most locations. Lower values reduce humidity sensitivity; higher values
+        increase it.
+      </small>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save</button>
+
+      {# Reset to defaults — sets a hidden field and submits #}
+      <button type="submit"
+              name="reset"
+              value="1"
+              class="secondary outline"
+              aria-describedby="reset-hint">
+        Reset to defaults
+      </button>
+
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="outline">Cancel</a>
+    </div>
+    <small id="reset-hint" style="display:block;margin-block-start:0.5rem">
+      Reset restores all haze calibration settings to the factory defaults listed above.
+    </small>
+  </form>
+</article>
