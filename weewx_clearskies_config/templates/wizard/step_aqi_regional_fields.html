@@ -3,13 +3,13 @@
    an AQI provider is already selected.
 
    Context variables:
-     provider_id  — the selected AQI provider ID (aeris, openmeteo, iqair, openweathermap)
+     provider_id  — the selected AQI provider ID (aeris_aqi, openmeteo_aqi, iqair, openweathermap_aqi)
      state        — WizardState (used to pre-select saved values)
      aqi_suggestion — dict with "filter", "index", "scale" suggestions from lat/lon
                        (may be empty if coordinates are unknown)
 #}
 
-{% if provider_id == "aeris" %}
+{% if provider_id == "aeris_aqi" %}
 <div class="aqi-regional-fields" aria-label="AQI regional scale for Aeris">
   {% set filter_options = [
     ("airnow", "US EPA (AirNow)"),
@@ -38,7 +38,7 @@
   </small>
 </div>
 
-{% elif provider_id == "openmeteo" %}
+{% elif provider_id == "openmeteo_aqi" %}
 <div class="aqi-regional-fields" aria-label="AQI index for Open-Meteo">
   {% set index_options = [
     ("us_aqi",       "US AQI (EPA)"),
@@ -84,7 +84,7 @@
   </small>
 </div>
 
-{% elif provider_id == "openweathermap" %}
+{% elif provider_id == "openweathermap_aqi" %}
 <div class="aqi-regional-fields aqi-regional-note"
      aria-label="AQI note for OpenWeatherMap">
   <p><small>OpenWeatherMap uses its own 1&ndash;5 air quality scale.

@@ -24,7 +24,9 @@
   "aeris":             {"display": "Aeris Weather",           "keyless": false, "fields": ["client_id","client_secret"],"coverage": "Global",  "notes": ""},
   "nws_alerts":        {"display": "NWS Alerts",              "keyless": true,  "fields": [],                          "coverage": "US only",  "notes": "Keyless"},
   "iqair":             {"display": "IQAir / AirVisual",       "keyless": false, "fields": ["api_key"],                 "coverage": "Global",   "notes": ""},
-  "openweathermap_aqi":{"display": "OpenWeatherMap AQI",      "keyless": false, "fields": ["api_key"],                 "coverage": "Global",   "notes": ""},
+  "aeris_aqi":         {"display": "Aeris AQI",               "keyless": false, "fields": ["client_id","client_secret"],"coverage": "Global",   "notes": "Observed data — haze eligible"},
+  "openmeteo_aqi":     {"display": "Open-Meteo AQI",          "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Model-based — not haze eligible"},
+  "openweathermap_aqi":{"display": "OpenWeatherMap AQI (deprecated)", "keyless": false, "fields": ["api_key"],          "coverage": "Global",   "notes": "Deprecated — model data, migrate to Aeris"},
   "usgs":              {"display": "USGS Earthquakes",        "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"},
   "rainviewer":        {"display": "RainViewer",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"}
 } %}
@@ -32,7 +34,7 @@
 {% set domain_providers = {
   "forecast":    ["nws", "openmeteo", "openweathermap", "aeris"],
   "alerts":      ["nws_alerts"],
-  "aqi":         ["iqair", "openweathermap_aqi"],
+  "aqi":         ["aeris_aqi", "iqair", "openmeteo_aqi", "openweathermap_aqi"],
   "earthquakes": ["usgs"],
   "radar":       ["rainviewer"]
 } %}
