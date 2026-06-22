@@ -3313,4 +3313,10 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
             if ords:
                 imp_units["ordinates"] = {"directions": ords}
 
+    # --- OpenAQ API key (bootstrap + AQI) ---
+    if not state.openaq_api_key:
+        oaq_key = config.get("openaq_api_key")
+        if oaq_key and isinstance(oaq_key, str):
+            state.openaq_api_key = oaq_key
+
 
