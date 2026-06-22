@@ -209,7 +209,7 @@
                 name="about_content"
                 rows="4"
                 aria-describedby="about_content_hint"
-                style="resize: vertical;">{{ about_content|default('', true) }}</textarea>
+                style="resize: vertical;">{{ state.about_content|default('', true) }}</textarea>
     </fieldset>
 
     <div role="group">
