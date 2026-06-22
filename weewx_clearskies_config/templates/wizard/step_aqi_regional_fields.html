@@ -84,6 +84,15 @@
   </small>
 </div>
 
+{% elif provider_id == "openaq" %}
+<div class="aqi-regional-fields aqi-regional-note"
+     aria-label="AQI note for OpenAQ">
+  <p><small>OpenAQ provides PM2.5 and PM10 from government reference monitors
+     in 141 countries. Observed data &mdash; eligible for haze confirmation.
+     Data lag is approximately 1&ndash;2 hours; Aeris or IQAir are preferred
+     when available. No regional scale configuration is required.</small></p>
+</div>
+
 {% elif provider_id == "openweathermap_aqi" %}
 <div class="aqi-regional-fields aqi-regional-note"
      aria-label="AQI note for OpenWeatherMap">

@@ -1763,7 +1763,7 @@ async def step6_aqi_regional(request: Request, provider_id: str) -> HTMLResponse
     state = get_wizard_state(session_id)
 
     # Validate provider_id is an AQI provider to prevent arbitrary template injection.
-    _VALID_AQI_PROVIDERS = {"aeris_aqi", "openmeteo_aqi", "iqair", "openweathermap_aqi"}
+    _VALID_AQI_PROVIDERS = {"aeris_aqi", "openmeteo_aqi", "iqair", "openaq", "openweathermap_aqi"}
     if provider_id not in _VALID_AQI_PROVIDERS:
         assert _templates is not None
         return HTMLResponse(content="", status_code=200)

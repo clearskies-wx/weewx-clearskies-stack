@@ -119,6 +119,17 @@ PROVIDERS: list[ProviderInfo] = [
         signup_url="https://www.aerisweather.com/signup/",
     ),
     ProviderInfo(
+        "openaq",
+        "OpenAQ",
+        "aqi",
+        "Global (141 countries)",
+        ("api_key",),
+        "https://api.openaq.org/v3/locations?coordinates={latitude},{longitude}&radius=25000&limit=1",
+        "get",
+        notes="Observed data — government reference monitors. Haze eligible. ~1-2 hour data lag; not preferred over Aeris/IQAir.",
+        signup_url="https://explore.openaq.org/register",
+    ),
+    ProviderInfo(
         "openweathermap_aqi",
         "OpenWeatherMap AQI (deprecated)",
         "aqi",
