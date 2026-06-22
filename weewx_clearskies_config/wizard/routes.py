@@ -1527,6 +1527,13 @@ async def step4_get(request: Request) -> HTMLResponse:
         except Exception:  # noqa: BLE001
             pass
 
+    # About content lives in branding.json (static, not API data).  Populate
+    # unconditionally — the station_name guard above skips _merge_from_existing_config
+    # when station_name is already set from the API, so about_content never loads.
+    if not state.about_content and _config_dir:
+        from weewx_clearskies_config.wizard.state_persistence import populate_from_branding_json
+        populate_from_branding_json(state, _config_dir)
+
     return _render(
         request,
         "step_station.html",
