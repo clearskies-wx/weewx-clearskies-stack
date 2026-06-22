@@ -109,6 +109,31 @@
         {% include "wizard/step_aqi_regional_fields.html" %}
         {% endif %}
       </div>
+
+      {# OpenAQ bootstrap API key — required for calibration bootstrap regardless
+         of which AQI provider is selected for real-time use. #}
+      <fieldset>
+        <legend>Haze Calibration Bootstrap (OpenAQ)</legend>
+        <p><small>The haze detection calibration bootstrap pulls historical PM2.5 data
+           from <a href="https://openaq.org" target="_blank" rel="noopener">OpenAQ</a>
+           (government reference monitors, 141 countries). This API key is required
+           for the <code>clearskies-api bootstrap</code> command regardless of your
+           AQI provider selection above.</small></p>
+        <label for="openaq_api_key">OpenAQ API Key</label>
+        <input type="password"
+               id="openaq_api_key"
+               name="openaq_api_key"
+               value="{{ state.openaq_api_key or '' }}"
+               placeholder="Register free at explore.openaq.org/register"
+               aria-describedby="openaq-key-hint"
+               autocomplete="off">
+        <small id="openaq-key-hint">
+          Free API key. <a href="https://explore.openaq.org/register"
+                           target="_blank" rel="noopener">Register here</a>.
+          Stored in <code>secrets.env</code> as
+          <code>WEEWX_CLEARSKIES_OPENAQ_API_KEY</code>.
+        </small>
+      </fieldset>
       {% endif %}
 
       {# Aeris forecast model selection (ADR-063) — only when Aeris is the forecast provider #}

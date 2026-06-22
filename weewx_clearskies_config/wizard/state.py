@@ -75,6 +75,10 @@ class WizardState:
     # [station] default_locale in api.conf by the API.
     default_locale: str = "en"
 
+    # OpenAQ API key for calibration bootstrap (separate from provider API keys
+    # because it's needed regardless of which AQI provider is selected).
+    openaq_api_key: str = ""
+
     # Webcam configuration
     webcam_enabled: bool = False
     webcam_image_url: str = "/webcam/weather_cam.jpg"

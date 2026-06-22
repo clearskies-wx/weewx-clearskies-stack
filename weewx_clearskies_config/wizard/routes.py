@@ -1888,6 +1888,11 @@ async def step6_post(request: Request) -> HTMLResponse:
     if submitted_forecast_model in ("standard", "xcast"):
         state.aeris_forecast_model = submitted_forecast_model
 
+    # OpenAQ bootstrap API key (needed regardless of AQI provider selection)
+    submitted_openaq_key = str(form.get("openaq_api_key", "")).strip()
+    if submitted_openaq_key:
+        state.openaq_api_key = submitted_openaq_key
+
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -2549,6 +2554,12 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "min_magnitude": state.earthquake_min_magnitude,
         "default_days": state.earthquake_default_days,
     }
+
+    # OpenAQ bootstrap API key — sent to the API so it writes
+    # WEEWX_CLEARSKIES_OPENAQ_API_KEY to its secrets.env.  Needed for
+    # calibration bootstrap regardless of which AQI provider is active.
+    if state.openaq_api_key:
+        api_payload["openaq_api_key"] = state.openaq_api_key
 
     # Unit configuration — sent to the API so it writes to api.conf [units].
     # This is the single unit authority (T2A.5, ADR-042).
