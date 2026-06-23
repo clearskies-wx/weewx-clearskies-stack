@@ -121,10 +121,11 @@
                   margin-block:1rem;font-size:0.875rem">
         <strong>Drift detected in {{ calibration.drift_warnings | length }} month(s):</strong>
         <ul style="margin:0.5rem 0 0;padding-inline-start:1.25rem">
+          {% set month_names = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] %}
           {% for w in calibration.drift_warnings %}
           <li>
-            <strong>{{ w.name }}</strong> — current mean {{ w.current_mean }},
-            baseline {{ w.baseline }}, deviation {{ w.deviation }}
+            <strong>{{ month_names[w.month] }}</strong> — recent mean {{ w.recent_mean }},
+            baseline {{ w.baseline }}, divergence {{ w.divergence }}
           </li>
           {% endfor %}
         </ul>
