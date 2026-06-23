@@ -157,6 +157,77 @@
 
   </section>
 
+  {# Bootstrap sensor info section #}
+  <section aria-labelledby="sensor-heading" style="margin-block-start:1.5rem">
+    <h3 id="sensor-heading">Bootstrap Sensor</h3>
+
+    {% if calibration is not none and calibration.get("openaq_sensor") %}
+      {% set sensor = calibration.openaq_sensor %}
+      <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem">
+        <dt>Active sensor</dt>
+        <dd>{{ sensor.name }} (ID: {{ sensor.sensor_id }})</dd>
+        <dt>Distance</dt>
+        <dd>{{ "%.1f"|format(sensor.distance_km) }} km</dd>
+        <dt>Coordinates</dt>
+        <dd>{{ "%.4f"|format(sensor.lat) }}, {{ "%.4f"|format(sensor.lon) }}</dd>
+      </dl>
+    {% elif calibration is not none %}
+      <p style="font-size:0.875rem;color:var(--pico-muted-color)">
+        No sensor selected yet. The system will select a reference sensor automatically
+        on the next bootstrap run.
+      </p>
+    {% endif %}
+
+    {# Sensor override controls #}
+    <details style="margin-block-start:1rem">
+      <summary>Override sensor selection</summary>
+      <div style="margin-block-start:0.75rem">
+
+        {# Dropdown of nearby reference sensors — loaded via HTMX #}
+        <div id="sensor-dropdown-area"
+             hx-get="/admin/openaq-sensors-fragment"
+             hx-trigger="revealed"
+             hx-swap="innerHTML">
+          <p style="font-size:0.875rem;color:var(--pico-muted-color)">Loading nearby sensors...</p>
+        </div>
+
+        {# Manual ID entry — the sole form submission path #}
+        <fieldset style="margin-block-start:1rem">
+          <legend style="font-size:0.875rem">Manual sensor ID</legend>
+          <form hx-post="/admin/haze-calibration"
+                hx-target="#admin-content"
+                hx-swap="innerHTML">
+            {# Carry existing settings through so the POST handler receives all keys #}
+            <input type="hidden" name="haze_detection"
+                   value="{{ values.get('haze_detection', defaults.haze_detection) }}">
+            <input type="hidden" name="gamma"
+                   value="{{ values.get('gamma', defaults.gamma) }}">
+            <label for="manual_sensor_id" style="font-size:0.875rem">
+              Enter any OpenAQ sensor ID
+              <input type="number" id="manual_sensor_id" name="openaq_sensor_id"
+                     placeholder="e.g. 1502"
+                     style="max-width:12rem"
+                     min="1"
+                     value="{{ values.get('openaq_sensor_id', '') }}">
+            </label>
+            <small style="display:block;margin-block:0.25rem 0.5rem">
+              Non-reference sensors (PurpleAir, private) are accepted here but not
+              listed in the dropdown above.
+            </small>
+            <div role="group">
+              <button type="submit" class="outline" style="font-size:0.85rem">Set sensor override</button>
+              {% if values.get('openaq_sensor_id') %}
+              <button type="submit" name="openaq_sensor_id" value=""
+                      class="secondary outline" style="font-size:0.85rem">Clear override</button>
+              {% endif %}
+            </div>
+          </form>
+        </fieldset>
+
+      </div>
+    </details>
+  </section>
+
   {# Settings form #}
   <form hx-post="/admin/haze-calibration"
         hx-target="#admin-content"

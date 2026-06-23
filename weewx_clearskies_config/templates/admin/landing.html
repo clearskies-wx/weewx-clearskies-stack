@@ -681,6 +681,10 @@
           <dd>{{ haze_calibration.get("overall_state", "no-data") | replace("-", " ") | capitalize }}</dd>
           <dt>Months calibrated</dt>
           <dd>{{ haze_calibration.get("months_calibrated", 0) }} / 12</dd>
+          {% if haze_calibration.get("openaq_sensor") %}
+          <dt>Sensor</dt>
+          <dd>{{ haze_calibration.openaq_sensor.name }} ({{ "%.1f"|format(haze_calibration.openaq_sensor.distance_km) }} km)</dd>
+          {% endif %}
           {% endif %}
         </dl>
       </article>

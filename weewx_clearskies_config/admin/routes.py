@@ -94,6 +94,7 @@ _SKY_DEFAULTS = {
 _HAZE_DEFAULTS: dict[str, str] = {
     "haze_detection": "true",
     "gamma": "0.45",
+    "openaq_sensor_id": "",
 }
 
 # Earthquake section defaults
@@ -841,6 +842,65 @@ async def sky_classification_post(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------
 
 
+@router.get("/openaq-sensors-fragment", response_class=HTMLResponse)
+async def openaq_sensors_fragment(request: Request) -> HTMLResponse:
+    """Return HTMX fragment with a select of nearby reference sensors.
+
+    The returned HTML is a ``<select>`` that, when the user picks an option,
+    copies the sensor ID into the manual-entry ``<input id="manual_sensor_id">``
+    on the same page.  No separate form submission — one submission path only.
+    """
+    _require_session(request)
+    client = _get_api_client()
+    sensors: list[dict] = []
+    error: str | None = None
+
+    if client is None:
+        error = "Cannot connect to API."
+    else:
+        try:
+            response = client._request("GET", "/setup/openaq-sensors")
+            data = response.json()
+            sensors = data.get("sensors", [])
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("openaq_sensors_fragment: could not load sensors: %s", exc)
+            error = f"Could not load sensors: {exc}"
+
+    if error:
+        escaped = error.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+        return HTMLResponse(
+            f'<p style="font-size:0.875rem;color:var(--pico-del-color)">{escaped}</p>'
+        )
+    if not sensors:
+        return HTMLResponse(
+            '<p style="font-size:0.875rem;color:var(--pico-muted-color)">'
+            "No reference sensors found within 25 km.</p>"
+        )
+
+    def _esc(v: object) -> str:
+        return str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
+
+    options = ['<option value="">— Select a sensor —</option>']
+    for s in sensors:
+        sensor_id = _esc(s.get("sensor_id", ""))
+        label = _esc(
+            f"{s.get('name', '?')} ({float(s.get('distance_km', 0)):.1f} km, ID: {s.get('sensor_id', '?')})"
+        )
+        options.append(f'<option value="{sensor_id}">{label}</option>')
+
+    select_html = (
+        '<label for="sensor-select" style="font-size:0.875rem">Reference sensors nearby</label>'
+        '<select id="sensor-select" aria-label="Select a reference sensor"'
+        ' onchange="document.getElementById(\'manual_sensor_id\').value = this.value">'
+        + "".join(options)
+        + "</select>"
+        '<small style="display:block;margin-block:0.25rem">Select a sensor to populate'
+        " the ID field below, then click “Set sensor override.”"
+        " Only reference-grade (AQMD/regulatory) monitors are listed.</small>"
+    )
+    return HTMLResponse(select_html)
+
+
 @router.get("/haze-calibration", response_class=HTMLResponse)
 async def haze_calibration_get(request: Request) -> HTMLResponse:
     """Render the haze calibration settings and status form."""
@@ -867,6 +927,13 @@ async def haze_calibration_post(request: Request) -> HTMLResponse:
         "haze_detection": "true" if form.get("haze_detection") else "false",
         "gamma": _safe_float_range(form, "gamma", 0.1, 1.0, _HAZE_DEFAULTS),
     }
+    # openaq_sensor_id: only update when present in form (may be empty string to clear)
+    if "openaq_sensor_id" in form:
+        raw_sensor_id = str(form["openaq_sensor_id"]).strip()
+        # Accept empty (clear) or positive integer only
+        if raw_sensor_id == "" or (raw_sensor_id.isdigit() and int(raw_sensor_id) > 0):
+            values["openaq_sensor_id"] = raw_sensor_id
+        # else: ignore invalid value, don't persist it
     api_conf = _config_dir / "api.conf"
     error: str | None = None
     success = False
