@@ -3,12 +3,9 @@
 Two supported topologies:
   same-host  — API and dashboard on one host.  Services bind loopback;
                no shared secret needed.
-  cross-host — Dashboard on a separate host.  Services bind 0.0.0.0
-               (all IPv4 interfaces); a shared secret is required to
-               authenticate the dashboard proxy to the API.
-
-Note: do NOT use :: for cross-host binds.  Uvicorn sets IPV6_V6ONLY=1 on
-IPv6 sockets, making :: IPv6-only regardless of the kernel bindv6only setting.
+  cross-host — Dashboard on a separate host.  Services bind ``*``
+               (dual-stack wildcard — both IPv4 and IPv6); a shared secret
+               is required to authenticate the dashboard proxy to the API.
 """
 
 from __future__ import annotations
@@ -33,7 +30,7 @@ def topology_defaults(same_host: bool) -> dict[str, Any]:
         api_bind_host, api_bind_port,
         needs_proxy_secret.
     """
-    bind_host = "127.0.0.1" if same_host else "0.0.0.0"
+    bind_host = "127.0.0.1" if same_host else "*"
     return {
         "api_bind_host": bind_host,
         "api_bind_port": 8765,

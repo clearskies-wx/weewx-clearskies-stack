@@ -2852,6 +2852,22 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     except Exception:  # noqa: BLE001
         logger.warning("wizard_apply: could not send restart request to API", exc_info=True)
 
+    # Reload Caddy so it picks up the updated caddy.env (API URL may have changed).
+    caddy_reloaded = False
+    try:
+        import subprocess
+
+        subprocess.run(
+            ["sudo", "systemctl", "reload", "caddy"],
+            check=True,
+            capture_output=True,
+            timeout=10,
+        )
+        caddy_reloaded = True
+        logger.info("wizard_apply: Caddy reloaded to pick up caddy.env")
+    except Exception:  # noqa: BLE001
+        logger.warning("wizard_apply: could not reload Caddy", exc_info=True)
+
     assert _templates is not None
     return _templates.TemplateResponse(
         request=request,

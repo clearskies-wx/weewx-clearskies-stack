@@ -420,6 +420,28 @@ def build_skin_conf_payload(state: WizardState) -> dict[str, Any]:
     return payload
 
 
+def write_caddy_env(state: WizardState, config_dir: Path) -> Path | None:
+    """Write caddy.env so the reverse proxy knows where to route API traffic.
+
+    On bare-metal deployments Caddy's systemd unit sources this file via an
+    EnvironmentFile drop-in.  The Caddyfile uses ``{$CLEARSKIES_API_URL}``
+    instead of a hardcoded address.
+
+    Returns the path to the written file, or None if api_address is unset.
+    """
+    if not state.api_address:
+        return None
+    dest = config_dir / "caddy.env"
+    lines = [
+        "# Managed by weewx-clearskies-config — do not edit manually.\n",
+        f"CLEARSKIES_API_URL={state.api_address}\n",
+    ]
+    if dest.exists():
+        shutil.copy2(dest, dest.with_suffix(dest.suffix + ".bak"))
+    _write_file(dest, "".join(lines))
+    return dest
+
+
 def write_pages_json(config_dir: Path) -> None:
     """Write default pages.json — all pages visible.
 
@@ -460,6 +482,9 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
     files_written.append(str(write_stack_conf(state, config_dir)))
     files_written.append(str(write_branding_json(state, config_dir)))
     write_pages_json(config_dir)
+    caddy_env_path = write_caddy_env(state, config_dir)
+    if caddy_env_path:
+        files_written.append(str(caddy_env_path))
     secrets_written.append(str(write_secrets_env(state, config_dir)))
 
     result: dict[str, Any] = {
