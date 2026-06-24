@@ -18,6 +18,8 @@ Route summary:
   POST /admin/earthquakes             — save stack.conf [earthquakes]
   GET  /admin/tls                     — TLS settings edit form
   POST /admin/tls                     — save stack.conf [tls]
+  GET  /admin/connection              — API connection settings
+  POST /admin/connection              — update API URL, caddy.env, reload Caddy
   GET  /admin/sky-classification      — sky classification calibration form
   POST /admin/sky-classification      — save api.conf [sky_classification]
   GET  /admin/haze-calibration        — haze calibration settings + status
@@ -285,6 +287,18 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
     if not api_conf.exists():
         return RedirectResponse("/wizard", status_code=303)
 
+    # API connection info for the landing card
+    from weewx_clearskies_config.wizard.known_apis import load_known_apis
+
+    known = load_known_apis(_config_dir)
+    connection_url = next(iter(known), "")
+    api_section = get_section("api", "api", _config_dir)
+    connection_bind = (
+        f"{api_section.get('bind_host', '')}:{api_section.get('bind_port', '8765')}"
+        if api_section.get("bind_host")
+        else ""
+    )
+
     # Read current values for all sections shown on the landing page
     branding = read_branding(_config_dir)
     pages_data = read_pages(_config_dir)
@@ -329,6 +343,8 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
             "sky_values": sky_values,
             "haze_values": haze_values,
             "haze_calibration": haze_calibration,
+            "connection_url": connection_url,
+            "connection_bind": connection_bind,
         },
     )
 
@@ -747,6 +763,113 @@ async def tls_post(request: Request) -> HTMLResponse:
         request,
         section_slug="tls",
         display_name="TLS Settings",
+        success=success,
+        error=error,
+        status_code=500 if error else 200,
+    )
+
+
+# ---------------------------------------------------------------------------
+# API Connection
+# ---------------------------------------------------------------------------
+
+
+@router.get("/connection", response_class=HTMLResponse)
+async def connection_get(request: Request) -> HTMLResponse:
+    """Render the API connection settings form."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    from weewx_clearskies_config.wizard.known_apis import load_known_apis
+
+    known = load_known_apis(_config_dir)
+    api_url = next(iter(known), "")
+    api_values = get_section("api", "api", _config_dir)
+    bind_host = api_values.get("bind_host", "")
+    bind_port = api_values.get("bind_port", "8765")
+
+    return _render(
+        request,
+        "connection.html",
+        {
+            "api_url": api_url,
+            "bind_host": bind_host,
+            "bind_port": bind_port,
+        },
+    )
+
+
+@router.post("/connection", response_class=HTMLResponse)
+async def connection_post(request: Request) -> HTMLResponse:
+    """Save API connection settings, update caddy.env, and reload Caddy."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    form = await request.form()
+    api_url = str(form.get("api_url", "")).strip()
+
+    error: str | None = None
+    success = False
+
+    if not api_url:
+        error = "API URL is required."
+    elif not api_url.startswith("https://"):
+        error = "API URL must start with https://"
+
+    if not error:
+        try:
+            from weewx_clearskies_config.wizard.known_apis import (
+                load_known_apis,
+                save_known_api,
+            )
+            from weewx_clearskies_config.wizard.config_writer import write_caddy_env
+            from weewx_clearskies_config.wizard.state import WizardState
+
+            known = load_known_apis(_config_dir)
+            old_url = next(iter(known), None)
+            old_fp = known.get(old_url, "") if old_url else ""
+
+            if old_url and old_url != api_url:
+                # Remove old entry, re-pin under new URL with same fingerprint.
+                # Operator can re-run wizard if cert changed too.
+                known_path = _config_dir / "known_apis.json"
+                import json as _json
+
+                new_known = {api_url: old_fp}
+                known_path.write_text(_json.dumps(new_known, indent=2), encoding="utf-8")
+                logger.info("Updated known_apis.json: %s -> %s", old_url, api_url)
+            elif not old_url:
+                save_known_api(_config_dir, api_url, "")
+
+            # Write caddy.env
+            stub_state = WizardState(api_address=api_url)
+            write_caddy_env(stub_state, _config_dir)
+
+            # Reload Caddy
+            import subprocess
+
+            subprocess.run(
+                ["sudo", "systemctl", "reload", "caddy"],
+                check=True,
+                capture_output=True,
+                timeout=10,
+            )
+            logger.info("connection_post: Caddy reloaded after API URL change to %s", api_url)
+            success = True
+        except OSError as exc:
+            error = f"File write error: {exc}"
+            logger.error("connection_post OSError: %s", exc)
+        except subprocess.CalledProcessError as exc:
+            error = f"Caddy reload failed: {exc.stderr.decode() if exc.stderr else exc}"
+            logger.error("connection_post Caddy reload failed: %s", exc)
+        except Exception as exc:  # noqa: BLE001
+            error = f"Unexpected error: {exc}"
+            logger.exception("connection_post unexpected error")
+
+    return _render_result(
+        request,
+        section_slug="connection",
+        display_name="API Connection",
         success=success,
         error=error,
         status_code=500 if error else 200,

@@ -168,6 +168,13 @@
              hx-swap="innerHTML"
              hx-push-url="true">Database</a>
         </li>
+        <li>
+          <a href="/admin/connection"
+             hx-get="/admin/connection"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">API Connection</a>
+        </li>
       </ul>
 
       <span class="nav-group-label">Providers</span>
@@ -375,6 +382,30 @@
         </dl>
         {% else %}
         <p class="empty-note">No values configured — run the setup wizard first.</p>
+        {% endif %}
+      </article>
+
+      <article class="admin-section-card">
+        <header>
+          <h3>API Connection</h3>
+          <a href="/admin/connection"
+             hx-get="/admin/connection"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true"
+             class="edit-link">Edit</a>
+        </header>
+        {% if connection_url %}
+        <dl>
+          <dt>API URL</dt>
+          <dd>{{ connection_url }}</dd>
+          {% if connection_bind %}
+          <dt>Bind</dt>
+          <dd>{{ connection_bind }}</dd>
+          {% endif %}
+        </dl>
+        {% else %}
+        <p class="empty-note">No API connection configured — run the setup wizard first.</p>
         {% endif %}
       </article>
     </div>

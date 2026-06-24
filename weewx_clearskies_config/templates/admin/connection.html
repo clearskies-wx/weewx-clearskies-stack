@@ -1,0 +1,85 @@
+{# -------------------------------------------------------------------------
+   API Connection settings edit form fragment.
+   Loaded via HTMX into #admin-content.
+   Context: api_url, bind_host, bind_port
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>API Connection</li>
+      </ul>
+    </nav>
+    <h2>API Connection</h2>
+  </header>
+
+  <p>The API URL is where the reverse proxy (Caddy) routes
+     <code>/api/v1/*</code> and <code>/sse</code> requests.
+     Changing this updates the Caddy environment and reloads the proxy.</p>
+
+  <form hx-post="/admin/connection"
+        hx-target="#admin-content"
+        hx-swap="innerHTML"
+        id="connection-form">
+
+    <fieldset>
+      <legend>API endpoint</legend>
+
+      <label for="api_url">
+        API URL
+        <input
+          type="url"
+          id="api_url"
+          name="api_url"
+          value="{{ api_url }}"
+          placeholder="https://weewx.example.com:8765"
+          required
+          aria-describedby="api-url-hint"
+        >
+      </label>
+      <small id="api-url-hint">
+        Full URL including scheme and port. Use a hostname (FQDN) rather than
+        an IP address for dual-stack compatibility.
+        Example: <code>https://weewx.example.com:8765</code>
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>Current API binding (read-only)</legend>
+      <dl style="font-size:0.85rem;margin:0">
+        <dt style="display:inline;font-weight:600">Bind host:</dt>
+        <dd style="display:inline;margin:0">
+          <code>{{ bind_host or "(not set)" }}</code>
+        </dd>
+        <br>
+        <dt style="display:inline;font-weight:600">Bind port:</dt>
+        <dd style="display:inline;margin:0">
+          <code>{{ bind_port }}</code>
+        </dd>
+      </dl>
+      <small>
+        The API bind address is set in <code>api.conf</code> on the weewx host.
+        Use <code>*</code> for dual-stack (IPv4 + IPv6) binding.
+        To change it, edit <code>api.conf</code> directly and restart the API service.
+      </small>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1rem">
+      <button type="submit">Save &amp; Reload Caddy</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">Cancel</a>
+    </div>
+  </form>
+</article>
