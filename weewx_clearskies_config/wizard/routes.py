@@ -779,6 +779,8 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.providers = prior.providers
             if not state.api_keys and prior.api_keys:
                 state.api_keys = prior.api_keys
+            if not state.providers_config and prior.providers_config:
+                state.providers_config = prior.providers_config
             if state.topology == "same-host" and prior.topology != "same-host":
                 state.topology = prior.topology
             if state.proxy_secret is None and prior.proxy_secret is not None:
@@ -1900,6 +1902,19 @@ async def step6_post(request: Request) -> HTMLResponse:
     if submitted_openaq_key:
         state.openaq_api_key = submitted_openaq_key
 
+    # LibreWxR endpoint configuration — only relevant when librewxr is the radar provider.
+    # librewxr_mode: "public" (use api.librewxr.net) or "selfhosted" (operator-supplied URL).
+    if state.providers.get("radar") == "librewxr":
+        librewxr_mode = str(form.get("librewxr_mode", "public")).strip()
+        if librewxr_mode == "selfhosted":
+            librewxr_endpoint = str(form.get("librewxr_endpoint", "")).strip()
+            state.providers_config["librewxr_endpoint"] = librewxr_endpoint
+        else:
+            # Public API — no custom endpoint; clear any previously saved value.
+            state.providers_config["librewxr_endpoint"] = ""
+    # If radar provider changed away from librewxr, leave providers_config as-is
+    # so the value is available if the operator switches back.
+
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -2515,6 +2530,12 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         # aeris_forecast_model in api.conf via the API's apply handler.
         if domain == "forecast" and api_provider_name == "aeris":
             provider_entry["aeris_forecast_model"] = state.aeris_forecast_model
+        # LibreWxR endpoint — written to [radar] librewxr_endpoint in api.conf
+        # when the operator chose self-hosted mode.  Empty string means public API.
+        if domain == "radar" and api_provider_name == "librewxr":
+            librewxr_ep = (state.providers_config or {}).get("librewxr_endpoint", "")
+            if librewxr_ep:
+                provider_entry["librewxr_endpoint"] = librewxr_ep
         api_providers[domain] = provider_entry
 
     api_payload: dict[str, Any] = {

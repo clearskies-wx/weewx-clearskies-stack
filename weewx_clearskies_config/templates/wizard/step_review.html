@@ -215,6 +215,16 @@
       {% endif %}
     </small></p>
     {% endif %}
+    {% if state.providers.get("radar") == "librewxr" %}
+    {% set librewxr_ep = (state.providers_config or {}).get("librewxr_endpoint", "") %}
+    <p><small><strong>LibreWxR Endpoint:</strong>
+      {% if librewxr_ep %}
+        Self-hosted — <code>{{ librewxr_ep }}</code>
+      {% else %}
+        Public API (api.librewxr.net)
+      {% endif %}
+    </small></p>
+    {% endif %}
   </section>
 
   {# 6. API Keys ---------------------------------------------------- #}
