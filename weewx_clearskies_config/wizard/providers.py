@@ -164,7 +164,17 @@ PROVIDERS: list[ProviderInfo] = [
         (),
         "https://api.rainviewer.com/public/weather-maps.json",
         "get",
-        "Keyless",
+        "Limited: zoom 7 max, no nowcast, single color scheme (since Jan 2026)",
+    ),
+    ProviderInfo(
+        "librewxr",
+        "LibreWxR",
+        "radar",
+        "Global",
+        (),
+        "https://api.librewxr.net/public/weather-maps.json",
+        "get",
+        "Better quality — zoom 12, 13 color schemes, nowcast, weather alerts. Self-host recommended for production.",
     ),
 ]
 

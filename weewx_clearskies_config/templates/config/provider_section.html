@@ -29,7 +29,8 @@
   "openaq":            {"display": "OpenAQ",                         "keyless": false, "fields": ["api_key"],          "coverage": "Global (141 countries)", "notes": "Observed — haze eligible. ~1-2 hr lag"},
   "openweathermap_aqi":{"display": "OpenWeatherMap AQI (deprecated)", "keyless": false, "fields": ["api_key"],          "coverage": "Global",   "notes": "Deprecated — model data, migrate to Aeris"},
   "usgs":              {"display": "USGS Earthquakes",        "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"},
-  "rainviewer":        {"display": "RainViewer",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"}
+  "rainviewer":        {"display": "RainViewer",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Limited: zoom 7 max, no nowcast, single color scheme (since Jan 2026)"},
+  "librewxr":          {"display": "LibreWxR",               "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Better quality — zoom 12, nowcast, weather alerts. Self-host recommended."}
 } %}
 
 {% set domain_providers = {
@@ -37,7 +38,7 @@
   "alerts":      ["nws_alerts"],
   "aqi":         ["aeris_aqi", "iqair", "openaq", "openmeteo_aqi", "openweathermap_aqi"],
   "earthquakes": ["usgs"],
-  "radar":       ["rainviewer"]
+  "radar":       ["rainviewer", "librewxr"]
 } %}
 
 {% set available_providers = domain_providers.get(section, []) %}
