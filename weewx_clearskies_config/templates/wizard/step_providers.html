@@ -169,47 +169,6 @@
         </fieldset>
       </div>
       {% endif %}
-
-      {# LibreWxR endpoint configuration — shown only when librewxr is selected as radar provider #}
-      {% if domain == "radar" %}
-      {% set librewxr_endpoint_saved = state.providers_config.get("librewxr_endpoint", "") if state.providers_config else "" %}
-      <div id="librewxr-config"
-           {% if selected_id != "librewxr" %}style="display: none;"{% endif %}>
-        <fieldset>
-          <legend>LibreWxR Endpoint</legend>
-          <label>
-            <input type="radio"
-                   name="librewxr_mode"
-                   value="public"
-                   {% if not librewxr_endpoint_saved %}checked{% endif %}
-                   aria-describedby="librewxr-mode-public-desc">
-            <strong>Public API (api.librewxr.net)</strong> — no infrastructure needed, no SLA
-          </label>
-          <span id="librewxr-mode-public-desc" class="sr-only">Use the hosted LibreWxR public API — no setup required.</span>
-          <label>
-            <input type="radio"
-                   name="librewxr_mode"
-                   value="selfhosted"
-                   {% if librewxr_endpoint_saved %}checked{% endif %}
-                   aria-describedby="librewxr-mode-self-desc">
-            <strong>Self-hosted (enter URL)</strong>
-          </label>
-          <span id="librewxr-mode-self-desc" class="sr-only">Use your own LibreWxR instance — enter the URL below.</span>
-          <div id="librewxr_endpoint_input"
-               {% if not librewxr_endpoint_saved %}style="display: none;"{% endif %}>
-            <label for="librewxr_endpoint">LibreWxR endpoint URL</label>
-            <input type="url"
-                   id="librewxr_endpoint"
-                   name="librewxr_endpoint"
-                   value="{{ librewxr_endpoint_saved }}"
-                   placeholder="https://your-librewxr-host:8080"
-                   aria-describedby="librewxr_hint">
-            <small id="librewxr_hint">Must be reachable by the Clear Skies API.
-              Recommend <code>LIBREWXR_MAX_FRAMES=24+</code> for smoother animation.</small>
-          </div>
-        </fieldset>
-      </div>
-      {% endif %}
     </fieldset>
     {% endfor %}
 
@@ -231,26 +190,6 @@
           var modelDiv = document.getElementById('aeris-forecast-model');
           if (modelDiv) {
             modelDiv.style.display = (this.value === 'aeris') ? '' : 'none';
-          }
-        });
-      });
-
-      // Show/hide LibreWxR endpoint config based on radar provider choice
-      document.querySelectorAll('input[name="provider_radar"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-          var cfg = document.getElementById('librewxr-config');
-          if (cfg) {
-            cfg.style.display = (this.value === 'librewxr') ? '' : 'none';
-          }
-        });
-      });
-
-      // Show/hide the self-hosted URL input based on LibreWxR mode choice
-      document.querySelectorAll('input[name="librewxr_mode"]').forEach(function(radio) {
-        radio.addEventListener('change', function() {
-          var endpointDiv = document.getElementById('librewxr_endpoint_input');
-          if (endpointDiv) {
-            endpointDiv.style.display = (this.value === 'selfhosted') ? '' : 'none';
           }
         });
       });

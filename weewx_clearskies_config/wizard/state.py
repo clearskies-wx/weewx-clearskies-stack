@@ -58,12 +58,6 @@ class WizardState:
     # API keys — key=provider_id, value=dict of credential field names → values
     api_keys: dict[str, dict[str, str]] = field(default_factory=dict)
 
-    # Provider-specific configuration beyond API keys.
-    # Used for settings that are not credentials but are provider-specific,
-    # e.g. librewxr_endpoint for self-hosted LibreWxR deployments.
-    # Key=config_name, value=value (typically str).
-    providers_config: dict[str, Any] = field(default_factory=dict)
-
     # Topology
     topology: str = "same-host"  # "same-host" or "cross-host"
     proxy_secret: str | None = None

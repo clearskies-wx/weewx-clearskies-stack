@@ -28,12 +28,8 @@
   "openmeteo_aqi":     {"display": "Open-Meteo AQI",          "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Model-based — not haze eligible"},
   "openaq":            {"display": "OpenAQ",                         "keyless": false, "fields": ["api_key"],          "coverage": "Global (141 countries)", "notes": "Observed — haze eligible. ~1-2 hr lag"},
   "openweathermap_aqi":{"display": "OpenWeatherMap AQI (deprecated)", "keyless": false, "fields": ["api_key"],          "coverage": "Global",   "notes": "Deprecated — model data, migrate to Aeris"},
-  "usgs":              {"display": "USGS Earthquakes",        "keyless": true,  "fields": [],                          "coverage": "Global",             "notes": "Keyless"},
-  "rainviewer":        {"display": "RainViewer",              "keyless": true,  "fields": [],                          "coverage": "Global",             "notes": "Limited: zoom 7 max, no nowcast, single color scheme (since Jan 2026)"},
-  "librewxr":          {"display": "LibreWxR",                "keyless": true,  "fields": [],                          "coverage": "Global",             "notes": "Global radar, satellite, nowcast. Self-host recommended for production."},
-  "noaa":              {"display": "NOAA Unified",            "keyless": true,  "fields": [],                          "coverage": "US (all territories)","notes": "US only. Radar + satellite + SPC severe weather + alerts."},
-  "msc_geomet":        {"display": "MSC GeoMet",              "keyless": true,  "fields": [],                          "coverage": "Canada",             "notes": "Meteorological Service of Canada WMS-T radar tiles."},
-  "dwd_radolan":       {"display": "DWD RADOLAN",             "keyless": true,  "fields": [],                          "coverage": "Germany",            "notes": "Deutscher Wetterdienst RADOLAN composite radar."}
+  "usgs":              {"display": "USGS Earthquakes",        "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"},
+  "rainviewer":        {"display": "RainViewer",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"}
 } %}
 
 {% set domain_providers = {
@@ -41,7 +37,7 @@
   "alerts":      ["nws_alerts"],
   "aqi":         ["aeris_aqi", "iqair", "openaq", "openmeteo_aqi", "openweathermap_aqi"],
   "earthquakes": ["usgs"],
-  "radar":       ["librewxr", "noaa", "msc_geomet", "dwd_radolan", "rainviewer"]
+  "radar":       ["rainviewer"]
 } %}
 
 {% set available_providers = domain_providers.get(section, []) %}

@@ -164,51 +164,7 @@ PROVIDERS: list[ProviderInfo] = [
         (),
         "https://api.rainviewer.com/public/weather-maps.json",
         "get",
-        "Limited: zoom 7 max, no nowcast, single color scheme (since Jan 2026). Global coverage.",
-    ),
-    ProviderInfo(
-        provider_id="librewxr",
-        display_name="LibreWxR",
-        domain="radar",
-        geographic_coverage="Global",
-        auth_fields=(),
-        test_url="https://api.librewxr.net/public/weather-maps.json",
-        test_method="GET",
-        notes="Global radar, satellite, nowcast. Self-host recommended for production. No API key required.",
-        signup_url="https://librewxr.net/",
-    ),
-    ProviderInfo(
-        provider_id="noaa",
-        display_name="NOAA Unified",
-        domain="radar",
-        geographic_coverage="US (all territories)",
-        auth_fields=(),
-        test_url="https://mesonet.agron.iastate.edu/cgi-bin/wms/nexrad/n0r-t.cgi?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities",
-        test_method="GET",
-        notes="US only. Full experience: radar + satellite + SPC severe weather + alerts. No API key required.",
-        signup_url="",
-    ),
-    ProviderInfo(
-        provider_id="msc_geomet",
-        display_name="MSC GeoMet",
-        domain="radar",
-        geographic_coverage="Canada",
-        auth_fields=(),
-        test_url="https://geo.weather.gc.ca/geomet?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities",
-        test_method="GET",
-        notes="Meteorological Service of Canada WMS-T radar tiles. No API key required.",
-        signup_url="",
-    ),
-    ProviderInfo(
-        provider_id="dwd_radolan",
-        display_name="DWD RADOLAN",
-        domain="radar",
-        geographic_coverage="Germany",
-        auth_fields=(),
-        test_url="https://maps.dwd.de/geoserver/dwd/ows?SERVICE=WMS&VERSION=1.3.0&REQUEST=GetCapabilities",
-        test_method="GET",
-        notes="Deutscher Wetterdienst RADOLAN composite radar. No API key required.",
-        signup_url="",
+        "Keyless",
     ),
 ]
 
@@ -229,39 +185,14 @@ def recommend_providers(latitude: float, longitude: float) -> dict[str, str]:
     locations prefer Open-Meteo for forecast and NWS alerts (the only
     current alerts provider).  Open-Meteo AQI is the keyless default for
     all locations; operators can upgrade to IQAir or OWM AQI later.
-
-    Radar recommendations are geo-specific:
-      - US CONUS → noaa (full radar + SPC + alerts experience)
-      - Europe → librewxr (global nowcast-capable)
-      - Japan → librewxr
-      - Canada → msc_geomet (Meteorological Service of Canada)
-      - Germany → dwd_radolan
-      - Global fallback → librewxr
     """
-    lat = latitude
-    lon = longitude
-    in_us = (-130.0 <= lon <= -60.0) and (24.0 <= lat <= 50.0)
-
-    # Radar recommendation — ordered from most-specific to least-specific.
-    if -125 <= lon <= -66 and 24 <= lat <= 50:
-        radar = "noaa"          # US → NOAA unified
-    elif 35 <= lat <= 72 and -25 <= lon <= 45:
-        radar = "librewxr"      # Europe → LibreWxR
-    elif 24 <= lat <= 46 and 122 <= lon <= 146:
-        radar = "librewxr"      # Japan → LibreWxR
-    elif 42 <= lat <= 83 and -141 <= lon <= -52:
-        radar = "msc_geomet"    # Canada → MSC GeoMet
-    elif 47 <= lat <= 55 and 5 <= lon <= 15:
-        radar = "dwd_radolan"   # Germany → DWD RADOLAN
-    else:
-        radar = "librewxr"      # Global fallback
-
+    in_us = (-130.0 <= longitude <= -60.0) and (24.0 <= latitude <= 50.0)
     return {
         "forecast": "nws" if in_us else "openmeteo",
         "alerts": "nws_alerts",
         "aqi": "openmeteo_aqi",
         "earthquakes": "usgs",
-        "radar": radar,
+        "radar": "rainviewer",
     }
 
 
