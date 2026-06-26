@@ -215,6 +215,23 @@
       {% endif %}
     </small></p>
     {% endif %}
+    {% if state.providers.get("radar") == "librewxr" %}
+    <table role="presentation">
+      <caption class="sr-only">LibreWxR radar configuration</caption>
+      <tbody>
+        <tr>
+          <th scope="row">Endpoint</th>
+          <td>{{ state.librewxr_endpoint }}</td>
+        </tr>
+        {% if state.librewxr_bounds %}
+        <tr>
+          <th scope="row">Geographic bounds</th>
+          <td>{{ state.librewxr_bounds }}</td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+    {% endif %}
   </section>
 
   {# 6. API Keys ---------------------------------------------------- #}

@@ -170,6 +170,10 @@ class WizardState:
     # aeris_forecast_model in api.conf.
     aeris_forecast_model: str = "xcast"
 
+    # LibreWxR radar configuration
+    librewxr_endpoint: str = "https://api.librewxr.net"
+    librewxr_bounds: str = ""  # "south,west,north,east" or empty for global
+
     # AQI regional configuration (ADR-059) — provider-specific scale selectors.
     # Persisted in wizard state and sent to the API via POST /setup/apply under
     # the providers.aqi entry so the API can write them to [providers.aqi] in

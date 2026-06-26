@@ -436,6 +436,9 @@ def write_caddy_env(state: WizardState, config_dir: Path) -> Path | None:
         "# Managed by weewx-clearskies-config — do not edit manually.\n",
         f"CLEARSKIES_API_URL={state.api_address}\n",
     ]
+    # LibreWxR proxy — Caddy uses this env var in the /librewxr/* handler.
+    if state.providers.get("radar") == "librewxr" and state.librewxr_endpoint:
+        lines.append(f"CLEARSKIES_LIBREWXR_URL={state.librewxr_endpoint}\n")
     if dest.exists():
         shutil.copy2(dest, dest.with_suffix(dest.suffix + ".bak"))
     _write_file(dest, "".join(lines))

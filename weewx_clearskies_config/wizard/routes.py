@@ -850,6 +850,11 @@ async def wizard_index(request: Request) -> HTMLResponse:
                 state.openmeteo_aqi_index = prior.openmeteo_aqi_index
             if state.iqair_aqi_scale == "us" and prior.iqair_aqi_scale != "us":
                 state.iqair_aqi_scale = prior.iqair_aqi_scale
+            # LibreWxR radar configuration
+            if state.librewxr_endpoint == "https://api.librewxr.net" and prior.librewxr_endpoint != "https://api.librewxr.net":
+                state.librewxr_endpoint = prior.librewxr_endpoint
+            if not state.librewxr_bounds and prior.librewxr_bounds:
+                state.librewxr_bounds = prior.librewxr_bounds
             # TLS configuration (step 14)
             if not state.tls_mode and prior.tls_mode:
                 state.tls_mode = prior.tls_mode
@@ -1895,6 +1900,20 @@ async def step6_post(request: Request) -> HTMLResponse:
     if submitted_forecast_model in ("standard", "xcast"):
         state.aeris_forecast_model = submitted_forecast_model
 
+    # LibreWxR endpoint and bounds (radar domain)
+    submitted_endpoint_mode = str(form.get("librewxr_endpoint_mode", "")).strip()
+    if submitted_endpoint_mode == "selfhosted":
+        submitted_url = str(form.get("librewxr_endpoint_url", "")).strip()
+        if submitted_url:
+            state.librewxr_endpoint = submitted_url
+        else:
+            state.librewxr_endpoint = "https://api.librewxr.net"
+    else:
+        state.librewxr_endpoint = "https://api.librewxr.net"
+
+    submitted_bounds = str(form.get("librewxr_bounds", "")).strip()
+    state.librewxr_bounds = submitted_bounds
+
     # OpenAQ bootstrap API key (needed regardless of AQI provider selection)
     submitted_openaq_key = str(form.get("openaq_api_key", "")).strip()
     if submitted_openaq_key:
@@ -2515,6 +2534,12 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         # aeris_forecast_model in api.conf via the API's apply handler.
         if domain == "forecast" and api_provider_name == "aeris":
             provider_entry["aeris_forecast_model"] = state.aeris_forecast_model
+        # LibreWxR endpoint and bounds — added to the radar provider entry
+        # so the API writes them to [radar] in api.conf.
+        if domain == "radar" and api_provider_name == "librewxr":
+            provider_entry["librewxr_endpoint"] = state.librewxr_endpoint
+            if state.librewxr_bounds:
+                provider_entry["librewxr_bounds"] = state.librewxr_bounds
         api_providers[domain] = provider_entry
 
     api_payload: dict[str, Any] = {
@@ -3130,6 +3155,12 @@ def _merge_from_existing_config(state: WizardState) -> None:
     if state.iqair_aqi_scale == "us" and existing.iqair_aqi_scale != "us":
         state.iqair_aqi_scale = existing.iqair_aqi_scale
 
+    # LibreWxR radar configuration
+    if state.librewxr_endpoint == "https://api.librewxr.net" and existing.librewxr_endpoint != "https://api.librewxr.net":
+        state.librewxr_endpoint = existing.librewxr_endpoint
+    if not state.librewxr_bounds and existing.librewxr_bounds:
+        state.librewxr_bounds = existing.librewxr_bounds
+
     # TLS configuration (step 14)
     if not state.tls_mode and existing.tls_mode:
         state.tls_mode = existing.tls_mode
@@ -3252,6 +3283,18 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 val = str(aqi_pd.get("aqi_scale", "")).strip()
                 if val in {"us", "cn"} and state.iqair_aqi_scale == "us":
                     state.iqair_aqi_scale = val
+
+        # LibreWxR endpoint and bounds — restore from API config on re-run.
+        radar_pd = api_providers.get("radar", {})
+        if isinstance(radar_pd, dict):
+            radar_provider_name = str(radar_pd.get("provider", "")).strip()
+            if radar_provider_name == "librewxr":
+                endpoint_val = str(radar_pd.get("librewxr_endpoint", "")).strip()
+                if endpoint_val and state.librewxr_endpoint == "https://api.librewxr.net":
+                    state.librewxr_endpoint = endpoint_val
+                bounds_val = str(radar_pd.get("librewxr_bounds", "")).strip()
+                if bounds_val and not state.librewxr_bounds:
+                    state.librewxr_bounds = bounds_val
 
     # --- Station ---
     station = config.get("station", {})

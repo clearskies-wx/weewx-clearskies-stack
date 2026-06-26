@@ -75,6 +75,16 @@ weather.example.com {
         file_server
     }
 
+    # LibreWxR radar proxy — only active when CLEARSKIES_LIBREWXR_URL is set.
+    # The wizard writes this env var to caddy.env when LibreWxR is the radar provider.
+    @librewxr expression `"{$CLEARSKIES_LIBREWXR_URL:}" != ""`
+    handle @librewxr {
+        handle /librewxr/* {
+            uri strip_prefix /librewxr
+            reverse_proxy {$CLEARSKIES_LIBREWXR_URL}
+        }
+    }
+
     handle {
         root * /var/www/clearskies
         try_files {path} /index.html
