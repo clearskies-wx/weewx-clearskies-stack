@@ -53,7 +53,7 @@
         <li>
           <a href="/admin/config"
              hx-get="/admin/config"
-             hx-target="#config-content"
+             hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
             Configuration
@@ -74,7 +74,7 @@
 
   <form id="column-mapping-form"
         hx-post="/admin/config/column-mapping"
-        hx-target="#config-content"
+        hx-target="#admin-content"
         hx-swap="innerHTML">
 
     {% if mapping %}
@@ -163,7 +163,7 @@
       <button type="submit">Save Column Mapping</button>
       <a href="/admin/config"
          hx-get="/admin/config"
-         hx-target="#config-content"
+         hx-target="#admin-content"
          hx-swap="innerHTML"
          hx-push-url="true"
          role="button"

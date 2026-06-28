@@ -26,7 +26,7 @@
         <li>
           <a href="/admin/config"
              hx-get="/admin/config"
-             hx-target="#config-content"
+             hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
             Configuration
@@ -48,7 +48,7 @@
 
   <form id="section-form-{{ component }}-{{ section }}"
         hx-post="/admin/config/{{ component }}/{{ section }}"
-        hx-target="#config-content"
+        hx-target="#admin-content"
         hx-swap="innerHTML">
 
     <fieldset>
@@ -132,7 +132,7 @@
       <button type="submit">Save {{ display_name }}</button>
       <a href="/admin/config"
          hx-get="/admin/config"
-         hx-target="#config-content"
+         hx-target="#admin-content"
          hx-swap="innerHTML"
          hx-push-url="true"
          role="button"

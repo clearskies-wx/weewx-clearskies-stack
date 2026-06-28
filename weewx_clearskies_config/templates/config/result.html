@@ -1,6 +1,6 @@
 {# -------------------------------------------------------------------------
    Result fragment — rendered after a save or test-provider POST.
-   Replaces #config-content via HTMX innerHTML swap.
+   Replaces #admin-content via HTMX innerHTML swap.
    Context: component, section, display_name, success, error, test_result?,
             test_provider_id?, test_provider_name?
    ------------------------------------------------------------------------- #}
@@ -11,7 +11,7 @@
         <li>
           <a href="/admin/config"
              hx-get="/admin/config"
-             hx-target="#config-content"
+             hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
             Configuration
@@ -65,7 +65,7 @@
   <div id="result-autodismiss"
        hx-get="/admin/config/{{ component }}/{{ section }}"
        hx-trigger="load delay:3s"
-       hx-target="#config-content"
+       hx-target="#admin-content"
        hx-swap="innerHTML"
        aria-hidden="true">
   </div>
@@ -115,7 +115,7 @@
     {% if section not in ("test-provider",) %}
     <a href="/admin/config/{{ component }}/{{ section }}"
        hx-get="/admin/config/{{ component }}/{{ section }}"
-       hx-target="#config-content"
+       hx-target="#admin-content"
        hx-swap="innerHTML"
        hx-push-url="true"
        role="button"
@@ -125,7 +125,7 @@
     {% endif %}
     <a href="/admin/config"
        hx-get="/admin/config"
-       hx-target="#config-content"
+       hx-target="#admin-content"
        hx-swap="innerHTML"
        hx-push-url="true"
        role="button"

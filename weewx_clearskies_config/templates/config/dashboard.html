@@ -141,7 +141,7 @@
           <li>
             <a href="/admin/config/{{ s.component }}/{{ s.section }}"
                hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
-               hx-target="#config-content"
+               hx-target="#admin-content"
                hx-swap="innerHTML"
                hx-push-url="true">
               <span class="section-name">{{ s.display_name }}</span>
@@ -171,7 +171,7 @@
       <div class="column-mapping-link">
         <a href="/admin/config/column-mapping"
            hx-get="/admin/config/column-mapping"
-           hx-target="#config-content"
+           hx-target="#admin-content"
            hx-swap="innerHTML"
            hx-push-url="true">
           <span class="section-name">Column Mapping</span>
@@ -192,7 +192,7 @@
   {# ------------------------------------------------------------------ #}
   {# Right content area — section edit forms load here via HTMX         #}
   {# ------------------------------------------------------------------ #}
-  <div id="config-content" aria-label="Configuration editor">
+  <div id="admin-content" aria-label="Configuration editor">
 
     <section aria-labelledby="overview-heading">
       <header>
@@ -219,7 +219,7 @@
               {{ s.display_name }}
               <a href="/admin/config/{{ s.component }}/{{ s.section }}"
                  hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
-                 hx-target="#config-content"
+                 hx-target="#admin-content"
                  hx-swap="innerHTML"
                  hx-push-url="true"
                  style="font-size:0.75em;margin-inline-start:0.75rem;font-weight:400">
@@ -256,7 +256,7 @@
       {% endif %}
     </section>
 
-  </div>{# /#config-content #}
+  </div>{# /#admin-content #}
 
 </div>{# /.config-layout #}
 {% endblock %}

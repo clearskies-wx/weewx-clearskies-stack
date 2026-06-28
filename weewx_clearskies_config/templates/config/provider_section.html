@@ -90,7 +90,7 @@
         <li>
           <a href="/admin/config"
              hx-get="/admin/config"
-             hx-target="#config-content"
+             hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
             Configuration
@@ -117,7 +117,7 @@
   {# ------------------------------------------------------------------ #}
   <form id="provider-section-form"
         hx-post="/admin/config/{{ component }}/{{ section }}"
-        hx-target="#config-content"
+        hx-target="#admin-content"
         hx-swap="innerHTML">
 
     <label for="provider-select-{{ section }}">Provider</label>
@@ -214,7 +214,7 @@
                   class="secondary"
                   aria-label="Test connectivity for {{ meta.get('display', pid) }}"
                   hx-post="/admin/config/test-provider"
-                  hx-target="#config-content"
+                  hx-target="#admin-content"
                   hx-swap="innerHTML"
                   hx-include="#provider-keys-{{ section }}-{{ pid }}"
                   hx-vals='{"provider_id": "{{ pid }}"}'
@@ -315,7 +315,7 @@
       <button type="submit">Save Provider Selection</button>
       <a href="/admin/config"
          hx-get="/admin/config"
-         hx-target="#config-content"
+         hx-target="#admin-content"
          hx-swap="innerHTML"
          hx-push-url="true"
          role="button"
