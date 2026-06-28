@@ -29,7 +29,7 @@ services:
     restart: unless-stopped
 
   dashboard:
-    image: ghcr.io/inguy24/weewx-clearskies-dashboard:${CLEARSKIES_VERSION:-0.1.0}
+    image: ghcr.io/clearskies-wx/weewx-clearskies-dashboard:${CLEARSKIES_VERSION:-0.1.0}
     build:
       context: ../../weewx-clearskies-dashboard
     volumes:
@@ -41,7 +41,7 @@ services:
     restart: "no"
 
   config:
-    image: ghcr.io/inguy24/weewx-clearskies-config:${CLEARSKIES_VERSION:-0.1.0}
+    image: ghcr.io/clearskies-wx/weewx-clearskies-config:${CLEARSKIES_VERSION:-0.1.0}
     build:
       context: ../..
       dockerfile: weewx-clearskies-stack/Dockerfile

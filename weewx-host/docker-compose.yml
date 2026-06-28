@@ -2,7 +2,7 @@ name: clearskies-api
 
 services:
   api:
-    image: ghcr.io/inguy24/weewx-clearskies-api:${CLEARSKIES_VERSION:-0.1.0}
+    image: ghcr.io/clearskies-wx/weewx-clearskies-api:${CLEARSKIES_VERSION:-0.1.0}
     build:
       context: ../../weewx-clearskies-api
     network_mode: host
