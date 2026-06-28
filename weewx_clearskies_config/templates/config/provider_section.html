@@ -236,6 +236,80 @@
     {% endif %}
     {% endfor %}
 
+    {# ---------------------------------------------------------------- #}
+    {# LibreWxR-specific config — endpoint and bounds                    #}
+    {# Visible only when section == radar and librewxr is selected       #}
+    {# ---------------------------------------------------------------- #}
+    {% if section == "radar" %}
+    {% set cur_endpoint = values.get("librewxr_endpoint", "") %}
+    {% set cur_bounds = values.get("librewxr_bounds", "") %}
+    {% set is_selfhosted = cur_endpoint and cur_endpoint != "https://api.librewxr.net" %}
+    <div id="librewxr-config-{{ section }}"
+         class="provider-keys-section {% if current_provider == 'librewxr' %}active{% endif %}"
+         aria-hidden="{{ 'false' if current_provider == 'librewxr' else 'true' }}"
+         {% if current_provider != 'librewxr' %}inert{% endif %}>
+
+      <fieldset class="provider-key-fields">
+        <legend>LibreWxR Configuration</legend>
+        <p><small>LibreWxR provides high-quality radar (zoom 12), 13 color schemes,
+           60-minute nowcast, and weather alerts. Use the public API for zero-setup,
+           or point to your own self-hosted instance for production reliability.</small></p>
+
+        <label>Endpoint</label>
+        <label>
+          <input type="radio"
+                 name="librewxr_endpoint_mode"
+                 value="public"
+                 {% if not is_selfhosted %}checked{% endif %}>
+          <strong>Public API</strong> (api.librewxr.net)
+          <br>
+          <small>No infrastructure needed. No SLA — best-effort availability.</small>
+        </label>
+        <label>
+          <input type="radio"
+                 name="librewxr_endpoint_mode"
+                 value="selfhosted"
+                 {% if is_selfhosted %}checked{% endif %}>
+          <strong>Self-hosted</strong>
+          <br>
+          <small>You deploy and maintain your own LibreWxR instance.</small>
+        </label>
+
+        <div id="librewxr-selfhosted-url-{{ section }}"
+             {% if not is_selfhosted %}style="display: none;"{% endif %}>
+          <label for="librewxr_endpoint">LibreWxR instance URL</label>
+          <input type="url"
+                 id="librewxr_endpoint"
+                 name="librewxr_endpoint"
+                 value="{{ cur_endpoint if is_selfhosted else '' }}"
+                 placeholder="https://librewxr.example.com"
+                 aria-describedby="librewxr-url-hint-{{ section }}">
+          <small id="librewxr-url-hint-{{ section }}">
+            Full URL to your LibreWxR instance. Must be reachable by Caddy.
+          </small>
+        </div>
+
+        <details style="margin-block-start: 0.75rem;">
+          <summary>Geographic bounds (optional)</summary>
+          <p><small>For self-hosted instances with BBOX cropping, enter the bounding box
+             so the dashboard limits zoom-out to your coverage area. Leave empty for
+             global coverage (public API).</small></p>
+          <label for="librewxr_bounds">Bounds (south,west,north,east)</label>
+          <input type="text"
+                 id="librewxr_bounds"
+                 name="librewxr_bounds"
+                 value="{{ cur_bounds }}"
+                 placeholder="32.0,-120.5,35.5,-114.5"
+                 pattern="^-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*$"
+                 aria-describedby="librewxr-bounds-hint-{{ section }}">
+          <small id="librewxr-bounds-hint-{{ section }}">
+            Four comma-separated decimal values. Example for SoCal: 32.0,-120.5,35.5,-114.5
+          </small>
+        </details>
+      </fieldset>
+    </div>
+    {% endif %}
+
     {# Save button row #}
     <div role="group" style="margin-block-start:1.25rem">
       <button type="submit">Save Provider Selection</button>
@@ -279,10 +353,33 @@
         el.setAttribute("inert", "");
       }
     });
+    // LibreWxR config panel (radar section only)
+    var lwxr = document.getElementById("librewxr-config-" + section);
+    if (lwxr) {
+      if (newValue === "librewxr") {
+        lwxr.classList.add("active");
+        lwxr.removeAttribute("aria-hidden");
+        lwxr.removeAttribute("inert");
+      } else {
+        lwxr.classList.remove("active");
+        lwxr.setAttribute("aria-hidden", "true");
+        lwxr.setAttribute("inert", "");
+      }
+    }
   }
 
   // Expose as a named global for the onchange= attribute above
   window["onProviderChange_" + section] = onProviderChange;
+
+  // Show/hide self-hosted URL based on endpoint mode radio (LibreWxR)
+  document.querySelectorAll('input[name="librewxr_endpoint_mode"]').forEach(function (radio) {
+    radio.addEventListener("change", function () {
+      var urlDiv = document.getElementById("librewxr-selfhosted-url-" + section);
+      if (urlDiv) {
+        urlDiv.style.display = (this.value === "selfhosted") ? "" : "none";
+      }
+    });
+  });
 }());
 </script>
 

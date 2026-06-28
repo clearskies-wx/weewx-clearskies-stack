@@ -228,6 +228,38 @@ def _get_api_client():  # type: ignore[return]
     return ApiClient(api_url, proxy_secret=proxy_secret)
 
 
+def _fetch_api_providers() -> dict[str, dict[str, Any]]:
+    """Fetch all provider configs from the API's /setup/current-config.
+
+    Returns a dict keyed by domain (forecast, alerts, aqi, radar, earthquakes),
+    each value a flat dict like ``{"provider": "librewxr", "librewxr_endpoint": "..."}``.
+    Returns ``{}`` if the API is unreachable.
+    """
+    client = _get_api_client()
+    if client is None:
+        return {}
+    try:
+        config = client.get_current_config()
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not fetch current config from API for provider sections", exc_info=True)
+        return {}
+    raw_providers = config.get("providers", {})
+    if not isinstance(raw_providers, dict):
+        return {}
+    result: dict[str, dict[str, Any]] = {}
+    for domain, pdata in raw_providers.items():
+        if not isinstance(pdata, dict):
+            continue
+        flat: dict[str, Any] = {"provider": str(pdata.get("provider", ""))}
+        for key in ("librewxr_endpoint", "librewxr_bounds", "iframe_url",
+                    "aeris_forecast_model", "nws_user_agent_contact"):
+            val = pdata.get(key)
+            if val:
+                flat[key] = str(val)
+        result[domain] = flat
+    return result
+
+
 def _read_calibration_state() -> dict | None:
     """Fetch calibration state from the API.
 
@@ -299,16 +331,19 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
         else ""
     )
 
-    # Read current values for all sections shown on the landing page
+    # Read current values for all sections shown on the landing page.
+    # Provider sections are fetched from the API (authoritative, on the weewx
+    # host) with local-file fallback.  Non-provider sections read locally.
+    api_providers = _fetch_api_providers()
     branding = read_branding(_config_dir)
     pages_data = read_pages(_config_dir)
     ui_values = get_section("stack", "ui", _config_dir)
     db_values = get_section("api", "database", _config_dir)
-    forecast_values = get_section("api", "forecast", _config_dir)
-    alerts_values = get_section("api", "alerts", _config_dir)
-    aqi_values = get_section("api", "aqi", _config_dir)
-    earthquakes_section = get_section("api", "earthquakes", _config_dir)
-    radar_values = get_section("api", "radar", _config_dir)
+    forecast_values = api_providers.get("forecast") or get_section("api", "forecast", _config_dir)
+    alerts_values = api_providers.get("alerts") or get_section("api", "alerts", _config_dir)
+    aqi_values = api_providers.get("aqi") or get_section("api", "aqi", _config_dir)
+    earthquakes_section = api_providers.get("earthquakes") or get_section("api", "earthquakes", _config_dir)
+    radar_values = api_providers.get("radar") or get_section("api", "radar", _config_dir)
     webcam_values = get_section("stack", "webcam", _config_dir)
     stack_earthquakes = _get_with_defaults(
         get_section("stack", "earthquakes", _config_dir), _EARTHQUAKE_DEFAULTS

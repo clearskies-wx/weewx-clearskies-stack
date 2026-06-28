@@ -74,7 +74,7 @@ _SECTION_ALLOWED_KEYS: dict[tuple[str, str], frozenset[str]] = {
     ("api", "alerts"):      frozenset({"provider"}),
     ("api", "aqi"):         frozenset({"provider"}),
     ("api", "earthquakes"): frozenset({"provider"}),
-    ("api", "radar"):       frozenset({"provider"}),
+    ("api", "radar"):       frozenset({"provider", "librewxr_endpoint", "librewxr_bounds"}),
     ("stack", "webcam"):    frozenset({"enabled", "image_url", "video_url", "refresh_interval"}),
     ("stack", "ui"):        frozenset({
         "enabled", "bind_host", "bind_port", "tls_cert_path", "tls_key_path",
@@ -230,6 +230,52 @@ def _section_display_name(component: str, section: str) -> str:
     return _SECTION_DISPLAY.get((component, section), f"{component}/{section}")
 
 
+_PROVIDER_DOMAINS = frozenset({"forecast", "alerts", "aqi", "earthquakes", "radar"})
+
+
+def _get_api_provider_values(section: str) -> dict[str, Any] | None:
+    """Fetch provider config for *section* from the API's /setup/current-config.
+
+    Returns a flat dict (e.g. ``{"provider": "librewxr", "librewxr_endpoint": "..."}``),
+    or None if the API is unreachable or the section has no provider configured.
+    The API on the weewx host is the single authority for provider config;
+    the local api.conf on weather-dev may be stale.
+    """
+    if _config_dir is None or section not in _PROVIDER_DOMAINS:
+        return None
+    try:
+        from weewx_clearskies_config.wizard.known_apis import load_known_apis
+        from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
+        from weewx_clearskies_config.wizard.api_client import ApiClient
+
+        known = load_known_apis(_config_dir)
+        if not known:
+            return None
+        api_url = next(iter(known))
+        secrets = _read_secrets_env(_config_dir)
+        proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
+        if not proxy_secret:
+            return None
+        client = ApiClient(api_url, proxy_secret=proxy_secret)
+        config = client.get_current_config()
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not fetch provider config from API for section %s", section, exc_info=True)
+        return None
+
+    providers = config.get("providers", {})
+    provider_data = providers.get(section)
+    if not provider_data or not isinstance(provider_data, dict):
+        return None
+
+    values: dict[str, Any] = {"provider": str(provider_data.get("provider", ""))}
+    for key in ("librewxr_endpoint", "librewxr_bounds", "iframe_url",
+                "aeris_forecast_model", "nws_user_agent_contact"):
+        val = provider_data.get(key)
+        if val:
+            values[key] = str(val)
+    return values
+
+
 # ---------------------------------------------------------------------------
 # Dashboard
 # ---------------------------------------------------------------------------
@@ -359,7 +405,11 @@ async def section_get(request: Request, component: str, section: str) -> HTMLRes
             status_code=404,
         )
 
-    values = get_section(component, section, _config_dir)
+    # Provider sections read from the API (authoritative) with local fallback.
+    if section in _PROVIDER_DOMAINS:
+        values = _get_api_provider_values(section) or get_section(component, section, _config_dir)
+    else:
+        values = get_section(component, section, _config_dir)
     secret_fields = _SECTION_SECRETS.get((component, section), ())
 
     return _render(
@@ -419,6 +469,16 @@ async def section_post(request: Request, component: str, section: str) -> HTMLRe
                 secret_values[key] = str_val
         else:
             conf_values[key] = str_val
+
+    # LibreWxR endpoint mode radio → resolve to actual endpoint URL.
+    if section == "radar":
+        endpoint_mode = str(form.get("librewxr_endpoint_mode", "")).strip()
+        if endpoint_mode == "selfhosted":
+            url_val = conf_values.get("librewxr_endpoint", "")
+            if not url_val:
+                conf_values["librewxr_endpoint"] = "https://api.librewxr.net"
+        else:
+            conf_values["librewxr_endpoint"] = "https://api.librewxr.net"
 
     error: str | None = None
     success = False
