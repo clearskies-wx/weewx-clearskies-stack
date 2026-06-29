@@ -23,7 +23,6 @@ from weewx_clearskies_config.auth import (
     write_secrets,
 )
 from weewx_clearskies_config.admin.routes import create_admin_router
-from weewx_clearskies_config.config.routes import create_config_router
 from weewx_clearskies_config.wizard.routes import create_wizard_router
 
 
@@ -98,15 +97,6 @@ def create_app(config: AppConfig) -> FastAPI:
         dashboard_root=config.dashboard_root,
     )
     app.include_router(wizard_router)
-
-    # Mount the config router.  create_config_router() injects shared objects
-    # (templates, session_manager, config_dir) that the router endpoints need.
-    config_router = create_config_router(
-        templates=templates,
-        session_manager=session_manager,
-        config_dir=config.config_dir,
-    )
-    app.include_router(config_router)
 
     # Mount the admin router.  create_admin_router() injects shared objects
     # (templates, session_manager, config_dir, dashboard_root) that the router

@@ -1,10 +1,12 @@
-"""FastAPI router for the admin landing page and domain-organized sections.
+"""FastAPI router for the admin landing page, domain-organized sections, and
+per-component config editing.
 
 Provides the top-level admin UI at /admin — a domain-organized overview of
 all configuration areas.  Individual sections load as HTMX fragments into
-the content area.
+the content area.  Also handles the per-component configuration pages that
+were formerly in config/routes.py.
 
-Route summary:
+Route summary (admin landing + domain sections):
   GET  /admin                         — landing page (requires session)
   GET  /admin/pages                   — page visibility edit form fragment
   POST /admin/pages                   — save page visibility
@@ -27,6 +29,14 @@ Route summary:
   POST /admin/haze-calibration/reset  — reset calibration data via API
   GET  /admin/now-layout              — card layout editor form
   POST /admin/now-layout              — save now-layout.json to config dir
+
+Route summary (config editor — formerly config/routes.py):
+  GET  /admin/config                          — config dashboard (all sections)
+  GET  /admin/config/{component}/{section}    — section edit form fragment
+  POST /admin/config/{component}/{section}    — save section, return result fragment
+  GET  /admin/config/column-mapping           — column mapping form
+  POST /admin/config/column-mapping           — update column mapping, return result
+  POST /admin/config/test-provider            — test provider connectivity
 """
 
 from __future__ import annotations
@@ -42,13 +52,18 @@ from fastapi.templating import Jinja2Templates
 
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
 from weewx_clearskies_config.config.reader import (
+    get_all_sections,
+    get_column_mapping,
     get_section,
     read_branding,
     read_pages,
 )
 from weewx_clearskies_config.config.updater import (
+    update_column_mapping,
     update_managed_region,
+    update_secrets,
 )
+from weewx_clearskies_config.wizard.providers import PROVIDERS, get_provider, test_provider
 
 logger = logging.getLogger(__name__)
 
@@ -238,17 +253,469 @@ def _safe_float_range(form: Any, key: str, lo: float, hi: float, defaults: dict)
     return defaults[key]
 
 
-def _safe_int_range(form: Any, key: str, lo: int, hi: int, defaults: dict) -> str:
-    """Return a validated int string from form data within [lo, hi], or the default."""
-    raw = str(form.get(key, "")).strip()
-    if raw:
-        try:
-            val = int(raw)
-            if lo <= val <= hi:
-                return str(val)
-        except ValueError:
-            pass
-    return defaults[key]
+# ---------------------------------------------------------------------------
+# Config editor helpers (formerly config/routes.py)
+# ---------------------------------------------------------------------------
+
+
+def _render_config(
+    request: Request,
+    template_name: str,
+    context: dict[str, Any],
+    *,
+    status_code: int = 200,
+) -> HTMLResponse:
+    """Render a config/ template (used by the per-component config editor)."""
+    assert _templates is not None, "Admin router not initialised"
+    return _templates.TemplateResponse(
+        request=request,
+        name=f"config/{template_name}",
+        context=context,
+        status_code=status_code,
+    )
+
+
+# Each entry: (component, section_key, display_name, secret_fields)
+# secret_fields: form field names whose values go into secrets.env instead of
+# being written directly into the .conf file.
+_SECTION_META: list[tuple[str, str, str, tuple[str, ...]]] = [
+    # api.conf sections
+    ("api", "server", "API Server", ()),
+    ("api", "database", "Database Connection", ("password",)),
+    ("api", "forecast", "Forecast Provider", ()),
+    ("api", "alerts", "Alerts Provider", ()),
+    ("api", "aqi", "AQI Provider", ()),
+    ("api", "earthquakes", "Earthquakes Provider", ()),
+    ("api", "radar", "Radar Provider", ()),
+    # stack.conf sections — webcam is a UI concern, written by the wizard to stack.conf
+    ("stack", "ui", "UI Settings", ()),
+    ("stack", "webcam", "Webcam", ()),
+]
+
+# Set of (component, section) pairs that are valid for editing
+_VALID_SECTIONS: frozenset[tuple[str, str]] = frozenset(
+    (comp, sec) for comp, sec, _name, _secrets in _SECTION_META
+)
+
+# Allowed keys per (component, section).  Only these keys are accepted from
+# form submissions — any extra keys are silently dropped (input validation at
+# trust boundary per coding.md §1).
+_SECTION_ALLOWED_KEYS: dict[tuple[str, str], frozenset[str]] = {
+    ("api", "server"):      frozenset({"bind_host", "bind_port"}),
+    ("api", "database"):    frozenset({"host", "port", "user", "name", "password"}),
+    ("api", "forecast"):    frozenset({"provider"}),
+    ("api", "alerts"):      frozenset({"provider"}),
+    ("api", "aqi"):         frozenset({"provider"}),
+    ("api", "earthquakes"): frozenset({"provider"}),
+    ("api", "radar"):       frozenset({"provider", "librewxr_endpoint", "librewxr_bounds"}),
+    ("stack", "webcam"):    frozenset({"enabled", "image_url", "video_url", "refresh_interval"}),
+    ("stack", "ui"):        frozenset({
+        "enabled", "bind_host", "bind_port", "tls_cert_path", "tls_key_path",
+        "station_name", "latitude", "longitude", "altitude_meters", "timezone",
+        "topology",
+    }),
+}
+
+# Map (component, section) -> display name
+_SECTION_DISPLAY: dict[tuple[str, str], str] = {
+    (comp, sec): name for comp, sec, name, _secrets in _SECTION_META
+}
+
+# Map (component, section) -> tuple of secret field names
+_SECTION_SECRETS: dict[tuple[str, str], tuple[str, ...]] = {
+    (comp, sec): secrets for comp, sec, _name, secrets in _SECTION_META
+}
+
+# Canonical field names available for column mapping
+# Sourced from the weewx standard schema; surfaced as datalist options in the UI.
+_CANONICAL_FIELDS = (
+    "dateTime", "usUnits", "interval", "barometer", "pressure", "altimeter",
+    "inTemp", "outTemp", "inHumidity", "outHumidity", "windSpeed", "windDir",
+    "windGust", "windGustDir", "rain", "rainRate", "dewpoint", "windchill",
+    "heatindex", "ET", "radiation", "UV", "extraTemp1", "extraTemp2", "extraTemp3",
+    "soilTemp1", "soilTemp2", "soilTemp3", "soilTemp4", "leafTemp1", "leafTemp2",
+    "extraHumid1", "extraHumid2", "soilMoist1", "soilMoist2", "soilMoist3",
+    "soilMoist4", "leafWet1", "leafWet2", "rxCheckPercent", "txBatteryStatus",
+    "consBatteryVoltage", "hail", "hailRate", "heatingTemp", "heatingVoltage",
+    "supplyVoltage", "referenceVoltage", "windBatteryStatus", "rainBatteryStatus",
+    "outTempBatteryStatus", "inTempBatteryStatus", "lightning_strike_count",
+    "lightning_distance", "pm1_0", "pm2_5", "pm10_0", "co2",
+)
+
+_PROVIDER_DOMAINS = frozenset({"forecast", "alerts", "aqi", "earthquakes", "radar"})
+
+
+def _secrets_env_key(component: str, section: str, field: str) -> str:
+    """Build the secrets.env key for a secret field.
+
+    Convention: WEEWX_CLEARSKIES_<COMPONENT>_<SECTION>_<FIELD>
+    """
+    return f"WEEWX_CLEARSKIES_{component.upper()}_{section.upper()}_{field.upper()}"
+
+
+def _section_display_name(component: str, section: str) -> str:
+    return _SECTION_DISPLAY.get((component, section), f"{component}/{section}")
+
+
+def _get_api_provider_values(section: str) -> dict[str, Any] | None:
+    """Fetch provider config for *section* from the API's /setup/current-config.
+
+    Returns a flat dict (e.g. ``{"provider": "librewxr", "librewxr_endpoint": "..."}``),
+    or None if the API is unreachable or the section has no provider configured.
+    The API on the weewx host is the single authority for provider config;
+    the local api.conf on weather-dev may be stale.
+    """
+    if _config_dir is None or section not in _PROVIDER_DOMAINS:
+        return None
+    try:
+        from weewx_clearskies_config.wizard.known_apis import load_known_apis
+        from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
+        from weewx_clearskies_config.wizard.api_client import ApiClient
+
+        known = load_known_apis(_config_dir)
+        if not known:
+            return None
+        api_url = next(iter(known))
+        secrets = _read_secrets_env(_config_dir)
+        proxy_secret = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
+        if not proxy_secret:
+            return None
+        client = ApiClient(api_url, proxy_secret=proxy_secret)
+        config = client.get_current_config()
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not fetch provider config from API for section %s", section, exc_info=True)
+        return None
+
+    providers = config.get("providers", {})
+    provider_data = providers.get(section)
+    if not provider_data or not isinstance(provider_data, dict):
+        return None
+
+    values: dict[str, Any] = {"provider": str(provider_data.get("provider", ""))}
+    for key in ("librewxr_endpoint", "librewxr_bounds", "iframe_url",
+                "aeris_forecast_model", "nws_user_agent_contact"):
+        val = provider_data.get(key)
+        if val:
+            values[key] = str(val)
+    return values
+
+
+# ---------------------------------------------------------------------------
+# Config dashboard and per-section editor (formerly config/routes.py)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/config", response_class=HTMLResponse)
+@router.get("/config/", response_class=HTMLResponse)
+async def config_dashboard(request: Request) -> HTMLResponse:
+    """Render the config dashboard — section nav + current value overview."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    all_sections = get_all_sections(_config_dir)
+
+    # Build structured nav data: list of (component, section, display_name, values)
+    nav_sections = []
+    for comp, sec, display_name, _secrets in _SECTION_META:
+        values = all_sections.get(comp, {}).get(sec, {})
+        nav_sections.append({
+            "component": comp,
+            "section": sec,
+            "display_name": display_name,
+            "values": values,
+        })
+
+    return _render_config(
+        request,
+        "dashboard.html",
+        {
+            "nav_sections": nav_sections,
+            "config_dir": str(_config_dir),
+        },
+    )
+
+
+@router.get("/config/column-mapping", response_class=HTMLResponse)
+async def column_mapping_get(request: Request) -> HTMLResponse:
+    """Render the column mapping edit form."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    current_mapping = get_column_mapping(_config_dir)
+
+    return _render_config(
+        request,
+        "section.html",
+        {
+            "component": "api",
+            "section": "column_mapping",
+            "display_name": "Column Mapping",
+            "is_column_mapping": True,
+            "mapping": current_mapping,
+            "canonical_fields": _CANONICAL_FIELDS,
+            "secret_fields": (),
+            "values": {},
+            "result": None,
+            "error": None,
+        },
+    )
+
+
+@router.post("/config/column-mapping", response_class=HTMLResponse)
+async def column_mapping_post(request: Request) -> HTMLResponse:
+    """Save column mapping and return result fragment."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    form = await request.form()
+
+    # Form fields are named "col_<db_column>" for each mapping entry
+    mapping: dict[str, str | None] = {}
+    for key, value in form.multi_items():
+        if key.startswith("col_"):
+            db_col = key[4:]
+            canonical = str(value).strip() or None
+            mapping[db_col] = canonical
+
+    error: str | None = None
+    success = False
+    try:
+        update_column_mapping(mapping, _config_dir)
+        success = True
+    except FileNotFoundError as exc:
+        error = str(exc)
+        logger.warning("column_mapping_post FileNotFoundError: %s", exc)
+    except Exception as exc:  # noqa: BLE001
+        error = f"Unexpected error saving column mapping: {exc}"
+        logger.exception("column_mapping_post unexpected error")
+
+    return _render_config(
+        request,
+        "result.html",
+        {
+            "component": "api",
+            "section": "column_mapping",
+            "display_name": "Column Mapping",
+            "success": success,
+            "error": error,
+        },
+        status_code=500 if error else 200,
+    )
+
+
+@router.get("/config/{component}/{section}", response_class=HTMLResponse)
+async def config_section_get(request: Request, component: str, section: str) -> HTMLResponse:
+    """Render the edit form for one config section."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    # Validate component/section against known-good list to prevent path traversal
+    if (component, section) not in _VALID_SECTIONS:
+        return _render_config(
+            request,
+            "result.html",
+            {
+                "component": component,
+                "section": section,
+                "display_name": f"{component}/{section}",
+                "success": False,
+                "error": f"Unknown section: {component}/{section}",
+            },
+            status_code=404,
+        )
+
+    # Provider sections read from the API (authoritative) with local fallback.
+    if section in _PROVIDER_DOMAINS:
+        values = _get_api_provider_values(section) or get_section(component, section, _config_dir)
+    else:
+        values = get_section(component, section, _config_dir)
+    secret_fields = _SECTION_SECRETS.get((component, section), ())
+
+    # Build provider metadata from the single source of truth (wizard/providers.py).
+    provider_meta: dict[str, dict] = {
+        p.provider_id: {
+            "display": p.display_name,
+            "coverage": p.geographic_coverage,
+            "keyless": len(p.auth_fields) == 0,
+            "fields": list(p.auth_fields),
+            "notes": p.notes,
+            "signup_url": p.signup_url,
+        }
+        for p in PROVIDERS
+    }
+    domain_providers: dict[str, list[str]] = {}
+    for p in PROVIDERS:
+        domain_providers.setdefault(p.domain, []).append(p.provider_id)
+
+    return _render_config(
+        request,
+        "section.html",
+        {
+            "component": component,
+            "section": section,
+            "display_name": _section_display_name(component, section),
+            "is_column_mapping": False,
+            "values": values,
+            "secret_fields": secret_fields,
+            "mapping": {},
+            "canonical_fields": _CANONICAL_FIELDS,
+            "provider_meta": provider_meta,
+            "domain_providers": domain_providers,
+            "result": None,
+            "error": None,
+        },
+    )
+
+
+@router.post("/config/{component}/{section}", response_class=HTMLResponse)
+async def config_section_post(request: Request, component: str, section: str) -> HTMLResponse:
+    """Save one config section via MANAGED REGION merge, return result fragment."""
+    _require_session(request)
+    assert _config_dir is not None
+
+    # Validate component/section
+    if (component, section) not in _VALID_SECTIONS:
+        return _render_config(
+            request,
+            "result.html",
+            {
+                "component": component,
+                "section": section,
+                "display_name": f"{component}/{section}",
+                "success": False,
+                "error": f"Unknown section: {component}/{section}",
+            },
+            status_code=404,
+        )
+
+    form = await request.form()
+    secret_fields = _SECTION_SECRETS.get((component, section), ())
+    allowed_keys = _SECTION_ALLOWED_KEYS.get((component, section), frozenset())
+
+    # Separate normal values from secret values.
+    # Only accept keys in the allowed set (input validation at trust boundary).
+    conf_values: dict[str, Any] = {}
+    secret_values: dict[str, str] = {}
+
+    for key, value in form.multi_items():
+        if key not in allowed_keys:
+            continue  # silently drop unexpected keys
+        str_val = str(value).strip()
+        if key in secret_fields:
+            if str_val:
+                secret_values[key] = str_val
+        else:
+            conf_values[key] = str_val
+
+    # LibreWxR endpoint mode radio → resolve to actual endpoint URL.
+    if section == "radar":
+        endpoint_mode = str(form.get("librewxr_endpoint_mode", "")).strip()
+        if endpoint_mode == "selfhosted":
+            url_val = conf_values.get("librewxr_endpoint", "")
+            if not url_val:
+                conf_values["librewxr_endpoint"] = "https://api.librewxr.net"
+        else:
+            conf_values["librewxr_endpoint"] = "https://api.librewxr.net"
+
+    error: str | None = None
+    success = False
+
+    try:
+        conf_path = _config_dir / f"{component}.conf"
+        if not conf_path.exists():
+            raise FileNotFoundError(
+                f"{component}.conf not found in config directory. "
+                "Run the setup wizard first."
+            )
+
+        # Write secret fields into secrets.env
+        for field_name, field_value in secret_values.items():
+            env_key = _secrets_env_key(component, section, field_name)
+            update_secrets(env_key, field_value, _config_dir)
+
+        # ADR-027: [ui] enabled is not flippable from the UI — remove it
+        # before writing so an operator cannot accidentally toggle it via the
+        # config form.
+        if component == "stack" and section == "ui":
+            conf_values.pop("enabled", None)
+
+        # Merge non-secret values into the managed region
+        if conf_values:
+            update_managed_region(conf_path, section, conf_values)
+
+        success = True
+
+    except FileNotFoundError as exc:
+        error = str(exc)
+        logger.warning("config_section_post FileNotFoundError: %s", exc)
+    except ValueError as exc:
+        error = f"Validation error: {exc}"
+        logger.warning("config_section_post ValueError: %s", exc)
+    except OSError as exc:
+        error = f"File write error: {exc}"
+        logger.error("config_section_post OSError: %s", exc)
+    except Exception as exc:  # noqa: BLE001
+        error = f"Unexpected error saving {component}/{section}: {exc}"
+        logger.exception("config_section_post unexpected error")
+
+    return _render_config(
+        request,
+        "result.html",
+        {
+            "component": component,
+            "section": section,
+            "display_name": _section_display_name(component, section),
+            "success": success,
+            "error": error,
+        },
+        status_code=500 if error else 200,
+    )
+
+
+@router.post("/config/test-provider", response_class=HTMLResponse)
+async def config_test_provider(request: Request) -> HTMLResponse:
+    """Test provider connectivity; return a result fragment."""
+    _require_session(request)
+
+    form = await request.form()
+    provider_id = str(form.get("provider_id", "")).strip()
+    info = get_provider(provider_id)
+
+    if not info:
+        return _render_config(
+            request,
+            "result.html",
+            {
+                "component": "api",
+                "section": "test-provider",
+                "display_name": "Provider Test",
+                "success": False,
+                "error": f"Unknown provider: {provider_id!r}",
+                "test_result": {"success": False, "error": f"Unknown provider: {provider_id}"},
+            },
+            status_code=404,
+        )
+
+    credentials: dict[str, str] = {}
+    for field_name in info.auth_fields:
+        credentials[field_name] = str(form.get(field_name, "")).strip()
+
+    result = test_provider(info, credentials)
+
+    return _render_config(
+        request,
+        "result.html",
+        {
+            "component": "api",
+            "section": "test-provider",
+            "display_name": f"Provider Test — {info.display_name}",
+            "success": result.get("success", False),
+            "error": result.get("error"),
+            "test_result": result,
+            "test_provider_id": provider_id,
+            "test_provider_name": info.display_name,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------
