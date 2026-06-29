@@ -16,6 +16,7 @@ Typical usage
 from .fields import ConfigField, FieldOption, ValidationRule, Condition
 from .sections import SectionDef, WizardStepDef
 from .registry import ConfigRegistry, DuplicateSectionError, DuplicateStepError, registry
+from .validation import validate_form_against_fields, extract_field_values, save_field_values
 
 __all__ = [
     "ConfigField",
@@ -28,6 +29,9 @@ __all__ = [
     "DuplicateSectionError",
     "DuplicateStepError",
     "registry",
+    "validate_form_against_fields",
+    "extract_field_values",
+    "save_field_values",
 ]
 
 # Populate the registry singleton at import time.
