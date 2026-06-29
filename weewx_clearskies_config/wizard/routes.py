@@ -1934,7 +1934,15 @@ async def step7_get(request: Request) -> HTMLResponse:
     state = get_wizard_state(session_id)
     if not state.webcam_enabled and state.webcam_image_url == "/webcam/weather_cam.jpg":
         _merge_from_existing_config(state)
-    return _render(request, "step_webcam.html", {"step": 10, "state": state, "error": None})
+    from weewx_clearskies_config.registry import registry
+    fields = registry.get_fields_for_section("webcam")
+    values = {
+        "enabled": state.webcam_enabled,
+        "image_url": state.webcam_image_url,
+        "video_url": state.webcam_video_url,
+        "refresh_interval": state.webcam_refresh_interval,
+    }
+    return _render(request, "step_webcam.html", {"step": 10, "state": state, "fields": fields, "values": values, "error": None})
 
 
 @router.post("/step/7", response_class=HTMLResponse)
@@ -1942,10 +1950,31 @@ async def step7_post(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
-    state.webcam_enabled = form.get("webcam_enabled") == "on"
-    state.webcam_image_url = str(form.get("webcam_image_url", "/webcam/weather_cam.jpg")).strip()
-    state.webcam_video_url = str(form.get("webcam_video_url", "/webcam/weewx_timelapse.mp4")).strip()
-    state.webcam_refresh_interval = int(form.get("webcam_refresh_interval", 60))
+    from weewx_clearskies_config.registry import registry, validate_form_against_fields, extract_field_values
+    fields = registry.get_fields_for_section("webcam")
+    form_data = dict(form)
+    errors = validate_form_against_fields(form_data, fields)
+    if errors:
+        values = {
+            "enabled": form_data.get("enabled") == "on",
+            "image_url": str(form_data.get("image_url", "/webcam/weather_cam.jpg")).strip(),
+            "video_url": str(form_data.get("video_url", "/webcam/weewx_timelapse.mp4")).strip(),
+            "refresh_interval": form_data.get("refresh_interval", "60"),
+        }
+        return _render(
+            request,
+            "step_webcam.html",
+            {"step": 10, "state": state, "fields": fields, "values": values, "error": " ".join(errors)},
+            status_code=422,
+        )
+    extracted = extract_field_values(form_data, fields)
+    state.webcam_enabled = bool(extracted.get("enabled", False))
+    state.webcam_image_url = str(extracted.get("image_url", "/webcam/weather_cam.jpg")).strip()
+    state.webcam_video_url = str(extracted.get("video_url", "/webcam/weewx_timelapse.mp4")).strip()
+    try:
+        state.webcam_refresh_interval = int(extracted.get("refresh_interval", 60))
+    except (ValueError, TypeError):
+        state.webcam_refresh_interval = 60
     save_wizard_state(session_id, state)
     return await step8_appearance_get(request)
 
@@ -2050,7 +2079,34 @@ async def step8_appearance_get(request: Request) -> HTMLResponse:
     state = get_wizard_state(session_id)
     if not state.site_title and not state.accent:
         _merge_from_existing_config(state)
-    return _render(request, "step_appearance.html", {"step": 11, "state": state, "error": None})
+    from weewx_clearskies_config.registry import registry
+    branding_fields = registry.get_fields_for_section("branding")
+    social_fields = registry.get_fields_for_section("social")
+    fields_by_key = {f.config_key: f for f in branding_fields}
+    social_fields_by_key = {f.config_key: f for f in social_fields}
+    values = {
+        "site_title": state.site_title,
+        "copyright_entity": state.copyright_entity,
+        "logo_light_url": state.logo_light_url,
+        "logo_dark_url": state.logo_dark_url,
+        "logo_alt": state.logo_alt,
+        "favicon_url": state.favicon_url,
+        "accent": state.accent or "blue",
+        "default_theme_mode": state.default_theme_mode or "auto-os",
+        "custom_css_url": state.custom_css_url,
+        "facebook_url": state.facebook_url,
+        "twitter_url": state.twitter_url,
+        "instagram_url": state.instagram_url,
+        "youtube_url": state.youtube_url,
+    }
+    return _render(request, "step_appearance.html", {
+        "step": 11,
+        "state": state,
+        "fields_by_key": fields_by_key,
+        "social_fields_by_key": social_fields_by_key,
+        "values": values,
+        "error": None,
+    })
 
 
 @router.post("/step/8", response_class=HTMLResponse)
@@ -2087,25 +2143,55 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
         state.favicon_url = favicon_url or str(form.get("favicon_url", "")).strip()
 
     if errors:
+        from weewx_clearskies_config.registry import registry as _reg
+        _bf = _reg.get_fields_for_section("branding")
+        _sf = _reg.get_fields_for_section("social")
+        _fbk = {f.config_key: f for f in _bf}
+        _sfbk = {f.config_key: f for f in _sf}
+        _vals = {
+            "site_title": state.site_title,
+            "copyright_entity": state.copyright_entity,
+            "logo_light_url": state.logo_light_url,
+            "logo_dark_url": state.logo_dark_url,
+            "logo_alt": state.logo_alt,
+            "favicon_url": state.favicon_url,
+            "accent": state.accent or "blue",
+            "default_theme_mode": state.default_theme_mode or "auto-os",
+            "custom_css_url": state.custom_css_url,
+            "facebook_url": state.facebook_url,
+            "twitter_url": state.twitter_url,
+            "instagram_url": state.instagram_url,
+            "youtube_url": state.youtube_url,
+        }
         return _render(
             request,
             "step_appearance.html",
-            {"step": 11, "state": state, "error": " ".join(errors)},
+            {"step": 11, "state": state, "fields_by_key": _fbk, "social_fields_by_key": _sfbk, "values": _vals, "error": " ".join(errors)},
             status_code=422,
         )
 
     # Logo alt text (WCAG requirement)
     state.logo_alt = str(form.get("logo_alt", "")).strip()
 
-    # Accent color — validate against allowed values; default to "blue".
-    _VALID_ACCENTS = {"blue", "teal", "indigo", "purple", "green", "amber"}
+    # Accent color and theme mode — validated against registry field options.
+    from weewx_clearskies_config.registry import registry
+    branding_fields = registry.get_fields_for_section("branding")
+    _branding_by_key = {f.config_key: f for f in branding_fields}
+    _accent_field = _branding_by_key.get("accent")
     submitted_accent = str(form.get("accent", "")).strip()
-    state.accent = submitted_accent if submitted_accent in _VALID_ACCENTS else ""
+    if _accent_field:
+        _valid_accents = {opt.value for opt in _accent_field.options}
+        state.accent = submitted_accent if submitted_accent in _valid_accents else ""
+    else:
+        state.accent = submitted_accent
 
-    # Default theme mode — validate against allowed values.
-    _VALID_THEME_MODES = {"light", "dark", "auto-os", "auto-sunrise-sunset"}
+    _theme_field = _branding_by_key.get("default_theme_mode")
     submitted_theme_mode = str(form.get("default_theme_mode", "")).strip()
-    state.default_theme_mode = submitted_theme_mode if submitted_theme_mode in _VALID_THEME_MODES else ""
+    if _theme_field:
+        _valid_theme_modes = {opt.value for opt in _theme_field.options}
+        state.default_theme_mode = submitted_theme_mode if submitted_theme_mode in _valid_theme_modes else ""
+    else:
+        state.default_theme_mode = submitted_theme_mode
 
     # Custom CSS URL — allow empty string (means "no custom CSS").
     state.custom_css_url = str(form.get("custom_css_url", "")).strip()
@@ -2197,7 +2283,20 @@ async def step_privacy_legal_get(request: Request) -> HTMLResponse:
     state = get_wizard_state(session_id)
     if not state.google_analytics_id and not state.privacy_regions:
         _merge_from_existing_config(state)
-    return _render(request, "step_privacy_legal.html", {"step": 12, "state": state, "error": None})
+    from weewx_clearskies_config.registry import registry
+    analytics_fields = registry.get_fields_for_section("analytics")
+    analytics_fields_by_key = {f.config_key: f for f in analytics_fields}
+    values = {
+        "google_analytics_id": state.google_analytics_id,
+        "privacy_regions": state.privacy_regions or "global",
+    }
+    return _render(request, "step_privacy_legal.html", {
+        "step": 12,
+        "state": state,
+        "analytics_fields_by_key": analytics_fields_by_key,
+        "values": values,
+        "error": None,
+    })
 
 
 @router.post("/privacy", response_class=HTMLResponse)
@@ -2207,19 +2306,15 @@ async def step_privacy_legal_post(request: Request) -> HTMLResponse:
     form = await request.form()
     state = get_wizard_state(session_id)
 
-    # --- Analytics ---
-    # Stored for future Phase 4 API support; not sent to the API yet.
-    state.google_analytics_id = str(form.get("google_analytics_id", "")).strip()
-
-    # --- Privacy & Legal ---
-    # Collect all checked checkbox values and join as a comma-separated string.
-    # form.getlist() returns a list of values for a multi-value field.
-    privacy_values: list[str] = [
-        str(v).strip()
-        for v in form.getlist("privacy_regions")
-        if str(v).strip()
-    ]
-    state.privacy_regions = ",".join(privacy_values)
+    # --- Analytics & Privacy Regions (via registry fields) ---
+    from weewx_clearskies_config.registry import registry, validate_form_against_fields, extract_field_values
+    analytics_fields = registry.get_fields_for_section("analytics")
+    form_data = dict(form)
+    reg_errors = validate_form_against_fields(form_data, analytics_fields)
+    if not reg_errors:
+        extracted = extract_field_values(form_data, analytics_fields)
+        state.google_analytics_id = str(extracted.get("google_analytics_id", "")).strip()
+        state.privacy_regions = str(extracted.get("privacy_regions", "global")).strip()
 
     # --- Legal Content Overrides (file upload) ---
     # For each text file field: if a file was uploaded, read its content as
@@ -2262,11 +2357,23 @@ async def step_privacy_legal_post(request: Request) -> HTMLResponse:
             content = _format_txt_to_markdown(content, doc_type=doc_type)
         setattr(state, state_attr, content)
 
-    if text_errors:
+    all_errors = reg_errors + text_errors
+    if all_errors:
+        analytics_fields_by_key = {f.config_key: f for f in analytics_fields}
+        values = {
+            "google_analytics_id": state.google_analytics_id,
+            "privacy_regions": state.privacy_regions or "global",
+        }
         return _render(
             request,
             "step_privacy_legal.html",
-            {"step": 12, "state": state, "error": " ".join(text_errors)},
+            {
+                "step": 12,
+                "state": state,
+                "analytics_fields_by_key": analytics_fields_by_key,
+                "values": values,
+                "error": " ".join(all_errors),
+            },
             status_code=422,
         )
 
@@ -2286,7 +2393,14 @@ async def step_feature_settings_get(request: Request) -> HTMLResponse:
     state = get_wizard_state(session_id)
     if state.earthquake_radius_km == 100.0 and state.earthquake_default_days == 7:
         _merge_from_existing_config(state)
-    return _render(request, "step_feature_settings.html", {"step": 13, "state": state, "error": None})
+    from weewx_clearskies_config.registry import registry
+    fields = registry.get_fields_for_section("earthquakes")
+    values = {
+        "radius_km": state.earthquake_radius_km,
+        "min_magnitude": state.earthquake_min_magnitude,
+        "default_days": str(state.earthquake_default_days),
+    }
+    return _render(request, "step_feature_settings.html", {"step": 13, "state": state, "fields": fields, "values": values, "error": None})
 
 
 @router.post("/features", response_class=HTMLResponse)
@@ -2295,27 +2409,36 @@ async def step_feature_settings_post(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
-
-    # --- Earthquake / Seismic Page Settings ---
-    radius_raw = str(form.get("earthquake_radius_km", "100")).strip()
+    from weewx_clearskies_config.registry import registry, validate_form_against_fields, extract_field_values
+    fields = registry.get_fields_for_section("earthquakes")
+    form_data = dict(form)
+    errors = validate_form_against_fields(form_data, fields)
+    if errors:
+        values = {
+            "radius_km": form_data.get("radius_km", "100"),
+            "min_magnitude": form_data.get("min_magnitude", "2.0"),
+            "default_days": form_data.get("default_days", "7"),
+        }
+        return _render(
+            request,
+            "step_feature_settings.html",
+            {"step": 13, "state": state, "fields": fields, "values": values, "error": " ".join(errors)},
+            status_code=422,
+        )
+    extracted = extract_field_values(form_data, fields)
     try:
-        state.earthquake_radius_km = max(1.0, float(radius_raw))
+        state.earthquake_radius_km = max(1.0, float(extracted.get("radius_km", 100)))
     except (ValueError, TypeError):
         state.earthquake_radius_km = 100.0
-
-    magnitude_raw = str(form.get("earthquake_min_magnitude", "2.0")).strip()
     try:
-        state.earthquake_min_magnitude = max(0.0, float(magnitude_raw))
+        state.earthquake_min_magnitude = max(0.0, float(extracted.get("min_magnitude", 2.0)))
     except (ValueError, TypeError):
         state.earthquake_min_magnitude = 2.0
-
-    days_raw = str(form.get("earthquake_default_days", "7")).strip()
     try:
-        days_val = int(days_raw)
+        days_val = int(extracted.get("default_days", 7))
         state.earthquake_default_days = days_val if days_val in (1, 7, 14, 30) else 7
     except (ValueError, TypeError):
         state.earthquake_default_days = 7
-
     save_wizard_state(session_id, state)
     return await step_tls_get(request)
 
@@ -2332,7 +2455,16 @@ async def step_tls_get(request: Request) -> HTMLResponse:
     state = get_wizard_state(session_id)
     if not state.tls_mode:
         _merge_from_existing_config(state)
-    return _render(request, "step_tls.html", {"step": 14, "state": state, "error": None})
+    from weewx_clearskies_config.registry import registry
+    fields = registry.get_fields_for_section("tls")
+    values = {
+        "mode": state.tls_mode,
+        "domain": state.tls_domain,
+        "acme_email": state.tls_acme_email,
+        "dns_provider": state.tls_dns_provider,
+        "dns_api_token": state.tls_dns_api_token,
+    }
+    return _render(request, "step_tls.html", {"step": 14, "state": state, "fields": fields, "values": values, "error": None})
 
 
 @router.post("/tls", response_class=HTMLResponse)
@@ -2341,53 +2473,47 @@ async def step_tls_post(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
+    from weewx_clearskies_config.registry import registry
+    fields = registry.get_fields_for_section("tls")
 
-    state.tls_mode = str(form.get("tls_mode", "")).strip()
-    state.tls_domain = str(form.get("tls_domain", "")).strip()
-    state.tls_acme_email = str(form.get("tls_acme_email", "")).strip()
-    state.tls_dns_provider = str(form.get("tls_dns_provider", "")).strip()
-    state.tls_dns_api_token = str(form.get("tls_dns_api_token", "")).strip()
+    state.tls_mode = str(form.get("mode", "")).strip()
+    state.tls_domain = str(form.get("domain", "")).strip()
+    state.tls_acme_email = str(form.get("acme_email", "")).strip()
+    state.tls_dns_provider = str(form.get("dns_provider", "")).strip()
+    state.tls_dns_api_token = str(form.get("dns_api_token", "")).strip()
 
-    _VALID_TLS_MODES = ("acme_http01", "acme_dns01", "behind_proxy")
-    if state.tls_mode not in _VALID_TLS_MODES:
+    def _tls_error(msg: str) -> HTMLResponse:
+        values = {
+            "mode": state.tls_mode,
+            "domain": state.tls_domain,
+            "acme_email": state.tls_acme_email,
+            "dns_provider": state.tls_dns_provider,
+            "dns_api_token": state.tls_dns_api_token,
+        }
         return _render(
             request,
             "step_tls.html",
-            {"step": 14, "state": state, "error": "Please select a TLS configuration mode."},
+            {"step": 14, "state": state, "fields": fields, "values": values, "error": msg},
             status_code=422,
         )
+
+    _VALID_TLS_MODES = {opt.value for f in fields for opt in (f.options or ()) if f.config_key == "mode"}
+    if not _VALID_TLS_MODES:
+        _VALID_TLS_MODES = {"self-signed", "acme_http01", "acme_dns01", "manual", "behind_proxy"}
+    if state.tls_mode not in _VALID_TLS_MODES:
+        return _tls_error("Please select a TLS configuration mode.")
 
     if state.tls_mode in ("acme_http01", "acme_dns01") and not state.tls_domain:
-        return _render(
-            request,
-            "step_tls.html",
-            {"step": 14, "state": state, "error": "Domain name is required for automated TLS."},
-            status_code=422,
-        )
+        return _tls_error("Domain name is required for automated TLS.")
 
     if state.tls_mode == "acme_http01" and not state.tls_acme_email:
-        return _render(
-            request,
-            "step_tls.html",
-            {"step": 14, "state": state, "error": "Email address is required for Let's Encrypt."},
-            status_code=422,
-        )
+        return _tls_error("Email address is required for Let's Encrypt.")
 
     if state.tls_mode == "acme_dns01" and not state.tls_dns_provider:
-        return _render(
-            request,
-            "step_tls.html",
-            {"step": 14, "state": state, "error": "DNS provider is required for DNS-01 challenge."},
-            status_code=422,
-        )
+        return _tls_error("DNS provider is required for DNS-01 challenge.")
 
     if state.tls_mode == "acme_dns01" and not state.tls_dns_api_token:
-        return _render(
-            request,
-            "step_tls.html",
-            {"step": 14, "state": state, "error": "DNS provider API token is required."},
-            status_code=422,
-        )
+        return _tls_error("DNS provider API token is required.")
 
     save_wizard_state(session_id, state)
     return await step9_review_get(request)

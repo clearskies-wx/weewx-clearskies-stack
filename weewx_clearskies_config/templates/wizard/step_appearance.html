@@ -1,3 +1,4 @@
+{% from "macros/form_fields.html" import render_field %}
 <article>
   <header>
     <h2>Step 11 of 15 — Appearance &amp; Branding</h2>
@@ -26,21 +27,8 @@
       <legend>Basic Identity</legend>
       <p><small>How your weather site identifies itself to visitors.</small></p>
 
-      <label for="site_title">Site Title</label>
-      <input type="text"
-             id="site_title"
-             name="site_title"
-             value="{{ state.site_title }}"
-             placeholder="My Weather Station">
-      <small>Displayed in the browser tab and dashboard header. Leave blank to use the station name.</small>
-
-      <label for="copyright_entity">Copyright Entity</label>
-      <input type="text"
-             id="copyright_entity"
-             name="copyright_entity"
-             value="{{ state.copyright_entity }}"
-             placeholder="Your Name or Organization">
-      <small>Name shown in the footer copyright line (e.g. your name or organization). Leave blank to omit.</small>
+      {{ render_field(fields_by_key["site_title"], values.get("site_title", ""), "wizard") }}
+      {{ render_field(fields_by_key["copyright_entity"], values.get("copyright_entity", ""), "wizard") }}
     </fieldset>
 
     {# ================================================================== #}
@@ -74,12 +62,7 @@
       <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
 
       <label for="logo_light_url">— or enter a URL</label>
-      <input type="text"
-             id="logo_light_url"
-             name="logo_light_url"
-             value="{{ state.logo_light_url }}"
-             placeholder="https://example.com/logo-light.png">
-      <small>Leave blank if uploading a file above.</small>
+      {{ render_field(fields_by_key["logo_light_url"], values.get("logo_light_url", ""), "wizard") }}
     </fieldset>
 
     <fieldset>
@@ -107,19 +90,10 @@
       <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
 
       <label for="logo_dark_url">— or enter a URL</label>
-      <input type="text"
-             id="logo_dark_url"
-             name="logo_dark_url"
-             value="{{ state.logo_dark_url }}"
-             placeholder="https://example.com/logo-dark.png">
-      <small>Leave blank if uploading a file above.</small>
+      {{ render_field(fields_by_key["logo_dark_url"], values.get("logo_dark_url", ""), "wizard") }}
     </fieldset>
 
-    {# Single-logo advisory (ADR-022).  Providing only one logo variant is
-       valid; the dashboard automatically CSS-inverts it for the opposite
-       colour scheme.  Warn the operator that the inverted result may not
-       look right, and how to avoid it.  Non-blocking — this never prevents
-       advancing the wizard. #}
+    {# Single-logo advisory (ADR-022). #}
     {% if state.logo_light_url and not state.logo_dark_url %}
     <div class="alert-error" role="status" aria-live="polite">
       <span>
@@ -165,23 +139,10 @@
       <small>ICO or PNG, max 100&nbsp;KB. Replaces the URL below when a file is chosen.</small>
 
       <label for="favicon_url">— or enter a URL</label>
-      <input type="text"
-             id="favicon_url"
-             name="favicon_url"
-             value="{{ state.favicon_url }}"
-             placeholder="https://example.com/favicon.ico">
-      <small>Leave blank if uploading a file above.</small>
+      {{ render_field(fields_by_key["favicon_url"], values.get("favicon_url", ""), "wizard") }}
     </fieldset>
 
-    {# Logo alt text #}
-    <label for="logo_alt">Logo Alt Text</label>
-    <input type="text"
-           id="logo_alt"
-           name="logo_alt"
-           value="{{ state.logo_alt }}"
-           placeholder="My Weather Station logo"
-           aria-describedby="logo_alt_help">
-    <small id="logo_alt_help">Alternative text for the logo image, read aloud by screen readers (WCAG requirement). Describe the logo briefly, e.g. "Riverside Weather Station logo".</small>
+    {{ render_field(fields_by_key["logo_alt"], values.get("logo_alt", ""), "wizard") }}
 
     {# ================================================================== #}
     {# Section 3: Colors &amp; Theme                                       #}
@@ -189,84 +150,9 @@
 
     <h3>Colors &amp; Theme</h3>
 
-    <fieldset>
-      <legend>Accent Color</legend>
-      <small id="accent_help">Primary highlight color used throughout the dashboard. Defaults to Blue if not set.</small>
-      <div class="accent-swatch-group" aria-describedby="accent_help">
-        {% for color_value, color_label, color_hex in [
-            ("blue",   "Blue",   "#2563eb"),
-            ("teal",   "Teal",   "#0d9488"),
-            ("indigo", "Indigo", "#4f46e5"),
-            ("purple", "Purple", "#7c3aed"),
-            ("green",  "Green",  "#16a34a"),
-            ("amber",  "Amber",  "#d97706"),
-        ] %}
-        <label class="accent-swatch-label">
-          <input type="radio"
-                 name="accent"
-                 value="{{ color_value }}"
-                 {% if state.accent == color_value or (not state.accent and color_value == 'blue') %}checked{% endif %}
-                 aria-label="{{ color_label }} accent color">
-          <span class="accent-swatch-circle"
-                style="background: {{ color_hex }};"
-                aria-hidden="true"></span>
-          <span class="accent-swatch-name">{{ color_label }}</span>
-        </label>
-        {% endfor %}
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Default Theme Mode</legend>
-      <small id="theme_mode_help">How the dashboard selects light or dark mode for visitors. "Match device" follows the visitor's OS setting. "Match sunrise/sunset" switches automatically based on your station's local sunrise and sunset times. Defaults to "Match device" if not set.</small>
-      <div class="theme-radio-group" aria-describedby="theme_mode_help">
-        <label class="theme-radio-card">
-          <input type="radio"
-                 name="default_theme_mode"
-                 value="light"
-                 {% if state.default_theme_mode == 'light' %}checked{% endif %}>
-          <span class="theme-radio-icon" aria-hidden="true">&#9728;&#65039;</span>
-          <span class="theme-radio-label">Light</span>
-        </label>
-        <label class="theme-radio-card">
-          <input type="radio"
-                 name="default_theme_mode"
-                 value="dark"
-                 {% if state.default_theme_mode == 'dark' %}checked{% endif %}>
-          <span class="theme-radio-icon" aria-hidden="true">&#127769;</span>
-          <span class="theme-radio-label">Dark</span>
-        </label>
-        <label class="theme-radio-card">
-          <input type="radio"
-                 name="default_theme_mode"
-                 value="auto-os"
-                 {% if state.default_theme_mode == 'auto-os' or not state.default_theme_mode %}checked{% endif %}>
-          <span class="theme-radio-icon" aria-hidden="true">&#128187;</span>
-          <span class="theme-radio-label">Match device</span>
-        </label>
-        <label class="theme-radio-card">
-          <input type="radio"
-                 name="default_theme_mode"
-                 value="auto-sunrise-sunset"
-                 {% if state.default_theme_mode == 'auto-sunrise-sunset' %}checked{% endif %}>
-          <span class="theme-radio-icon" aria-hidden="true">&#127749;</span>
-          <span class="theme-radio-label">Match sunrise/sunset</span>
-        </label>
-      </div>
-    </fieldset>
-
-    <fieldset>
-      <legend>Custom CSS</legend>
-
-      <label for="custom_css_url">Custom CSS URL</label>
-      <input type="url"
-             id="custom_css_url"
-             name="custom_css_url"
-             value="{{ state.custom_css_url }}"
-             placeholder="https://example.com/custom.css"
-             aria-describedby="custom_css_help">
-      <small id="custom_css_help">Optional URL to a CSS file loaded after the dashboard's default styles. Use this to override colors, fonts, or layout without modifying the theme files. Leave blank if not needed.</small>
-    </fieldset>
+    {{ render_field(fields_by_key["accent"], values.get("accent", "blue"), "wizard") }}
+    {{ render_field(fields_by_key["default_theme_mode"], values.get("default_theme_mode", "auto-os"), "wizard") }}
+    {{ render_field(fields_by_key["custom_css_url"], values.get("custom_css_url", ""), "wizard") }}
 
     {# ================================================================== #}
     {# Section 4: Social Media                                             #}
@@ -278,33 +164,10 @@
       <legend>Social Media Links</legend>
       <p><small>Optional. Leave blank if not used. When provided, social media links appear in the dashboard footer.</small></p>
 
-      <label for="facebook_url">Facebook Page URL</label>
-      <input type="url"
-             id="facebook_url"
-             name="facebook_url"
-             value="{{ state.facebook_url }}"
-             placeholder="https://www.facebook.com/yourpage">
-
-      <label for="twitter_url">Twitter / X Profile URL</label>
-      <input type="url"
-             id="twitter_url"
-             name="twitter_url"
-             value="{{ state.twitter_url }}"
-             placeholder="https://twitter.com/yourhandle">
-
-      <label for="instagram_url">Instagram Profile URL</label>
-      <input type="url"
-             id="instagram_url"
-             name="instagram_url"
-             value="{{ state.instagram_url }}"
-             placeholder="https://www.instagram.com/yourprofile">
-
-      <label for="youtube_url">YouTube Channel URL</label>
-      <input type="url"
-             id="youtube_url"
-             name="youtube_url"
-             value="{{ state.youtube_url }}"
-             placeholder="https://www.youtube.com/channel/yourchannel">
+      {{ render_field(social_fields_by_key["facebook_url"], values.get("facebook_url", ""), "wizard") }}
+      {{ render_field(social_fields_by_key["twitter_url"], values.get("twitter_url", ""), "wizard") }}
+      {{ render_field(social_fields_by_key["instagram_url"], values.get("instagram_url", ""), "wizard") }}
+      {{ render_field(social_fields_by_key["youtube_url"], values.get("youtube_url", ""), "wizard") }}
     </fieldset>
 
     <div role="group">

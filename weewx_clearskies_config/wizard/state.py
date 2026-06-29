@@ -197,6 +197,12 @@ class WizardState:
     # only to secrets.env (mode 0600), never to stack.conf.
     tls_dns_api_token: str = ""
 
+    # Registry-keyed values for wizard steps that delegate field rendering
+    # to the config registry macros.  Key = registry config_key (e.g. "enabled",
+    # "image_url"), value = current value.  Populated by step GET handlers and
+    # read by step templates via render_section_fields / render_field.
+    registry_values: dict[str, Any] = field(default_factory=dict)
+
 
 # ---------------------------------------------------------------------------
 # In-memory session store

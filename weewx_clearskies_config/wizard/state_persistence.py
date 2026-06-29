@@ -646,6 +646,11 @@ def _state_from_dict(raw: dict[str, Any]) -> WizardState:
                 kwargs[f.name] = {str(k): str(v) for k, v in val.items()}
             else:
                 kwargs[f.name] = None
+        elif f.name == "registry_values":
+            if isinstance(val, dict):
+                kwargs[f.name] = val
+            else:
+                kwargs[f.name] = {}
         else:
             kwargs[f.name] = val
     return WizardState(**kwargs)

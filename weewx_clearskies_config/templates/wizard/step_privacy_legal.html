@@ -1,3 +1,4 @@
+{% from "macros/form_fields.html" import render_field %}
 <article>
   <header>
     <h2>Step 12 of 15 — Privacy, Legal &amp; Analytics</h2>
@@ -25,17 +26,7 @@
 
     <fieldset>
       <legend>Google Analytics</legend>
-
-      <label for="google_analytics_id">Google Analytics Measurement ID</label>
-      <input type="text"
-             id="google_analytics_id"
-             name="google_analytics_id"
-             value="{{ state.google_analytics_id }}"
-             placeholder="G-XXXXXXXXXX"
-             pattern="G-[A-Za-z0-9]+"
-             aria-describedby="ga_id_help ga_id_setup">
-      <small id="ga_id_help">Enter your Google Analytics 4 Measurement ID. When configured, a cookie consent banner will appear for visitors. Only page views are tracked.</small>
-      <small id="ga_id_setup">To set up GA4: Create a property at <a href="https://analytics.google.com" target="_blank" rel="noopener">analytics.google.com</a> &rarr; Data Streams &rarr; Web &rarr; copy the Measurement ID.</small>
+      {{ render_field(analytics_fields_by_key["google_analytics_id"], values.get("google_analytics_id", ""), "wizard") }}
     </fieldset>
 
     {# ================================================================== #}
@@ -46,41 +37,7 @@
 
     <fieldset>
       <legend>Privacy Law Disclosures</legend>
-      <p id="privacy_regions_help">
-        <small>Select the regions where your website visitors are located. This determines which privacy laws are shown on your Legal page. Choose "Global" if you are unsure.</small>
-      </p>
-
-      <fieldset aria-describedby="privacy_regions_help">
-        <legend>Visitor Regions</legend>
-
-        {# "Global" checkbox — JS toggles all others when this is checked #}
-        <label>
-          <input type="checkbox"
-                 id="privacy_region_global"
-                 name="privacy_regions"
-                 value="global"
-                 {% if "global" in state.privacy_regions %}checked{% endif %}
-                 onchange="(function(cb){var others=document.querySelectorAll('input[name=privacy_regions]:not(#privacy_region_global)');others.forEach(function(o){o.checked=cb.checked;});})(this)">
-          Global (all regions)
-        </label>
-
-        {% for region_value, region_label in [
-            ("north-america", "North America"),
-            ("south-america", "South America"),
-            ("europe",        "Europe"),
-            ("asia",          "Asia"),
-            ("oceania",       "Oceania"),
-            ("africa",        "Africa"),
-        ] %}
-        <label>
-          <input type="checkbox"
-                 name="privacy_regions"
-                 value="{{ region_value }}"
-                 {% if region_value in state.privacy_regions %}checked{% endif %}>
-          {{ region_label }}
-        </label>
-        {% endfor %}
-      </fieldset>
+      {{ render_field(analytics_fields_by_key["privacy_regions"], values.get("privacy_regions", "global"), "wizard") }}
     </fieldset>
 
     {# ================================================================== #}

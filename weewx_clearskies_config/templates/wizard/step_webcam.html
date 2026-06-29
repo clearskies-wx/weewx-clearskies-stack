@@ -1,3 +1,4 @@
+{% from "macros/form_fields.html" import render_section_fields %}
 <article>
   <header>
     <h2>Step 10 of 15 — Webcam</h2>
@@ -15,38 +16,7 @@
         hx-indicator="#wizard-spinner"
         autocomplete="off">
 
-    <label for="webcam_enabled">
-      <input type="checkbox" id="webcam_enabled" name="webcam_enabled" {% if state.webcam_enabled %}checked{% endif %}>
-      Enable webcam on dashboard
-    </label>
-
-    <label for="webcam_image_url">Image URL</label>
-    <input type="text"
-           id="webcam_image_url"
-           name="webcam_image_url"
-           value="{{ state.webcam_image_url }}"
-           placeholder="/webcam/weather_cam.jpg"
-           aria-describedby="webcam-image-url-hint">
-    <small id="webcam-image-url-hint">URL path to the live still image. Default: /webcam/weather_cam.jpg</small>
-
-    <label for="webcam_video_url">Timelapse Video URL</label>
-    <input type="text"
-           id="webcam_video_url"
-           name="webcam_video_url"
-           value="{{ state.webcam_video_url }}"
-           placeholder="/webcam/weewx_timelapse.mp4"
-           aria-describedby="webcam-video-url-hint">
-    <small id="webcam-video-url-hint">URL path to the timelapse video file. Default: /webcam/weewx_timelapse.mp4</small>
-
-    <label for="webcam_refresh_interval">Refresh Interval (seconds)</label>
-    <input type="number"
-           id="webcam_refresh_interval"
-           name="webcam_refresh_interval"
-           value="{{ state.webcam_refresh_interval }}"
-           min="10"
-           max="3600"
-           aria-describedby="webcam-refresh-interval-hint">
-    <small id="webcam-refresh-interval-hint">How often the image updates. Default: 60 seconds</small>
+    {{ render_section_fields(fields, values, "wizard") }}
 
     <div role="group">
       <button type="button"
