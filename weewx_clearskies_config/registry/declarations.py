@@ -469,6 +469,7 @@ registry.register_section(
         display_name="Sky Classification",
         domain_group="advanced",
         config_source="api.conf",
+        custom_template="sky_classification.html",
     ),
     (
         ConfigField(

@@ -20,8 +20,8 @@ Route summary:
   POST /admin/tls                     — save stack.conf [tls]
   GET  /admin/connection              — API connection settings
   POST /admin/connection              — update API URL, caddy.env, reload Caddy
-  GET  /admin/sky-classification      — sky classification calibration form
-  POST /admin/sky-classification      — save api.conf [sky_classification]
+  GET  /admin/section/sky_classification — sky classification calibration form (custom template)
+  POST /admin/section/sky_classification — save api.conf [sky_classification] (generic handler)
   GET  /admin/haze-calibration        — haze calibration settings + status
   POST /admin/haze-calibration        — save api.conf [conditions] haze keys
   POST /admin/haze-calibration/reset  — reset calibration data via API
@@ -51,25 +51,6 @@ from weewx_clearskies_config.config.updater import (
 )
 
 logger = logging.getLogger(__name__)
-
-# Kasten-Czeplak reference table for sky classification display
-_KC_REFERENCE = [
-    {"km_range": "0.97 – 1.00", "okta": "0 (clear)", "nws": "SKC / CLR"},
-    {"km_range": "0.85 – 0.96", "okta": "1–2 (few)", "nws": "FEW"},
-    {"km_range": "0.52 – 0.84", "okta": "3–4 (scattered)", "nws": "SCT"},
-    {"km_range": "0.15 – 0.51", "okta": "5–7 (broken)", "nws": "BKN"},
-    {"km_range": "0.00 – 0.14", "okta": "8 (overcast)", "nws": "OVC"},
-]
-
-# Sky classification defaults
-_SKY_DEFAULTS = {
-    "scatter_few_max": "0.97",
-    "scatter_sct_max": "0.85",
-    "scatter_bkn_max": "0.52",
-    "overcast_km_threshold": "0.15",
-    "overcast_kv_threshold": "0.03",
-    "sza_min_elevation": "5.0",
-}
 
 # Haze calibration defaults
 _HAZE_DEFAULTS: dict[str, str] = {
@@ -314,9 +295,7 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
         get_section("stack", "earthquakes", _config_dir), _eq_defaults
     )
     tls_values = get_section("stack", "tls", _config_dir)
-    sky_values = _get_with_defaults(
-        get_section("api", "sky_classification", _config_dir), _SKY_DEFAULTS
-    )
+    sky_values = get_section("api", "sky_classification", _config_dir)
     haze_values = _get_with_defaults(
         get_section("api", "conditions", _config_dir), _HAZE_DEFAULTS
     )
@@ -442,7 +421,8 @@ async def generic_section_get(request: Request, section_id: str) -> HTMLResponse
     fields = registry.get_fields_for_section(section_id)
     values = _read_section_values(section, fields)
 
-    return _render(request, "generic_section.html", {
+    template_name = section.custom_template if section.custom_template else "generic_section.html"
+    return _render(request, template_name, {
         "section": section,
         "fields": fields,
         "values": values,
@@ -613,89 +593,6 @@ async def connection_post(request: Request) -> HTMLResponse:
         status_code=500 if error else 200,
     )
 
-
-# ---------------------------------------------------------------------------
-# T3.5 — Sky Classification calibration
-# ---------------------------------------------------------------------------
-
-
-@router.get("/sky-classification", response_class=HTMLResponse)
-async def sky_classification_get(request: Request) -> HTMLResponse:
-    """Render the sky classification calibration form."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    values = _get_with_defaults(
-        get_section("api", "sky_classification", _config_dir), _SKY_DEFAULTS
-    )
-    return _render(
-        request,
-        "sky_classification.html",
-        {
-            "values": values,
-            "kc_reference": _KC_REFERENCE,
-            "defaults": _SKY_DEFAULTS,
-        },
-    )
-
-
-@router.post("/sky-classification", response_class=HTMLResponse)
-async def sky_classification_post(request: Request) -> HTMLResponse:
-    """Save sky classification thresholds and return result fragment."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    form = await request.form()
-
-    def _safe_float(key: str) -> str:
-        raw = str(form.get(key, "")).strip()
-        if raw:
-            try:
-                float(raw)
-                return raw
-            except ValueError:
-                pass
-        return _SKY_DEFAULTS[key]
-
-    # Handle reset-to-defaults
-    if form.get("reset") == "1":
-        values = dict(_SKY_DEFAULTS)
-    else:
-        values = {
-            "scatter_few_max": _safe_float("scatter_few_max"),
-            "scatter_sct_max": _safe_float("scatter_sct_max"),
-            "scatter_bkn_max": _safe_float("scatter_bkn_max"),
-            "overcast_km_threshold": _safe_float("overcast_km_threshold"),
-            "overcast_kv_threshold": _safe_float("overcast_kv_threshold"),
-            "sza_min_elevation": _safe_float("sza_min_elevation"),
-        }
-
-    api_conf = _config_dir / "api.conf"
-    error: str | None = None
-    success = False
-    try:
-        if not api_conf.exists():
-            raise FileNotFoundError("api.conf not found — run the setup wizard first.")
-        update_managed_region(api_conf, "sky_classification", values)
-        success = True
-    except FileNotFoundError as exc:
-        error = str(exc)
-        logger.warning("sky_classification_post FileNotFoundError: %s", exc)
-    except OSError as exc:
-        error = f"File write error: {exc}"
-        logger.error("sky_classification_post OSError: %s", exc)
-    except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving sky classification: {exc}"
-        logger.exception("sky_classification_post unexpected error")
-
-    return _render_result(
-        request,
-        section_slug="sky-classification",
-        display_name="Sky Classification",
-        success=success,
-        error=error,
-        status_code=500 if error else 200,
-    )
 
 
 # ---------------------------------------------------------------------------
