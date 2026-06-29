@@ -4,42 +4,14 @@
 
    Context: component ("api"), section, display_name, values,
             secret_fields (always empty for provider sections — secrets go to
-            wizard step 5 / secrets.env directly)
+            wizard step 5 / secrets.env directly),
+            provider_meta (dict keyed by provider_id, from wizard/providers.py),
+            domain_providers (dict mapping domain -> list of provider_ids)
 
-   Provider metadata is embedded inline from the static PROVIDERS list.
    Selecting a different provider in the dropdown reveals its auth fields.
    The inline "Test" button posts to /admin/config/test-provider.
    Saving the provider selection posts to /admin/config/api/<section>.
    ------------------------------------------------------------------------- #}
-
-{# ---------------------------------------------------------------------- #}
-{# Static provider metadata per domain — mirrors wizard/providers.py       #}
-{# This avoids an extra HTMX round-trip just to discover auth fields.      #}
-{# Update here if PROVIDERS list changes.                                  #}
-{# ---------------------------------------------------------------------- #}
-{% set provider_meta = {
-  "nws":               {"display": "National Weather Service", "keyless": true,  "fields": [],                          "coverage": "US only",  "notes": "Keyless — uses User-Agent header"},
-  "openmeteo":         {"display": "Open-Meteo",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless, free tier"},
-  "openweathermap":    {"display": "OpenWeatherMap",          "keyless": false, "fields": ["api_key"],                 "coverage": "Global",   "notes": ""},
-  "aeris":             {"display": "Aeris Weather",           "keyless": false, "fields": ["client_id","client_secret"],"coverage": "Global",  "notes": ""},
-  "nws_alerts":        {"display": "NWS Alerts",              "keyless": true,  "fields": [],                          "coverage": "US only",  "notes": "Keyless"},
-  "iqair":             {"display": "IQAir / AirVisual",       "keyless": false, "fields": ["api_key"],                 "coverage": "Global",   "notes": ""},
-  "aeris_aqi":         {"display": "Aeris AQI",               "keyless": false, "fields": ["client_id","client_secret"],"coverage": "Global",   "notes": "Observed data — haze eligible"},
-  "openmeteo_aqi":     {"display": "Open-Meteo AQI",          "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Model-based — not haze eligible"},
-  "openaq":            {"display": "OpenAQ",                         "keyless": false, "fields": ["api_key"],          "coverage": "Global (141 countries)", "notes": "Observed — haze eligible. ~1-2 hr lag"},
-  "openweathermap_aqi":{"display": "OpenWeatherMap AQI (deprecated)", "keyless": false, "fields": ["api_key"],          "coverage": "Global",   "notes": "Deprecated — model data, migrate to Aeris"},
-  "usgs":              {"display": "USGS Earthquakes",        "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Keyless"},
-  "rainviewer":        {"display": "RainViewer",              "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Limited: zoom 7 max, no nowcast, single color scheme (since Jan 2026)"},
-  "librewxr":          {"display": "LibreWxR",               "keyless": true,  "fields": [],                          "coverage": "Global",   "notes": "Better quality — zoom 12, nowcast, weather alerts. Self-host recommended."}
-} %}
-
-{% set domain_providers = {
-  "forecast":    ["nws", "openmeteo", "openweathermap", "aeris"],
-  "alerts":      ["nws_alerts"],
-  "aqi":         ["aeris_aqi", "iqair", "openaq", "openmeteo_aqi", "openweathermap_aqi"],
-  "earthquakes": ["usgs"],
-  "radar":       ["rainviewer", "librewxr"]
-} %}
 
 {% set available_providers = domain_providers.get(section, []) %}
 {% set current_provider = values.get("provider", "") %}

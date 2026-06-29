@@ -34,7 +34,7 @@ from weewx_clearskies_config.config.updater import (
     update_managed_region,
     update_secrets,
 )
-from weewx_clearskies_config.wizard.providers import get_provider, test_provider
+from weewx_clearskies_config.wizard.providers import PROVIDERS, get_provider, test_provider
 
 logger = logging.getLogger(__name__)
 
@@ -412,6 +412,24 @@ async def section_get(request: Request, component: str, section: str) -> HTMLRes
         values = get_section(component, section, _config_dir)
     secret_fields = _SECTION_SECRETS.get((component, section), ())
 
+    # Build provider metadata from the single source of truth (wizard/providers.py).
+    # Keys match what provider_section.html expects: display, coverage, keyless,
+    # fields, notes, signup_url.
+    provider_meta: dict[str, dict] = {
+        p.provider_id: {
+            "display": p.display_name,
+            "coverage": p.geographic_coverage,
+            "keyless": len(p.auth_fields) == 0,
+            "fields": list(p.auth_fields),
+            "notes": p.notes,
+            "signup_url": p.signup_url,
+        }
+        for p in PROVIDERS
+    }
+    domain_providers: dict[str, list[str]] = {}
+    for p in PROVIDERS:
+        domain_providers.setdefault(p.domain, []).append(p.provider_id)
+
     return _render(
         request,
         "section.html",
@@ -424,6 +442,8 @@ async def section_get(request: Request, component: str, section: str) -> HTMLRes
             "secret_fields": secret_fields,
             "mapping": {},
             "canonical_fields": _CANONICAL_FIELDS,
+            "provider_meta": provider_meta,
+            "domain_providers": domain_providers,
             "result": None,
             "error": None,
         },
