@@ -83,6 +83,9 @@ def create_admin_router(
     _session_manager = session_manager
     _config_dir = config_dir
     _dashboard_root = dashboard_root
+    from weewx_clearskies_config.registry import registry
+    manifest_path = dashboard_root / "card-manifest.json"
+    registry.load_card_config_fields(str(manifest_path))
     return router
 
 
