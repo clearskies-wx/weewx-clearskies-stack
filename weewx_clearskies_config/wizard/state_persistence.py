@@ -449,7 +449,7 @@ def populate_from_config(config_dir: Path) -> WizardState:
 
         tls_section = stack_cfg.get("tls", {})
         if isinstance(tls_section, dict):
-            _VALID_TLS_MODES = {"acme_http01", "acme_dns01", "behind_proxy"}
+            _VALID_TLS_MODES = {"self-signed", "acme_http01", "acme_dns01", "manual", "behind_proxy"}
             mode_val = str(tls_section.get("mode", "")).strip()
             if mode_val in _VALID_TLS_MODES:
                 state.tls_mode = mode_val

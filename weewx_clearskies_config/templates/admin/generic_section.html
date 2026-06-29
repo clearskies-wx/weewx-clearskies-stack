@@ -1,5 +1,12 @@
 {% from "macros/form_fields.html" import render_section_fields %}
 
+<nav aria-label="Breadcrumb">
+  <ul>
+    <li><a href="#" hx-get="/admin/config" hx-target="#admin-content" hx-swap="innerHTML">Admin</a></li>
+    <li>{{ section.display_name }}</li>
+  </ul>
+</nav>
+
 <article>
   <header>
     <h2>{{ section.display_name }}</h2>
