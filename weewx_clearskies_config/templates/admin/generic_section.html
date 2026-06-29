@@ -1,0 +1,23 @@
+{% from "macros/form_fields.html" import render_section_fields %}
+
+<article>
+  <header>
+    <h2>{{ section.display_name }}</h2>
+  </header>
+
+  {% if error %}
+  <div role="alert" class="alert-error">{{ error }}</div>
+  {% endif %}
+
+  <form hx-post="/admin/section/{{ section.section_id }}"
+        hx-target="#admin-content" hx-swap="innerHTML">
+    {{ render_section_fields(fields, values, "admin") }}
+    <div role="group">
+      <button type="button" hx-get="/admin/config"
+              hx-target="#admin-content" hx-swap="innerHTML">Cancel</button>
+      <button type="submit">Save</button>
+    </div>
+  </form>
+</article>
+
+<script src="/static/js/conditional-visibility.js"></script>

@@ -47,31 +47,10 @@ from weewx_clearskies_config.config.reader import (
     read_pages,
 )
 from weewx_clearskies_config.config.updater import (
-    update_branding,
     update_managed_region,
-    update_pages,
 )
 
 logger = logging.getLogger(__name__)
-
-# The 9 built-in pages.  "now" is always visible and cannot be hidden.
-_ALL_PAGES = [
-    {"slug": "now", "name": "Now"},
-    {"slug": "forecast", "name": "Forecast"},
-    {"slug": "charts", "name": "Charts"},
-    {"slug": "almanac", "name": "Almanac"},
-    {"slug": "earthquakes", "name": "Earthquakes"},
-    {"slug": "records", "name": "Records"},
-    {"slug": "reports", "name": "Reports"},
-    {"slug": "about", "name": "About"},
-    {"slug": "legal", "name": "Legal"},
-]
-
-# Accent colour options (matches branding.json values used by the dashboard)
-_ACCENT_OPTIONS = ["blue", "teal", "indigo", "purple", "green", "amber"]
-
-# Theme mode options
-_THEME_OPTIONS = ["auto-os", "auto-sunrise", "light", "dark"]
 
 # Kasten-Czeplak reference table for sky classification display
 _KC_REFERENCE = [
@@ -98,21 +77,6 @@ _HAZE_DEFAULTS: dict[str, str] = {
     "gamma": "0.45",
     "openaq_sensor_id": "",
 }
-
-# Earthquake section defaults
-_EARTHQUAKE_DEFAULTS = {
-    "radius_km": "500",
-    "min_magnitude": "2.5",
-    "default_days": "30",
-}
-
-# TLS mode options
-_TLS_MODES = [
-    {"value": "self-signed", "label": "Self-signed (development)"},
-    {"value": "acme_http01", "label": "ACME HTTP-01 (Let's Encrypt, HTTP)"},
-    {"value": "acme_dns01", "label": "ACME DNS-01 (Let's Encrypt, DNS)"},
-    {"value": "manual", "label": "Manual (supply cert + key paths)"},
-]
 
 # ---------------------------------------------------------------------------
 # Module-level state injected by create_admin_router()
@@ -345,8 +309,9 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
     earthquakes_section = api_providers.get("earthquakes") or get_section("api", "earthquakes", _config_dir)
     radar_values = api_providers.get("radar") or get_section("api", "radar", _config_dir)
     webcam_values = get_section("stack", "webcam", _config_dir)
+    _eq_defaults = {"radius_km": "250", "min_magnitude": "2.0", "default_days": "30"}
     stack_earthquakes = _get_with_defaults(
-        get_section("stack", "earthquakes", _config_dir), _EARTHQUAKE_DEFAULTS
+        get_section("stack", "earthquakes", _config_dir), _eq_defaults
     )
     tls_values = get_section("stack", "tls", _config_dir)
     sky_values = _get_with_defaults(
@@ -357,6 +322,17 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
     )
     haze_calibration = _read_calibration_state()
     hidden_pages: list[str] = pages_data.get("hidden", [])
+    _all_pages = [
+        {"slug": "now", "name": "Now"},
+        {"slug": "forecast", "name": "Forecast"},
+        {"slug": "charts", "name": "Charts"},
+        {"slug": "almanac", "name": "Almanac"},
+        {"slug": "earthquakes", "name": "Earthquakes"},
+        {"slug": "records", "name": "Records"},
+        {"slug": "reports", "name": "Reports"},
+        {"slug": "about", "name": "About"},
+        {"slug": "legal", "name": "Legal"},
+    ]
 
     return _render(
         request,
@@ -364,7 +340,7 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
         {
             "branding": branding,
             "hidden_pages": hidden_pages,
-            "all_pages": _ALL_PAGES,
+            "all_pages": _all_pages,
             "ui_values": ui_values,
             "db_values": db_values,
             "forecast_values": forecast_values,
@@ -385,419 +361,146 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
 
 
 # ---------------------------------------------------------------------------
-# T3.2 — Page visibility
+# T2.1 — Generic registry section handler
 # ---------------------------------------------------------------------------
 
 
-@router.get("/pages", response_class=HTMLResponse)
-async def pages_get(request: Request) -> HTMLResponse:
-    """Render the page visibility edit form."""
-    _require_session(request)
+def _find_section(section_id: str):  # type: ignore[return]
+    """Look up a section in the registry by section_id.
+
+    Raises HTTPException 404 if not found.
+    """
+    from fastapi import HTTPException
+    from weewx_clearskies_config.registry import registry
+
+    for group in registry.get_all_domain_groups():
+        for s in registry.get_sections_for_group(group):
+            if s.section_id == section_id:
+                return s
+    raise HTTPException(status_code=404, detail=f"Unknown section: {section_id}")
+
+
+def _read_section_values(section, fields) -> dict:  # type: ignore[return]
+    """Read current field values for *section* from the appropriate backend.
+
+    Returns a dict keyed by config_key (matching the field declarations).
+    For .conf-based sources, get_section() returns keys that should already
+    match the config_key names.  For JSON sources (branding.json, pages.json)
+    the mapping is handled here.
+    """
     assert _config_dir is not None
+    source = section.config_source
 
-    pages_data = read_pages(_config_dir)
-    hidden: list[str] = pages_data.get("hidden", [])
+    if source == "stack.conf":
+        return get_section("stack", section.section_id, _config_dir)
 
-    return _render(
-        request,
-        "pages_visibility.html",
-        {
-            "pages": _ALL_PAGES,
-            "hidden": hidden,
-        },
-    )
+    elif source == "api.conf":
+        return get_section("api", section.section_id, _config_dir)
 
+    elif source == "branding.json":
+        branding = read_branding(_config_dir)
+        # Build result keyed by config_key for each field
+        values: dict = {}
+        for field in fields:
+            key = field.config_key
+            # config_target may be "branding.json" (top-level) or
+            # "branding.json:<sub_key>" (nested dict)
+            target = field.config_target
+            if ":" in target:
+                sub = target.split(":", 1)[1]
+                nested = branding.get(sub, {})
+                values[key] = nested.get(key, field.default)
+            else:
+                values[key] = branding.get(key, field.default)
+        return values
 
-@router.post("/pages", response_class=HTMLResponse)
-async def pages_post(request: Request) -> HTMLResponse:
-    """Save page visibility and return result fragment."""
-    _require_session(request)
-    assert _config_dir is not None
+    elif source == "pages.json":
+        pages_data = read_pages(_config_dir)
+        hidden: list = pages_data.get("hidden", [])
+        # The pages section has one field: hidden_pages (checkbox_group)
+        # The value is the list of hidden slugs
+        return {"hidden_pages": hidden}
 
-    form = await request.form()
-
-    # "visible" is a multi-value field; each checked checkbox submits its slug.
-    visible_slugs = set(form.getlist("visible"))
-    # "now" is always visible regardless of form submission
-    visible_slugs.add("now")
-
-    all_slugs = {p["slug"] for p in _ALL_PAGES}
-    hidden = sorted(all_slugs - visible_slugs)
-
-    error: str | None = None
-    success = False
-    try:
-        update_pages(_config_dir, hidden)
-        success = True
-    except OSError as exc:
-        error = f"File write error: {exc}"
-        logger.error("pages_post OSError: %s", exc)
-    except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving page visibility: {exc}"
-        logger.exception("pages_post unexpected error")
-
-    return _render_result(
-        request,
-        section_slug="pages",
-        display_name="Page Visibility",
-        success=success,
-        error=error,
-        status_code=500 if error else 200,
-    )
-
-
-# ---------------------------------------------------------------------------
-# T3.3 — Branding (appearance)
-# ---------------------------------------------------------------------------
-
-
-@router.get("/branding", response_class=HTMLResponse)
-async def branding_get(request: Request) -> HTMLResponse:
-    """Render the appearance/branding edit form."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    branding = read_branding(_config_dir)
-    return _render(
-        request,
-        "branding.html",
-        {
-            "branding": branding,
-            "accent_options": _ACCENT_OPTIONS,
-            "theme_options": _THEME_OPTIONS,
-        },
-    )
-
-
-@router.post("/branding", response_class=HTMLResponse)
-async def branding_post(request: Request) -> HTMLResponse:
-    """Save appearance/branding fields and return result fragment."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    form = await request.form()
-
-    # Allowed keys only — input validation at trust boundary
-    updates: dict[str, Any] = {}
-    site_title = str(form.get("siteTitle", "")).strip()
-    updates["siteTitle"] = site_title
-
-    copyright_entity = str(form.get("copyrightEntity", "")).strip()
-    updates["copyrightEntity"] = copyright_entity
-
-    accent = str(form.get("accent", "")).strip()
-    if accent in _ACCENT_OPTIONS:
-        updates["accent"] = accent
-
-    theme_mode = str(form.get("defaultThemeMode", "")).strip()
-    if theme_mode in _THEME_OPTIONS:
-        updates["defaultThemeMode"] = theme_mode
-
-    favicon_url = str(form.get("faviconUrl", "")).strip()
-    updates["faviconUrl"] = favicon_url
-
-    custom_css_url = str(form.get("customCssUrl", "")).strip()
-    updates["customCssUrl"] = custom_css_url or None
-
-    # Logo URLs — stored nested under "logo"
-    logo_light = str(form.get("logo.lightUrl", "")).strip()
-    logo_dark = str(form.get("logo.darkUrl", "")).strip()
-    logo_alt = str(form.get("logo.alt", "")).strip()
-    updates["logo"] = {
-        "lightUrl": logo_light,
-        "darkUrl": logo_dark,
-        "alt": logo_alt,
-    }
-
-    error: str | None = None
-    success = False
-    try:
-        update_branding(_config_dir, updates)
-        success = True
-    except OSError as exc:
-        error = f"File write error: {exc}"
-        logger.error("branding_post OSError: %s", exc)
-    except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving branding: {exc}"
-        logger.exception("branding_post unexpected error")
-
-    return _render_result(
-        request,
-        section_slug="branding",
-        display_name="Appearance",
-        success=success,
-        error=error,
-        status_code=500 if error else 200,
-    )
-
-
-# ---------------------------------------------------------------------------
-# T3.3 — Social links
-# ---------------------------------------------------------------------------
-
-
-@router.get("/social", response_class=HTMLResponse)
-async def social_get(request: Request) -> HTMLResponse:
-    """Render the social links edit form."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    branding = read_branding(_config_dir)
-    social = branding.get("social", {})
-    return _render(
-        request,
-        "social.html",
-        {"social": social},
-    )
-
-
-@router.post("/social", response_class=HTMLResponse)
-async def social_post(request: Request) -> HTMLResponse:
-    """Save social links and return result fragment."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    form = await request.form()
-
-    social: dict[str, str] = {
-        "facebook": str(form.get("facebook", "")).strip(),
-        "twitter": str(form.get("twitter", "")).strip(),
-        "instagram": str(form.get("instagram", "")).strip(),
-        "youtube": str(form.get("youtube", "")).strip(),
-    }
-
-    error: str | None = None
-    success = False
-    try:
-        update_branding(_config_dir, {"social": social})
-        success = True
-    except OSError as exc:
-        error = f"File write error: {exc}"
-        logger.error("social_post OSError: %s", exc)
-    except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving social links: {exc}"
-        logger.exception("social_post unexpected error")
-
-    return _render_result(
-        request,
-        section_slug="social",
-        display_name="Social Links",
-        success=success,
-        error=error,
-        status_code=500 if error else 200,
-    )
-
-
-# ---------------------------------------------------------------------------
-# T3.3 — Analytics & Privacy
-# ---------------------------------------------------------------------------
-
-
-@router.get("/analytics", response_class=HTMLResponse)
-async def analytics_get(request: Request) -> HTMLResponse:
-    """Render the analytics & privacy edit form."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    branding = read_branding(_config_dir)
-    return _render(
-        request,
-        "analytics_privacy.html",
-        {
-            "ga_id": branding.get("googleAnalyticsId", ""),
-            "privacy_regions": branding.get("privacyRegions", "global"),
-        },
-    )
-
-
-@router.post("/analytics", response_class=HTMLResponse)
-async def analytics_post(request: Request) -> HTMLResponse:
-    """Save analytics & privacy settings and return result fragment."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    form = await request.form()
-    ga_id = str(form.get("googleAnalyticsId", "")).strip()
-    privacy_regions = str(form.get("privacyRegions", "global")).strip()
-
-    error: str | None = None
-    success = False
-    try:
-        update_branding(
-            _config_dir,
-            {
-                "googleAnalyticsId": ga_id,
-                "privacyRegions": privacy_regions,
-            },
+    else:
+        logger.warning(
+            "_read_section_values: unknown config_source %r for section %s",
+            source,
+            section.section_id,
         )
-        success = True
-    except OSError as exc:
-        error = f"File write error: {exc}"
-        logger.error("analytics_post OSError: %s", exc)
-    except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving analytics settings: {exc}"
-        logger.exception("analytics_post unexpected error")
-
-    return _render_result(
-        request,
-        section_slug="analytics",
-        display_name="Analytics & Privacy",
-        success=success,
-        error=error,
-        status_code=500 if error else 200,
-    )
+        return {}
 
 
-# ---------------------------------------------------------------------------
-# T3.4 — Earthquake feature settings
-# ---------------------------------------------------------------------------
-
-
-@router.get("/earthquakes", response_class=HTMLResponse)
-async def earthquakes_get(request: Request) -> HTMLResponse:
-    """Render the earthquake feature settings edit form."""
+@router.get("/section/{section_id}", response_class=HTMLResponse)
+async def generic_section_get(request: Request, section_id: str) -> HTMLResponse:
+    """Render a registry-defined section edit form."""
     _require_session(request)
     assert _config_dir is not None
 
-    values = _get_with_defaults(
-        get_section("stack", "earthquakes", _config_dir), _EARTHQUAKE_DEFAULTS
-    )
-    return _render(request, "feature_settings.html", {"values": values})
+    from weewx_clearskies_config.registry import registry
+
+    section = _find_section(section_id)
+    fields = registry.get_fields_for_section(section_id)
+    values = _read_section_values(section, fields)
+
+    return _render(request, "generic_section.html", {
+        "section": section,
+        "fields": fields,
+        "values": values,
+    })
 
 
-@router.post("/earthquakes", response_class=HTMLResponse)
-async def earthquakes_post(request: Request) -> HTMLResponse:
-    """Save earthquake settings and return result fragment."""
+@router.post("/section/{section_id}", response_class=HTMLResponse)
+async def generic_section_post(request: Request, section_id: str) -> HTMLResponse:
+    """Save a registry-defined section and return result fragment."""
     _require_session(request)
     assert _config_dir is not None
+
+    from weewx_clearskies_config.registry import registry
+    from weewx_clearskies_config.registry.validation import (
+        validate_form_against_fields,
+        extract_field_values,
+        save_field_values,
+    )
+
+    section = _find_section(section_id)
+    fields = registry.get_fields_for_section(section_id)
 
     form = await request.form()
+    # Collect multi-value fields (e.g. checkbox_group) as lists
+    form_data: dict = {}
+    for field in fields:
+        raw = form.getlist(field.config_key)
+        if len(raw) > 1:
+            form_data[field.config_key] = raw
+        elif len(raw) == 1:
+            form_data[field.config_key] = raw[0]
+        # absent keys stay absent (boolean fields → False, etc.)
 
-    # Validate numeric fields — accept only values that look like numbers
-    def _safe_num(key: str, default: str) -> str:
-        raw = str(form.get(key, "")).strip()
-        if raw:
-            try:
-                float(raw)
-                return raw
-            except ValueError:
-                pass
-        return default
-
-    values = {
-        "radius_km": _safe_num("radius_km", _EARTHQUAKE_DEFAULTS["radius_km"]),
-        "min_magnitude": _safe_num("min_magnitude", _EARTHQUAKE_DEFAULTS["min_magnitude"]),
-        "default_days": _safe_num("default_days", _EARTHQUAKE_DEFAULTS["default_days"]),
-    }
-
-    stack_conf = _config_dir / "stack.conf"
-    error: str | None = None
-    success = False
-    try:
-        if not stack_conf.exists():
-            raise FileNotFoundError("stack.conf not found — run the setup wizard first.")
-        update_managed_region(stack_conf, "earthquakes", values)
-        success = True
-    except FileNotFoundError as exc:
-        error = str(exc)
-        logger.warning("earthquakes_post FileNotFoundError: %s", exc)
-    except OSError as exc:
-        error = f"File write error: {exc}"
-        logger.error("earthquakes_post OSError: %s", exc)
-    except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving earthquake settings: {exc}"
-        logger.exception("earthquakes_post unexpected error")
-
-    return _render_result(
-        request,
-        section_slug="earthquakes",
-        display_name="Earthquake Settings",
-        success=success,
-        error=error,
-        status_code=500 if error else 200,
-    )
-
-
-# ---------------------------------------------------------------------------
-# T3.4 — TLS settings
-# ---------------------------------------------------------------------------
-
-
-@router.get("/tls", response_class=HTMLResponse)
-async def tls_get(request: Request) -> HTMLResponse:
-    """Render the TLS settings edit form."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    values = get_section("stack", "tls", _config_dir)
-    return _render(
-        request,
-        "tls.html",
-        {
+    errors = validate_form_against_fields(form_data, fields)
+    if errors:
+        values = _read_section_values(section, fields)
+        return _render(request, "generic_section.html", {
+            "section": section,
+            "fields": fields,
             "values": values,
-            "tls_modes": _TLS_MODES,
-        },
-    )
+            "error": "; ".join(errors),
+        }, status_code=422)
 
+    values = extract_field_values(form_data, fields)
 
-@router.post("/tls", response_class=HTMLResponse)
-async def tls_post(request: Request) -> HTMLResponse:
-    """Save TLS settings and return result fragment."""
-    _require_session(request)
-    assert _config_dir is not None
-
-    form = await request.form()
-
-    allowed_modes = {m["value"] for m in _TLS_MODES}
-    mode = str(form.get("mode", "self-signed")).strip()
-    if mode not in allowed_modes:
-        mode = "self-signed"
-
-    values: dict[str, str] = {"mode": mode}
-
-    if mode in ("acme_http01", "acme_dns01"):
-        domain = str(form.get("domain", "")).strip()
-        acme_email = str(form.get("acme_email", "")).strip()
-        if domain:
-            values["domain"] = domain
-        if acme_email:
-            values["acme_email"] = acme_email
-
-    if mode == "acme_dns01":
-        dns_provider = str(form.get("dns_provider", "")).strip()
-        if dns_provider:
-            values["dns_provider"] = dns_provider
-
-    if mode == "manual":
-        cert_path = str(form.get("tls_cert_path", "")).strip()
-        key_path = str(form.get("tls_key_path", "")).strip()
-        if cert_path:
-            values["tls_cert_path"] = cert_path
-        if key_path:
-            values["tls_key_path"] = key_path
-
-    stack_conf = _config_dir / "stack.conf"
     error: str | None = None
     success = False
     try:
-        if not stack_conf.exists():
-            raise FileNotFoundError("stack.conf not found — run the setup wizard first.")
-        update_managed_region(stack_conf, "tls", values)
+        save_field_values(values, section, str(_config_dir))
         success = True
-    except FileNotFoundError as exc:
-        error = str(exc)
-        logger.warning("tls_post FileNotFoundError: %s", exc)
-    except OSError as exc:
-        error = f"File write error: {exc}"
-        logger.error("tls_post OSError: %s", exc)
     except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving TLS settings: {exc}"
-        logger.exception("tls_post unexpected error")
+        error = f"Error saving: {exc}"
+        logger.exception("generic_section_post error for %s", section_id)
 
     return _render_result(
         request,
-        section_slug="tls",
-        display_name="TLS Settings",
+        section_slug=section_id,
+        display_name=section.display_name,
         success=success,
         error=error,
         status_code=500 if error else 200,
