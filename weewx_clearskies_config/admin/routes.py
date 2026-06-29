@@ -253,10 +253,105 @@ def _safe_int_range(form: Any, key: str, lo: int, hi: int, defaults: dict) -> st
 # ---------------------------------------------------------------------------
 
 
+# Human-readable labels for registry domain groups shown on the landing page.
+_GROUP_LABELS: dict[str, str] = {
+    "station": "Station",
+    "providers": "Providers",
+    "appearance": "Appearance",
+    "dashboard": "Dashboard",
+    "advanced": "Advanced",
+    "cards": "Card Settings",
+}
+
+# Custom sections that exist as dedicated routes but are not in the registry.
+# Each entry carries the fields shown as a card on the landing overview.
+# "url" is the HTMX GET target; "description" is a one-line summary shown
+# instead of a dl when there are no landing_display fields to render.
+_CUSTOM_SECTIONS: list[dict] = [
+    {
+        "section_id": "station-identity",
+        "display_name": "Station Identity",
+        "group": "station",
+        "url": "/admin/config/stack/ui",
+        "description": "",
+    },
+    {
+        "section_id": "database",
+        "display_name": "Database",
+        "group": "station",
+        "url": "/admin/config/api/database",
+        "description": "",
+    },
+    {
+        "section_id": "connection",
+        "display_name": "API Connection",
+        "group": "station",
+        "url": "/admin/connection",
+        "description": "",
+    },
+    {
+        "section_id": "forecast-provider",
+        "display_name": "Forecast",
+        "group": "providers",
+        "url": "/admin/config/api/forecast",
+        "description": "",
+    },
+    {
+        "section_id": "alerts-provider",
+        "display_name": "Alerts",
+        "group": "providers",
+        "url": "/admin/config/api/alerts",
+        "description": "",
+    },
+    {
+        "section_id": "aqi-provider",
+        "display_name": "AQI",
+        "group": "providers",
+        "url": "/admin/config/api/aqi",
+        "description": "",
+    },
+    {
+        "section_id": "earthquakes-provider",
+        "display_name": "Earthquakes Provider",
+        "group": "providers",
+        "url": "/admin/config/api/earthquakes",
+        "description": "",
+    },
+    {
+        "section_id": "radar-provider",
+        "display_name": "Radar",
+        "group": "providers",
+        "url": "/admin/config/api/radar",
+        "description": "",
+    },
+    {
+        "section_id": "now-layout",
+        "display_name": "Now Page Layout",
+        "group": "dashboard",
+        "url": "/admin/now-layout",
+        "description": "Drag-and-drop card arrangement for the Now page.",
+    },
+    {
+        "section_id": "column-mapping",
+        "display_name": "Column Mapping",
+        "group": "dashboard",
+        "url": "/admin/config/column-mapping",
+        "description": "Map database columns to weewx canonical field names.",
+    },
+    {
+        "section_id": "haze-calibration",
+        "display_name": "Haze Calibration",
+        "group": "advanced",
+        "url": "/admin/haze-calibration",
+        "description": "",
+    },
+]
+
+
 @router.get("", response_class=HTMLResponse, response_model=None)
 @router.get("/", response_class=HTMLResponse, response_model=None)
 async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
-    """Render the admin landing page — domain-organized section overview."""
+    """Render the admin landing page — registry-driven domain-organized overview."""
     _require_session(request)
     assert _config_dir is not None
 
@@ -264,77 +359,140 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
     if not api_conf.exists():
         return RedirectResponse("/wizard", status_code=303)
 
-    # API connection info for the landing card
-    from weewx_clearskies_config.wizard.known_apis import load_known_apis
+    from weewx_clearskies_config.registry import registry
 
+    # Build ordered domain group list: priority groups first (station, providers
+    # are custom-only — not in the registry), then registry groups, then any
+    # remaining custom-only groups.
+    registry_groups = list(registry.get_all_domain_groups())
+    all_group_names = []
+    seen: set[str] = set()
+    # Prepend custom-only groups that come before any registry group (station, providers)
+    _priority_groups = ["station", "providers"]
+    for g in _priority_groups:
+        if g not in seen:
+            all_group_names.append(g)
+            seen.add(g)
+    for g in registry_groups:
+        if g not in seen:
+            all_group_names.append(g)
+            seen.add(g)
+    # Any remaining custom-only groups not yet added
+    for cs in _CUSTOM_SECTIONS:
+        g = cs["group"]
+        if g not in seen:
+            all_group_names.append(g)
+            seen.add(g)
+
+    domain_groups = [(g, _GROUP_LABELS.get(g, g.title())) for g in all_group_names]
+
+    # Build sections_by_group: registry sections first, then custom sections, per group
+    sections_by_group: dict[str, list] = {g: [] for g in all_group_names}
+    for g in all_group_names:
+        for section in registry.get_sections_for_group(g):
+            sections_by_group[g].append({"type": "registry", "section": section})
+    for cs in _CUSTOM_SECTIONS:
+        g = cs["group"]
+        if g in sections_by_group:
+            sections_by_group[g].append({"type": "custom", "section": cs})
+
+    # Collect landing display field values for registry sections that have
+    # fields with admin_landing_display=True.
+    landing_values: dict[str, list[tuple[str, Any]]] = {}
+    for g in all_group_names:
+        for entry in sections_by_group[g]:
+            if entry["type"] != "registry":
+                continue
+            section = entry["section"]
+            fields = registry.get_fields_for_section(section.section_id)
+            display_fields = [f for f in fields if f.admin_landing_display]
+            if display_fields:
+                values = _read_section_values(section, fields)
+                landing_values[section.section_id] = [
+                    (f.label, values.get(f.config_key, f.default))
+                    for f in display_fields
+                ]
+
+    # Collect custom-section landing values: provider "provider" keys, connection URL,
+    # station identity highlights, haze calibration summary.
+    api_providers = _fetch_api_providers()
+    from weewx_clearskies_config.wizard.known_apis import load_known_apis
     known = load_known_apis(_config_dir)
     connection_url = next(iter(known), "")
     api_section = get_section("api", "api", _config_dir)
     connection_bind = (
         f"{api_section.get('bind_host', '')}:{api_section.get('bind_port', '8765')}"
-        if api_section.get("bind_host")
-        else ""
+        if api_section.get("bind_host") else ""
     )
-
-    # Read current values for all sections shown on the landing page.
-    # Provider sections are fetched from the API (authoritative, on the weewx
-    # host) with local-file fallback.  Non-provider sections read locally.
-    api_providers = _fetch_api_providers()
-    branding = read_branding(_config_dir)
-    pages_data = read_pages(_config_dir)
     ui_values = get_section("stack", "ui", _config_dir)
     db_values = get_section("api", "database", _config_dir)
-    forecast_values = api_providers.get("forecast") or get_section("api", "forecast", _config_dir)
-    alerts_values = api_providers.get("alerts") or get_section("api", "alerts", _config_dir)
-    aqi_values = api_providers.get("aqi") or get_section("api", "aqi", _config_dir)
-    earthquakes_section = api_providers.get("earthquakes") or get_section("api", "earthquakes", _config_dir)
-    radar_values = api_providers.get("radar") or get_section("api", "radar", _config_dir)
-    webcam_values = get_section("stack", "webcam", _config_dir)
-    _eq_defaults = {"radius_km": "250", "min_magnitude": "2.0", "default_days": "30"}
-    stack_earthquakes = _get_with_defaults(
-        get_section("stack", "earthquakes", _config_dir), _eq_defaults
-    )
-    tls_values = get_section("stack", "tls", _config_dir)
-    sky_values = get_section("api", "sky_classification", _config_dir)
-    haze_values = _get_with_defaults(
-        get_section("api", "conditions", _config_dir), _HAZE_DEFAULTS
-    )
+    haze_values = _get_with_defaults(get_section("api", "conditions", _config_dir), _HAZE_DEFAULTS)
     haze_calibration = _read_calibration_state()
-    hidden_pages: list[str] = pages_data.get("hidden", [])
-    _all_pages = [
-        {"slug": "now", "name": "Now"},
-        {"slug": "forecast", "name": "Forecast"},
-        {"slug": "charts", "name": "Charts"},
-        {"slug": "almanac", "name": "Almanac"},
-        {"slug": "earthquakes", "name": "Earthquakes"},
-        {"slug": "records", "name": "Records"},
-        {"slug": "reports", "name": "Reports"},
-        {"slug": "about", "name": "About"},
-        {"slug": "legal", "name": "Legal"},
-    ]
+
+    _provider_domains = {
+        "forecast-provider": "forecast",
+        "alerts-provider": "alerts",
+        "aqi-provider": "aqi",
+        "earthquakes-provider": "earthquakes",
+        "radar-provider": "radar",
+    }
+    custom_landing_values: dict[str, list[tuple[str, Any]]] = {}
+
+    if ui_values:
+        rows: list[tuple[str, Any]] = []
+        if ui_values.get("station_name"):
+            rows.append(("Name", ui_values["station_name"]))
+        if ui_values.get("timezone"):
+            rows.append(("Timezone", ui_values["timezone"]))
+        if ui_values.get("latitude") and ui_values.get("longitude"):
+            rows.append(("Coordinates", f"{ui_values['latitude']}, {ui_values['longitude']}"))
+        if rows:
+            custom_landing_values["station-identity"] = rows
+
+    if db_values:
+        rows = []
+        if db_values.get("host"):
+            port_str = f":{db_values['port']}" if db_values.get("port") else ""
+            rows.append(("Host", f"{db_values['host']}{port_str}"))
+        if db_values.get("name"):
+            rows.append(("Database", db_values["name"]))
+        if db_values.get("user"):
+            rows.append(("User", db_values["user"]))
+        if rows:
+            custom_landing_values["database"] = rows
+
+    if connection_url:
+        rows = [("API URL", connection_url)]
+        if connection_bind:
+            rows.append(("Bind", connection_bind))
+        custom_landing_values["connection"] = rows
+
+    for cs_id, domain in _provider_domains.items():
+        pdata = api_providers.get(domain) or get_section("api", domain, _config_dir)
+        provider_val = pdata.get("provider", "") if pdata else ""
+        custom_landing_values[cs_id] = [("Provider", provider_val or "not set")]
+
+    # Haze calibration summary
+    haze_rows: list[tuple[str, Any]] = [("Detection", haze_values.get("haze_detection", "true"))]
+    if haze_calibration is None:
+        haze_rows.append(("Status", "API unreachable"))
+    else:
+        haze_rows.append(("Status",
+            haze_calibration.get("overall_state", "no-data").replace("-", " ").capitalize()))
+        haze_rows.append(("Months calibrated", f"{haze_calibration.get('months_calibrated', 0)} / 12"))
+        if haze_calibration.get("openaq_sensor"):
+            s = haze_calibration["openaq_sensor"]
+            haze_rows.append(("Sensor", f"{s['name']} ({s['distance_km']:.1f} km)"))
+    custom_landing_values["haze-calibration"] = haze_rows
 
     return _render(
         request,
         "landing.html",
         {
-            "branding": branding,
-            "hidden_pages": hidden_pages,
-            "all_pages": _all_pages,
-            "ui_values": ui_values,
-            "db_values": db_values,
-            "forecast_values": forecast_values,
-            "alerts_values": alerts_values,
-            "aqi_values": aqi_values,
-            "earthquakes_provider": earthquakes_section,
-            "radar_values": radar_values,
-            "webcam_values": webcam_values,
-            "stack_earthquakes": stack_earthquakes,
-            "tls_values": tls_values,
-            "sky_values": sky_values,
-            "haze_values": haze_values,
-            "haze_calibration": haze_calibration,
-            "connection_url": connection_url,
-            "connection_bind": connection_bind,
+            "domain_groups": domain_groups,
+            "sections_by_group": sections_by_group,
+            "landing_values": landing_values,
+            "custom_landing_values": custom_landing_values,
         },
     )
 

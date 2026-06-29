@@ -1,4 +1,4 @@
-﻿{% extends "base.html" %}
+{% extends "base.html" %}
 {% block title %}Clear Skies — Admin{% endblock %}
 {% block content %}
 
@@ -74,7 +74,7 @@
     justify-content: space-between;
     gap: 1rem;
   }
-  .admin-section-card header h2 {
+  .admin-section-card header h3 {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
@@ -148,164 +148,39 @@
 <div class="admin-layout">
 
   {# ------------------------------------------------------------------ #}
-  {# Left sidebar — quick nav to each domain section                     #}
+  {# Left sidebar — quick nav generated from registry + custom sections  #}
   {# ------------------------------------------------------------------ #}
   <aside class="admin-sidebar">
     <nav aria-label="Admin sections">
-      <span class="nav-group-label">Station</span>
+      {% for group_name, group_label in domain_groups %}
+      <span class="nav-group-label">{{ group_label }}</span>
       <ul>
+        {% for entry in sections_by_group[group_name] %}
+        {% if entry.type == "registry" %}
         <li>
-          <a href="/admin/config/stack/ui"
-             hx-get="/admin/config/stack/ui"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Station Identity</a>
+          <a href="/admin/section/{{ entry.section.section_id }}"
+             hx-get="/admin/section/{{ entry.section.section_id }}"
+             hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true">
+            {{ entry.section.display_name }}</a>
         </li>
+        {% else %}
         <li>
-          <a href="/admin/config/api/database"
-             hx-get="/admin/config/api/database"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Database</a>
+          <a href="{{ entry.section.url }}"
+             hx-get="{{ entry.section.url }}"
+             hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true">
+            {{ entry.section.display_name }}</a>
         </li>
-        <li>
-          <a href="/admin/connection"
-             hx-get="/admin/connection"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">API Connection</a>
-        </li>
+        {% endif %}
+        {% endfor %}
       </ul>
-
-      <span class="nav-group-label">Providers</span>
-      <ul>
-        <li>
-          <a href="/admin/config/api/forecast"
-             hx-get="/admin/config/api/forecast"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Forecast</a>
-        </li>
-        <li>
-          <a href="/admin/config/api/alerts"
-             hx-get="/admin/config/api/alerts"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Alerts</a>
-        </li>
-        <li>
-          <a href="/admin/config/api/aqi"
-             hx-get="/admin/config/api/aqi"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">AQI</a>
-        </li>
-        <li>
-          <a href="/admin/config/api/earthquakes"
-             hx-get="/admin/config/api/earthquakes"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Earthquakes Provider</a>
-        </li>
-        <li>
-          <a href="/admin/config/api/radar"
-             hx-get="/admin/config/api/radar"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Radar</a>
-        </li>
-      </ul>
-
-      <span class="nav-group-label">Appearance</span>
-      <ul>
-        <li>
-          <a href="/admin/section/branding"
-             hx-get="/admin/section/branding"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Appearance</a>
-        </li>
-        <li>
-          <a href="/admin/section/social"
-             hx-get="/admin/section/social"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Social Links</a>
-        </li>
-        <li>
-          <a href="/admin/section/analytics"
-             hx-get="/admin/section/analytics"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Analytics &amp; Privacy</a>
-        </li>
-      </ul>
-
-      <span class="nav-group-label">Dashboard</span>
-      <ul>
-        <li>
-          <a href="/admin/section/webcam"
-             hx-get="/admin/section/webcam"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Webcam</a>
-        </li>
-        <li>
-          <a href="/admin/section/pages"
-             hx-get="/admin/section/pages"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Page Visibility</a>
-        </li>
-        <li>
-          <a href="/admin/config/column-mapping"
-             hx-get="/admin/config/column-mapping"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Column Mapping</a>
-        </li>
-      </ul>
-
-      <span class="nav-group-label">Advanced</span>
-      <ul>
-        <li>
-          <a href="/admin/section/earthquakes"
-             hx-get="/admin/section/earthquakes"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Earthquake Settings</a>
-        </li>
-        <li>
-          <a href="/admin/section/sky_classification"
-             hx-get="/admin/section/sky_classification"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Sky Classification</a>
-        </li>
-        <li>
-          <a href="/admin/haze-calibration"
-             hx-get="/admin/haze-calibration"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">Haze Calibration</a>
-        </li>
-        <li>
-          <a href="/admin/section/tls"
-             hx-get="/admin/section/tls"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true">TLS</a>
-        </li>
-      </ul>
+      {% endfor %}
     </nav>
 
     <div class="admin-sidebar-footer">
-      <a href="/admin/config"
-         style="display:block;font-size:0.85rem;margin-block-end:0.5rem">
+      <a href="/admin/config" style="display:block;font-size:0.85rem;margin-block-end:0.5rem">
         Advanced config editor
       </a>
-      <a href="/wizard"
-         style="display:block;font-size:0.85rem;margin-block-end:0.75rem">
+      <a href="/wizard" style="display:block;font-size:0.85rem;margin-block-end:0.75rem">
         Re-run Setup Wizard
       </a>
       <form action="/logout" method="post">
@@ -317,430 +192,61 @@
   </aside>
 
   {# ------------------------------------------------------------------ #}
-  {# Right content area — section overviews + HTMX edit form target      #}
+  {# Right content area — section overview cards                          #}
   {# ------------------------------------------------------------------ #}
   <div id="admin-content" aria-label="Admin configuration">
-
-    {# ---- Station Identity ---- #}
+    {% for group_name, group_label in domain_groups %}
     <div class="admin-domain-group">
-      <h2 class="admin-domain-heading">Station</h2>
+      <h2 class="admin-domain-heading">{{ group_label }}</h2>
 
+      {% for entry in sections_by_group[group_name] %}
+      {% if entry.type == "registry" %}
+      {# Registry section card #}
+      {% set section = entry.section %}
       <article class="admin-section-card">
         <header>
-          <h3>Station Identity</h3>
-          <a href="/admin/config/stack/ui"
-             hx-get="/admin/config/stack/ui"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
+          <h3>{{ section.display_name }}</h3>
+          <a href="/admin/section/{{ section.section_id }}"
+             hx-get="/admin/section/{{ section.section_id }}"
+             hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true"
              class="edit-link">Edit</a>
         </header>
-        {% if ui_values %}
+        {% if landing_values.get(section.section_id) %}
         <dl>
-          {% if ui_values.get("station_name") %}
-          <dt>Name</dt>
-          <dd>{{ ui_values.station_name }}</dd>
-          {% endif %}
-          {% if ui_values.get("timezone") %}
-          <dt>Timezone</dt>
-          <dd>{{ ui_values.timezone }}</dd>
-          {% endif %}
-          {% if ui_values.get("latitude") and ui_values.get("longitude") %}
-          <dt>Coordinates</dt>
-          <dd>{{ ui_values.latitude }}, {{ ui_values.longitude }}</dd>
-          {% endif %}
-        </dl>
-        {% else %}
-        <p class="empty-note">No values configured — run the setup wizard first.</p>
-        {% endif %}
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Database</h3>
-          <a href="/admin/config/api/database"
-             hx-get="/admin/config/api/database"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        {% if db_values %}
-        <dl>
-          {% if db_values.get("host") %}
-          <dt>Host</dt>
-          <dd>{{ db_values.host }}{% if db_values.get("port") %}:{{ db_values.port }}{% endif %}</dd>
-          {% endif %}
-          {% if db_values.get("name") %}
-          <dt>Database</dt>
-          <dd>{{ db_values.name }}</dd>
-          {% endif %}
-          {% if db_values.get("user") %}
-          <dt>User</dt>
-          <dd>{{ db_values.user }}</dd>
-          {% endif %}
-        </dl>
-        {% else %}
-        <p class="empty-note">No values configured — run the setup wizard first.</p>
-        {% endif %}
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>API Connection</h3>
-          <a href="/admin/connection"
-             hx-get="/admin/connection"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        {% if connection_url %}
-        <dl>
-          <dt>API URL</dt>
-          <dd>{{ connection_url }}</dd>
-          {% if connection_bind %}
-          <dt>Bind</dt>
-          <dd>{{ connection_bind }}</dd>
-          {% endif %}
-        </dl>
-        {% else %}
-        <p class="empty-note">No API connection configured — run the setup wizard first.</p>
-        {% endif %}
-      </article>
-    </div>
-
-    {# ---- Providers ---- #}
-    <div class="admin-domain-group">
-      <h2 class="admin-domain-heading">Providers</h2>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Forecast</h3>
-          <a href="/admin/config/api/forecast"
-             hx-get="/admin/config/api/forecast"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Provider</dt>
-          <dd>{{ forecast_values.get("provider") or "not set" }}</dd>
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Alerts</h3>
-          <a href="/admin/config/api/alerts"
-             hx-get="/admin/config/api/alerts"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Provider</dt>
-          <dd>{{ alerts_values.get("provider") or "not set" }}</dd>
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>AQI</h3>
-          <a href="/admin/config/api/aqi"
-             hx-get="/admin/config/api/aqi"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Provider</dt>
-          <dd>{{ aqi_values.get("provider") or "not set" }}</dd>
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Earthquakes Provider</h3>
-          <a href="/admin/config/api/earthquakes"
-             hx-get="/admin/config/api/earthquakes"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Provider</dt>
-          <dd>{{ earthquakes_provider.get("provider") or "not set" }}</dd>
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Radar</h3>
-          <a href="/admin/config/api/radar"
-             hx-get="/admin/config/api/radar"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Provider</dt>
-          <dd>{{ radar_values.get("provider") or "not set" }}</dd>
-        </dl>
-      </article>
-    </div>
-
-    {# ---- Appearance ---- #}
-    <div class="admin-domain-group">
-      <h2 class="admin-domain-heading">Appearance</h2>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Appearance</h3>
-          <a href="/admin/section/branding"
-             hx-get="/admin/section/branding"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        {% if branding %}
-        <dl>
-          {% if branding.get("siteTitle") %}
-          <dt>Site title</dt>
-          <dd>{{ branding.siteTitle }}</dd>
-          {% endif %}
-          {% if branding.get("accent") %}
-          <dt>Accent</dt>
-          <dd>{{ branding.accent }}</dd>
-          {% endif %}
-          {% if branding.get("defaultThemeMode") %}
-          <dt>Theme</dt>
-          <dd>{{ branding.defaultThemeMode }}</dd>
-          {% endif %}
-        </dl>
-        {% else %}
-        <p class="empty-note">No branding configured — run the setup wizard first.</p>
-        {% endif %}
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Social Links</h3>
-          <a href="/admin/section/social"
-             hx-get="/admin/section/social"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        {% set social = branding.get("social", {}) %}
-        {% set social_set = [] %}
-        {% for k in ["facebook", "twitter", "instagram", "youtube"] %}
-          {% if social.get(k) %}{% set _ = social_set.append(k) %}{% endif %}
-        {% endfor %}
-        {% if social_set %}
-        <p style="font-size:0.85rem;margin:0.25rem 0 0">
-          {{ social_set | join(", ") | capitalize }}
-        </p>
-        {% else %}
-        <p class="empty-note">No social links configured.</p>
-        {% endif %}
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Analytics &amp; Privacy</h3>
-          <a href="/admin/section/analytics"
-             hx-get="/admin/section/analytics"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>GA ID</dt>
-          <dd>{{ branding.get("googleAnalyticsId") or "(none)" }}</dd>
-          <dt>Privacy regions</dt>
-          <dd>{{ branding.get("privacyRegions") or "global" }}</dd>
-        </dl>
-      </article>
-    </div>
-
-    {# ---- Dashboard ---- #}
-    <div class="admin-domain-group">
-      <h2 class="admin-domain-heading">Dashboard</h2>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Webcam</h3>
-          <a href="/admin/section/webcam"
-             hx-get="/admin/section/webcam"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Enabled</dt>
-          <dd>{{ webcam_values.get("enabled", "false") }}</dd>
-          {% if webcam_values.get("image_url") %}
-          <dt>Image URL</dt>
-          <dd>{{ webcam_values.image_url }}</dd>
-          {% endif %}
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Page Visibility</h3>
-          <a href="/admin/section/pages"
-             hx-get="/admin/section/pages"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <div class="page-badge-list" aria-label="Page visibility">
-          {% for page in all_pages %}
-          <span class="page-badge {% if page.slug in hidden_pages %}hidden{% endif %}"
-                title="{% if page.slug in hidden_pages %}Hidden{% else %}Visible{% endif %}">
-            {{ page.name }}
-          </span>
+          {% for field_label, field_value in landing_values[section.section_id] %}
+          <dt>{{ field_label }}</dt>
+          <dd>{{ field_value or "—" }}</dd>
           {% endfor %}
-        </div>
+        </dl>
+        {% endif %}
       </article>
 
+      {% else %}
+      {# Custom section card (not in registry — dedicated route) #}
+      {% set cs = entry.section %}
       <article class="admin-section-card">
         <header>
-          <h3>Now Page Layout</h3>
-          <a href="/admin/now-layout"
-             hx-get="/admin/now-layout"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
+          <h3>{{ cs.display_name }}</h3>
+          <a href="{{ cs.url }}" hx-get="{{ cs.url }}"
+             hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true"
              class="edit-link">Edit</a>
         </header>
-        <p style="font-size:0.85rem;margin:0.25rem 0 0">
-          Drag-and-drop card arrangement for the Now page.
-        </p>
+        {% if custom_landing_values.get(cs.section_id) %}
+        <dl>
+          {% for field_label, field_value in custom_landing_values[cs.section_id] %}
+          <dt>{{ field_label }}</dt>
+          <dd>{{ field_value or "—" }}</dd>
+          {% endfor %}
+        </dl>
+        {% elif cs.description %}
+        <p style="font-size:0.85rem;margin:0.25rem 0 0">{{ cs.description }}</p>
+        {% endif %}
       </article>
+      {% endif %}
+      {% endfor %}
 
-      <article class="admin-section-card">
-        <header>
-          <h3>Column Mapping</h3>
-          <a href="/admin/config/column-mapping"
-             hx-get="/admin/config/column-mapping"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <p style="font-size:0.85rem;margin:0.25rem 0 0">
-          Map database columns to weewx canonical field names.
-        </p>
-      </article>
     </div>
-
-    {# ---- Advanced ---- #}
-    <div class="admin-domain-group">
-      <h2 class="admin-domain-heading">Advanced</h2>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Earthquake Settings</h3>
-          <a href="/admin/section/earthquakes"
-             hx-get="/admin/section/earthquakes"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Radius</dt>
-          <dd>{{ stack_earthquakes.get("radius_km", "500") }} km</dd>
-          <dt>Min magnitude</dt>
-          <dd>{{ stack_earthquakes.get("min_magnitude", "2.5") }}</dd>
-          <dt>Default days</dt>
-          <dd>{{ stack_earthquakes.get("default_days", "30") }}</dd>
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Sky Classification</h3>
-          <a href="/admin/section/sky_classification"
-             hx-get="/admin/section/sky_classification"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Few/clear Km</dt>
-          <dd>&ge; {{ sky_values.get("scatter_few_max", "0.97") }}</dd>
-          <dt>Sct Km</dt>
-          <dd>{{ sky_values.get("scatter_sct_max", "0.85") }} – {{ sky_values.get("scatter_few_max", "0.97") }}</dd>
-          <dt>Bkn Km</dt>
-          <dd>{{ sky_values.get("scatter_bkn_max", "0.52") }} – {{ sky_values.get("scatter_sct_max", "0.85") }}</dd>
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>Haze Calibration</h3>
-          <a href="/admin/haze-calibration"
-             hx-get="/admin/haze-calibration"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Detection</dt>
-          <dd>{{ haze_values.get("haze_detection", "true") }}</dd>
-          {% if haze_calibration is none %}
-          <dt>Status</dt>
-          <dd style="color:var(--pico-muted-color)">API unreachable</dd>
-          {% else %}
-          <dt>Status</dt>
-          <dd>{{ haze_calibration.get("overall_state", "no-data") | replace("-", " ") | capitalize }}</dd>
-          <dt>Months calibrated</dt>
-          <dd>{{ haze_calibration.get("months_calibrated", 0) }} / 12</dd>
-          {% if haze_calibration.get("openaq_sensor") %}
-          <dt>Sensor</dt>
-          <dd>{{ haze_calibration.openaq_sensor.name }} ({{ "%.1f"|format(haze_calibration.openaq_sensor.distance_km) }} km)</dd>
-          {% endif %}
-          {% endif %}
-        </dl>
-      </article>
-
-      <article class="admin-section-card">
-        <header>
-          <h3>TLS</h3>
-          <a href="/admin/section/tls"
-             hx-get="/admin/section/tls"
-             hx-target="#admin-content"
-             hx-swap="innerHTML"
-             hx-push-url="true"
-             class="edit-link">Edit</a>
-        </header>
-        <dl>
-          <dt>Mode</dt>
-          <dd>{{ tls_values.get("mode", "(not set)") }}</dd>
-          {% if tls_values.get("domain") %}
-          <dt>Domain</dt>
-          <dd>{{ tls_values.domain }}</dd>
-          {% endif %}
-        </dl>
-      </article>
-    </div>
-
+    {% endfor %}
   </div>{# /#admin-content #}
 
 </div>{# /.admin-layout #}
