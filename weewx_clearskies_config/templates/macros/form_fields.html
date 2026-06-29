@@ -1,0 +1,249 @@
+{# -------------------------------------------------------------------------
+   form_fields.html — Jinja2 macros for rendering ConfigField objects.
+
+   Macros:
+     render_field(field, value, mode)
+       Renders a single field from the config registry.
+       field  : ConfigField object (field_id, field_type, label, help_text,
+                wizard_help, placeholder, default, options, validation,
+                conditions, config_key, is_secret, grid_column)
+       value  : current value (str, bool, list, or None)
+       mode   : "wizard" or "admin"
+
+     render_section_fields(fields, values, mode)
+       Loops over a section's fields and calls render_field for each.
+       fields : tuple[ConfigField, ...]
+       values : dict of {config_key: current_value}
+       mode   : "wizard" or "admin"
+
+   Contract source: OPERATIONS-MANUAL.md §4.1 render_field macro contract
+   ------------------------------------------------------------------------- #}
+
+
+{# ── helpers ── #}
+
+{# Derive a safe HTML element id from a field_id (dots → underscores). #}
+{%- macro _fid(field) -%}{{ field.field_id | replace('.', '_') }}{%- endmacro -%}
+
+{# Choose the correct help text based on render mode. #}
+{%- macro _help_text(field, mode) -%}
+  {%- if mode == "wizard" and field.wizard_help -%}
+    {{ field.wizard_help }}
+  {%- else -%}
+    {{ field.help_text }}
+  {%- endif -%}
+{%- endmacro -%}
+
+{# Build data-condition-* attributes for conditional visibility. #}
+{%- macro _condition_attrs(field) -%}
+  {%- if field.conditions -%}
+    {%- if field.conditions | length == 1 -%}
+      {%- set cond = field.conditions[0] -%}
+ data-condition-field="{{ cond.field_id }}" data-condition-op="{{ cond.operator }}" data-condition-value="{{ cond.value }}"
+    {%- else -%}
+ data-condition-field="{{ field.conditions | map(attribute='field_id') | list | tojson }}" data-condition-op="{{ field.conditions | map(attribute='operator') | list | tojson }}" data-condition-value="{{ field.conditions | map(attribute='value') | list | tojson }}"
+    {%- endif -%}
+  {%- endif -%}
+{%- endmacro -%}
+
+{# Derive wrapper div CSS class from grid_column. #}
+{%- macro _grid_class(field) -%}
+  {%- if field.grid_column == "full" -%}field-full{%- else -%}field-half{%- endif -%}
+{%- endmacro -%}
+
+
+{# ── render_field ── #}
+{% macro render_field(field, value, mode) %}
+{%- set eid = _fid(field) -%}
+{%- set hid = "help_" ~ eid -%}
+{%- set help = _help_text(field, mode) -%}
+<div class="{{ _grid_class(field) }}"{{ _condition_attrs(field) }}>
+
+  {# ── text ── #}
+  {%- if field.field_type == "text" %}
+  <label for="{{ eid }}">{{ field.label }}</label>
+  <input type="text"
+         id="{{ eid }}"
+         name="{{ field.config_key }}"
+         value="{{ value if value is not none else '' }}"
+         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         aria-describedby="{{ hid }}">
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── url ── #}
+  {%- elif field.field_type == "url" %}
+  <label for="{{ eid }}">{{ field.label }}</label>
+  <input type="url"
+         id="{{ eid }}"
+         name="{{ field.config_key }}"
+         value="{{ value if value is not none else '' }}"
+         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         aria-describedby="{{ hid }}">
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── number ── #}
+  {%- elif field.field_type == "number" %}
+  {%- set ns = namespace(min_val=none, max_val=none, step_val=none) -%}
+  {%- for rule in field.validation %}
+    {%- if rule.rule_type == "min" %}{% set ns.min_val = rule.value %}{% endif %}
+    {%- if rule.rule_type == "max" %}{% set ns.max_val = rule.value %}{% endif %}
+    {%- if rule.rule_type == "step" %}{% set ns.step_val = rule.value %}{% endif %}
+  {%- endfor %}
+  <label for="{{ eid }}">{{ field.label }}</label>
+  <input type="number"
+         id="{{ eid }}"
+         name="{{ field.config_key }}"
+         value="{{ value if value is not none else '' }}"
+         {% if ns.min_val is not none %}min="{{ ns.min_val }}"{% endif %}
+         {% if ns.max_val is not none %}max="{{ ns.max_val }}"{% endif %}
+         {% if ns.step_val is not none %}step="{{ ns.step_val }}"{% endif %}
+         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         aria-describedby="{{ hid }}">
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── boolean (Pico CSS switch) ── #}
+  {%- elif field.field_type == "boolean" %}
+  <label for="{{ eid }}">
+    <input type="checkbox"
+           id="{{ eid }}"
+           name="{{ field.config_key }}"
+           role="switch"
+           {% if value %}checked{% endif %}
+           aria-describedby="{{ hid }}">
+    {{ field.label }}
+  </label>
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── select ── #}
+  {%- elif field.field_type == "select" %}
+  <label for="{{ eid }}">{{ field.label }}</label>
+  <select id="{{ eid }}"
+          name="{{ field.config_key }}"
+          aria-describedby="{{ hid }}">
+    {% for opt in field.options %}
+    <option value="{{ opt.value }}"{% if value == opt.value %} selected{% endif %}>{{ opt.label }}</option>
+    {% endfor %}
+  </select>
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── radio ── #}
+  {%- elif field.field_type == "radio" %}
+  <fieldset>
+    <legend>{{ field.label }}</legend>
+    {% for opt in field.options %}
+    <label>
+      <input type="radio"
+             id="{{ eid }}_{{ opt.value | replace('.', '_') | replace(' ', '_') }}"
+             name="{{ field.config_key }}"
+             value="{{ opt.value }}"
+             {% if value == opt.value %}checked{% endif %}
+             aria-describedby="{{ hid }}">
+      {{ opt.label }}
+      {% if opt.description %}<small>{{ opt.description }}</small>{% endif %}
+    </label>
+    {% endfor %}
+  </fieldset>
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── password ── #}
+  {%- elif field.field_type == "password" %}
+  <label for="{{ eid }}">{{ field.label }}</label>
+  <div class="password-field">
+    <input type="password"
+           id="{{ eid }}"
+           name="{{ field.config_key }}"
+           value="{{ value if value is not none else '' }}"
+           {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+           aria-describedby="{{ hid }}">
+    <button type="button"
+            class="password-toggle"
+            aria-label="Show/Hide {{ field.label }}"
+            aria-controls="{{ eid }}"
+            onclick="togglePassword(this)">
+      <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
+           fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+        <circle cx="12" cy="12" r="3"/>
+      </svg>
+    </button>
+  </div>
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── file_or_url (URL input only; file upload handled by route handler) ── #}
+  {%- elif field.field_type == "file_or_url" %}
+  <label for="{{ eid }}">{{ field.label }}</label>
+  <input type="url"
+         id="{{ eid }}"
+         name="{{ field.config_key }}"
+         value="{{ value if value is not none else '' }}"
+         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         aria-describedby="{{ hid }}">
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── radio_swatch ── #}
+  {%- elif field.field_type == "radio_swatch" %}
+  <fieldset class="accent-swatches">
+    <legend>{{ field.label }}</legend>
+    {% for opt in field.options %}
+    <label class="swatch-label">
+      <input type="radio"
+             id="{{ eid }}_{{ opt.value | replace('.', '_') | replace(' ', '_') }}"
+             name="{{ field.config_key }}"
+             value="{{ opt.value }}"
+             {% if value == opt.value %}checked{% endif %}
+             aria-describedby="{{ hid }}"
+             class="swatch-radio">
+      <span class="swatch"
+            style="background-color: var(--accent-{{ opt.value }})"
+            title="{{ opt.label }}"
+            aria-label="{{ opt.label }}"></span>
+    </label>
+    {% endfor %}
+  </fieldset>
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── textarea ── #}
+  {%- elif field.field_type == "textarea" %}
+  <label for="{{ eid }}">{{ field.label }}</label>
+  <textarea id="{{ eid }}"
+            name="{{ field.config_key }}"
+            rows="4"
+            {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+            aria-describedby="{{ hid }}">{{ value if value is not none else '' }}</textarea>
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {# ── checkbox_group ── #}
+  {%- elif field.field_type == "checkbox_group" %}
+  {%- set checked_values = value if value is iterable and value is not string else [] %}
+  <fieldset>
+    <legend>{{ field.label }}</legend>
+    {% for opt in field.options %}
+    <label>
+      <input type="checkbox"
+             id="{{ eid }}_{{ opt.value | replace('.', '_') | replace(' ', '_') }}"
+             name="{{ field.config_key }}"
+             value="{{ opt.value }}"
+             {% if opt.value in checked_values %}checked{% endif %}
+             aria-describedby="{{ hid }}">
+      {{ opt.label }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  <small id="{{ hid }}">{{ help }}</small>
+
+  {%- endif %}
+</div>
+{% endmacro %}
+
+
+{# ── render_section_fields ── #}
+{% macro render_section_fields(fields, values, mode) %}
+{# fields : tuple[ConfigField, ...]
+   values : dict of {config_key: current_value}
+   mode   : "wizard" or "admin" #}
+<div class="registry-fields">
+  {% for field in fields %}
+    {{ render_field(field, values.get(field.config_key, field.default), mode) }}
+  {% endfor %}
+</div>
+{% endmacro %}
