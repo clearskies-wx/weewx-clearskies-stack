@@ -27,6 +27,8 @@ Route summary (admin landing + domain sections):
   GET  /admin/haze-calibration        — haze calibration settings + status
   POST /admin/haze-calibration        — save api.conf [conditions] haze keys
   POST /admin/haze-calibration/reset  — reset calibration data via API
+  GET  /admin/geographic-features     — geographic features (PMTiles) status + update trigger
+  POST /admin/geographic-features/update — trigger PMTiles download via API
   GET  /admin/now-layout              — card layout editor form
   POST /admin/now-layout              — save now-layout.json to config dir
 
@@ -237,6 +239,23 @@ def _read_calibration_state() -> dict | None:
         return response.json()
     except Exception:  # noqa: BLE001
         logger.warning("Could not fetch calibration state from API", exc_info=True)
+        return None
+
+
+def _fetch_geographic_features_status() -> dict | None:
+    """Fetch geographic features status from the API.
+
+    Returns the API's geographic-features/status response dict, or None if
+    the API is unreachable or not configured.
+    """
+    client = _get_api_client()
+    if client is None:
+        return None
+    try:
+        response = client._request("GET", "/api/v1/geographic-features/status")
+        return response.json()
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not fetch geographic features status from API", exc_info=True)
         return None
 
 
@@ -815,6 +834,13 @@ _CUSTOM_SECTIONS: list[dict] = [
         "url": "/admin/haze-calibration",
         "description": "",
     },
+    {
+        "section_id": "geographic-features",
+        "display_name": "Geographic Features",
+        "group": "advanced",
+        "url": "/admin/geographic-features",
+        "description": "OpenStreetMap boundaries, roads, and water for the satellite map overlay.",
+    },
 ]
 
 
@@ -954,6 +980,22 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
             s = haze_calibration["openaq_sensor"]
             haze_rows.append(("Sensor", f"{s['name']} ({s['distance_km']:.1f} km)"))
     custom_landing_values["haze-calibration"] = haze_rows
+
+    # Geographic features summary
+    geo_status = _fetch_geographic_features_status()
+    geo_rows: list[tuple[str, Any]] = []
+    if geo_status is None:
+        geo_rows.append(("Status", "API unreachable"))
+    elif geo_status.get("available"):
+        size_bytes = geo_status.get("size_bytes")
+        size_str = f"{size_bytes / (1024 * 1024):.1f} MB" if size_bytes else "unknown size"
+        geo_rows.append(("Status", f"Available ({size_str})"))
+        updated_at = geo_status.get("updated_at")
+        if updated_at:
+            geo_rows.append(("Updated", updated_at[:10] if len(updated_at) >= 10 else updated_at))
+    else:
+        geo_rows.append(("Status", "Not downloaded"))
+    custom_landing_values["geographic-features"] = geo_rows
 
     return _render(
         request,
@@ -1364,6 +1406,56 @@ async def haze_calibration_reset(request: Request) -> HTMLResponse:
     return _render_result(request, section_slug="haze-calibration",
         display_name="Haze Calibration", success=success, error=error,
         status_code=500 if error else 200)
+
+
+# ---------------------------------------------------------------------------
+# Phase 4 T4.1 — Geographic features (PMTiles) admin
+# ---------------------------------------------------------------------------
+
+
+@router.get("/geographic-features", response_class=HTMLResponse)
+async def geographic_features_get(request: Request) -> HTMLResponse:
+    """Render the geographic features status page."""
+    _require_session(request)
+    geo_status = _fetch_geographic_features_status()
+    error: str | None = None
+    if geo_status is None:
+        error = "Cannot connect to the API — check that the API is running and configured."
+    return _render(request, "geographic_features.html", {
+        "status": geo_status,
+        "error": error,
+    })
+
+
+@router.post("/geographic-features/update", response_class=HTMLResponse)
+async def geographic_features_update(request: Request) -> HTMLResponse:
+    """Trigger a PMTiles geographic features download via the API."""
+    _require_session(request)
+    client = _get_api_client()
+    error: str | None = None
+    success = False
+    if client is None:
+        error = "Cannot connect to the API — check that the API is running and configured."
+    else:
+        try:
+            response = client._request("POST", "/setup/geographic-features/update")
+            data = response.json()
+            success = data.get("success", True)  # treat any 2xx as success
+            if not success:
+                error = data.get("message") or data.get("error") or "Update failed — unknown error."
+        except Exception as exc:  # noqa: BLE001
+            error = f"API error: {exc}"
+            logger.warning("geographic_features_update API error: %s", exc)
+    if success:
+        return _render(request, "geographic_features.html", {
+            "status": _fetch_geographic_features_status(),
+            "error": None,
+            "flash": "Geographic features data updated successfully.",
+        })
+    return _render(request, "geographic_features.html", {
+        "status": _fetch_geographic_features_status(),
+        "error": error,
+    }, status_code=500 if error else 200)
 
 
 # ---------------------------------------------------------------------------
