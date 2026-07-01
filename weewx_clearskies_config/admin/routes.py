@@ -1508,10 +1508,27 @@ async def forecast_correction_get(request: Request) -> HTMLResponse:
         get_section("api", "forecast_correction", _config_dir), _FC_DEFAULTS
     )
     status = _fetch_forecast_correction_status()
+    # Format epoch timestamps to human-readable dates for the template.
+    fmt_start = fmt_end = None
+    if status:
+        from datetime import datetime, timezone as _tz  # noqa: PLC0415
+        for key, target in [("date_range_start", "start"), ("date_range_end", "end")]:
+            epoch = status.get(key)
+            if epoch is not None:
+                try:
+                    dt = datetime.fromtimestamp(int(epoch), tz=_tz.utc)
+                    if target == "start":
+                        fmt_start = dt.strftime("%Y-%m-%d %H:%M UTC")
+                    else:
+                        fmt_end = dt.strftime("%Y-%m-%d %H:%M UTC")
+                except (ValueError, OSError, OverflowError):
+                    pass
     return _render(request, "forecast_correction.html", {
         "values": values,
         "defaults": _FC_DEFAULTS,
         "status": status,
+        "fmt_date_start": fmt_start,
+        "fmt_date_end": fmt_end,
     })
 
 

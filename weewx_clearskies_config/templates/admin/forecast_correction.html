@@ -97,8 +97,8 @@
 
         <dt>Date range</dt>
         <dd>
-          {% if status.get("date_range_start") and status.get("date_range_end") %}
-            {{ status.date_range_start }} &ndash; {{ status.date_range_end }}
+          {% if fmt_date_start and fmt_date_end %}
+            {{ fmt_date_start }} &ndash; {{ fmt_date_end }}
           {% else %}
             &mdash;
           {% endif %}
