@@ -80,7 +80,7 @@ _HAZE_DEFAULTS: dict[str, str] = {
 _FC_DEFAULTS: dict[str, str] = {
     "enabled": "false",
     "collection_enabled": "true",
-    "retrain_schedule": "weekly",
+    "retrain_schedule": "daily",
     "retrain_day": "0",
     "min_samples": "500",
     "retention_years": "3",
