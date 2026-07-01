@@ -1508,19 +1508,35 @@ async def forecast_correction_get(request: Request) -> HTMLResponse:
         get_section("api", "forecast_correction", _config_dir), _FC_DEFAULTS
     )
     status = _fetch_forecast_correction_status()
-    # Format epoch timestamps to human-readable dates for the template.
+    # Format epoch timestamps in station-local time for the template.
     fmt_start = fmt_end = None
     if status:
         from datetime import datetime, timezone as _tz  # noqa: PLC0415
+        from zoneinfo import ZoneInfo  # noqa: PLC0415
+        # The API's current-config or station endpoint provides the timezone;
+        # fall back to reading it from the correction status response or api.conf.
+        station_tz_name = None
+        client = _get_api_client()
+        if client is not None:
+            try:
+                resp = client._request("GET", "/api/v1/station")
+                station_tz_name = resp.json().get("data", {}).get("timezone")
+            except Exception:  # noqa: BLE001
+                pass
+        try:
+            tz = ZoneInfo(station_tz_name) if station_tz_name else _tz.utc
+        except (KeyError, ValueError):
+            tz = _tz.utc
         for key, target in [("date_range_start", "start"), ("date_range_end", "end")]:
             epoch = status.get(key)
             if epoch is not None:
                 try:
-                    dt = datetime.fromtimestamp(int(epoch), tz=_tz.utc)
+                    dt = datetime.fromtimestamp(int(epoch), tz=_tz.utc).astimezone(tz)
+                    formatted = dt.strftime("%Y-%m-%d %H:%M %Z")
                     if target == "start":
-                        fmt_start = dt.strftime("%Y-%m-%d %H:%M UTC")
+                        fmt_start = formatted
                     else:
-                        fmt_end = dt.strftime("%Y-%m-%d %H:%M UTC")
+                        fmt_end = formatted
                 except (ValueError, OSError, OverflowError):
                     pass
     return _render(request, "forecast_correction.html", {
