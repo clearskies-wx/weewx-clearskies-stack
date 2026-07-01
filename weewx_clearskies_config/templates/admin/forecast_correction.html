@@ -1,0 +1,257 @@
+{# -------------------------------------------------------------------------
+   Forecast correction admin section fragment.
+   Loaded via HTMX into #admin-content.
+   Context:
+     status   — API response dict from GET /setup/forecast-correction/status,
+                 or None if the API is unreachable. Expected keys:
+                   is_active          — bool
+                   enabled            — bool
+                   collection_enabled — bool
+                   model_available    — bool
+                   pair_count         — int
+                   date_range_start   — ISO date string or null
+                   date_range_end     — ISO date string or null
+                   last_trained       — ISO date string or null
+                   training_status    — "idle"|"training"|"failed"
+                   mae_raw            — float or null
+                   mae_corrected      — float or null
+                   provider_score     — float or null
+                   correction_pct     — float or null
+                   sample_count       — int or null
+     values   — dict of current [forecast_correction] settings from api.conf
+     defaults — dict of default values (_FC_DEFAULTS)
+   ------------------------------------------------------------------------- #}
+<article>
+  <header>
+    <nav aria-label="Breadcrumb">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">Admin</a>
+        </li>
+        <li>Forecast Correction</li>
+      </ul>
+    </nav>
+    <h2>Forecast Correction</h2>
+  </header>
+
+  <p>The forecast correction engine learns systematic temperature bias patterns
+     at your station using Random Forest regression. It collects forecast-observation
+     pairs, trains a model, and applies corrections to hourly forecast temperatures
+     before serving them.</p>
+
+  {# Status section #}
+  <section aria-labelledby="fc-status-heading">
+    <h3 id="fc-status-heading">Engine Status</h3>
+
+    {% if status is none %}
+      <div role="alert"
+           style="background:var(--pico-secondary-background);
+                  border-left:3px solid var(--pico-color-amber-500,#f59e0b);
+                  padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
+                  margin-block:1rem;font-size:0.875rem">
+        <strong>API unreachable.</strong>
+        The API is unreachable or not yet configured. Start the API service and
+        reload this page to view forecast correction status.
+      </div>
+    {% else %}
+      {% set min_samples = values.get("min_samples", defaults.min_samples) | int %}
+
+      <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem;margin-block-end:1rem">
+        <dt>Correction active</dt>
+        <dd>
+          {% if status.get("is_active") %}
+            <span aria-label="Active"
+                  style="display:inline-flex;align-items:center;gap:0.4rem">
+              <span aria-hidden="true"
+                    style="display:inline-block;width:0.7rem;height:0.7rem;
+                           border-radius:50%;background:var(--pico-color-green-500,#22c55e)"></span>
+              Active
+            </span>
+          {% else %}
+            <span aria-label="Inactive"
+                  style="display:inline-flex;align-items:center;gap:0.4rem">
+              <span aria-hidden="true"
+                    style="display:inline-block;width:0.7rem;height:0.7rem;
+                           border-radius:50%;background:var(--pico-muted-color,#9ca3af)"></span>
+              Inactive
+            </span>
+          {% endif %}
+        </dd>
+
+        <dt>Model available</dt>
+        <dd>{% if status.get("model_available") %}Yes{% else %}No{% endif %}</dd>
+
+        <dt>Pairs collected</dt>
+        <dd>
+          {% set pair_count = status.get("pair_count", 0) %}
+          {% if pair_count < min_samples %}
+            {{ pair_count }} / {{ min_samples }} needed for training
+          {% else %}
+            {{ pair_count }}
+          {% endif %}
+        </dd>
+
+        <dt>Date range</dt>
+        <dd>
+          {% if status.get("date_range_start") and status.get("date_range_end") %}
+            {{ status.date_range_start }} &ndash; {{ status.date_range_end }}
+          {% else %}
+            &mdash;
+          {% endif %}
+        </dd>
+
+        <dt>Last trained</dt>
+        <dd>{{ status.get("last_trained") or "Never" }}</dd>
+
+        <dt>Training status</dt>
+        <dd>{{ status.get("training_status", "idle") | capitalize }}</dd>
+      </dl>
+    {% endif %}
+  </section>
+
+  {# TruScore metrics — only when a model has been trained #}
+  {% if status is not none and status.get("mae_raw") is not none %}
+  <section aria-labelledby="fc-metrics-heading" style="margin-block-start:1.5rem">
+    <h3 id="fc-metrics-heading">TruScore Metrics</h3>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;margin-block:1rem">
+
+      <div style="border:1px solid var(--pico-muted-border-color);
+                  border-radius:var(--pico-border-radius);
+                  padding:0.75rem 1rem;background:var(--pico-card-background-color)">
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">Provider Score</div>
+        <div style="font-size:1.25rem;font-weight:600">{{ status.get("provider_score", "&mdash;") }}</div>
+        <small style="font-size:0.75rem;color:var(--pico-muted-color)">
+          100 &minus; MAE. Higher = more accurate raw forecast.
+        </small>
+      </div>
+
+      <div style="border:1px solid var(--pico-muted-border-color);
+                  border-radius:var(--pico-border-radius);
+                  padding:0.75rem 1rem;background:var(--pico-card-background-color)">
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">Correction Score</div>
+        <div style="font-size:1.25rem;font-weight:600">{{ status.get("correction_pct", "&mdash;") }}%</div>
+        <small style="font-size:0.75rem;color:var(--pico-muted-color)">
+          Percentage improvement from correction.
+        </small>
+      </div>
+
+      <div style="border:1px solid var(--pico-muted-border-color);
+                  border-radius:var(--pico-border-radius);
+                  padding:0.75rem 1rem;background:var(--pico-card-background-color)">
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">MAE (raw)</div>
+        <div style="font-size:1.25rem;font-weight:600">{{ status.get("mae_raw", "&mdash;") }}&deg;</div>
+      </div>
+
+      <div style="border:1px solid var(--pico-muted-border-color);
+                  border-radius:var(--pico-border-radius);
+                  padding:0.75rem 1rem;background:var(--pico-card-background-color)">
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">MAE (corrected)</div>
+        <div style="font-size:1.25rem;font-weight:600">{{ status.get("mae_corrected", "&mdash;") }}&deg;</div>
+      </div>
+
+      <div style="border:1px solid var(--pico-muted-border-color);
+                  border-radius:var(--pico-border-radius);
+                  padding:0.75rem 1rem;background:var(--pico-card-background-color)">
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">Training samples</div>
+        <div style="font-size:1.25rem;font-weight:600">{{ status.get("sample_count", "&mdash;") }}</div>
+      </div>
+
+    </div>
+  </section>
+  {% endif %}
+
+  {# Action buttons section #}
+  {% if status is not none %}
+  <section aria-labelledby="fc-controls-heading" style="margin-block-start:1.5rem">
+    <h3 id="fc-controls-heading">Engine Controls</h3>
+
+    <form hx-post="/admin/forecast-correction/toggle"
+          hx-target="#admin-content"
+          hx-swap="innerHTML">
+      <fieldset>
+        <legend>Enable / Disable</legend>
+
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
+          <input type="checkbox"
+                 name="enabled"
+                 value="true"
+                 {% if status.get("enabled") %}checked{% endif %}
+                 aria-describedby="fc-enabled-hint">
+          Apply corrections to forecasts
+        </label>
+        <small id="fc-enabled-hint" style="display:block;margin-block-start:0.25rem">
+          Enable only after a model has been trained.
+        </small>
+
+        <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-block-start:0.75rem">
+          <input type="checkbox"
+                 name="collection_enabled"
+                 value="true"
+                 {% if status.get("collection_enabled") %}checked{% endif %}
+                 aria-describedby="fc-collection-hint">
+          Collect forecast-observation pairs
+        </label>
+        <small id="fc-collection-hint" style="display:block;margin-block-start:0.25rem">
+          Collection runs independently &mdash; pairs are stored even when correction is disabled.
+        </small>
+
+        <div role="group" style="margin-block-start:1rem">
+          <button type="submit">Save</button>
+        </div>
+      </fieldset>
+    </form>
+
+    <form hx-post="/admin/forecast-correction/retrain"
+          hx-target="#admin-content"
+          hx-swap="innerHTML"
+          hx-confirm="This will retrain the correction model. Training typically takes a few seconds."
+          style="margin-block-start:1rem">
+      <button type="submit" class="outline">Retrain Now</button>
+    </form>
+  </section>
+  {% endif %}
+
+  {# Configuration section (read-only display) #}
+  <section aria-labelledby="fc-config-heading" style="margin-block-start:1.5rem">
+    <h3 id="fc-config-heading">Configuration</h3>
+
+    {% set day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] %}
+    {% set retrain_day_idx = values.get("retrain_day", defaults.retrain_day) | int %}
+
+    <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem;margin-block-end:1rem">
+      <dt>Retrain schedule</dt>
+      <dd>{{ values.get("retrain_schedule", defaults.retrain_schedule) | capitalize }}</dd>
+
+      <dt>Retrain day</dt>
+      <dd>
+        {% if retrain_day_idx >= 0 and retrain_day_idx < 7 %}
+          {{ day_names[retrain_day_idx] }}
+        {% else %}
+          {{ values.get("retrain_day", defaults.retrain_day) }}
+        {% endif %}
+      </dd>
+
+      <dt>Min samples</dt>
+      <dd>{{ values.get("min_samples", defaults.min_samples) }}</dd>
+
+      <dt>Retention years</dt>
+      <dd>{{ values.get("retention_years", defaults.retention_years) }}</dd>
+
+      <dt>DB path</dt>
+      <dd><code style="font-size:0.8rem">{{ values.get("db_path", defaults.db_path) }}</code></dd>
+
+      <dt>Model path</dt>
+      <dd><code style="font-size:0.8rem">{{ values.get("model_path", defaults.model_path) }}</code></dd>
+    </dl>
+
+    <small style="color:var(--pico-muted-color);font-size:0.875rem">
+      These settings are configured in <code>api.conf</code> [forecast_correction].
+      Edit the file directly or re-run the setup wizard to change them.
+    </small>
+  </section>
+
+</article>

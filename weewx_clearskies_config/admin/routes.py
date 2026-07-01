@@ -76,6 +76,18 @@ _HAZE_DEFAULTS: dict[str, str] = {
     "openaq_sensor_id": "",
 }
 
+# Forecast correction defaults
+_FC_DEFAULTS: dict[str, str] = {
+    "enabled": "false",
+    "collection_enabled": "true",
+    "retrain_schedule": "weekly",
+    "retrain_day": "0",
+    "min_samples": "500",
+    "retention_years": "3",
+    "db_path": "/etc/weewx-clearskies/forecast_correction.db",
+    "model_path": "/etc/weewx-clearskies/forecast_correction_model.pkl",
+}
+
 # ---------------------------------------------------------------------------
 # Module-level state injected by create_admin_router()
 # ---------------------------------------------------------------------------
@@ -256,6 +268,23 @@ def _fetch_geographic_features_status() -> dict | None:
         return response.json()
     except Exception:  # noqa: BLE001
         logger.warning("Could not fetch geographic features status from API", exc_info=True)
+        return None
+
+
+def _fetch_forecast_correction_status() -> dict | None:
+    """Fetch forecast correction status from the API.
+
+    Returns the API's forecast-correction/status response dict, or None if
+    the API is unreachable or not configured.
+    """
+    client = _get_api_client()
+    if client is None:
+        return None
+    try:
+        response = client._request("GET", "/setup/forecast-correction/status")
+        return response.json()
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not fetch forecast correction status from API", exc_info=True)
         return None
 
 
@@ -840,6 +869,13 @@ _CUSTOM_SECTIONS: list[dict] = [
         "group": "advanced",
         "url": "/admin/geographic-features",
         "description": "OpenStreetMap boundaries, roads, and water for the satellite map overlay.",
+    },
+    {
+        "section_id": "forecast-correction",
+        "display_name": "Forecast Correction",
+        "group": "advanced",
+        "url": "/admin/forecast-correction",
+        "description": "Temperature bias correction using forecast-observation pairs and Random Forest regression.",
     },
 ]
 
@@ -1456,6 +1492,87 @@ async def geographic_features_update(request: Request) -> HTMLResponse:
         "status": _fetch_geographic_features_status(),
         "error": error,
     }, status_code=500 if error else 200)
+
+
+# ---------------------------------------------------------------------------
+# Phase 7 — Forecast correction admin
+# ---------------------------------------------------------------------------
+
+
+@router.get("/forecast-correction", response_class=HTMLResponse)
+async def forecast_correction_get(request: Request) -> HTMLResponse:
+    """Render the forecast correction status, metrics, and controls page."""
+    _require_session(request)
+    assert _config_dir is not None
+    values = _get_with_defaults(
+        get_section("api", "forecast_correction", _config_dir), _FC_DEFAULTS
+    )
+    status = _fetch_forecast_correction_status()
+    return _render(request, "forecast_correction.html", {
+        "values": values,
+        "defaults": _FC_DEFAULTS,
+        "status": status,
+    })
+
+
+@router.post("/forecast-correction/toggle", response_class=HTMLResponse)
+async def forecast_correction_toggle(request: Request) -> HTMLResponse:
+    """Toggle forecast correction and/or pair collection via the API."""
+    _require_session(request)
+    client = _get_api_client()
+    error: str | None = None
+    success = False
+    if client is None:
+        error = "Cannot connect to API — check that the API is running and configured."
+    else:
+        form = await request.form()
+        body = {
+            "enabled": "enabled" in form,
+            "collection_enabled": "collection_enabled" in form,
+        }
+        try:
+            client._request("POST", "/setup/forecast-correction/toggle", json=body)
+            success = True
+        except Exception as exc:  # noqa: BLE001
+            error = f"API error: {exc}"
+            logger.warning("forecast_correction_toggle API error: %s", exc)
+    return _render_result(
+        request,
+        section_slug="forecast-correction",
+        display_name="Forecast Correction",
+        success=success,
+        error=error,
+        status_code=500 if error else 200,
+    )
+
+
+@router.post("/forecast-correction/retrain", response_class=HTMLResponse)
+async def forecast_correction_retrain(request: Request) -> HTMLResponse:
+    """Trigger a model retrain via the API."""
+    _require_session(request)
+    client = _get_api_client()
+    error: str | None = None
+    success = False
+    if client is None:
+        error = "Cannot connect to API — check that the API is running and configured."
+    else:
+        try:
+            response = client._request("POST", "/setup/forecast-correction/retrain")
+            data = response.json()
+            success = data.get("success", False)
+            if not success:
+                error = data.get("message", "Training did not complete.")
+        except Exception as exc:  # noqa: BLE001
+            error = f"API error: {exc}"
+            logger.warning("forecast_correction_retrain API error: %s", exc)
+    return _render_result(
+        request,
+        section_slug="forecast-correction",
+        display_name="Forecast Correction",
+        success=success,
+        error=error,
+        status_code=500 if error else 200,
+    )
 
 
 # ---------------------------------------------------------------------------
