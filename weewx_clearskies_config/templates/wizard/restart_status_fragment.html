@@ -14,12 +14,13 @@
 <div class="restart-item">
   {% if api_up %}
   <span class="alert-success" style="display:inline-flex; padding:0.3rem 0.6rem; margin-bottom:0; gap:0.4rem;">
-    <span aria-hidden="true">&#10003;</span> API service &#8212; running
+    <span aria-hidden="true">&#10003;</span> {{ _("API service — running") }}
   </span>
   {% else %}
   <span class="cs-spinner" aria-hidden="true"></span>
-  Restarting API service&#8230;
+  {{ _("Restarting API service…") }}
   {% endif %}
 </div>
 
 {% if api_up %}</div>{% endif %}
+</content>

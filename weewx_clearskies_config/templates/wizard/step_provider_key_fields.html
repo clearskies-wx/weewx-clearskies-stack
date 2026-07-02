@@ -1,8 +1,8 @@
-<div class="provider-key-fields" aria-label="API credentials for {{ provider.display_name }}">
+<div class="provider-key-fields" aria-label="{{ _('API credentials for') }} {{ provider.display_name }}">
   {% if provider.signup_url %}
   <p class="provider-signup-hint">
     <a href="{{ provider.signup_url }}" target="_blank" rel="noopener noreferrer">
-      Get API key →<span class="sr-only"> (opens in new tab)</span>
+      {{ _("Get API key") }} →<span class="sr-only"> ({{ _("opens in new tab") }})</span>
     </a>
   </p>
   {% endif %}
@@ -13,7 +13,7 @@
 
   <label for="{{ input_id }}">
     {{ field_name | replace("_", " ") | title }}
-    {% if is_secret %}<span class="sr-only">(hidden by default)</span>{% endif %}
+    {% if is_secret %}<span class="sr-only">({{ _("hidden by default") }})</span>{% endif %}
   </label>
   {% if is_secret %}
   <div class="password-field">
@@ -30,7 +30,7 @@
            oninput="document.getElementById('{{ provider.provider_id }}_{{ field_name }}_unchanged').value='0'">
     <button type="button"
             class="password-toggle"
-            aria-label="Show {{ field_name | replace('_', ' ') | title }}"
+            aria-label="{{ _('Show') }} {{ field_name | replace('_', ' ') | title }}"
             aria-controls="{{ input_id }}"
             onclick="togglePassword(this)">
       <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
@@ -49,7 +49,7 @@
          aria-describedby="{{ provider.provider_id }}-{{ field_name }}-hint">
   {% endif %}
   <small id="{{ provider.provider_id }}-{{ field_name }}-hint">
-    Required credential for {{ provider.display_name }}.
+    {{ _("Required credential for") }} {{ provider.display_name }}.
   </small>
   {% endfor %}
 
@@ -61,6 +61,7 @@
           hx-swap="innerHTML"
           hx-include="#providers-form"
           hx-indicator="#wizard-spinner">
-    Test {{ provider.display_name }} connection
+    {{ _("Test") }} {{ provider.display_name }} {{ _("connection") }}
   </button>
 </div>
+</content>

@@ -10,19 +10,19 @@
 #}
 
 {% if provider_id == "aeris_aqi" %}
-<div class="aqi-regional-fields" aria-label="AQI regional scale for Aeris">
+<div class="aqi-regional-fields" aria-label="{{ _('AQI regional scale for Aeris') }}">
   {% set filter_options = [
-    ("airnow", "US EPA (AirNow)"),
-    ("china",  "China (MEP/CAAQS)"),
-    ("india",  "India (NAQI)"),
-    ("eaqi",   "European AQI (EAQI)"),
-    ("caqi",   "Common AQI (CAQI)"),
-    ("uk",     "United Kingdom (DAQI)"),
-    ("de",     "Germany (LQI)"),
-    ("cai",    "South Korea (CAI)"),
+    ("airnow", _("US EPA (AirNow)")),
+    ("china",  _("China (MEP/CAAQS)")),
+    ("india",  _("India (NAQI)")),
+    ("eaqi",   _("European AQI (EAQI)")),
+    ("caqi",   _("Common AQI (CAQI)")),
+    ("uk",     _("United Kingdom (DAQI)")),
+    ("de",     _("Germany (LQI)")),
+    ("cai",    _("South Korea (CAI)")),
   ] %}
   {% set current = state.aeris_aqi_filter or aqi_suggestion.get("filter", "airnow") %}
-  <label for="aeris_aqi_filter">AQI Regional Scale</label>
+  <label for="aeris_aqi_filter">{{ _("AQI Regional Scale") }}</label>
   <select id="aeris_aqi_filter" name="aeris_aqi_filter"
           aria-describedby="aeris-aqi-filter-hint">
     {% for value, label in filter_options %}
@@ -30,22 +30,22 @@
     {% endfor %}
   </select>
   <small id="aeris-aqi-filter-hint">
-    Selects the regional AQI standard returned by Aeris.
+    {{ _("Selects the regional AQI standard returned by Aeris.") }}
     {% if aqi_suggestion.get("filter") %}
-    Auto-suggested from your station location.
+    {{ _("Auto-suggested from your station location.") }}
     {% endif %}
-    You can change this at any time.
+    {{ _("You can change this at any time.") }}
   </small>
 </div>
 
 {% elif provider_id == "openmeteo_aqi" %}
-<div class="aqi-regional-fields" aria-label="AQI index for Open-Meteo">
+<div class="aqi-regional-fields" aria-label="{{ _('AQI index for Open-Meteo') }}">
   {% set index_options = [
-    ("us_aqi",       "US AQI (EPA)"),
-    ("european_aqi", "European AQI (EAQI)"),
+    ("us_aqi",       _("US AQI (EPA)")),
+    ("european_aqi", _("European AQI (EAQI)")),
   ] %}
   {% set current = state.openmeteo_aqi_index or aqi_suggestion.get("index", "us_aqi") %}
-  <label for="openmeteo_aqi_index">AQI Index</label>
+  <label for="openmeteo_aqi_index">{{ _("AQI Index") }}</label>
   <select id="openmeteo_aqi_index" name="openmeteo_aqi_index"
           aria-describedby="openmeteo-aqi-index-hint">
     {% for value, label in index_options %}
@@ -53,22 +53,22 @@
     {% endfor %}
   </select>
   <small id="openmeteo-aqi-index-hint">
-    Open-Meteo computes both US and European AQI server-side.
+    {{ _("Open-Meteo computes both US and European AQI server-side.") }}
     {% if aqi_suggestion.get("index") %}
-    Auto-suggested from your station location.
+    {{ _("Auto-suggested from your station location.") }}
     {% endif %}
-    You can change this at any time.
+    {{ _("You can change this at any time.") }}
   </small>
 </div>
 
 {% elif provider_id == "iqair" %}
-<div class="aqi-regional-fields" aria-label="AQI scale for IQAir">
+<div class="aqi-regional-fields" aria-label="{{ _('AQI scale for IQAir') }}">
   {% set scale_options = [
-    ("us", "US EPA (AQI)"),
-    ("cn", "China MEP (AQICN)"),
+    ("us", _("US EPA (AQI)")),
+    ("cn", _("China MEP (AQICN)")),
   ] %}
   {% set current = state.iqair_aqi_scale or aqi_suggestion.get("scale", "us") %}
-  <label for="iqair_aqi_scale">AQI Scale</label>
+  <label for="iqair_aqi_scale">{{ _("AQI Scale") }}</label>
   <select id="iqair_aqi_scale" name="iqair_aqi_scale"
           aria-describedby="iqair-aqi-scale-hint">
     {% for value, label in scale_options %}
@@ -76,28 +76,29 @@
     {% endfor %}
   </select>
   <small id="iqair-aqi-scale-hint">
-    IQAir returns both US EPA and China MEP indices.
+    {{ _("IQAir returns both US EPA and China MEP indices.") }}
     {% if aqi_suggestion.get("scale") %}
-    Auto-suggested from your station location.
+    {{ _("Auto-suggested from your station location.") }}
     {% endif %}
-    You can change this at any time.
+    {{ _("You can change this at any time.") }}
   </small>
 </div>
 
 {% elif provider_id == "openaq" %}
 <div class="aqi-regional-fields aqi-regional-note"
-     aria-label="AQI note for OpenAQ">
-  <p><small>OpenAQ provides PM2.5 and PM10 from government reference monitors
-     in 141 countries. Observed data &mdash; eligible for haze confirmation.
-     Data lag is approximately 1&ndash;2 hours; Aeris or IQAir are preferred
-     when available. No regional scale configuration is required.</small></p>
+     aria-label="{{ _('AQI note for OpenAQ') }}">
+  <p><small>{{ _("OpenAQ provides PM2.5 and PM10 from government reference monitors
+     in 141 countries. Observed data — eligible for haze confirmation.
+     Data lag is approximately 1–2 hours; Aeris or IQAir are preferred
+     when available. No regional scale configuration is required.") }}</small></p>
 </div>
 
 {% elif provider_id == "openweathermap_aqi" %}
 <div class="aqi-regional-fields aqi-regional-note"
-     aria-label="AQI note for OpenWeatherMap">
-  <p><small>OpenWeatherMap uses its own 1&ndash;5 air quality scale.
-     No regional configuration is required.</small></p>
+     aria-label="{{ _('AQI note for OpenWeatherMap') }}">
+  <p><small>{{ _("OpenWeatherMap uses its own 1–5 air quality scale.
+     No regional configuration is required.") }}</small></p>
 </div>
 
 {% endif %}
+</content>

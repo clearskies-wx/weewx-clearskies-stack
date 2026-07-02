@@ -1,14 +1,14 @@
 <article>
   <header>
-    <h2>Step 9 of 15 — Providers &amp; API Keys</h2>
-    <p>Choose a data provider for each service domain.
+    <h2>{{ _("Step 9 of 15 — Providers & API Keys") }}</h2>
+    <p>{{ _("Choose a data provider for each service domain.
        Providers that match your station location are pre-selected.
-       For providers that require an API key, the key fields appear inline when you select them.</p>
+       For providers that require an API key, the key fields appear inline when you select them.") }}</p>
   </header>
 
   {% if error %}
   <div role="alert" class="alert-error">
-    <strong>Error:</strong> {{ error }}
+    <strong>{{ _("Error:") }}</strong> {{ error }}
   </div>
   {% endif %}
 
@@ -20,19 +20,19 @@
         autocomplete="off">
 
     {% set domain_labels = {
-      "forecast":    "Forecast",
-      "alerts":      "Weather Alerts",
-      "aqi":         "Air Quality (AQI)",
-      "earthquakes": "Earthquakes",
-      "radar":       "Radar"
+      "forecast":    _("Forecast"),
+      "alerts":      _("Weather Alerts"),
+      "aqi":         _("Air Quality (AQI)"),
+      "earthquakes": _("Earthquakes"),
+      "radar":       _("Radar")
     } %}
 
     {% set domain_descriptions = {
-      "forecast":    "Provides multi-day weather forecasts shown on the dashboard.",
-      "alerts":      "Provides severe weather warnings and watches for your area.",
-      "aqi":         "Provides current air quality index readings.",
-      "earthquakes": "Provides recent earthquake activity near your station.",
-      "radar":       "Provides radar imagery for the dashboard map tile."
+      "forecast":    _("Provides multi-day weather forecasts shown on the dashboard."),
+      "alerts":      _("Provides severe weather warnings and watches for your area."),
+      "aqi":         _("Provides current air quality index readings."),
+      "earthquakes": _("Provides recent earthquake activity near your station."),
+      "radar":       _("Provides radar imagery for the dashboard map tile.")
     } %}
 
     {% for domain, providers in providers_by_domain.items() %}
@@ -49,7 +49,7 @@
       {% set provider = providers[0] %}
       <p>
         <strong>{{ provider.display_name }}</strong>
-        — {{ provider.geographic_coverage }}, keyless
+        — {{ provider.geographic_coverage }}, {{ _("keyless") }}
         {%- if provider.notes %} — {{ provider.notes }}{% endif %}
       </p>
       <input type="hidden" name="provider_{{ domain }}" value="{{ provider.provider_id }}">
@@ -74,10 +74,10 @@
                {% endif %}>
         <strong>{{ provider.display_name }}</strong>
         {% if is_recommended %}
-        <span class="provider-recommended" aria-label="Matches your location">Selected for your location</span>
+        <span class="provider-recommended" aria-label="{{ _('Matches your location') }}">{{ _("Selected for your location") }}</span>
         {% endif %}
         {% if provider.auth_fields %}
-        <span class="badge-key-required" aria-label="API key required">Key required</span>
+        <span class="badge-key-required" aria-label="{{ _('API key required') }}">{{ _("Key required") }}</span>
         {% endif %}
         <br>
         <span id="provider-desc-{{ provider.provider_id }}">
@@ -113,13 +113,13 @@
       {# OpenAQ bootstrap API key — required for calibration bootstrap regardless
          of which AQI provider is selected for real-time use. #}
       <fieldset>
-        <legend>Haze Calibration Bootstrap (OpenAQ)</legend>
-        <p><small>The haze detection calibration bootstrap pulls historical PM2.5 data
-           from <a href="https://openaq.org" target="_blank" rel="noopener">OpenAQ</a>
-           (government reference monitors, 141 countries). This API key is required
-           for the <code>clearskies-api bootstrap</code> command regardless of your
-           AQI provider selection above.</small></p>
-        <label for="openaq_api_key">OpenAQ API Key</label>
+        <legend>{{ _("Haze Calibration Bootstrap (OpenAQ)") }}</legend>
+        <p><small>{{ _("The haze detection calibration bootstrap pulls historical PM2.5 data
+           from") }} <a href="https://openaq.org" target="_blank" rel="noopener">OpenAQ</a>
+           {{ _("(government reference monitors, 141 countries). This API key is required
+           for the") }} <code>clearskies-api bootstrap</code> {{ _("command regardless of your
+           AQI provider selection above.") }}</small></p>
+        <label for="openaq_api_key">{{ _("OpenAQ API Key") }}</label>
         <input type="password"
                id="openaq_api_key"
                name="openaq_api_key"
@@ -128,9 +128,9 @@
                aria-describedby="openaq-key-hint"
                autocomplete="off">
         <small id="openaq-key-hint">
-          Free API key. <a href="https://explore.openaq.org/register"
-                           target="_blank" rel="noopener">Register here</a>.
-          Stored in <code>secrets.env</code> as
+          {{ _("Free API key.") }} <a href="https://explore.openaq.org/register"
+                           target="_blank" rel="noopener">{{ _("Register here") }}</a>.
+          {{ _("Stored in") }} <code>secrets.env</code> {{ _("as") }}
           <code>WEEWX_CLEARSKIES_OPENAQ_API_KEY</code>.
         </small>
       </fieldset>
@@ -141,17 +141,17 @@
       <div id="aeris-forecast-model"
            {% if selected_id != "aeris" %}style="display: none;"{% endif %}>
         <fieldset>
-          <legend>Aeris Forecast Model</legend>
+          <legend>{{ _("Aeris Forecast Model") }}</legend>
           <label>
             <input type="radio"
                    name="aeris_forecast_model"
                    value="xcast"
                    {% if state.aeris_forecast_model == "xcast" %}checked{% endif %}
                    aria-describedby="aeris-model-xcast-desc">
-            <strong>Xcast (ML-enhanced)</strong>
+            <strong>{{ _("Xcast (ML-enhanced)") }}</strong>
             <br>
             <span id="aeris-model-xcast-desc">
-              <small>Uses machine learning to enhance temperature and wind speed predictions. Recommended for most operators.</small>
+              <small>{{ _("Uses machine learning to enhance temperature and wind speed predictions. Recommended for most operators.") }}</small>
             </span>
           </label>
           <label>
@@ -160,10 +160,10 @@
                    value="standard"
                    {% if state.aeris_forecast_model == "standard" %}checked{% endif %}
                    aria-describedby="aeris-model-standard-desc">
-            <strong>Standard</strong>
+            <strong>{{ _("Standard") }}</strong>
             <br>
             <span id="aeris-model-standard-desc">
-              <small>Traditional XWeather forecast model.</small>
+              <small>{{ _("Traditional XWeather forecast model.") }}</small>
             </span>
           </label>
         </fieldset>
@@ -175,22 +175,22 @@
       <div id="librewxr-config"
            {% if selected_id != "librewxr" %}style="display: none;"{% endif %}>
         <fieldset>
-          <legend>LibreWxR Configuration</legend>
-          <p><small>LibreWxR provides high-quality radar (zoom 12), 13 color schemes,
+          <legend>{{ _("LibreWxR Configuration") }}</legend>
+          <p><small>{{ _("LibreWxR provides high-quality radar (zoom 12), 13 color schemes,
              60-minute nowcast, and weather alerts. Use the public API for zero-setup,
-             or point to your own self-hosted instance for production reliability.</small></p>
+             or point to your own self-hosted instance for production reliability.") }}</small></p>
 
-          <label>Endpoint</label>
+          <label>{{ _("Endpoint") }}</label>
           <label>
             <input type="radio"
                    name="librewxr_endpoint_mode"
                    value="public"
                    {% if not state.librewxr_endpoint or state.librewxr_endpoint == "https://api.librewxr.net" %}checked{% endif %}
                    aria-describedby="librewxr-public-desc">
-            <strong>Public API</strong> (api.librewxr.net)
+            <strong>{{ _("Public API") }}</strong> (api.librewxr.net)
             <br>
             <span id="librewxr-public-desc">
-              <small>No infrastructure needed. No SLA — best-effort availability.</small>
+              <small>{{ _("No infrastructure needed. No SLA — best-effort availability.") }}</small>
             </span>
           </label>
           <label>
@@ -199,17 +199,17 @@
                    value="selfhosted"
                    {% if state.librewxr_endpoint and state.librewxr_endpoint != "https://api.librewxr.net" %}checked{% endif %}
                    aria-describedby="librewxr-selfhosted-desc">
-            <strong>Self-hosted</strong>
+            <strong>{{ _("Self-hosted") }}</strong>
             <br>
             <span id="librewxr-selfhosted-desc">
-              <small>You deploy and maintain your own LibreWxR instance. It must be
-              reachable by Caddy (your front-end host).</small>
+              <small>{{ _("You deploy and maintain your own LibreWxR instance. It must be
+              reachable by Caddy (your front-end host).") }}</small>
             </span>
           </label>
 
           <div id="librewxr-selfhosted-url"
                {% if not state.librewxr_endpoint or state.librewxr_endpoint == "https://api.librewxr.net" %}style="display: none;"{% endif %}>
-            <label for="librewxr_endpoint_url">LibreWxR instance URL</label>
+            <label for="librewxr_endpoint_url">{{ _("LibreWxR instance URL") }}</label>
             <input type="url"
                    id="librewxr_endpoint_url"
                    name="librewxr_endpoint_url"
@@ -217,16 +217,16 @@
                    placeholder="https://librewxr.example.com"
                    aria-describedby="librewxr-url-hint">
             <small id="librewxr-url-hint">
-              Full URL to your LibreWxR instance. Must be reachable by Caddy.
+              {{ _("Full URL to your LibreWxR instance. Must be reachable by Caddy.") }}
             </small>
           </div>
 
           <details>
-            <summary>Geographic bounds (optional)</summary>
-            <p><small>For self-hosted instances with BBOX cropping, enter the bounding box
+            <summary>{{ _("Geographic bounds (optional)") }}</summary>
+            <p><small>{{ _("For self-hosted instances with BBOX cropping, enter the bounding box
                so the dashboard limits zoom-out to your coverage area. Leave empty for
-               global coverage (public API).</small></p>
-            <label for="librewxr_bounds">Bounds (south,west,north,east)</label>
+               global coverage (public API).") }}</small></p>
+            <label for="librewxr_bounds">{{ _("Bounds (south,west,north,east)") }}</label>
             <input type="text"
                    id="librewxr_bounds"
                    name="librewxr_bounds"
@@ -235,7 +235,7 @@
                    pattern="^-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*$"
                    aria-describedby="librewxr-bounds-hint">
             <small id="librewxr-bounds-hint">
-              Four comma-separated decimal values. Example for SoCal: 32.0,-120.5,35.5,-114.5
+              {{ _("Four comma-separated decimal values. Example for SoCal: 32.0,-120.5,35.5,-114.5") }}
             </small>
           </details>
         </fieldset>
@@ -250,9 +250,9 @@
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        ← Previous
+        ← {{ _("Previous") }}
       </button>
-      <button type="submit">Next: Webcam &#8594;</button>
+      <button type="submit">{{ _("Next: Webcam") }} &#8594;</button>
     </div>
 
     <script>
@@ -290,3 +290,4 @@
 {# OOB: update the progress bar to reflect the current step. #}
 {% set oob = true %}
 {% include "wizard/_progress_bar.html" %}
+</content>

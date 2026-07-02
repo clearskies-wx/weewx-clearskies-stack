@@ -2,7 +2,7 @@
 <select id="timezone"
         name="timezone"
         aria-describedby="tz-hint">
-  <option value="">— select a timezone —</option>
+  <option value="">{{ _("— select a timezone —") }}</option>
   {% for region, zone_list in timezones %}
   <optgroup label="{{ region }}">
     {% for tz in zone_list %}
@@ -23,3 +23,4 @@
        placeholder="America/New_York"
        aria-describedby="tz-hint">
 {% endif %}
+</content>

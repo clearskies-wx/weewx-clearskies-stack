@@ -1,15 +1,15 @@
 <article>
   <header>
-    <h2>Step 15 of 15 — Review &amp; Apply</h2>
-    <p>Review your configuration before applying.
-       Applying will send the API configuration to the remote API, then write
-       <code>branding.json</code>, <code>stack.conf</code>, and <code>secrets.env</code>
-       to the local config directory.</p>
+    <h2>{{ _("Step 15 of 15 — Review & Apply") }}</h2>
+    <p>{{ _("Review your configuration before applying.
+       Applying will send the API configuration to the remote API, then write") }}
+       <code>branding.json</code>, <code>stack.conf</code>, {{ _("and") }} <code>secrets.env</code>
+       {{ _("to the local config directory.") }}</p>
   </header>
 
   {% if error %}
   <div role="alert" class="alert-error">
-    <strong>Error:</strong> {{ error }}
+    <strong>{{ _("Error:") }}</strong> {{ error }}
   </div>
   {% endif %}
 
@@ -47,39 +47,39 @@
   {# 0. API Connection ---------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-api">
     <h3 id="review-api">
-      API Connection
+      {{ _("API Connection") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/1"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit API connection settings">Edit</a>
+         aria-label="{{ _('Edit API connection settings') }}">{{ _("Edit") }}</a>
     </h3>
     <table class="review-table">
-      <caption class="sr-only">API connection settings</caption>
+      <caption class="sr-only">{{ _("API connection settings") }}</caption>
       <tbody>
         <tr>
-          <th scope="row">API address</th>
-          <td>{{ state.api_address or '(not set)' }}</td>
+          <th scope="row">{{ _("API address") }}</th>
+          <td>{{ state.api_address or _("(not set)") }}</td>
         </tr>
         <tr>
-          <th scope="row">Connection</th>
+          <th scope="row">{{ _("Connection") }}</th>
           <td>
             {% if state.api_session_id or state.proxy_secret %}
-            <span aria-label="Connected">&#10003; Connected</span>
+            <span aria-label="{{ _('Connected') }}">&#10003; {{ _("Connected") }}</span>
             {% else %}
-            <div class="alert-error" style="margin-bottom:0;">Not connected — go back to step 1</div>
+            <div class="alert-error" style="margin-bottom:0;">{{ _("Not connected — go back to step 1") }}</div>
             {% endif %}
           </td>
         </tr>
         <tr>
-          <th scope="row">Certificate fingerprint</th>
+          <th scope="row">{{ _("Certificate fingerprint") }}</th>
           <td>
             {% if state.cert_fingerprint %}
             <code class="review-fingerprint">{{ state.cert_fingerprint }}</code>
             {% else %}
-            <em>(not verified)</em>
+            <em>{{ _("(not verified)") }}</em>
             {% endif %}
           </td>
         </tr>
@@ -90,23 +90,23 @@
   {# 1. Database ---------------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-db">
     <h3 id="review-db">
-      Database
+      {{ _("Database") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/2"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit database settings">Edit</a>
+         aria-label="{{ _('Edit database settings') }}">{{ _("Edit") }}</a>
     </h3>
     <table class="review-table">
-      <caption class="sr-only">Database connection settings</caption>
+      <caption class="sr-only">{{ _("Database connection settings") }}</caption>
       <tbody>
-        <tr><th scope="row">Host</th><td>{{ state.db_host or '(not set)' }}</td></tr>
-        <tr><th scope="row">Port</th><td>{{ state.db_port }}</td></tr>
-        <tr><th scope="row">User</th><td>{{ state.db_user or '(not set)' }}</td></tr>
-        <tr><th scope="row">Database</th><td>{{ state.db_name }}</td></tr>
-        <tr><th scope="row">Password</th><td><em>stored in secrets.env</em></td></tr>
+        <tr><th scope="row">{{ _("Host") }}</th><td>{{ state.db_host or _("(not set)") }}</td></tr>
+        <tr><th scope="row">{{ _("Port") }}</th><td>{{ state.db_port }}</td></tr>
+        <tr><th scope="row">{{ _("User") }}</th><td>{{ state.db_user or _("(not set)") }}</td></tr>
+        <tr><th scope="row">{{ _("Database") }}</th><td>{{ state.db_name }}</td></tr>
+        <tr><th scope="row">{{ _("Password") }}</th><td><em>{{ _("stored in secrets.env") }}</em></td></tr>
       </tbody>
     </table>
   </section>
@@ -114,61 +114,61 @@
   {# 2. Column Mapping --------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-columns">
     <h3 id="review-columns">
-      Column Mapping
+      {{ _("Column Mapping") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/3"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit column mapping">Edit</a>
+         aria-label="{{ _('Edit column mapping') }}">{{ _("Edit") }}</a>
     </h3>
     {% set mapped_count = state.column_mapping.values() | select | list | length %}
     {% set total_count = state.column_mapping | length %}
     {% if state.column_mapping %}
     <table class="review-table">
-      <caption class="sr-only">Column mapping summary</caption>
+      <caption class="sr-only">{{ _("Column mapping summary") }}</caption>
       <tbody>
         <tr>
-          <th scope="row">Mapped columns</th>
-          <td>{{ mapped_count }} of {{ total_count }} columns assigned</td>
+          <th scope="row">{{ _("Mapped columns") }}</th>
+          <td>{{ mapped_count }} {{ _("of") }} {{ total_count }} {{ _("columns assigned") }}</td>
         </tr>
       </tbody>
     </table>
     {% else %}
-    <p>No column mapping configured (all-stock schema, auto-mapped).</p>
+    <p>{{ _("No column mapping configured (all-stock schema, auto-mapped).") }}</p>
     {% endif %}
   </section>
 
   {# 3. Station ----------------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-station">
     <h3 id="review-station">
-      Station
+      {{ _("Station") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/4"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit station settings">Edit</a>
+         aria-label="{{ _('Edit station settings') }}">{{ _("Edit") }}</a>
     </h3>
     <table class="review-table">
-      <caption class="sr-only">Station identity settings</caption>
+      <caption class="sr-only">{{ _("Station identity settings") }}</caption>
       <tbody>
-        <tr><th scope="row">Name</th><td>{{ state.station_name or '(not set)' }}</td></tr>
-        <tr><th scope="row">Latitude</th><td>{{ state.latitude if state.latitude is not none else '(not set)' }}</td></tr>
-        <tr><th scope="row">Longitude</th><td>{{ state.longitude if state.longitude is not none else '(not set)' }}</td></tr>
+        <tr><th scope="row">{{ _("Name") }}</th><td>{{ state.station_name or _("(not set)") }}</td></tr>
+        <tr><th scope="row">{{ _("Latitude") }}</th><td>{{ state.latitude if state.latitude is not none else _("(not set)") }}</td></tr>
+        <tr><th scope="row">{{ _("Longitude") }}</th><td>{{ state.longitude if state.longitude is not none else _("(not set)") }}</td></tr>
         {% if state.altitude_meters is not none %}
         {% if state.altitude_unit == "feet" %}
-        <tr><th scope="row">Altitude (ft)</th><td>{{ (state.altitude_meters / 0.3048) | round(1) }}</td></tr>
+        <tr><th scope="row">{{ _("Altitude (ft)") }}</th><td>{{ (state.altitude_meters / 0.3048) | round(1) }}</td></tr>
         {% else %}
-        <tr><th scope="row">Altitude (m)</th><td>{{ state.altitude_meters | round(3) }}</td></tr>
+        <tr><th scope="row">{{ _("Altitude (m)") }}</th><td>{{ state.altitude_meters | round(3) }}</td></tr>
         {% endif %}
         {% else %}
-        <tr><th scope="row">Altitude</th><td>(not set)</td></tr>
+        <tr><th scope="row">{{ _("Altitude") }}</th><td>{{ _("(not set)") }}</td></tr>
         {% endif %}
-        <tr><th scope="row">Timezone</th><td>{{ state.timezone or '(not set)' }}</td></tr>
-        <tr><th scope="row">Default language</th><td>{{ state.default_locale or 'en' }}</td></tr>
+        <tr><th scope="row">{{ _("Timezone") }}</th><td>{{ state.timezone or _("(not set)") }}</td></tr>
+        <tr><th scope="row">{{ _("Default language") }}</th><td>{{ state.default_locale or 'en' }}</td></tr>
       </tbody>
     </table>
   </section>
@@ -176,22 +176,22 @@
   {# 5. Providers --------------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-providers">
     <h3 id="review-providers">
-      Providers
+      {{ _("Providers") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/6"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit provider selections">Edit</a>
+         aria-label="{{ _('Edit provider selections') }}">{{ _("Edit") }}</a>
     </h3>
     {% if state.providers %}
     <table class="review-table">
-      <caption class="sr-only">Selected data providers</caption>
+      <caption class="sr-only">{{ _("Selected data providers") }}</caption>
       <thead>
         <tr>
-          <th scope="col">Domain</th>
-          <th scope="col">Provider</th>
+          <th scope="col">{{ _("Domain") }}</th>
+          <th scope="col">{{ _("Provider") }}</th>
         </tr>
       </thead>
       <tbody>
@@ -204,28 +204,28 @@
       </tbody>
     </table>
     {% else %}
-    <p>No providers selected.</p>
+    <p>{{ _("No providers selected.") }}</p>
     {% endif %}
     {% if state.providers.get("forecast") == "aeris" %}
-    <p><small><strong>Aeris Forecast Model:</strong>
+    <p><small><strong>{{ _("Aeris Forecast Model:") }}</strong>
       {% if state.aeris_forecast_model == "xcast" %}
-        Xcast (ML-enhanced)
+        {{ _("Xcast (ML-enhanced)") }}
       {% else %}
-        Standard
+        {{ _("Standard") }}
       {% endif %}
     </small></p>
     {% endif %}
     {% if state.providers.get("radar") == "librewxr" %}
     <table role="presentation">
-      <caption class="sr-only">LibreWxR radar configuration</caption>
+      <caption class="sr-only">{{ _("LibreWxR radar configuration") }}</caption>
       <tbody>
         <tr>
-          <th scope="row">Endpoint</th>
+          <th scope="row">{{ _("Endpoint") }}</th>
           <td>{{ state.librewxr_endpoint }}</td>
         </tr>
         {% if state.librewxr_bounds %}
         <tr>
-          <th scope="row">Geographic bounds</th>
+          <th scope="row">{{ _("Geographic bounds") }}</th>
           <td>{{ state.librewxr_bounds }}</td>
         </tr>
         {% endif %}
@@ -238,22 +238,22 @@
   {% if state.api_keys %}
   <section class="review-section" aria-labelledby="review-keys">
     <h3 id="review-keys">
-      API Keys
+      {{ _("API Keys") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/6"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit API keys">Edit</a>
+         aria-label="{{ _('Edit API keys') }}">{{ _("Edit") }}</a>
     </h3>
     <table class="review-table">
-      <caption class="sr-only">API keys for selected providers (values masked)</caption>
+      <caption class="sr-only">{{ _("API keys for selected providers (values masked)") }}</caption>
       <thead>
         <tr>
-          <th scope="col">Provider</th>
-          <th scope="col">Field</th>
-          <th scope="col">Value</th>
+          <th scope="col">{{ _("Provider") }}</th>
+          <th scope="col">{{ _("Field") }}</th>
+          <th scope="col">{{ _("Value") }}</th>
         </tr>
       </thead>
       <tbody>
@@ -265,11 +265,11 @@
           <td>
             {% if value | length > 8 %}
             {# Show first 4 + bullets + last 4 #}
-            <span class="masked-key" aria-label="API key, value masked">{{ value[:4] }}••••••••{{ value[-4:] }}</span>
+            <span class="masked-key" aria-label="{{ _('API key, value masked') }}">{{ value[:4] }}••••••••{{ value[-4:] }}</span>
             {% elif value %}
-            <span class="masked-key" aria-label="API key set">••••••••</span>
+            <span class="masked-key" aria-label="{{ _('API key set') }}">••••••••</span>
             {% else %}
-            <em>(not set)</em>
+            <em>{{ _("(not set)") }}</em>
             {% endif %}
           </td>
         </tr>
@@ -283,23 +283,23 @@
   {# 7. Webcam ---------------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-webcam">
     <h3 id="review-webcam">
-      Webcam
+      {{ _("Webcam") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/7"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit webcam settings">Edit</a>
+         aria-label="{{ _('Edit webcam settings') }}">{{ _("Edit") }}</a>
     </h3>
     <table class="review-table">
-      <caption class="sr-only">Webcam configuration</caption>
+      <caption class="sr-only">{{ _("Webcam configuration") }}</caption>
       <tbody>
-        <tr><th scope="row">Enabled</th><td>{{ "Yes" if state.webcam_enabled else "No" }}</td></tr>
+        <tr><th scope="row">{{ _("Enabled") }}</th><td>{{ _("Yes") if state.webcam_enabled else _("No") }}</td></tr>
         {% if state.webcam_enabled %}
-        <tr><th scope="row">Image URL</th><td>{{ state.webcam_image_url }}</td></tr>
-        <tr><th scope="row">Video URL</th><td>{{ state.webcam_video_url }}</td></tr>
-        <tr><th scope="row">Refresh interval</th><td>{{ state.webcam_refresh_interval }}s</td></tr>
+        <tr><th scope="row">{{ _("Image URL") }}</th><td>{{ state.webcam_image_url }}</td></tr>
+        <tr><th scope="row">{{ _("Video URL") }}</th><td>{{ state.webcam_video_url }}</td></tr>
+        <tr><th scope="row">{{ _("Refresh interval") }}</th><td>{{ state.webcam_refresh_interval }}s</td></tr>
         {% endif %}
       </tbody>
     </table>
@@ -308,64 +308,64 @@
   {# 8. Branding ---------------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-branding">
     <h3 id="review-branding">
-      Branding
+      {{ _("Branding") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/step/8"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit branding settings">Edit</a>
+         aria-label="{{ _('Edit branding settings') }}">{{ _("Edit") }}</a>
     </h3>
 
-    <h4>Site Identity</h4>
+    <h4>{{ _("Site Identity") }}</h4>
     <table class="review-table">
-      <caption class="sr-only">Branding configuration</caption>
+      <caption class="sr-only">{{ _("Branding configuration") }}</caption>
       <tbody>
-        <tr><th scope="row">Site title</th><td>{{ state.site_title or '<em>(not set — station name used)</em>' | safe }}</td></tr>
-        <tr><th scope="row">Copyright entity</th><td>{{ state.copyright_entity or '<em>(not set)</em>' | safe }}</td></tr>
-        <tr><th scope="row">Logo (light theme)</th><td>{{ state.logo_light_url or '<em>None</em>' | safe }}</td></tr>
-        <tr><th scope="row">Logo (dark theme)</th><td>{{ state.logo_dark_url or '<em>None</em>' | safe }}</td></tr>
-        <tr><th scope="row">Logo alt text</th><td>{{ state.logo_alt or '<em>(not set)</em>' | safe }}</td></tr>
-        <tr><th scope="row">Favicon</th><td>{{ state.favicon_url or '<em>None</em>' | safe }}</td></tr>
+        <tr><th scope="row">{{ _("Site title") }}</th><td>{% if state.site_title %}{{ state.site_title }}{% else %}<em>{{ _("(not set — station name used)") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("Copyright entity") }}</th><td>{% if state.copyright_entity %}{{ state.copyright_entity }}{% else %}<em>{{ _("(not set)") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("Logo (light theme)") }}</th><td>{% if state.logo_light_url %}{{ state.logo_light_url }}{% else %}<em>{{ _("None") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("Logo (dark theme)") }}</th><td>{% if state.logo_dark_url %}{{ state.logo_dark_url }}{% else %}<em>{{ _("None") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("Logo alt text") }}</th><td>{% if state.logo_alt %}{{ state.logo_alt }}{% else %}<em>{{ _("(not set)") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("Favicon") }}</th><td>{% if state.favicon_url %}{{ state.favicon_url }}{% else %}<em>{{ _("None") }}</em>{% endif %}</td></tr>
         <tr>
-          <th scope="row">Accent color</th>
+          <th scope="row">{{ _("Accent color") }}</th>
           <td>
             {% if state.accent %}
               {{ state.accent | capitalize }}
             {% else %}
-              <em>Blue (default)</em>
+              <em>{{ _("Blue (default)") }}</em>
             {% endif %}
           </td>
         </tr>
         <tr>
-          <th scope="row">Theme mode</th>
+          <th scope="row">{{ _("Theme mode") }}</th>
           <td>
             {% if state.default_theme_mode == "light" %}
-              Light
+              {{ _("Light") }}
             {% elif state.default_theme_mode == "dark" %}
-              Dark
+              {{ _("Dark") }}
             {% elif state.default_theme_mode == "auto-os" %}
-              Match device
+              {{ _("Match device") }}
             {% elif state.default_theme_mode == "auto-sunrise-sunset" %}
-              Match sunrise/sunset
+              {{ _("Match sunrise/sunset") }}
             {% else %}
-              <em>Match device (default)</em>
+              <em>{{ _("Match device (default)") }}</em>
             {% endif %}
           </td>
         </tr>
-        <tr><th scope="row">Custom CSS URL</th><td>{{ state.custom_css_url or '<em>None</em>' | safe }}</td></tr>
+        <tr><th scope="row">{{ _("Custom CSS URL") }}</th><td>{% if state.custom_css_url %}{{ state.custom_css_url }}{% else %}<em>{{ _("None") }}</em>{% endif %}</td></tr>
       </tbody>
     </table>
 
-    <h4>Social Media</h4>
+    <h4>{{ _("Social Media") }}</h4>
     <table class="review-table">
-      <caption class="sr-only">Social media links</caption>
+      <caption class="sr-only">{{ _("Social media links") }}</caption>
       <tbody>
-        <tr><th scope="row">Facebook</th><td>{{ state.facebook_url or '<em>Not configured</em>' | safe }}</td></tr>
-        <tr><th scope="row">Twitter / X</th><td>{{ state.twitter_url or '<em>Not configured</em>' | safe }}</td></tr>
-        <tr><th scope="row">Instagram</th><td>{{ state.instagram_url or '<em>Not configured</em>' | safe }}</td></tr>
-        <tr><th scope="row">YouTube</th><td>{{ state.youtube_url or '<em>Not configured</em>' | safe }}</td></tr>
+        <tr><th scope="row">{{ _("Facebook") }}</th><td>{% if state.facebook_url %}{{ state.facebook_url }}{% else %}<em>{{ _("Not configured") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("Twitter / X") }}</th><td>{% if state.twitter_url %}{{ state.twitter_url }}{% else %}<em>{{ _("Not configured") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("Instagram") }}</th><td>{% if state.instagram_url %}{{ state.instagram_url }}{% else %}<em>{{ _("Not configured") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("YouTube") }}</th><td>{% if state.youtube_url %}{{ state.youtube_url }}{% else %}<em>{{ _("Not configured") }}</em>{% endif %}</td></tr>
       </tbody>
     </table>
   </section>
@@ -373,64 +373,64 @@
   {# 9. Privacy, Legal & Analytics ---------------------------------- #}
   <section class="review-section" aria-labelledby="review-privacy">
     <h3 id="review-privacy">
-      Privacy, Legal &amp; Analytics
+      {{ _("Privacy, Legal & Analytics") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/privacy"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit privacy and analytics settings">Edit</a>
+         aria-label="{{ _('Edit privacy and analytics settings') }}">{{ _("Edit") }}</a>
     </h3>
 
-    <h4>Analytics</h4>
+    <h4>{{ _("Analytics") }}</h4>
     <table class="review-table">
-      <caption class="sr-only">Analytics and privacy settings</caption>
+      <caption class="sr-only">{{ _("Analytics and privacy settings") }}</caption>
       <tbody>
         <tr>
-          <th scope="row">GA Measurement ID</th>
+          <th scope="row">{{ _("GA Measurement ID") }}</th>
           <td>
-            {{ state.google_analytics_id or '<em>Not configured</em>' | safe }}
+            {% if state.google_analytics_id %}{{ state.google_analytics_id }}{% else %}<em>{{ _("Not configured") }}</em>{% endif %}
             {% if state.google_analytics_id %}
-            <br><small><em>Phase 4: takes effect after the API update.</em></small>
+            <br><small><em>{{ _("Phase 4: takes effect after the API update.") }}</em></small>
             {% endif %}
           </td>
         </tr>
         <tr>
-          <th scope="row">Privacy regions</th>
+          <th scope="row">{{ _("Privacy regions") }}</th>
           <td>
             {% if state.privacy_regions %}
               {{ state.privacy_regions }}
-              <br><small><em>Phase 4: takes effect after the API update.</em></small>
+              <br><small><em>{{ _("Phase 4: takes effect after the API update.") }}</em></small>
             {% else %}
-              <em>Global (default)</em>
+              <em>{{ _("Global (default)") }}</em>
             {% endif %}
           </td>
         </tr>
       </tbody>
     </table>
 
-    <h4>Legal Content</h4>
+    <h4>{{ _("Legal Content") }}</h4>
     <table class="review-table">
-      <caption class="sr-only">Legal content override configuration</caption>
+      <caption class="sr-only">{{ _("Legal content override configuration") }}</caption>
       <tbody>
         <tr>
-          <th scope="row">Custom Terms of Use</th>
+          <th scope="row">{{ _("Custom Terms of Use") }}</th>
           <td>
             {% if state.custom_terms_md %}
-              Custom
+              {{ _("Custom") }}
             {% else %}
-              <em>Default</em>
+              <em>{{ _("Default") }}</em>
             {% endif %}
           </td>
         </tr>
         <tr>
-          <th scope="row">Custom Privacy Policy</th>
+          <th scope="row">{{ _("Custom Privacy Policy") }}</th>
           <td>
             {% if state.custom_privacy_md %}
-              Custom
+              {{ _("Custom") }}
             {% else %}
-              <em>Default</em>
+              <em>{{ _("Default") }}</em>
             {% endif %}
           </td>
         </tr>
@@ -441,23 +441,23 @@
   {# 10. Feature Settings ------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-features">
     <h3 id="review-features">
-      Feature Settings
+      {{ _("Feature Settings") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/features"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit feature settings">Edit</a>
+         aria-label="{{ _('Edit feature settings') }}">{{ _("Edit") }}</a>
     </h3>
 
-    <h4>Seismic Page</h4>
+    <h4>{{ _("Seismic Page") }}</h4>
     <table class="review-table">
-      <caption class="sr-only">Earthquake data configuration</caption>
+      <caption class="sr-only">{{ _("Earthquake data configuration") }}</caption>
       <tbody>
-        <tr><th scope="row">Search radius</th><td>{{ state.earthquake_radius_km | int }} km</td></tr>
-        <tr><th scope="row">Min magnitude</th><td>{{ state.earthquake_min_magnitude }}</td></tr>
-        <tr><th scope="row">Time window</th><td>{{ state.earthquake_default_days }} day{{ "s" if state.earthquake_default_days != 1 else "" }}</td></tr>
+        <tr><th scope="row">{{ _("Search radius") }}</th><td>{{ state.earthquake_radius_km | int }} km</td></tr>
+        <tr><th scope="row">{{ _("Min magnitude") }}</th><td>{{ state.earthquake_min_magnitude }}</td></tr>
+        <tr><th scope="row">{{ _("Time window") }}</th><td>{{ state.earthquake_default_days }} {{ _("day") if state.earthquake_default_days == 1 else _("days") }}</td></tr>
       </tbody>
     </table>
   </section>
@@ -465,39 +465,39 @@
   {# 11. TLS / HTTPS --------------------------------------------------- #}
   <section class="review-section" aria-labelledby="review-tls">
     <h3 id="review-tls">
-      TLS / HTTPS
+      {{ _("TLS / HTTPS") }}
       <a class="review-edit-link"
          href="#"
          hx-get="/wizard/tls"
          hx-target="#wizard-content"
          hx-swap="innerHTML show:window:top"
          hx-indicator="#wizard-spinner"
-         aria-label="Edit TLS settings">Edit</a>
+         aria-label="{{ _('Edit TLS settings') }}">{{ _("Edit") }}</a>
     </h3>
     <table class="review-table">
-      <caption class="sr-only">TLS / HTTPS configuration</caption>
+      <caption class="sr-only">{{ _("TLS / HTTPS configuration") }}</caption>
       <tbody>
         <tr>
-          <th scope="row">Mode</th>
+          <th scope="row">{{ _("Mode") }}</th>
           <td>
             {% if state.tls_mode == 'acme_http01' %}
-              Let's Encrypt (HTTP-01) — auto-issued, public server
+              {{ _("Let's Encrypt (HTTP-01) — auto-issued, public server") }}
             {% elif state.tls_mode == 'acme_dns01' %}
-              Let's Encrypt (DNS-01) — DNS provider challenge
+              {{ _("Let's Encrypt (DNS-01) — DNS provider challenge") }}
             {% elif state.tls_mode == 'behind_proxy' %}
-              Behind existing reverse proxy — HTTP-only Caddy
+              {{ _("Behind existing reverse proxy — HTTP-only Caddy") }}
             {% else %}
-              <em>(not configured)</em>
+              <em>{{ _("(not configured)") }}</em>
             {% endif %}
           </td>
         </tr>
         {% if state.tls_mode in ('acme_http01', 'acme_dns01') %}
-        <tr><th scope="row">Domain</th><td>{{ state.tls_domain or '<em>(not set)</em>' | safe }}</td></tr>
-        <tr><th scope="row">ACME email</th><td>{{ state.tls_acme_email or '<em>(not set)</em>' | safe }}</td></tr>
+        <tr><th scope="row">{{ _("Domain") }}</th><td>{% if state.tls_domain %}{{ state.tls_domain }}{% else %}<em>{{ _("(not set)") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("ACME email") }}</th><td>{% if state.tls_acme_email %}{{ state.tls_acme_email }}{% else %}<em>{{ _("(not set)") }}</em>{% endif %}</td></tr>
         {% endif %}
         {% if state.tls_mode == 'acme_dns01' %}
-        <tr><th scope="row">DNS provider</th><td>{{ state.tls_dns_provider or '<em>(not set)</em>' | safe }}</td></tr>
-        <tr><th scope="row">API token</th><td><em>stored in secrets.env</em></td></tr>
+        <tr><th scope="row">{{ _("DNS provider") }}</th><td>{% if state.tls_dns_provider %}{{ state.tls_dns_provider }}{% else %}<em>{{ _("(not set)") }}</em>{% endif %}</td></tr>
+        <tr><th scope="row">{{ _("API token") }}</th><td><em>{{ _("stored in secrets.env") }}</em></td></tr>
         {% endif %}
       </tbody>
     </table>
@@ -514,9 +514,9 @@
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        &#8592; Previous
+        &#8592; {{ _("Previous") }}
       </button>
-      <button type="submit">Apply Configuration</button>
+      <button type="submit">{{ _("Apply Configuration") }}</button>
     </div>
   </form>
 </article>
@@ -524,3 +524,4 @@
 {# OOB: update the progress bar to reflect the current step. #}
 {% set oob = true %}
 {% include "wizard/_progress_bar.html" %}
+</content>

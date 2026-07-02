@@ -1,13 +1,13 @@
 <article>
   <header>
-    <h2>Step 6 of 15 — Station Identity</h2>
-    <p>Confirm your weather station's location and display name.
-       These are used for provider geo-routing and the dashboard header.</p>
+    <h2>{{ _("Step 6 of 15 — Station Identity") }}</h2>
+    <p>{{ _("Confirm your weather station's location and display name.
+       These are used for provider geo-routing and the dashboard header.") }}</p>
   </header>
 
   {% if error %}
   <div role="alert" class="alert-error">
-    <strong>Error:</strong> {{ error }}
+    <strong>{{ _("Error:") }}</strong> {{ error }}
   </div>
   {% endif %}
 
@@ -23,9 +23,9 @@
     <input type="hidden" id="altitude_unit" name="altitude_unit" value="{{ state.altitude_unit }}">
 
     <fieldset>
-      <legend>Station information</legend>
+      <legend>{{ _("Station information") }}</legend>
 
-      <label for="station_name">Station display name</label>
+      <label for="station_name">{{ _("Station display name") }}</label>
       <input type="text"
              id="station_name"
              name="station_name"
@@ -33,11 +33,11 @@
              maxlength="100"
              placeholder="My Home Weather Station"
              aria-describedby="station-name-hint">
-      <small id="station-name-hint">Shown in the dashboard header. Leave blank to use the default.</small>
+      <small id="station-name-hint">{{ _("Shown in the dashboard header. Leave blank to use the default.") }}</small>
 
       <div class="grid">
         <div>
-          <label for="latitude">Latitude</label>
+          <label for="latitude">{{ _("Latitude") }}</label>
           <input type="number"
                  id="latitude"
                  name="latitude"
@@ -52,10 +52,10 @@
                  hx-include="[name=latitude],[name=longitude]"
                  hx-target="#timezone"
                  hx-swap="outerHTML">
-          <small id="lat-hint">Decimal degrees. North is positive (e.g. 38.8894); South is negative (e.g. -33.8688).</small>
+          <small id="lat-hint">{{ _("Decimal degrees. North is positive (e.g. 38.8894); South is negative (e.g. -33.8688).") }}</small>
         </div>
         <div>
-          <label for="longitude">Longitude</label>
+          <label for="longitude">{{ _("Longitude") }}</label>
           <input type="number"
                  id="longitude"
                  name="longitude"
@@ -70,14 +70,14 @@
                  hx-include="[name=latitude],[name=longitude]"
                  hx-target="#timezone"
                  hx-swap="outerHTML">
-          <small id="lon-hint">Decimal degrees. West is negative (e.g. -77.0352); East is positive (e.g. 151.2093).</small>
+          <small id="lon-hint">{{ _("Decimal degrees. West is negative (e.g. -77.0352); East is positive (e.g. 151.2093).") }}</small>
         </div>
       </div>
 
       <button type="button"
               onclick="useMyLocation()"
-              aria-label="Use browser location to fill latitude and longitude">
-        <span aria-hidden="true">📍</span> Use my location
+              aria-label="{{ _('Use browser location to fill latitude and longitude') }}">
+        <span aria-hidden="true">📍</span> {{ _("Use my location") }}
       </button>
       <div id="geolocation-status"
            role="status"
@@ -86,7 +86,7 @@
 
       <div class="grid" style="align-items:start;">
         <div>
-          <label for="altitude_meters">Altitude</label>
+          <label for="altitude_meters">{{ _("Altitude") }}</label>
           <input type="number"
                  id="altitude_meters"
                  name="altitude_meters"
@@ -96,27 +96,27 @@
                  max="30000"
                  placeholder="0"
                  aria-describedby="alt-hint">
-          <small id="alt-hint">Used for pressure calculations. Enter 0 if unknown.</small>
+          <small id="alt-hint">{{ _("Used for pressure calculations. Enter 0 if unknown.") }}</small>
         </div>
         <div>
-          <label for="altitude_unit_select">Unit</label>
+          <label for="altitude_unit_select">{{ _("Unit") }}</label>
           <select id="altitude_unit_select"
                   onchange="onAltUnitChange(this.value)"
-                  aria-label="Altitude unit">
-            <option value="meters" {% if state.altitude_unit != 'feet' %}selected{% endif %}>meters</option>
-            <option value="feet" {% if state.altitude_unit == 'feet' %}selected{% endif %}>feet</option>
+                  aria-label="{{ _('Altitude unit') }}">
+            <option value="meters" {% if state.altitude_unit != 'feet' %}selected{% endif %}>{{ _("meters") }}</option>
+            <option value="feet" {% if state.altitude_unit == 'feet' %}selected{% endif %}>{{ _("feet") }}</option>
           </select>
           <small>&nbsp;</small>
         </div>
       </div>
 
-      <label for="timezone">Timezone</label>
+      <label for="timezone">{{ _("Timezone") }}</label>
       <div aria-live="polite" id="timezone-live-region">
         {% if timezones %}
         <select id="timezone"
                 name="timezone"
                 aria-describedby="tz-hint">
-          <option value="">— select a timezone —</option>
+          <option value="">{{ _("— select a timezone —") }}</option>
           {% for region, zone_list in timezones %}
           <optgroup label="{{ region }}">
             {% for tz in zone_list %}
@@ -139,15 +139,15 @@
         {% endif %}
       </div>
       <small id="tz-hint">
-        IANA timezone name, e.g. <code>America/New_York</code>, <code>Europe/London</code>, <code>Asia/Tokyo</code>.
+        {{ _("IANA timezone name, e.g.") }} <code>America/New_York</code>, <code>Europe/London</code>, <code>Asia/Tokyo</code>.
         {% if state.latitude and state.longitude %}
-        <strong>Auto-detected from your coordinates.</strong> You can change it using the dropdown if needed.
+        <strong>{{ _("Auto-detected from your coordinates.") }}</strong> {{ _("You can change it using the dropdown if needed.") }}
         {% else %}
-        If you enter coordinates above, the timezone will be auto-detected.
+        {{ _("If you enter coordinates above, the timezone will be auto-detected.") }}
         {% endif %}
       </small>
 
-      <label for="default_locale">Default language</label>
+      <label for="default_locale">{{ _("Default language") }}</label>
       <select id="default_locale"
               name="default_locale"
               aria-describedby="locale-hint">
@@ -158,7 +158,7 @@
         </option>
         {% endfor %}
       </select>
-      <small id="locale-hint">The default display language for the dashboard. Operators and visitors can override this in the UI.</small>
+      <small id="locale-hint">{{ _("The default display language for the dashboard. Operators and visitors can override this in the UI.") }}</small>
     </fieldset>
 
     {# ================================================================== #}
@@ -166,26 +166,26 @@
     {# ================================================================== #}
 
     <fieldset>
-      <legend>Station Photo</legend>
+      <legend>{{ _("Station Photo") }}</legend>
 
-      <label for="station_photo_file">Upload station photo (optional)</label>
+      <label for="station_photo_file">{{ _("Upload station photo (optional)") }}</label>
       <input type="file"
              id="station_photo_file"
              name="station_photo_file"
              accept=".jpg,.jpeg,.png,.webp"
              aria-describedby="station_photo_file_help">
-      <small id="station_photo_file_help">Optional. JPG, PNG, or WebP, max 2 MB. Displayed on the About page.</small>
+      <small id="station_photo_file_help">{{ _("Optional. JPG, PNG, or WebP, max 2 MB. Displayed on the About page.") }}</small>
 
       {% if state.station_photo_url %}
       <div id="station_photo_preview">
-        <p><small><strong>Current station photo:</strong></small></p>
+        <p><small><strong>{{ _("Current station photo:") }}</strong></small></p>
         <img src="{{ state.station_photo_url }}"
-             alt="{{ state.station_photo_alt or 'Station photo preview' }}"
+             alt="{{ state.station_photo_alt or _('Station photo preview') }}"
              style="max-width: 200px; max-height: 150px; display: block; border-radius: 0.25rem;">
       </div>
       {% endif %}
 
-      <label for="station_photo_alt">Station photo description (alt text)</label>
+      <label for="station_photo_alt">{{ _("Station photo description (alt text)") }}</label>
       <input type="text"
              id="station_photo_alt"
              name="station_photo_alt"
@@ -193,7 +193,7 @@
              maxlength="200"
              placeholder="Describe your weather station"
              aria-describedby="station_photo_alt_help">
-      <small id="station_photo_alt_help">Required for accessibility when a photo is uploaded. Describe what is shown in the image (e.g. "Rooftop weather station with anemometer and rain gauge").</small>
+      <small id="station_photo_alt_help">{{ _('Required for accessibility when a photo is uploaded. Describe what is shown in the image (e.g. "Rooftop weather station with anemometer and rain gauge").') }}</small>
     </fieldset>
 
     {# ================================================================== #}
@@ -201,10 +201,10 @@
     {# ================================================================== #}
 
     <fieldset>
-      <legend>About This Station (Optional)</legend>
+      <legend>{{ _("About This Station (Optional)") }}</legend>
 
-      <label for="about_content">Station description</label>
-      <small id="about_content_hint">Shown on the About page. Supports plain text. Leave empty to skip.</small>
+      <label for="about_content">{{ _("Station description") }}</label>
+      <small id="about_content_hint">{{ _("Shown on the About page. Supports plain text. Leave empty to skip.") }}</small>
       <textarea id="about_content"
                 name="about_content"
                 rows="4"
@@ -219,7 +219,7 @@
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        ← Previous
+        ← {{ _("Previous") }}
       </button>
       {% else %}
       <button type="button"
@@ -227,10 +227,10 @@
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        ← Previous
+        ← {{ _("Previous") }}
       </button>
       {% endif %}
-      <button type="submit">Next: Units &#8594;</button>
+      <button type="submit">{{ _("Next: Units") }} &#8594;</button>
     </div>
   </form>
 </article>
@@ -302,3 +302,4 @@
 {# OOB: update the progress bar to reflect the current step. #}
 {% set oob = true %}
 {% include "wizard/_progress_bar.html" %}
+</content>

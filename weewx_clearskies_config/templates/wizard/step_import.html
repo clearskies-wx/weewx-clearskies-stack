@@ -1,14 +1,14 @@
 <article>
   <header>
-    <h2>Step 2 of 15 — Import Existing Configuration</h2>
-    <p>If you have an existing weewx skin (like Belchertown), enter its name to import
+    <h2>{{ _("Step 2 of 15 — Import Existing Configuration") }}</h2>
+    <p>{{ _("If you have an existing weewx skin (like Belchertown), enter its name to import
        the configuration and pre-fill the steps that follow.
-       Otherwise, click <strong>Skip — Start Fresh</strong> to begin with US defaults.</p>
+       Otherwise, click") }} <strong>{{ _("Skip — Start Fresh") }}</strong> {{ _("to begin with US defaults.") }}</p>
   </header>
 
   {% if error %}
   <div role="alert" class="alert-error">
-    <strong>Error:</strong> {{ error }}
+    <strong>{{ _("Error:") }}</strong> {{ error }}
   </div>
   {% endif %}
 
@@ -22,9 +22,9 @@
 
     {# --- API-based import --- #}
     <fieldset>
-      <legend>Import from weewx skin</legend>
+      <legend>{{ _("Import from weewx skin") }}</legend>
 
-      <label for="skin_name">Skin name</label>
+      <label for="skin_name">{{ _("Skin name") }}</label>
       <input type="text"
              id="skin_name"
              name="skin_name"
@@ -32,13 +32,13 @@
              placeholder="e.g. Belchertown"
              aria-describedby="skin-name-hint">
       <small id="skin-name-hint">
-        Directory name from <code>/etc/weewx/skins/</code> on your weewx host.
-        The API will fetch the <code>skin.conf</code> file automatically.
+        {{ _("Directory name from") }} <code>/etc/weewx/skins/</code> {{ _("on your weewx host.
+        The API will fetch the") }} <code>skin.conf</code> {{ _("file automatically.") }}
       </small>
 
       <div class="wizard-nav" role="group" style="margin-block-start: 1rem;">
         <button type="submit" hx-indicator="#wizard-spinner">
-          Import and Continue &#8594;
+          {{ _("Import and Continue") }} &#8594;
         </button>
       </div>
     </fieldset>
@@ -47,23 +47,23 @@
 
     {# --- File upload fallback --- #}
     <details class="wizard-details">
-      <summary>Or upload a skin.conf file manually</summary>
+      <summary>{{ _("Or upload a skin.conf file manually") }}</summary>
       <div>
-        <label for="skin_conf_file">skin.conf file</label>
+        <label for="skin_conf_file">{{ _("skin.conf file") }}</label>
         <input type="file"
                id="skin_conf_file"
                name="skin_conf"
                accept=".conf,text/plain"
                aria-describedby="skin-conf-hint">
         <small id="skin-conf-hint">
-          Use this if the API cannot reach the skin directory directly.
-          Select the <code>skin.conf</code> from your existing weewx skin
-          (e.g. <code>/etc/weewx/skins/Belchertown/skin.conf</code>).
+          {{ _("Use this if the API cannot reach the skin directory directly.
+          Select the") }} <code>skin.conf</code> {{ _("from your existing weewx skin
+          (e.g.") }} <code>/etc/weewx/skins/Belchertown/skin.conf</code>).
         </small>
 
         <div style="margin-block-start: 1rem;">
           <button type="submit" class="outline" hx-indicator="#wizard-spinner">
-            Upload and Continue &#8594;
+            {{ _("Upload and Continue") }} &#8594;
           </button>
         </div>
       </div>
@@ -79,10 +79,10 @@
               value="1"
               class="outline secondary"
               hx-indicator="#wizard-spinner">
-        Skip &#8212; Start Fresh &#8594;
+        {{ _("Skip — Start Fresh") }} &#8594;
       </button>
       <small style="display:block; margin-block-start:0.5rem;">
-        Start with sensible US-unit defaults. You can adjust all settings in the steps that follow.
+        {{ _("Start with sensible US-unit defaults. You can adjust all settings in the steps that follow.") }}
       </small>
     </div>
 
@@ -98,3 +98,4 @@
 {% set oob = true %}
 {% include "wizard/_progress_bar.html" %}
 {% endif %}
+</content>

@@ -1,8 +1,8 @@
 {% from "macros/form_fields.html" import render_field %}
 <article>
   <header>
-    <h2>Step 11 of 15 — Appearance &amp; Branding</h2>
-    <p>Customise your site's identity, logos, colours, and social media links.</p>
+    <h2>{{ _("Step 11 of 15 — Appearance & Branding") }}</h2>
+    <p>{{ _("Customise your site's identity, logos, colours, and social media links.") }}</p>
   </header>
 
   {% if error %}
@@ -21,11 +21,11 @@
     {# Section 1: Site Identity                                            #}
     {# ================================================================== #}
 
-    <h3>Site Identity</h3>
+    <h3>{{ _("Site Identity") }}</h3>
 
     <fieldset>
-      <legend>Basic Identity</legend>
-      <p><small>How your weather site identifies itself to visitors.</small></p>
+      <legend>{{ _("Basic Identity") }}</legend>
+      <p><small>{{ _("How your weather site identifies itself to visitors.") }}</small></p>
 
       {{ render_field(fields_by_key["site_title"], values.get("site_title", ""), "wizard") }}
       {{ render_field(fields_by_key["copyright_entity"], values.get("copyright_entity", ""), "wizard") }}
@@ -35,18 +35,18 @@
     {# Section 2: Logos                                                    #}
     {# ================================================================== #}
 
-    <h3>Logos</h3>
+    <h3>{{ _("Logos") }}</h3>
 
     <fieldset>
-      <legend>Logo (light theme)</legend>
-      <p><small>Shown when the visitor uses a light colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
+      <legend>{{ _("Logo (light theme)") }}</legend>
+      <p><small>{{ _("Shown when the visitor uses a light colour scheme. PNG or SVG, max 500 KB.") }}</small></p>
 
       {% if state.logo_light_url %}
       <p>
         <small>
-          Current:
+          {{ _("Current:") }}
           {% if state.logo_light_url.startswith('/wizard/branding/') %}
-            <strong>uploaded file</strong> — {{ state.logo_light_url.split('/')[-1] }}
+            <strong>{{ _("uploaded file") }}</strong> — {{ state.logo_light_url.split('/')[-1] }}
           {% else %}
             <a href="{{ state.logo_light_url }}" target="_blank" rel="noopener">{{ state.logo_light_url }}</a>
           {% endif %}
@@ -54,27 +54,27 @@
       </p>
       {% endif %}
 
-      <label for="logo_light_file">Upload a file</label>
+      <label for="logo_light_file">{{ _("Upload a file") }}</label>
       <input type="file"
              id="logo_light_file"
              name="logo_light_file"
              accept=".png,.svg,image/png,image/svg+xml">
-      <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+      <small>{{ _("PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.") }}</small>
 
-      <label for="logo_light_url">— or enter a URL</label>
+      <label for="logo_light_url">{{ _("— or enter a URL") }}</label>
       {{ render_field(fields_by_key["logo_light_url"], values.get("logo_light_url", ""), "wizard") }}
     </fieldset>
 
     <fieldset>
-      <legend>Logo (dark theme)</legend>
-      <p><small>Shown when the visitor uses a dark colour scheme. PNG or SVG, max 500&nbsp;KB.</small></p>
+      <legend>{{ _("Logo (dark theme)") }}</legend>
+      <p><small>{{ _("Shown when the visitor uses a dark colour scheme. PNG or SVG, max 500 KB.") }}</small></p>
 
       {% if state.logo_dark_url %}
       <p>
         <small>
-          Current:
+          {{ _("Current:") }}
           {% if state.logo_dark_url.startswith('/wizard/branding/') %}
-            <strong>uploaded file</strong> — {{ state.logo_dark_url.split('/')[-1] }}
+            <strong>{{ _("uploaded file") }}</strong> — {{ state.logo_dark_url.split('/')[-1] }}
           {% else %}
             <a href="{{ state.logo_dark_url }}" target="_blank" rel="noopener">{{ state.logo_dark_url }}</a>
           {% endif %}
@@ -82,14 +82,14 @@
       </p>
       {% endif %}
 
-      <label for="logo_dark_file">Upload a file</label>
+      <label for="logo_dark_file">{{ _("Upload a file") }}</label>
       <input type="file"
              id="logo_dark_file"
              name="logo_dark_file"
              accept=".png,.svg,image/png,image/svg+xml">
-      <small>PNG or SVG, max 500&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+      <small>{{ _("PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.") }}</small>
 
-      <label for="logo_dark_url">— or enter a URL</label>
+      <label for="logo_dark_url">{{ _("— or enter a URL") }}</label>
       {{ render_field(fields_by_key["logo_dark_url"], values.get("logo_dark_url", ""), "wizard") }}
     </fieldset>
 
@@ -97,33 +97,33 @@
     {% if state.logo_light_url and not state.logo_dark_url %}
     <div class="alert-error" role="status" aria-live="polite">
       <span>
-        <strong>Note:</strong> You have a light-theme logo but no dark-theme logo.
+        <strong>{{ _("Note:") }}</strong> {{ _("You have a light-theme logo but no dark-theme logo.
         Visitors using a dark colour scheme will see your light logo automatically
         colour-inverted, which may not look correct. Upload a dark-theme logo above
-        to control how it appears.
+        to control how it appears.") }}
       </span>
     </div>
     {% elif state.logo_dark_url and not state.logo_light_url %}
     <div class="alert-error" role="status" aria-live="polite">
       <span>
-        <strong>Note:</strong> You have a dark-theme logo but no light-theme logo.
+        <strong>{{ _("Note:") }}</strong> {{ _("You have a dark-theme logo but no light-theme logo.
         Visitors using a light colour scheme will see your dark logo automatically
         colour-inverted, which may not look correct. Upload a light-theme logo above
-        to control how it appears.
+        to control how it appears.") }}
       </span>
     </div>
     {% endif %}
 
     <fieldset>
-      <legend>Favicon</legend>
-      <p><small>Small icon shown in the browser tab. ICO or PNG, max 100&nbsp;KB. Leave blank to use the default Clear Skies icon.</small></p>
+      <legend>{{ _("Favicon") }}</legend>
+      <p><small>{{ _("Small icon shown in the browser tab. ICO or PNG, max 100 KB. Leave blank to use the default Clear Skies icon.") }}</small></p>
 
       {% if state.favicon_url %}
       <p>
         <small>
-          Current:
+          {{ _("Current:") }}
           {% if state.favicon_url.startswith('/wizard/branding/') %}
-            <strong>uploaded file</strong> — {{ state.favicon_url.split('/')[-1] }}
+            <strong>{{ _("uploaded file") }}</strong> — {{ state.favicon_url.split('/')[-1] }}
           {% else %}
             <a href="{{ state.favicon_url }}" target="_blank" rel="noopener">{{ state.favicon_url }}</a>
           {% endif %}
@@ -131,14 +131,14 @@
       </p>
       {% endif %}
 
-      <label for="favicon_file">Upload a file</label>
+      <label for="favicon_file">{{ _("Upload a file") }}</label>
       <input type="file"
              id="favicon_file"
              name="favicon_file"
              accept=".ico,.png,image/x-icon,image/vnd.microsoft.icon,image/png">
-      <small>ICO or PNG, max 100&nbsp;KB. Replaces the URL below when a file is chosen.</small>
+      <small>{{ _("ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.") }}</small>
 
-      <label for="favicon_url">— or enter a URL</label>
+      <label for="favicon_url">{{ _("— or enter a URL") }}</label>
       {{ render_field(fields_by_key["favicon_url"], values.get("favicon_url", ""), "wizard") }}
     </fieldset>
 
@@ -148,7 +148,7 @@
     {# Section 3: Colors &amp; Theme                                       #}
     {# ================================================================== #}
 
-    <h3>Colors &amp; Theme</h3>
+    <h3>{{ _("Colors & Theme") }}</h3>
 
     {{ render_field(fields_by_key["accent"], values.get("accent", "blue"), "wizard") }}
     {{ render_field(fields_by_key["default_theme_mode"], values.get("default_theme_mode", "auto-os"), "wizard") }}
@@ -158,11 +158,11 @@
     {# Section 4: Social Media                                             #}
     {# ================================================================== #}
 
-    <h3>Social Media</h3>
+    <h3>{{ _("Social Media") }}</h3>
 
     <fieldset>
-      <legend>Social Media Links</legend>
-      <p><small>Optional. Leave blank if not used. When provided, social media links appear in the dashboard footer.</small></p>
+      <legend>{{ _("Social Media Links") }}</legend>
+      <p><small>{{ _("Optional. Leave blank if not used. When provided, social media links appear in the dashboard footer.") }}</small></p>
 
       {{ render_field(social_fields_by_key["facebook_url"], values.get("facebook_url", ""), "wizard") }}
       {{ render_field(social_fields_by_key["twitter_url"], values.get("twitter_url", ""), "wizard") }}
@@ -176,9 +176,9 @@
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        &#8592; Previous: Webcam
+        &#8592; {{ _("Previous: Webcam") }}
       </button>
-      <button type="submit">Next: Privacy &amp; Legal &#8594;</button>
+      <button type="submit">{{ _("Next: Privacy & Legal") }} &#8594;</button>
     </div>
   </form>
 </article>
@@ -186,3 +186,4 @@
 {# OOB: update the progress bar to reflect the current step. #}
 {% set oob = true %}
 {% include "wizard/_progress_bar.html" %}
+</content>

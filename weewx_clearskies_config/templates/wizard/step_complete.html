@@ -1,52 +1,52 @@
 <article>
   <header>
     {% if error %}
-    <h2>Setup failed</h2>
+    <h2>{{ _("Setup failed") }}</h2>
     {% else %}
-    <h2>Setup complete!</h2>
+    <h2>{{ _("Setup complete!") }}</h2>
     {% endif %}
   </header>
 
   {% if error %}
   <div role="alert" aria-live="assertive" class="alert-error">
-    <h3>Configuration failed</h3>
+    <h3>{{ _("Configuration failed") }}</h3>
     <p>{{ error }}</p>
     <button type="button"
             hx-get="/wizard/step/9"
             hx-target="#wizard-content"
             hx-swap="innerHTML show:window:top"
             hx-indicator="#wizard-spinner">
-      &#8592; Back to Review
+      &#8592; {{ _("Back to Review") }}
     </button>
   </div>
 
   {% else %}
   <div role="status" aria-live="polite">
     <p>
-      Your weather dashboard is being configured.
-      The API service is restarting to load the new settings — this may take a moment.
+      {{ _("Your weather dashboard is being configured.
+      The API service is restarting to load the new settings — this may take a moment.") }}
     </p>
     <p>
-      Your dashboard will be available at the address you configured.
+      {{ _("Your dashboard will be available at the address you configured.
       If you are accessing it on your local network, open a browser and enter the
-      IP address or hostname of your weather server.
+      IP address or hostname of your weather server.") }}
     </p>
   </div>
 
   {# ---- Live service restart status ---------------------------------- #}
   <section aria-labelledby="restart-status-heading">
-    <h3 id="restart-status-heading">Service Restart</h3>
+    <h3 id="restart-status-heading">{{ _("Service Restart") }}</h3>
     <div id="restart-status"
          role="status"
          aria-live="polite"
-         aria-label="Service restart progress"
+         aria-label="{{ _('Service restart progress') }}"
          hx-get="/wizard/restart-status"
          hx-trigger="load, every 2s [!document.querySelector('#restart-status .all-done')]"
          hx-swap="innerHTML">
       {# Initial placeholder — replaced immediately by the first HTMX poll. #}
       <div class="restart-item">
         <span class="cs-spinner" aria-hidden="true"></span>
-        Restarting API service...
+        {{ _("Restarting API service...") }}
       </div>
     </div>
   </section>
@@ -54,7 +54,7 @@
   {% if result %}
   {# ---- Files written -------------------------------------------- #}
   <section aria-labelledby="files-written">
-    <h3 id="files-written">Files written</h3>
+    <h3 id="files-written">{{ _("Files written") }}</h3>
     <ul>
       {% for path in result.files_written %}
       <li><code>{{ path }}</code></li>
@@ -65,17 +65,17 @@
   {# ---- Secrets written ------------------------------------------ #}
   {% if result.secrets_written %}
   <section aria-labelledby="secrets-written">
-    <h3 id="secrets-written">Secret files</h3>
+    <h3 id="secrets-written">{{ _("Secret files") }}</h3>
     <ul>
       {% for path in result.secrets_written %}
-      <li><code>{{ path }}</code> (mode 0600)</li>
+      <li><code>{{ path }}</code> {{ _("(mode 0600)") }}</li>
       {% endfor %}
     </ul>
     <p>
-      <strong>Keep these files secure.</strong>
-      They contain the proxy shared secret (<code>WEEWX_CLEARSKIES_PROXY_SECRET</code>).
-      The database password and provider API keys are stored in the API's own secrets file on the weewx host.
-      Do not commit any secrets file to version control.
+      <strong>{{ _("Keep these files secure.") }}</strong>
+      {{ _("They contain the proxy shared secret") }} (<code>WEEWX_CLEARSKIES_PROXY_SECRET</code>).
+      {{ _("The database password and provider API keys are stored in the API's own secrets file on the weewx host.
+      Do not commit any secrets file to version control.") }}
     </p>
   </section>
   {% endif %}
@@ -85,18 +85,18 @@
   {# otherwise the secret is in secrets.env only.                       #}
   {% if result and result.proxy_secret %}
   <section aria-labelledby="proxy-secret-section">
-    <h3 id="proxy-secret-section">Proxy shared secret</h3>
+    <h3 id="proxy-secret-section">{{ _("Proxy shared secret") }}</h3>
     <p>
-      Because you chose <strong>cross-host</strong> topology, a shared secret was generated.
-      Copy this value to your dashboard host's environment as
-      <code>CLEARSKIES_PROXY_SECRET</code> before starting the dashboard.
+      {{ _("Because you chose") }} <strong>{{ _("cross-host") }}</strong> {{ _("topology, a shared secret was generated.
+      Copy this value to your dashboard host's environment as") }}
+      <code>CLEARSKIES_PROXY_SECRET</code> {{ _("before starting the dashboard.") }}
     </p>
-    <div class="shared-secret-box" aria-label="Proxy shared secret value">
+    <div class="shared-secret-box" aria-label="{{ _('Proxy shared secret value') }}">
       <code>{{ result.proxy_secret }}</code>
     </div>
     <p>
-      <small>This value is also saved in <code>secrets.env</code> on this host.
-      You will not be able to retrieve it from this UI again.</small>
+      <small>{{ _("This value is also saved in") }} <code>secrets.env</code> {{ _("on this host.
+      You will not be able to retrieve it from this UI again.") }}</small>
     </p>
   </section>
   {% endif %}
@@ -105,35 +105,35 @@
 
   {# ---- Troubleshooting / manual steps -------------------------------- #}
   <details class="wizard-details">
-    <summary>Troubleshooting — manual steps if needed</summary>
+    <summary>{{ _("Troubleshooting — manual steps if needed") }}</summary>
     <p>
-      If the dashboard does not load or shows stale data after a minute or two,
-      you can restart the services manually on your weewx host:
+      {{ _("If the dashboard does not load or shows stale data after a minute or two,
+      you can restart the services manually on your weewx host:") }}
     </p>
     <ol>
       <li>
-        <strong>Restart the API</strong> to load the new configuration:
+        <strong>{{ _("Restart the API") }}</strong> {{ _("to load the new configuration:") }}
         <br>
         <code>systemctl restart clearskies-api</code>
         <br>
-        <small>Or: <code>clearskies-stack restart api</code> if you are using Docker Compose.</small>
+        <small>{{ _("Or:") }} <code>clearskies-stack restart api</code> {{ _("if you are using Docker Compose.") }}</small>
       </li>
     </ol>
     {% if result and result.proxy_secret %}
     <p>
-      If you are using <strong>cross-host</strong> topology, also set
-      <code>CLEARSKIES_PROXY_SECRET</code> on the dashboard host to the value
-      shown above before starting the dashboard container.
+      {{ _("If you are using") }} <strong>{{ _("cross-host") }}</strong> {{ _("topology, also set") }}
+      <code>CLEARSKIES_PROXY_SECRET</code> {{ _("on the dashboard host to the value
+      shown above before starting the dashboard container.") }}
     </p>
     {% endif %}
     <p>
-      For full deployment instructions including Docker Compose, reverse proxy examples,
-      and TLS setup, see the
-      <a href="https://github.com/weewx-clearskies/weewx-clearskies-stack" target="_blank" rel="noopener">deployment documentation</a>.
+      {{ _("For full deployment instructions including Docker Compose, reverse proxy examples,
+      and TLS setup, see the") }}
+      <a href="https://github.com/weewx-clearskies/weewx-clearskies-stack" target="_blank" rel="noopener">{{ _("deployment documentation") }}</a>.
     </p>
   </details>
 
-  <a href="/">Return to home</a>
+  <a href="/">{{ _("Return to home") }}</a>
   {% endif %}
 </article>
 
@@ -141,21 +141,22 @@
 {# OOB: replace the progress bar nav so all 11 steps show as complete. #}
 {# hx-swap-oob="true" targets the element with matching id="wizard-nav". #}
 {# ------------------------------------------------------------------ #}
-<nav id="wizard-nav" aria-label="Wizard progress" hx-swap-oob="true">
+<nav id="wizard-nav" aria-label="{{ _('Wizard progress') }}" hx-swap-oob="true">
   <ol class="wizard-progress" role="list">
-    <li class="is-complete"><span class="step-label" aria-hidden="true">API Connection</span><span class="sr-only">Step 1: API Connection (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Import</span><span class="sr-only">Step 2: Import (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">EULA</span><span class="sr-only">Step 3: EULA (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Database</span><span class="sr-only">Step 4: Database (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Columns</span><span class="sr-only">Step 5: Columns (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Station</span><span class="sr-only">Step 6: Station (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Units</span><span class="sr-only">Step 7: Units (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Providers</span><span class="sr-only">Step 8: Providers (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Webcam</span><span class="sr-only">Step 9: Webcam (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Branding</span><span class="sr-only">Step 10: Branding (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Privacy</span><span class="sr-only">Step 11: Privacy (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Features</span><span class="sr-only">Step 12: Features (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">TLS</span><span class="sr-only">Step 13: TLS (complete)</span></li>
-    <li class="is-complete"><span class="step-label" aria-hidden="true">Review</span><span class="sr-only">Step 14: Review (complete)</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("API Connection") }}</span><span class="sr-only">{{ _("Step 1: API Connection (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Import") }}</span><span class="sr-only">{{ _("Step 2: Import (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("EULA") }}</span><span class="sr-only">{{ _("Step 3: EULA (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Database") }}</span><span class="sr-only">{{ _("Step 4: Database (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Columns") }}</span><span class="sr-only">{{ _("Step 5: Columns (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Station") }}</span><span class="sr-only">{{ _("Step 6: Station (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Units") }}</span><span class="sr-only">{{ _("Step 7: Units (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Providers") }}</span><span class="sr-only">{{ _("Step 8: Providers (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Webcam") }}</span><span class="sr-only">{{ _("Step 9: Webcam (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Branding") }}</span><span class="sr-only">{{ _("Step 10: Branding (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Privacy") }}</span><span class="sr-only">{{ _("Step 11: Privacy (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Features") }}</span><span class="sr-only">{{ _("Step 12: Features (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("TLS") }}</span><span class="sr-only">{{ _("Step 13: TLS (complete)") }}</span></li>
+    <li class="is-complete"><span class="step-label" aria-hidden="true">{{ _("Review") }}</span><span class="sr-only">{{ _("Step 14: Review (complete)") }}</span></li>
   </ol>
 </nav>
+</content>

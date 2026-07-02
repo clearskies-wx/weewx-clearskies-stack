@@ -1,8 +1,8 @@
 {% from "macros/form_fields.html" import render_field %}
 <article>
   <header>
-    <h2>Step 12 of 15 — Privacy, Legal &amp; Analytics</h2>
-    <p>Configure analytics tracking, visitor region disclosures, and optional legal content overrides.</p>
+    <h2>{{ _("Step 12 of 15 — Privacy, Legal & Analytics") }}</h2>
+    <p>{{ _("Configure analytics tracking, visitor region disclosures, and optional legal content overrides.") }}</p>
   </header>
 
   {% if error %}
@@ -22,10 +22,10 @@
     {# Section 1: Analytics                                                #}
     {# ================================================================== #}
 
-    <h3>Analytics</h3>
+    <h3>{{ _("Analytics") }}</h3>
 
     <fieldset>
-      <legend>Google Analytics</legend>
+      <legend>{{ _("Google Analytics") }}</legend>
       {{ render_field(analytics_fields_by_key["google_analytics_id"], values.get("google_analytics_id", ""), "wizard") }}
     </fieldset>
 
@@ -33,10 +33,10 @@
     {# Section 2: Visitor Regions                                          #}
     {# ================================================================== #}
 
-    <h3>Visitor Regions</h3>
+    <h3>{{ _("Visitor Regions") }}</h3>
 
     <fieldset>
-      <legend>Privacy Law Disclosures</legend>
+      <legend>{{ _("Privacy Law Disclosures") }}</legend>
       {{ render_field(analytics_fields_by_key["privacy_regions"], values.get("privacy_regions", "global"), "wizard") }}
     </fieldset>
 
@@ -44,38 +44,38 @@
     {# Section 3: Legal Content                                            #}
     {# ================================================================== #}
 
-    <h3>Legal Content</h3>
+    <h3>{{ _("Legal Content") }}</h3>
 
     <fieldset>
-      <legend>Legal Content Override</legend>
-      <p><small>Optional. Upload your own Terms of Use and Privacy Policy to replace the default content on your Legal page. Leave blank to use the built-in templates.</small></p>
+      <legend>{{ _("Legal Content Override") }}</legend>
+      <p><small>{{ _("Optional. Upload your own Terms of Use and Privacy Policy to replace the default content on your Legal page. Leave blank to use the built-in templates.") }}</small></p>
 
-      <label for="custom_terms_file">Upload Terms of Use (Markdown or text file)</label>
+      <label for="custom_terms_file">{{ _("Upload Terms of Use (Markdown or text file)") }}</label>
       <input type="file"
              id="custom_terms_file"
              name="custom_terms_file"
              accept=".md,.txt"
              aria-describedby="custom_terms_file_help">
-      <small id="custom_terms_file_help">Upload a .md or .txt file (max 100 KB). Markdown files render as-is. Plain text files are auto-formatted with heading structure.</small>
+      <small id="custom_terms_file_help">{{ _("Upload a .md or .txt file (max 100 KB). Markdown files render as-is. Plain text files are auto-formatted with heading structure.") }}</small>
 
       {% if state.custom_terms_md %}
-      <div id="custom_terms_preview" aria-label="Current Terms of Use content preview">
-        <p><small><strong>Current Terms of Use (previously uploaded):</strong></small></p>
+      <div id="custom_terms_preview" aria-label="{{ _('Current Terms of Use content preview') }}">
+        <p><small><strong>{{ _("Current Terms of Use (previously uploaded):") }}</strong></small></p>
         <pre style="max-height: 12em; overflow-y: auto; white-space: pre-wrap; font-size: 0.8125rem; border: 1px solid var(--pico-border-color, #ccc); padding: 0.5rem; border-radius: 0.25rem;" aria-readonly="true" tabindex="0">{{ state.custom_terms_md | e }}</pre>
       </div>
       {% endif %}
 
-      <label for="custom_privacy_file">Upload Privacy Policy (Markdown or text file)</label>
+      <label for="custom_privacy_file">{{ _("Upload Privacy Policy (Markdown or text file)") }}</label>
       <input type="file"
              id="custom_privacy_file"
              name="custom_privacy_file"
              accept=".md,.txt"
              aria-describedby="custom_privacy_file_help">
-      <small id="custom_privacy_file_help">Upload a .md or .txt file (max 100 KB). Markdown files render as-is. Plain text files are auto-formatted with heading structure.</small>
+      <small id="custom_privacy_file_help">{{ _("Upload a .md or .txt file (max 100 KB). Markdown files render as-is. Plain text files are auto-formatted with heading structure.") }}</small>
 
       {% if state.custom_privacy_md %}
-      <div id="custom_privacy_preview" aria-label="Current Privacy Policy content preview">
-        <p><small><strong>Current Privacy Policy (previously uploaded):</strong></small></p>
+      <div id="custom_privacy_preview" aria-label="{{ _('Current Privacy Policy content preview') }}">
+        <p><small><strong>{{ _("Current Privacy Policy (previously uploaded):") }}</strong></small></p>
         <pre style="max-height: 12em; overflow-y: auto; white-space: pre-wrap; font-size: 0.8125rem; border: 1px solid var(--pico-border-color, #ccc); padding: 0.5rem; border-radius: 0.25rem;" aria-readonly="true" tabindex="0">{{ state.custom_privacy_md | e }}</pre>
       </div>
       {% endif %}
@@ -87,9 +87,9 @@
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        &#8592; Previous: Branding
+        &#8592; {{ _("Previous: Branding") }}
       </button>
-      <button type="submit">Next: Feature Settings &#8594;</button>
+      <button type="submit">{{ _("Next: Feature Settings") }} &#8594;</button>
     </div>
   </form>
 </article>
@@ -97,3 +97,4 @@
 {# OOB: update the progress bar to reflect the current step. #}
 {% set oob = true %}
 {% include "wizard/_progress_bar.html" %}
+</content>
