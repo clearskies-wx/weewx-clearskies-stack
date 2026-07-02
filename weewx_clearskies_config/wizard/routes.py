@@ -54,11 +54,16 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
+from weewx_clearskies_config.i18n import (
+    DEFAULT_LOCALE,
+    LOCALE_COOKIE_NAME,
+    get_supported_locales,
+)
 from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
 from weewx_clearskies_config.wizard.config_writer import apply_wizard, build_skin_conf_payload, write_branding_json
 from weewx_clearskies_config.wizard.known_apis import load_known_apis, verify_or_pin_fingerprint
@@ -235,6 +240,103 @@ _VALID_LOCALES: frozenset[str] = frozenset(tag for tag, _ in _SUPPORTED_LOCALES)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wizard", tags=["wizard"])
+
+# Codes accepted for the wizard's own UI language (clearskies-wizard-locale
+# cookie). Deliberately not reused from _VALID_LOCALES above: that set
+# validates state.default_locale, the *dashboard's* default language for
+# visitors (ADR-021) — a different, independently-configurable setting from
+# what language the operator sees while running this wizard.
+_WIZARD_LOCALE_CODES: frozenset[str] = frozenset(
+    loc["code"] for loc in get_supported_locales()
+)
+
+
+def _guess_locale_from_accept_language(header_value: str) -> str:
+    """Best-effort match of an Accept-Language header to a supported wizard locale.
+
+    Parses the comma-separated list of language ranges (RFC 9110 §12.5.4),
+    ignoring q-values beyond their ordering, and returns the first supported
+    locale that matches either the full BCP-47 tag or its primary subtag.
+    Falls back to English when nothing matches.
+    """
+    for part in header_value.split(","):
+        tag = part.split(";", 1)[0].strip()
+        if not tag:
+            continue
+        for code in _WIZARD_LOCALE_CODES:
+            if tag.lower() == code.lower():
+                return code
+        primary = tag.split("-", 1)[0].lower()
+        for code in _WIZARD_LOCALE_CODES:
+            if primary == code.split("-", 1)[0].lower():
+                return code
+    return DEFAULT_LOCALE
+
+
+# ---------------------------------------------------------------------------
+# Language step (step 0) — the wizard's own UI language, chosen once before
+# any other step. Unrelated to the "Default language" field in step 4
+# (state.default_locale), which sets the dashboard's default for visitors.
+# ---------------------------------------------------------------------------
+
+
+@router.get("/step/language", response_class=HTMLResponse)
+async def step_language_get(request: Request) -> HTMLResponse:
+    """Render the language selection step as a full page.
+
+    Reached either by direct navigation/bookmark or by the redirect in
+    wizard_index() when no locale cookie is set yet. Rendered as a full page
+    (via wizard/layout.html) rather than a fragment because, unlike every
+    other step, it can be the very first thing a browser requests — there is
+    no existing page chrome for an HTMX fragment to swap into.
+    """
+    _require_session(request)
+    cookie_locale = request.cookies.get(LOCALE_COOKIE_NAME, "")
+    if cookie_locale in _WIZARD_LOCALE_CODES:
+        selected = cookie_locale
+    else:
+        selected = _guess_locale_from_accept_language(request.headers.get("accept-language", ""))
+    assert _templates is not None
+    return _templates.TemplateResponse(
+        request=request,
+        name="wizard/layout.html",
+        context={
+            "step": 0,
+            "initial_step_template": "step_language.html",
+            "locales": get_supported_locales(),
+            # NOTE: deliberately not named "current_locale" — that name is a
+            # Jinja2 global (i18n.get_current_locale, wired up in app.py) used
+            # by base.html for <html lang>. A context key of the same name
+            # would shadow the global for this render and break that lookup.
+            "selected_locale": selected,
+        },
+    )
+
+
+@router.get("/set-language/{locale}", name="wizard_set_language")
+async def wizard_set_language(request: Request, locale: str) -> RedirectResponse:
+    """Persist the operator's chosen wizard UI language and return to the wizard.
+
+    Sets the clearskies-wizard-locale cookie read by _LocaleMiddleware
+    (app.py) on every subsequent request. An unrecognised locale code falls
+    back to English rather than erroring, so a stale or hand-edited URL can't
+    break the wizard.
+    """
+    _require_session(request)
+    chosen = locale if locale in _WIZARD_LOCALE_CODES else DEFAULT_LOCALE
+    response = RedirectResponse(url="/wizard", status_code=303)
+    secure = bool(_session_manager and _session_manager.tls_enabled)
+    response.set_cookie(
+        key=LOCALE_COOKIE_NAME,
+        value=chosen,
+        max_age=60 * 60 * 24 * 365,
+        httponly=True,
+        samesite="strict",
+        secure=secure,
+        path="/",
+    )
+    return response
+
 
 # ---------------------------------------------------------------------------
 # Step 0: skin.conf Import or Fresh Start
@@ -729,9 +831,17 @@ def _split_api_address(api_address: str) -> tuple[str, str]:
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
-async def wizard_index(request: Request) -> HTMLResponse:
-    """Render the full wizard page with step 1 (API connection) loaded."""
+async def wizard_index(request: Request) -> HTMLResponse | RedirectResponse:
+    """Render the full wizard page with step 1 (API connection) loaded.
+
+    First redirects to the language step if no wizard UI locale has been
+    chosen yet — see step_language_get()/wizard_set_language() above.
+    """
     session_id = _require_session(request)
+
+    if LOCALE_COOKIE_NAME not in request.cookies:
+        return RedirectResponse(url="/wizard/step/language", status_code=302)
+
     state = get_wizard_state(session_id)
 
     # Fresh-browser case: the session is new so state fields are blank, but a

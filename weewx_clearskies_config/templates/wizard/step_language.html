@@ -1,0 +1,34 @@
+<article>
+  <header>
+    <h2>{{ _("Choose your language") }}</h2>
+    <p>{{ _("Select the language for the setup wizard.") }}</p>
+  </header>
+
+  {# Real navigation (GET, no JS side effects), so these are plain <a> links
+     rather than <button onclick>: each one requests
+     /wizard/set-language/{code}, which sets the locale cookie and redirects
+     back to /wizard. Native <a> semantics (Enter to activate, announced as
+     "link" by assistive tech) are correct here — no role="button" override,
+     since that would misrepresent a navigating link as a non-navigating
+     control. #}
+  <div class="wizard-lang-grid" role="list">
+    {% for locale in locales %}
+    <a href="/wizard/set-language/{{ locale.code }}"
+       class="wizard-lang-card{% if locale.code == selected_locale %} wizard-lang-card--selected{% endif %}"
+       role="listitem"
+       {% if locale.code == selected_locale %}aria-current="true"{% endif %}
+       lang="{{ locale.code }}">
+      <strong>{{ locale.native }}</strong>
+      <small>{{ locale.name }}</small>
+      {% if locale.code == selected_locale %}
+      <span class="wizard-lang-check" aria-hidden="true">&#10003;</span>
+      <span class="sr-only">({{ _("current selection") }})</span>
+      {% endif %}
+    </a>
+    {% endfor %}
+  </div>
+</article>
+
+{# OOB: update the progress bar to reflect the language step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}

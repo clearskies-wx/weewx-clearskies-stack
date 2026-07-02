@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Clear Skies Setup Wizard{% if step >= 1 and step <= 14 %} — Step {{ step }} of 14{% else %} — Complete{% endif %}{% endblock %}
+{% block title %}Clear Skies Setup Wizard{% if step == 0 %} — {{ _("Choose your language") }}{% elif step >= 1 and step <= 15 %} — Step {{ step }} of 15{% else %} — Complete{% endif %}{% endblock %}
 {% block content %}
 
 {# ------------------------------------------------------------------ #}
@@ -453,6 +453,62 @@
   font-size: 0.8rem;
   line-height: 1.3;
 }
+
+/* ----- Language selection cards (step_language) --------------------- */
+.wizard-lang-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+  gap: 0.75rem;
+  margin-block-start: 1rem;
+}
+.wizard-lang-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.85rem 2.25rem 0.85rem 1rem;
+  border: 2px solid var(--pico-muted-border-color);
+  border-radius: 0.5rem;
+  text-decoration: none;
+  color: var(--pico-color);
+  background: var(--pico-card-background-color, var(--pico-background-color));
+  transition: border-color 0.15s ease;
+}
+.wizard-lang-card:hover {
+  border-color: var(--pico-primary);
+}
+.wizard-lang-card:focus-visible {
+  outline: 3px solid var(--pico-primary);
+  outline-offset: 2px;
+}
+.wizard-lang-card small {
+  color: var(--pico-muted-color);
+}
+.wizard-lang-card--selected {
+  border-width: 2px;
+  border-color: var(--pico-primary);
+}
+.wizard-lang-check {
+  position: absolute;
+  top: 0.7rem;
+  inset-inline-end: 0.75rem;
+  color: var(--pico-primary);
+  font-weight: 700;
+}
+
+/* ----- Progress bar — non-interactive language indicator ----------- */
+/* Excluded from the counter() numbering (counter-increment: none set inline
+   on the <li>) so steps 1-15 keep their existing numbers. */
+.wizard-progress li.wizard-lang-progress-item::before {
+  content: "\1F310"; /* globe */
+  background: var(--pico-muted-border-color);
+  color: var(--pico-color);
+}
+.wizard-progress li.wizard-lang-progress-item.is-complete::before {
+  content: "\2713"; /* check mark */
+  background: var(--pico-primary);
+  color: var(--pico-primary-inverse);
+}
 </style>
 
 <header style="display: flex; align-items: center; justify-content: space-between; gap: 1rem;">
@@ -485,7 +541,7 @@
 {# ------------------------------------------------------------------ #}
 {% set _in_layout = true %}
 <section id="wizard-content" aria-atomic="false">
-  {% include "wizard/step_api.html" %}
+  {% include "wizard/" ~ (initial_step_template | default("step_api.html")) %}
 </section>
 
 {# ------------------------------------------------------------------ #}

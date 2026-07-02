@@ -53,6 +53,20 @@
 {% endmacro %}
 <nav id="wizard-nav" aria-label="Wizard progress"{% if oob %} hx-swap-oob="true"{% endif %}>
   <ol class="wizard-progress" role="list">
+    {# ---------------------------------------------------------------- #}
+    {# Language step (step 0) — chosen once before step 1 and shown here #}
+    {# as a non-interactive indicator, not a numbered/clickable step:   #}
+    {# `counter-increment: none` keeps steps 1-15 numbered unchanged.   #}
+    {# ---------------------------------------------------------------- #}
+    <li class="wizard-lang-progress-item{% if step > 0 %} is-complete{% endif %}"
+        style="counter-increment: none;"
+        {% if step == 0 %}aria-current="step"{% endif %}>
+      <span class="step-label" aria-hidden="true">{{ _("Language") }}</span>
+      <span class="sr-only">
+        {{ _("Language") }}
+        {%- if step == 0 %} ({{ _("current") }}){% elif step > 0 %} ({{ _("complete") }}){% endif %}
+      </span>
+    </li>
     {% for i in range(1, 16) %}
     <li
       {% if i == step and step <= 15 %}aria-current="step"{% endif %}
