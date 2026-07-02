@@ -6,6 +6,8 @@ and the config writer (config_writer.py) to avoid duplication.
 
 from __future__ import annotations
 
+from weewx_clearskies_config.i18n import get_current_locale, translate
+
 # ---------------------------------------------------------------------------
 # Valid options per unit group
 # Each entry is (weewx_unit_string, human_label).
@@ -106,15 +108,17 @@ def validate_units(units: dict[str, str]) -> dict[str, str]:
     Returns a dict of {group_name: error_message} for each invalid entry.
     An empty dict means the submission is valid.
     """
+    locale = get_current_locale()
     errors: dict[str, str] = {}
     for group, options in UNIT_OPTIONS.items():
         valid_units = {u for u, _ in options}
         submitted = units.get(group, "")
         if not submitted:
-            errors[group] = f"A unit must be selected for {UNIT_GROUP_LABELS.get(group, group)}."
-        elif submitted not in valid_units:
-            errors[group] = (
-                f'"{submitted}" is not a valid unit for '
-                f"{UNIT_GROUP_LABELS.get(group, group)}."
+            errors[group] = translate("A unit must be selected for {group}.", locale).format(
+                group=UNIT_GROUP_LABELS.get(group, group)
             )
+        elif submitted not in valid_units:
+            errors[group] = translate(
+                '"{submitted}" is not a valid unit for {group}.', locale
+            ).format(submitted=submitted, group=UNIT_GROUP_LABELS.get(group, group))
     return errors

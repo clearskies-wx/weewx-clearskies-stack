@@ -1,4 +1,5 @@
 {
+  "\"{submitted}\" is not a valid unit for {group}.": "\"{submitted}\" is not a valid unit for {group}.",
   "(government reference monitors, 141 countries). This API key is required\n           for the": "(government reference monitors, 141 countries). This API key is required\n           for the",
   "(mode 0600)": "(mode 0600)",
   "(mode 0600) and are never written to the config file. Use the": "(mode 0600) and are never written to the config file. Use the",
@@ -15,6 +16,7 @@
   "14 days": "14 days",
   "30 days": "30 days",
   "7 days": "7 days",
+  "A unit must be selected for {group}.": "A unit must be selected for {group}.",
   "ACME DNS-01 (Let's Encrypt, DNS)": "ACME DNS-01 (Let's Encrypt, DNS)",
   "ACME Email": "ACME Email",
   "ACME HTTP-01 (Let's Encrypt, HTTP)": "ACME HTTP-01 (Let's Encrypt, HTTP)",
