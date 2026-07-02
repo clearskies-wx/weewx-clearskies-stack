@@ -19,9 +19,22 @@ from weewx_clearskies_config.config.updater import (
     update_managed_region,
     update_pages,
 )
+from weewx_clearskies_config.i18n import get_current_locale, translate
 
 from .fields import ConfigField, ValidationRule
 from .sections import SectionDef
+
+
+def _(key: str) -> str:
+    """Translate *key* using the current request's wizard/admin UI locale.
+
+    Python-code counterpart to the Jinja2 ``_()`` global — see the identical
+    helper in wizard/routes.py and admin/routes.py for the full rationale.
+    field.label itself is also passed through this so a translated field
+    name appears in the validation message, matching what the render_field
+    macro (macros/form_fields.html) shows for the same field on-screen.
+    """
+    return translate(key, get_current_locale())
 
 logger = logging.getLogger(__name__)
 
@@ -75,27 +88,31 @@ def validate_form_against_fields(
 
             if rtype == "required":
                 if not value:
-                    errors.append(f"{field.label}: This field is required.")
+                    errors.append(_("{field}: This field is required.").format(field=_(field.label)))
 
             elif rtype == "min":
                 if value:
                     try:
                         if float(value) < float(rule.value):
                             errors.append(
-                                f"{field.label}: Value must be at least {rule.value}."
+                                _("{field}: Value must be at least {value}.").format(
+                                    field=_(field.label), value=rule.value
+                                )
                             )
                     except (TypeError, ValueError):
-                        errors.append(f"{field.label}: Must be a number.")
+                        errors.append(_("{field}: Must be a number.").format(field=_(field.label)))
 
             elif rtype == "max":
                 if value:
                     try:
                         if float(value) > float(rule.value):
                             errors.append(
-                                f"{field.label}: Value must be at most {rule.value}."
+                                _("{field}: Value must be at most {value}.").format(
+                                    field=_(field.label), value=rule.value
+                                )
                             )
                     except (TypeError, ValueError):
-                        errors.append(f"{field.label}: Must be a number.")
+                        errors.append(_("{field}: Must be a number.").format(field=_(field.label)))
 
             elif rtype == "step":
                 if value:
@@ -108,30 +125,34 @@ def validate_form_against_fields(
                         tolerance = fstep * 1e-9
                         if remainder > tolerance and abs(remainder - fstep) > tolerance:
                             errors.append(
-                                f"{field.label}: Value must be a multiple of {rule.value}."
+                                _("{field}: Value must be a multiple of {value}.").format(
+                                    field=_(field.label), value=rule.value
+                                )
                             )
                     except (TypeError, ValueError):
-                        errors.append(f"{field.label}: Must be a number.")
+                        errors.append(_("{field}: Must be a number.").format(field=_(field.label)))
 
             elif rtype == "pattern":
                 if value:
                     if not re.fullmatch(rule.value, value):
                         errors.append(
-                            f"{field.label}: Value does not match the required format."
+                            _("{field}: Value does not match the required format.").format(field=_(field.label))
                         )
 
             elif rtype == "one_of":
                 if value not in rule.value:
                     allowed = ", ".join(str(v) for v in rule.value)
                     errors.append(
-                        f"{field.label}: Must be one of: {allowed}."
+                        _("{field}: Must be one of: {allowed}.").format(field=_(field.label), allowed=allowed)
                     )
 
             elif rtype == "max_length":
                 try:
                     if len(value) > int(rule.value):
                         errors.append(
-                            f"{field.label}: Must be at most {rule.value} characters."
+                            _("{field}: Must be at most {value} characters.").format(
+                                field=_(field.label), value=rule.value
+                            )
                         )
                 except (TypeError, ValueError):
                     pass
