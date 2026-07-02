@@ -844,8 +844,8 @@ def _split_api_address(api_address: str) -> tuple[str, str]:
     return addr, "8765"
 
 
-@router.get("", response_class=HTMLResponse)
-@router.get("/", response_class=HTMLResponse)
+@router.get("", response_class=HTMLResponse, response_model=None)
+@router.get("/", response_class=HTMLResponse, response_model=None)
 async def wizard_index(request: Request) -> HTMLResponse | RedirectResponse:
     """Render the full wizard page with step 1 (API connection) loaded.
 
