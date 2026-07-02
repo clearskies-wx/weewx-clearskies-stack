@@ -65,9 +65,21 @@ from weewx_clearskies_config.config.updater import (
     update_managed_region,
     update_secrets,
 )
+from weewx_clearskies_config.i18n import get_current_locale, translate
 from weewx_clearskies_config.wizard.providers import PROVIDERS, get_provider, test_provider
 
 logger = logging.getLogger(__name__)
+
+
+def _(key: str) -> str:
+    """Translate *key* using the current request's wizard/admin UI locale.
+
+    Python-code counterpart to the Jinja2 ``_()`` global registered in
+    app.py. See the identical helper in wizard/routes.py for the full
+    rationale — kept as a local copy rather than a shared import so each
+    router module has no import-time dependency on the other.
+    """
+    return translate(key, get_current_locale())
 
 # Haze calibration defaults
 _HAZE_DEFAULTS: dict[str, str] = {
@@ -136,7 +148,7 @@ def _require_session(request: Request) -> None:
 def _raise_unauthorized() -> NoReturn:
     from starlette.exceptions import HTTPException as StarletteHTTPException
 
-    raise StarletteHTTPException(status_code=401, detail="Authentication required")
+    raise StarletteHTTPException(status_code=401, detail=_("Authentication required"))
 
 
 def _render(
@@ -1180,7 +1192,7 @@ async def generic_section_post(request: Request, section_id: str) -> HTMLRespons
         save_field_values(values, section, str(_config_dir))
         success = True
     except Exception as exc:  # noqa: BLE001
-        error = f"Error saving: {exc}"
+        error = _("Error saving: {detail}").format(detail=exc)
         logger.exception("generic_section_post error for %s", section_id)
 
     return _render_result(
@@ -1236,9 +1248,9 @@ async def connection_post(request: Request) -> HTMLResponse:
     success = False
 
     if not api_url:
-        error = "API URL is required."
+        error = _("API URL is required.")
     elif not api_url.startswith("https://"):
-        error = "API URL must start with https://"
+        error = _("API URL must start with https://")
 
     if not error:
         try:
@@ -1281,19 +1293,21 @@ async def connection_post(request: Request) -> HTMLResponse:
             logger.info("connection_post: Caddy reloaded after API URL change to %s", api_url)
             success = True
         except OSError as exc:
-            error = f"File write error: {exc}"
+            error = _("File write error: {detail}").format(detail=exc)
             logger.error("connection_post OSError: %s", exc)
         except subprocess.CalledProcessError as exc:
-            error = f"Caddy reload failed: {exc.stderr.decode() if exc.stderr else exc}"
+            error = _("Caddy reload failed: {detail}").format(
+                detail=exc.stderr.decode() if exc.stderr else exc
+            )
             logger.error("connection_post Caddy reload failed: %s", exc)
         except Exception as exc:  # noqa: BLE001
-            error = f"Unexpected error: {exc}"
+            error = _("Unexpected error: {detail}").format(detail=exc)
             logger.exception("connection_post unexpected error")
 
     return _render_result(
         request,
         section_slug="connection",
-        display_name="API Connection",
+        display_name=_("API Connection"),
         success=success,
         error=error,
         status_code=500 if error else 200,
@@ -1320,7 +1334,7 @@ async def openaq_sensors_fragment(request: Request) -> HTMLResponse:
     error: str | None = None
 
     if client is None:
-        error = "Cannot connect to API."
+        error = _("Cannot connect to API.")
     else:
         try:
             response = client._request("GET", "/setup/openaq-sensors")
@@ -1328,7 +1342,7 @@ async def openaq_sensors_fragment(request: Request) -> HTMLResponse:
             sensors = data.get("sensors", [])
         except Exception as exc:  # noqa: BLE001
             logger.warning("openaq_sensors_fragment: could not load sensors: %s", exc)
-            error = f"Could not load sensors: {exc}"
+            error = _("Could not load sensors: {detail}").format(detail=exc)
 
     if error:
         escaped = error.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
@@ -1338,13 +1352,14 @@ async def openaq_sensors_fragment(request: Request) -> HTMLResponse:
     if not sensors:
         return HTMLResponse(
             '<p style="font-size:0.875rem;color:var(--pico-muted-color)">'
-            "No reference sensors found within 25 km.</p>"
+            + _("No reference sensors found within 25 km.")
+            + "</p>"
         )
 
     def _esc(v: object) -> str:
         return str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;").replace('"', "&quot;")
 
-    options = ['<option value="">— Select a sensor —</option>']
+    options = [f'<option value="">{_esc(_("— Select a sensor —"))}</option>']
     for s in sensors:
         sensor_id = _esc(s.get("sensor_id", ""))
         label = _esc(
@@ -1353,14 +1368,12 @@ async def openaq_sensors_fragment(request: Request) -> HTMLResponse:
         options.append(f'<option value="{sensor_id}">{label}</option>')
 
     select_html = (
-        '<label for="sensor-select" style="font-size:0.875rem">Reference sensors nearby</label>'
-        '<select id="sensor-select" aria-label="Select a reference sensor"'
+        f'<label for="sensor-select" style="font-size:0.875rem">{_esc(_("Reference sensors nearby"))}</label>'
+        f'<select id="sensor-select" aria-label="{_esc(_("Select a reference sensor"))}"'
         ' onchange="document.getElementById(\'manual_sensor_id\').value = this.value">'
         + "".join(options)
         + "</select>"
-        '<small style="display:block;margin-block:0.25rem">Select a sensor to populate'
-        " the ID field below, then click “Set sensor override.”"
-        " Only reference-grade (AQMD/regulatory) monitors are listed.</small>"
+        f'<small style="display:block;margin-block:0.25rem">{_esc(_("Select a sensor to populate the ID field below, then click “Set sensor override.” Only reference-grade (AQMD/regulatory) monitors are listed."))}</small>'
     )
     return HTMLResponse(select_html)
 
@@ -1410,13 +1423,13 @@ async def haze_calibration_post(request: Request) -> HTMLResponse:
         error = str(exc)
         logger.warning("haze_calibration_post FileNotFoundError: %s", exc)
     except OSError as exc:
-        error = f"File write error: {exc}"
+        error = _("File write error: {detail}").format(detail=exc)
         logger.error("haze_calibration_post OSError: %s", exc)
     except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error: {exc}"
+        error = _("Unexpected error: {detail}").format(detail=exc)
         logger.exception("haze_calibration_post unexpected error")
     return _render_result(request, section_slug="haze-calibration",
-        display_name="Haze Calibration", success=success, error=error,
+        display_name=_("Haze Calibration"), success=success, error=error,
         status_code=500 if error else 200)
 
 
@@ -1428,19 +1441,19 @@ async def haze_calibration_reset(request: Request) -> HTMLResponse:
     error: str | None = None
     success = False
     if client is None:
-        error = "Cannot connect to API — check that the API is running and configured."
+        error = _("Cannot connect to API — check that the API is running and configured.")
     else:
         try:
             response = client._request("POST", "/setup/calibration-reset")
             data = response.json()
             success = data.get("success", False)
             if not success:
-                error = data.get("message", "Reset failed — unknown error.")
+                error = data.get("message", _("Reset failed — unknown error."))
         except Exception as exc:  # noqa: BLE001
-            error = f"API error: {exc}"
+            error = _("API error: {detail}").format(detail=exc)
             logger.warning("calibration_reset API error: %s", exc)
     return _render_result(request, section_slug="haze-calibration",
-        display_name="Haze Calibration", success=success, error=error,
+        display_name=_("Haze Calibration"), success=success, error=error,
         status_code=500 if error else 200)
 
 
@@ -1456,7 +1469,7 @@ async def geographic_features_get(request: Request) -> HTMLResponse:
     geo_status = _fetch_geographic_features_status()
     error: str | None = None
     if geo_status is None:
-        error = "Cannot connect to the API — check that the API is running and configured."
+        error = _("Cannot connect to the API — check that the API is running and configured.")
     return _render(request, "geographic_features.html", {
         "status": geo_status,
         "error": error,
@@ -1471,22 +1484,22 @@ async def geographic_features_update(request: Request) -> HTMLResponse:
     error: str | None = None
     success = False
     if client is None:
-        error = "Cannot connect to the API — check that the API is running and configured."
+        error = _("Cannot connect to the API — check that the API is running and configured.")
     else:
         try:
             response = client._request("POST", "/setup/geographic-features/update")
             data = response.json()
             success = data.get("success", True)  # treat any 2xx as success
             if not success:
-                error = data.get("message") or data.get("error") or "Update failed — unknown error."
+                error = data.get("message") or data.get("error") or _("Update failed — unknown error.")
         except Exception as exc:  # noqa: BLE001
-            error = f"API error: {exc}"
+            error = _("API error: {detail}").format(detail=exc)
             logger.warning("geographic_features_update API error: %s", exc)
     if success:
         return _render(request, "geographic_features.html", {
             "status": _fetch_geographic_features_status(),
             "error": None,
-            "flash": "Geographic features data updated successfully.",
+            "flash": _("Geographic features data updated successfully."),
         })
     return _render(request, "geographic_features.html", {
         "status": _fetch_geographic_features_status(),
@@ -1556,7 +1569,7 @@ async def forecast_correction_toggle(request: Request) -> HTMLResponse:
     error: str | None = None
     success = False
     if client is None:
-        error = "Cannot connect to API — check that the API is running and configured."
+        error = _("Cannot connect to API — check that the API is running and configured.")
     else:
         form = await request.form()
         body = {
@@ -1567,12 +1580,12 @@ async def forecast_correction_toggle(request: Request) -> HTMLResponse:
             client._request("POST", "/setup/forecast-correction/toggle", json=body)
             success = True
         except Exception as exc:  # noqa: BLE001
-            error = f"API error: {exc}"
+            error = _("API error: {detail}").format(detail=exc)
             logger.warning("forecast_correction_toggle API error: %s", exc)
     return _render_result(
         request,
         section_slug="forecast-correction",
-        display_name="Forecast Correction",
+        display_name=_("Forecast Correction"),
         success=success,
         error=error,
         status_code=500 if error else 200,
@@ -1587,21 +1600,21 @@ async def forecast_correction_retrain(request: Request) -> HTMLResponse:
     error: str | None = None
     success = False
     if client is None:
-        error = "Cannot connect to API — check that the API is running and configured."
+        error = _("Cannot connect to API — check that the API is running and configured.")
     else:
         try:
             response = client._request("POST", "/setup/forecast-correction/retrain")
             data = response.json()
             success = data.get("success", False)
             if not success:
-                error = data.get("message", "Training did not complete.")
+                error = data.get("message", _("Training did not complete."))
         except Exception as exc:  # noqa: BLE001
-            error = f"API error: {exc}"
+            error = _("API error: {detail}").format(detail=exc)
             logger.warning("forecast_correction_retrain API error: %s", exc)
     return _render_result(
         request,
         section_slug="forecast-correction",
-        display_name="Forecast Correction",
+        display_name=_("Forecast Correction"),
         success=success,
         error=error,
         status_code=500 if error else 200,
@@ -1698,9 +1711,9 @@ async def now_layout_post(request: Request) -> HTMLResponse:
         return _render_result(
             request,
             section_slug="now-layout",
-            display_name="Now Page Layout",
+            display_name=_("Now Page Layout"),
             success=False,
-            error="Invalid layout data",
+            error=_("Invalid layout data"),
             status_code=422,
         )
 
@@ -1739,16 +1752,16 @@ async def now_layout_post(request: Request) -> HTMLResponse:
             f.write("\n")
         success = True
     except OSError as exc:
-        error = f"File write error: {exc}"
+        error = _("File write error: {detail}").format(detail=exc)
         logger.error("now_layout_post OSError: %s", exc)
     except Exception as exc:  # noqa: BLE001
-        error = f"Unexpected error saving card layout: {exc}"
+        error = _("Unexpected error saving card layout: {detail}").format(detail=exc)
         logger.exception("now_layout_post unexpected error")
 
     return _render_result(
         request,
         section_slug="now-layout",
-        display_name="Now Page Layout",
+        display_name=_("Now Page Layout"),
         success=success,
         error=error,
         status_code=500 if error else 200,

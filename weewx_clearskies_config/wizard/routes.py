@@ -62,7 +62,9 @@ from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
 from weewx_clearskies_config.i18n import (
     DEFAULT_LOCALE,
     LOCALE_COOKIE_NAME,
+    get_current_locale,
     get_supported_locales,
+    translate,
 )
 from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
 from weewx_clearskies_config.wizard.config_writer import apply_wizard, build_skin_conf_payload, write_branding_json
@@ -93,6 +95,19 @@ from weewx_clearskies_config.wizard.units import (
     UNIT_PRESETS,
     validate_units,
 )
+
+
+def _(key: str) -> str:
+    """Translate *key* using the current request's wizard UI locale.
+
+    Python-code counterpart to the Jinja2 ``_()`` global registered in
+    app.py — templates call ``_()`` at render time; route handlers building
+    error/status strings outside a template call this instead. Both resolve
+    through the same translations/*.json files via
+    weewx_clearskies_config.i18n.translate().
+    """
+    return translate(key, get_current_locale())
+
 
 # ---------------------------------------------------------------------------
 # Timezone list helper
@@ -388,10 +403,10 @@ async def step_import_post(request: Request) -> HTMLResponse:
                     "step_import.html",
                     {
                         "step": 2,
-                        "error": (
-                            f"Could not find skin.conf in /etc/weewx/skins/{skin_name}/. "
+                        "error": _(
+                            "Could not find skin.conf in /etc/weewx/skins/{skin_name}/. "
                             "Check the skin name."
-                        ),
+                        ).format(skin_name=skin_name),
                     },
                     status_code=422,
                 )
@@ -402,7 +417,7 @@ async def step_import_post(request: Request) -> HTMLResponse:
                 "step_import.html",
                 {
                     "step": 2,
-                    "error": "API not connected. Complete step 1 (API Connection) before importing.",
+                    "error": _("API not connected. Complete step 1 (API Connection) before importing."),
                 },
                 status_code=422,
             )
@@ -410,7 +425,7 @@ async def step_import_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_import.html",
-                {"step": 2, "error": f"Failed to fetch skin.conf: {exc}"},
+                {"step": 2, "error": _("Failed to fetch skin.conf: {error}").format(error=exc)},
                 status_code=422,
             )
 
@@ -420,7 +435,7 @@ async def step_import_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_import.html",
-                {"step": 2, "error": f"Could not parse skin.conf: {exc}"},
+                {"step": 2, "error": _("Could not parse skin.conf: {error}").format(error=exc)},
                 status_code=422,
             )
 
@@ -435,7 +450,7 @@ async def step_import_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_import.html",
-                {"step": 2, "error": f"Could not read the uploaded file: {exc}"},
+                {"step": 2, "error": _("Could not read the uploaded file: {error}").format(error=exc)},
                 status_code=422,
             )
 
@@ -445,7 +460,7 @@ async def step_import_post(request: Request) -> HTMLResponse:
             return _render(
                 request,
                 "step_import.html",
-                {"step": 2, "error": f"Could not parse skin.conf: {exc}"},
+                {"step": 2, "error": _("Could not parse skin.conf: {error}").format(error=exc)},
                 status_code=422,
             )
 
@@ -455,7 +470,7 @@ async def step_import_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_import.html",
-            {"step": 2, "error": "Enter a skin name or upload a file, or click Skip — Start Fresh."},
+            {"step": 2, "error": _("Enter a skin name or upload a file, or click Skip — Start Fresh.")},
             status_code=422,
         )
 
@@ -561,7 +576,7 @@ async def step_eula_post(request: Request) -> HTMLResponse:
             {
                 "step": 3,
                 "state": state,
-                "error": (
+                "error": _(
                     "You must check the acceptance box to continue. "
                     "Please scroll through the Agreement and check the box."
                 ),
@@ -644,7 +659,7 @@ async def step_units_post(request: Request) -> HTMLResponse:
                 "unit_options": UNIT_OPTIONS,
                 "unit_group_labels": UNIT_GROUP_LABELS,
                 "presets": UNIT_PRESETS,
-                "error": "Please correct the errors below.",
+                "error": _("Please correct the errors below."),
                 "errors": errors,
             },
             status_code=422,
@@ -700,12 +715,12 @@ def _is_rerun_mode(api_address: str | None) -> bool:
 def _api_error_message(exc: ApiClientError) -> str:
     """Map an ApiClientError to a user-friendly plain-English message."""
     if exc.status_code == 401:
-        return "Your setup session has expired. Go back to step 1 and reconnect to the API."
+        return _("Your setup session has expired. Go back to step 1 and reconnect to the API.")
     if exc.status_code == 410:
-        return "This API has already been set up. If you need to reconfigure it, restart the API with the --reset flag."
+        return _("This API has already been set up. If you need to reconfigure it, restart the API with the --reset flag.")
     if exc.status_code == 503:
-        return "The API is temporarily unavailable. Wait a moment and try again."
-    return f"The API returned an error ({exc.status_code}). Check the API server log and try again."
+        return _("The API is temporarily unavailable. Wait a moment and try again.")
+    return _("The API returned an error ({status_code}). Check the API server log and try again.").format(status_code=exc.status_code)
 
 # Templates are resolved at router creation time; the Jinja2Templates instance
 # is set by create_wizard_router() so the caller can pass the correct path.
@@ -772,7 +787,7 @@ def _unauthorized() -> Exception:
     # clients that receive it are redirected to /login by the HTMX response
     # error handler wired in layout.html.
     from starlette.exceptions import HTTPException as StarletteHTTPException
-    return StarletteHTTPException(status_code=401, detail="Authentication required")
+    return StarletteHTTPException(status_code=401, detail=_("Authentication required"))
 
 
 def _render(
@@ -1054,7 +1069,7 @@ async def step1_api_post(request: Request) -> HTMLResponse:
             request,
             "step_api.html",
             {"step": 1, "state": state,
-             "error": "API host is required.",
+             "error": _("API host is required."),
              "success": False, "api_host": host, "api_port": port_raw,
              "rerun_mode": _is_rerun_mode(state.api_address)},
             status_code=422,
@@ -1066,7 +1081,7 @@ async def step1_api_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_api.html",
-            {"step": 1, "state": state, "error": "Port must be between 1 and 65535.",
+            {"step": 1, "state": state, "error": _("Port must be between 1 and 65535."),
              "success": False, "api_host": host, "api_port": port_raw,
              "rerun_mode": _is_rerun_mode(state.api_address)},
             status_code=422,
@@ -1108,7 +1123,7 @@ async def step1_api_post(request: Request) -> HTMLResponse:
                 {
                     "step": 1,
                     "state": state,
-                    "error": (
+                    "error": _(
                         "Re-run failed: the proxy secret is not in secrets.env. "
                         "If you deleted secrets.env, re-run the installer to regenerate it, "
                         "or restart the API with --reset to start a fresh setup."
@@ -1127,13 +1142,13 @@ async def step1_api_post(request: Request) -> HTMLResponse:
             client.get_db_defaults()  # Any authenticated endpoint will do.
         except ApiClientError as exc:
             if exc.status_code == 401:
-                error_msg = (
+                error_msg = _(
                     "The API did not accept the proxy secret. "
                     "Check that secrets.env contains the correct WEEWX_CLEARSKIES_PROXY_SECRET "
                     "and that the API is running with the same value."
                 )
             else:
-                error_msg = f"Could not verify the API connection: {_api_error_message(exc)}"
+                error_msg = _("Could not verify the API connection: {detail}").format(detail=_api_error_message(exc))
             return _render(
                 request,
                 "step_api.html",
@@ -1147,7 +1162,7 @@ async def step1_api_post(request: Request) -> HTMLResponse:
                 request,
                 "step_api.html",
                 {"step": 1, "state": state,
-                 "error": "Could not reach the API. Check the address and try again.",
+                 "error": _("Could not reach the API. Check the address and try again."),
                  "success": False, "api_host": host, "api_port": str(port),
                  "rerun_mode": True},
                 status_code=422,
@@ -1187,7 +1202,7 @@ async def step1_api_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_api.html",
-            {"step": 1, "state": state, "error": "All fields are required.",
+            {"step": 1, "state": state, "error": _("All fields are required."),
              "success": False, "api_host": host, "api_port": port_raw,
              "rerun_mode": False},
             status_code=422,
@@ -1211,11 +1226,11 @@ async def step1_api_post(request: Request) -> HTMLResponse:
         api_session_id = client.handshake(trust_token)
     except ApiClientError as exc:
         if exc.status_code == 401:
-            error_msg = "Invalid trust token. Check the token printed in the API terminal and try again."
+            error_msg = _("Invalid trust token. Check the token printed in the API terminal and try again.")
         elif exc.status_code == 410:
-            error_msg = "This API has already been set up. If you need to reconfigure it, restart the API with the --reset flag."
+            error_msg = _("This API has already been set up. If you need to reconfigure it, restart the API with the --reset flag.")
         else:
-            error_msg = "Could not connect to the API. Check the address and try again."
+            error_msg = _("Could not connect to the API. Check the address and try again.")
         return _render(
             request,
             "step_api.html",
@@ -1229,7 +1244,7 @@ async def step1_api_post(request: Request) -> HTMLResponse:
             request,
             "step_api.html",
             {"step": 1, "state": state,
-             "error": "Could not reach the API. Check the address and try again.",
+             "error": _("Could not reach the API. Check the address and try again."),
              "success": False, "api_host": host, "api_port": str(port),
              "rerun_mode": False},
             status_code=422,
@@ -1294,10 +1309,10 @@ async def step2_db_get(request: Request) -> HTMLResponse:
             if exc.status_code == 401:
                 # Session expired — redirect to step 1.
                 return await step1_api_get(request)
-            api_warning = "Could not fetch database defaults from the API. Enter the settings below."
+            api_warning = _("Could not fetch database defaults from the API. Enter the settings below.")
             logger.warning("get_db_defaults failed: %s", exc)
         except Exception:  # noqa: BLE001
-            api_warning = "Could not reach the API to fetch database defaults. Enter the settings below."
+            api_warning = _("Could not reach the API to fetch database defaults. Enter the settings below.")
             logger.warning("get_db_defaults network error", exc_info=True)
 
     return _render(
@@ -1324,14 +1339,14 @@ async def step2_db_test(request: Request) -> HTMLResponse:
         client = _get_api_client(state)
         result = client.test_db(host, port, user, password, db_name)
     except ValueError:
-        result = {"success": False, "error": "API not connected. Go back to step 1 and reconnect.", "version": None}
+        result = {"success": False, "error": _("API not connected. Go back to step 1 and reconnect."), "version": None}
     except ApiClientError as exc:
         if exc.status_code == 401:
-            result = {"success": False, "error": "Your setup session has expired. Go back to step 1 to reconnect.", "version": None}
+            result = {"success": False, "error": _("Your setup session has expired. Go back to step 1 to reconnect."), "version": None}
         else:
             result = {"success": False, "error": _api_error_message(exc), "version": None}
     except Exception:  # noqa: BLE001
-        result = {"success": False, "error": "Could not reach the API to test the connection. Check that the API is running and try again.", "version": None}
+        result = {"success": False, "error": _("Could not reach the API to test the connection. Check that the API is running and try again."), "version": None}
 
     return _render(
         request,
@@ -1400,7 +1415,7 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_db.html",
-            {"step": 4, "state": state, "result": None, "error": "API not connected. Go back to step 1 and reconnect."},
+            {"step": 4, "state": state, "result": None, "error": _("API not connected. Go back to step 1 and reconnect.")},
             status_code=422,
         )
     except ApiClientError as exc:
@@ -1416,7 +1431,7 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_db.html",
-            {"step": 4, "state": state, "result": None, "error": "Could not reach the API to test the connection. Check that the API is running and try again."},
+            {"step": 4, "state": state, "result": None, "error": _("Could not reach the API to test the connection. Check that the API is running and try again.")},
             status_code=422,
         )
 
@@ -1462,14 +1477,14 @@ async def step3_get(request: Request) -> HTMLResponse:
             state.schema_data = schema_data
             save_wizard_state(session_id, state)
         except ValueError:
-            error = "API not connected. Go back to step 1 and reconnect."
+            error = _("API not connected. Go back to step 1 and reconnect.")
         except ApiClientError as exc:
             if exc.status_code == 401:
                 return await step1_api_get(request)
-            error = "Could not fetch the database schema from the API — check your connection settings in step 2 and try again."
+            error = _("Could not fetch the database schema from the API — check your connection settings in step 2 and try again.")
             logger.warning("get_schema failed in step3_get: %s", exc)
         except Exception:  # noqa: BLE001
-            error = "Could not reach the API to fetch the database schema. Check that the API is running and try again."
+            error = _("Could not reach the API to fetch the database schema. Check that the API is running and try again.")
             logger.warning("get_schema network error in step3_get", exc_info=True)
 
     # If the user has previously saved column mappings (e.g. they advanced to step 4
@@ -1528,7 +1543,7 @@ async def step3_post(request: Request) -> HTMLResponse:
                 schema_data = process_api_schema(api_schema)
                 state.schema_data = schema_data
             except Exception as exc:  # noqa: BLE001
-                schema_error = "Could not read the database schema — check your connection settings in step 2 and try again."
+                schema_error = _("Could not read the database schema — check your connection settings in step 2 and try again.")
                 logger.warning("get_schema error in step3_post: %s", exc)
         return _render(
             request,
@@ -1622,10 +1637,10 @@ async def step4_get(request: Request) -> HTMLResponse:
         except ApiClientError as exc:
             if exc.status_code == 401:
                 return await step1_api_get(request)
-            error = "Could not fetch station details from the API. Fill in the fields below manually."
+            error = _("Could not fetch station details from the API. Fill in the fields below manually.")
             logger.warning("get_station failed in step4_get: %s", exc)
         except Exception:  # noqa: BLE001
-            error = "Could not reach the API to fetch station details. Fill in the fields below manually."
+            error = _("Could not reach the API to fetch station details. Fill in the fields below manually.")
             logger.warning("get_station network error in step4_get", exc_info=True)
 
     # On re-run, altitude_meters may already be set (from old progress file)
@@ -1915,9 +1930,9 @@ async def step6_test_key(request: Request, provider_id: str) -> HTMLResponse:
             request,
             "step_provider_test_result.html",
             {
-                "test_result": {"success": False, "error": "This provider is not available. Please go back and choose a different provider."},
+                "test_result": {"success": False, "error": _("This provider is not available. Please go back and choose a different provider.")},
                 "test_provider_id": provider_id,
-                "test_provider_name": "Unknown provider",
+                "test_provider_name": _("Unknown provider"),
             },
         )
 
@@ -2147,7 +2162,7 @@ async def _handle_branding_upload(
     The caller uses None to mean "keep the URL text-field value instead."
     """
     if _config_dir is None:
-        return None, "Configuration directory not set — cannot save uploaded files."
+        return None, _("Configuration directory not set — cannot save uploaded files.")
 
     allowed_exts, _allowed_mimes, max_bytes = _BRANDING_UPLOAD_RULES[field_name]
     upload = form.get(field_name)
@@ -2160,17 +2175,20 @@ async def _handle_branding_upload(
     raw_filename: str = str(upload.filename)
     suffix = Path(raw_filename).suffix.lower()
     if suffix not in allowed_exts:
-        return None, (
-            f"Unsupported file type \"{suffix}\" for {field_name.replace('_file', '')}. "
-            f"Allowed: {', '.join(sorted(allowed_exts))}."
-        )
+        return None, _(
+            'Unsupported file type "{suffix}" for {field}. '
+            "Allowed: {allowed}."
+        ).format(suffix=suffix, field=field_name.replace('_file', ''), allowed=', '.join(sorted(allowed_exts)))
 
     data: bytes = await upload.read()
     if len(data) > max_bytes:
         max_kb = max_bytes // 1024
-        return None, (
-            f"{field_name.replace('_file', '').replace('_', ' ').title()}: "
-            f"file is {len(data) // 1024} KB, exceeds the {max_kb} KB limit."
+        return None, _(
+            "{field}: file is {size} KB, exceeds the {limit} KB limit."
+        ).format(
+            field=field_name.replace('_file', '').replace('_', ' ').title(),
+            size=len(data) // 1024,
+            limit=max_kb,
         )
 
     safe_name = _sanitise_filename(raw_filename)
@@ -2451,15 +2469,18 @@ async def step_privacy_legal_post(request: Request) -> HTMLResponse:
         suffix = Path(raw_filename).suffix.lower()
         if suffix not in _ALLOWED_TEXT_EXTS:
             text_errors.append(
-                f"Unsupported file type \"{suffix}\" for {field_name.replace('_file', '')}. "
-                f"Allowed: .md, .txt."
+                _('Unsupported file type "{suffix}" for {field}. Allowed: .md, .txt.').format(
+                    suffix=suffix, field=field_name.replace('_file', '')
+                )
             )
             continue
         data: bytes = await upload.read()
         if len(data) > _MAX_TEXT_BYTES:
             text_errors.append(
-                f"{field_name.replace('_file', '').replace('_', ' ').title()}: "
-                f"file is {len(data) // 1024} KB, exceeds the 100 KB limit."
+                _("{field}: file is {size} KB, exceeds the 100 KB limit.").format(
+                    field=field_name.replace('_file', '').replace('_', ' ').title(),
+                    size=len(data) // 1024,
+                )
             )
             continue
         content = data.decode("utf-8", errors="replace")
@@ -2611,19 +2632,19 @@ async def step_tls_post(request: Request) -> HTMLResponse:
     if not _VALID_TLS_MODES:
         _VALID_TLS_MODES = {"self-signed", "acme_http01", "acme_dns01", "manual", "behind_proxy"}
     if state.tls_mode not in _VALID_TLS_MODES:
-        return _tls_error("Please select a TLS configuration mode.")
+        return _tls_error(_("Please select a TLS configuration mode."))
 
     if state.tls_mode in ("acme_http01", "acme_dns01") and not state.tls_domain:
-        return _tls_error("Domain name is required for automated TLS.")
+        return _tls_error(_("Domain name is required for automated TLS."))
 
     if state.tls_mode == "acme_http01" and not state.tls_acme_email:
-        return _tls_error("Email address is required for Let's Encrypt.")
+        return _tls_error(_("Email address is required for Let's Encrypt."))
 
     if state.tls_mode == "acme_dns01" and not state.tls_dns_provider:
-        return _tls_error("DNS provider is required for DNS-01 challenge.")
+        return _tls_error(_("DNS provider is required for DNS-01 challenge."))
 
     if state.tls_mode == "acme_dns01" and not state.tls_dns_api_token:
-        return _tls_error("DNS provider API token is required.")
+        return _tls_error(_("DNS provider API token is required."))
 
     save_wizard_state(session_id, state)
     return await step9_review_get(request)
@@ -2708,7 +2729,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             name="wizard/step_complete.html",
             context={
                 "step": 13,
-                "error": "The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option.",
+                "error": _("The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option."),
                 "result": None,
             },
             status_code=500,
@@ -2863,7 +2884,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             {
                 "step": 15,
                 "state": state,
-                "error": "API not connected. Go back to step 1 and reconnect before applying.",
+                "error": _("API not connected. Go back to step 1 and reconnect before applying."),
             },
             status_code=422,
         )
@@ -2876,7 +2897,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             {
                 "step": 15,
                 "state": state,
-                "error": f"Failed to apply API configuration: {error_msg}",
+                "error": _("Failed to apply API configuration: {detail}").format(detail=error_msg),
             },
             status_code=422,
         )
@@ -2888,7 +2909,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             {
                 "step": 15,
                 "state": state,
-                "error": "Could not reach the API to apply configuration. Check that the API is running and try again.",
+                "error": _("Could not reach the API to apply configuration. Check that the API is running and try again."),
             },
             status_code=422,
         )
@@ -3067,13 +3088,17 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         except Exception:  # noqa: BLE001
             _exc_user = "clearskies"
         _exc_config_dir = _config_dir or Path("/etc/weewx-clearskies")
-        local_error = (
-            f"API configuration saved successfully. "
-            f"Local config write failed for: {exc.filename or _exc_config_dir}.\n"
-            f"The API is configured but local files are out of sync.\n"
-            f"Fix permissions and click Apply again to write local files.\n\n"
-            f"Fix: sudo chown -R {_exc_user}:{_exc_user} {_exc_config_dir}/\n"
-            f"     sudo chmod 750 {_exc_config_dir}/"
+        local_error = _(
+            "API configuration saved successfully. "
+            "Local config write failed for: {failed_path}.\n"
+            "The API is configured but local files are out of sync.\n"
+            "Fix permissions and click Apply again to write local files.\n\n"
+            "Fix: sudo chown -R {user}:{user} {config_dir}/\n"
+            "     sudo chmod 750 {config_dir}/"
+        ).format(
+            failed_path=exc.filename or _exc_config_dir,
+            user=_exc_user,
+            config_dir=_exc_config_dir,
         )
         logger.error("apply_wizard OSError: %s", exc)
         return _render(
