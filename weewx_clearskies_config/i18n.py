@@ -19,6 +19,8 @@ import contextvars
 import json
 from pathlib import Path
 
+from markupsafe import Markup
+
 #: Cookie that persists the operator's chosen wizard UI language across
 #: requests. 1 year max-age; see ``wizard/routes.py:wizard_set_language``.
 LOCALE_COOKIE_NAME = "clearskies-wizard-locale"
@@ -52,15 +54,23 @@ def load_translations(translations_dir: Path | None = None) -> None:
 
 
 def translate(key: str, locale: str = DEFAULT_LOCALE) -> str:
-    """Look up a translation by key. Falls back to English, then the key itself."""
+    """Look up a translation by key. Falls back to English, then the key itself.
+
+    Returns a ``markupsafe.Markup`` instance (a ``str`` subclass) so that
+    Jinja2's autoescape does not re-escape translated values that legitimately
+    contain HTML (e.g. ``<sub>``, ``<code>``, ``<strong>``). The translation
+    content comes from our own trusted JSON files under ``translations/``,
+    never from user input, so marking it safe here is correct — see
+    I18N-COMPLIANCE-PLAN.md "Jinja2 autoescape double-escaping" note.
+    """
     value = _translations.get(locale, {}).get(key)
     if value:
-        return value
+        return Markup(value)
     if locale != DEFAULT_LOCALE:
         value = _translations.get(DEFAULT_LOCALE, {}).get(key)
         if value:
-            return value
-    return key
+            return Markup(value)
+    return Markup(key)
 
 
 def get_current_locale() -> str:
