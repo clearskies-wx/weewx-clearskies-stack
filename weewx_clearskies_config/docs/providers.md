@@ -135,7 +135,7 @@ Some providers are free and keyless — you just select them and they work. Othe
 | NWS | US only | None | ~156 hours | ~7 days | Yes (AFD) | No | No | No |
 | Open-Meteo | Global | None | Provider default | 7 days | No | Yes | Yes | Yes |
 | OpenWeatherMap | Global | Required (paid) | 48 hours | 8 days | No | Yes | Yes | Yes |
-| Aeris | Global | Required | Up to 240 hours | 14 days | Paid tier only | Yes | Yes | Yes |
+| Xweather | Global | Required | Up to 240 hours | 14 days | Paid tier only | Yes | Yes | Yes |
 
 ---
 

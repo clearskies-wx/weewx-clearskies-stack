@@ -109,13 +109,13 @@ PROVIDERS: list[ProviderInfo] = [
     ),
     ProviderInfo(
         "aeris_aqi",
-        "Aeris AQI",
+        "Xweather AQI",
         "aqi",
         "Global",
         ("client_id", "client_secret"),
         "https://data.api.xweather.com/airquality/38.8,-77.0?client_id={client_id}&client_secret={client_secret}",
         "get",
-        notes="Observed data — eligible for haze confirmation (ADR-066). Uses same Aeris credentials as forecast.",
+        notes="Observed data — eligible for haze confirmation (ADR-066). Uses same Xweather credentials as forecast.",
         signup_url="https://www.xweather.com/signup/",
     ),
     ProviderInfo(
