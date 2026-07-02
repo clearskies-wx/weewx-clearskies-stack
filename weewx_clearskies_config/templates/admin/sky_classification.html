@@ -13,57 +13,60 @@
 
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin"
              hx-get="/admin"
              hx-target="#admin-content"
              hx-swap="innerHTML"
-             hx-push-url="true">Admin</a>
+             hx-push-url="true">{{ _("Admin") }}</a>
         </li>
-        <li>Sky Classification</li>
+        <li>{{ _("Sky Classification") }}</li>
       </ul>
     </nav>
-    <h2>Sky Classification Calibration</h2>
+    <h2>{{ _("Sky Classification Calibration") }}</h2>
   </header>
 
-  <p>The sky cover classifier uses the Kasten-Czeplak clearness index (K<sub>m</sub>) —
+  {# This string contains literal <sub> markup as part of the message (the
+     Km symbol), so it is passed through | safe after translation rather
+     than autoescaped — the markup is a fixed literal, not user input. #}
+  <p>{{ _("The sky cover classifier uses the Kasten-Czeplak clearness index (K<sub>m</sub>) —
      the ratio of measured solar irradiance to the clear-sky theoretical maximum.
-     Adjust the thresholds below to match your sensor's characteristics.</p>
+     Adjust the thresholds below to match your sensor's characteristics.") | safe }}</p>
 
   {# Sensor accuracy note #}
-  <aside aria-label="Sensor accuracy note"
+  <aside aria-label="{{ _('Sensor accuracy note') }}"
          style="background:var(--pico-secondary-background);
                 border-left:3px solid var(--pico-muted-border-color);
                 padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
                 margin-block-end:1rem;font-size:0.875rem">
-    <strong>Sensor accuracy note:</strong>
-    Davis VP2 pyranometers: &plusmn;3&ndash;5%.
-    Ambient Weather stations: approximately &plusmn;15%.
+    <strong>{{ _("Sensor accuracy note:") }}</strong>
+    {{ _("Davis VP2 pyranometers: ±3–5%.
+    Ambient Weather stations: approximately ±15%.
     If you use consumer-grade equipment, tight threshold values may produce
     unreliable classifications during marginal sky conditions.
-    Consider relaxing the thresholds by 0.05&ndash;0.10 for less precise sensors.
+    Consider relaxing the thresholds by 0.05–0.10 for less precise sensors.") }}
   </aside>
 
   {# Kasten-Czeplak reference table — inlined (static data) #}
   <section aria-labelledby="kc-table-heading">
-    <h3 id="kc-table-heading">Kasten-Czeplak K<sub>m</sub> reference</h3>
+    <h3 id="kc-table-heading">{{ _("Kasten-Czeplak K<sub>m</sub> reference") | safe }}</h3>
     <div style="overflow-x:auto">
-      <table role="table" aria-label="Kasten-Czeplak clearness index to sky cover mapping">
+      <table role="table" aria-label="{{ _('Kasten-Czeplak clearness index to sky cover mapping') }}">
         <thead>
           <tr>
-            <th scope="col">K<sub>m</sub> range</th>
-            <th scope="col">Oktas (coverage)</th>
-            <th scope="col">NWS label</th>
+            <th scope="col">{{ _("K<sub>m</sub> range") | safe }}</th>
+            <th scope="col">{{ _("Oktas (coverage)") }}</th>
+            <th scope="col">{{ _("NWS label") }}</th>
           </tr>
         </thead>
         <tbody>
-          <tr><td>0.97 &ndash; 1.00</td><td>0 (clear)</td><td><code>SKC / CLR</code></td></tr>
-          <tr><td>0.85 &ndash; 0.96</td><td>1&ndash;2 (few)</td><td><code>FEW</code></td></tr>
-          <tr><td>0.52 &ndash; 0.84</td><td>3&ndash;4 (scattered)</td><td><code>SCT</code></td></tr>
-          <tr><td>0.15 &ndash; 0.51</td><td>5&ndash;7 (broken)</td><td><code>BKN</code></td></tr>
-          <tr><td>0.00 &ndash; 0.14</td><td>8 (overcast)</td><td><code>OVC</code></td></tr>
+          <tr><td>0.97 &ndash; 1.00</td><td>0 ({{ _("clear") }})</td><td><code>SKC / CLR</code></td></tr>
+          <tr><td>0.85 &ndash; 0.96</td><td>1&ndash;2 ({{ _("few") }})</td><td><code>FEW</code></td></tr>
+          <tr><td>0.52 &ndash; 0.84</td><td>3&ndash;4 ({{ _("scattered") }})</td><td><code>SCT</code></td></tr>
+          <tr><td>0.15 &ndash; 0.51</td><td>5&ndash;7 ({{ _("broken") }})</td><td><code>BKN</code></td></tr>
+          <tr><td>0.00 &ndash; 0.14</td><td>8 ({{ _("overcast") }})</td><td><code>OVC</code></td></tr>
         </tbody>
       </table>
     </div>
@@ -81,14 +84,14 @@
     {{ render_section_fields(fields, values, "admin") }}
 
     <div role="group" style="margin-block-start:1rem">
-      <button type="submit">Save</button>
+      <button type="submit">{{ _("Save") }}</button>
 
       {# Reset to defaults — sets each field to its registry default, then submits #}
       <button type="button"
               class="secondary outline"
               aria-describedby="reset-hint"
               onclick="skyClassificationReset()">
-        Reset to defaults
+        {{ _("Reset to defaults") }}
       </button>
 
       <a href="/admin"
@@ -97,10 +100,10 @@
          hx-swap="innerHTML"
          hx-push-url="true"
          role="button"
-         class="outline">Cancel</a>
+         class="outline">{{ _("Cancel") }}</a>
     </div>
     <small id="reset-hint" style="display:block;margin-block-start:0.5rem">
-      Reset restores all thresholds to the factory defaults listed above.
+      {{ _("Reset restores all thresholds to the factory defaults listed above.") }}
     </small>
   </form>
 </article>
@@ -128,3 +131,4 @@
 </script>
 
 <script src="/static/js/conditional-visibility.js"></script>
+</content>

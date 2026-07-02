@@ -1,15 +1,15 @@
 {% from "macros/form_fields.html" import render_section_fields %}
 
-<nav aria-label="Breadcrumb">
+<nav aria-label="{{ _('Breadcrumb') }}">
   <ul>
-    <li><a href="#" hx-get="/admin/config" hx-target="#admin-content" hx-swap="innerHTML">Admin</a></li>
-    <li>{{ section.display_name }}</li>
+    <li><a href="#" hx-get="/admin/config" hx-target="#admin-content" hx-swap="innerHTML">{{ _("Admin") }}</a></li>
+    <li>{{ _(section.display_name) }}</li>
   </ul>
 </nav>
 
 <article>
   <header>
-    <h2>{{ section.display_name }}</h2>
+    <h2>{{ _(section.display_name) }}</h2>
   </header>
 
   {% if error %}
@@ -21,10 +21,11 @@
     {{ render_section_fields(fields, values, "admin") }}
     <div role="group">
       <button type="button" hx-get="/admin/config"
-              hx-target="#admin-content" hx-swap="innerHTML">Cancel</button>
-      <button type="submit">Save</button>
+              hx-target="#admin-content" hx-swap="innerHTML">{{ _("Cancel") }}</button>
+      <button type="submit">{{ _("Save") }}</button>
     </div>
   </form>
 </article>
 
 <script src="/static/js/conditional-visibility.js"></script>
+</content>

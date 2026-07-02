@@ -12,26 +12,26 @@
    ------------------------------------------------------------------------- #}
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin"
              hx-get="/admin"
              hx-target="#admin-content"
              hx-swap="innerHTML"
-             hx-push-url="true">Admin</a>
+             hx-push-url="true">{{ _("Admin") }}</a>
         </li>
-        <li>Geographic Features</li>
+        <li>{{ _("Geographic Features") }}</li>
       </ul>
     </nav>
-    <h2>Geographic Features</h2>
+    <h2>{{ _("Geographic Features") }}</h2>
   </header>
 
   <p>
-    Downloads OpenStreetMap geographic features (boundaries, roads, water) for the
+    {{ _("Downloads OpenStreetMap geographic features (boundaries, roads, water) for the
     satellite map overlay. The data is stored as a PMTiles file on the API host and
     served to the dashboard on demand. Downloads may take several minutes depending
-    on the station location and network speed.
+    on the station location and network speed.") }}
   </p>
 
   {% if flash %}
@@ -46,7 +46,7 @@
 
   {# Status section #}
   <section aria-labelledby="geo-status-heading">
-    <h3 id="geo-status-heading">Current Status</h3>
+    <h3 id="geo-status-heading">{{ _("Current Status") }}</h3>
 
     {% if error %}
       <div role="alert"
@@ -54,7 +54,7 @@
                   border-left:3px solid var(--pico-color-amber-500,#f59e0b);
                   padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
                   margin-block:1rem;font-size:0.875rem">
-        <strong>Status unavailable.</strong>
+        <strong>{{ _("Status unavailable.") }}</strong>
         {{ error }}
       </div>
     {% elif status is none %}
@@ -63,40 +63,40 @@
                   border-left:3px solid var(--pico-color-amber-500,#f59e0b);
                   padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
                   margin-block:1rem;font-size:0.875rem">
-        <strong>Status unavailable.</strong>
-        The API is unreachable or not yet configured. Start the API service and
-        reload this page to view geographic features status.
+        <strong>{{ _("Status unavailable.") }}</strong>
+        {{ _("The API is unreachable or not yet configured. Start the API service and
+        reload this page to view geographic features status.") }}
       </div>
     {% else %}
       <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem;margin-block-end:1rem">
-        <dt>Availability</dt>
+        <dt>{{ _("Availability") }}</dt>
         <dd>
           {% if status.get("available") %}
-            <span aria-label="Available"
+            <span aria-label="{{ _('Available') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-color-green-500,#22c55e)"></span>
-              Available
+              {{ _("Available") }}
             </span>
           {% else %}
-            <span aria-label="Not downloaded"
+            <span aria-label="{{ _('Not downloaded') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-muted-color,#9ca3af)"></span>
-              Not downloaded
+              {{ _("Not downloaded") }}
             </span>
           {% endif %}
         </dd>
 
         {% if status.get("size_bytes") %}
-        <dt>File size</dt>
+        <dt>{{ _("File size") }}</dt>
         <dd>{{ "%.1f"|format(status.size_bytes / (1024 * 1024)) }} MB</dd>
         {% endif %}
 
         {% if status.get("updated_at") %}
-        <dt>Last updated</dt>
+        <dt>{{ _("Last updated") }}</dt>
         <dd>{{ status.updated_at[:10] if status.updated_at|length >= 10 else status.updated_at }}</dd>
         {% endif %}
       </dl>
@@ -105,11 +105,11 @@
 
   {# Update trigger #}
   <section aria-labelledby="geo-update-heading" style="margin-block-start:1.5rem">
-    <h3 id="geo-update-heading">Update Map Data</h3>
+    <h3 id="geo-update-heading">{{ _("Update Map Data") }}</h3>
     <p style="font-size:0.875rem;color:var(--pico-muted-color)">
-      Triggers a fresh download of OpenStreetMap geographic features clipped to
+      {{ _("Triggers a fresh download of OpenStreetMap geographic features clipped to
       the station's configured bounding box. The download runs synchronously —
-      the page will wait until the download is complete (typically 1–5 minutes).
+      the page will wait until the download is complete (typically 1–5 minutes).") }}
     </p>
     <form hx-post="/admin/geographic-features/update"
           hx-target="#admin-content"
@@ -119,18 +119,18 @@
         <button type="submit"
                 id="geo-update-btn"
                 aria-describedby="geo-update-hint">
-          Update Map Data
+          {{ _("Update Map Data") }}
         </button>
         <span id="geo-spinner"
               class="htmx-indicator"
               aria-live="polite"
               style="font-size:0.875rem;color:var(--pico-muted-color);align-self:center">
-          Downloading&hellip; this may take a few minutes.
+          {{ _("Downloading… this may take a few minutes.") }}
         </span>
       </div>
       <small id="geo-update-hint" style="display:block;margin-block-start:0.5rem">
-        Only one download runs at a time. If a download is already in progress,
-        this button will wait for it to complete before returning.
+        {{ _("Only one download runs at a time. If a download is already in progress,
+        this button will wait for it to complete before returning.") }}
       </small>
     </form>
   </section>
@@ -142,7 +142,8 @@
        hx-swap="innerHTML"
        hx-push-url="true"
        role="button"
-       class="outline secondary">Back to Admin</a>
+       class="outline secondary">{{ _("Back to Admin") }}</a>
   </div>
 
 </article>
+</content>

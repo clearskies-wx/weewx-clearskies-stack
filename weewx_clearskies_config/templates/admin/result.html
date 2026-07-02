@@ -5,7 +5,7 @@
    ------------------------------------------------------------------------- #}
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin"
@@ -13,13 +13,13 @@
              hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
-            Admin
+            {{ _("Admin") }}
           </a>
         </li>
-        <li>{{ display_name }}</li>
+        <li>{{ _(display_name) }}</li>
       </ul>
     </nav>
-    <h2>{{ display_name }}</h2>
+    <h2>{{ _(display_name) }}</h2>
   </header>
 
   {# ------------------------------------------------------------------ #}
@@ -41,10 +41,10 @@
               background-color:var(--pico-del-color, #f8d7da);border:1px solid #f5c6cb;color:#721c24;
               {% endif %}">
     {% if success %}
-    <strong>Saved.</strong>
-    {{ display_name }} settings updated successfully.
+    <strong>{{ _("Saved.") }}</strong>
+    {{ _(display_name) }} {{ _("settings updated successfully.") }}
     {% else %}
-    <strong>Error saving {{ display_name }}:</strong>
+    <strong>{{ _("Error saving") }} {{ _(display_name) }}:</strong>
     {{ error }}
     {% endif %}
   </div>
@@ -60,7 +60,7 @@
        hx-push-url="true"
        role="button"
        class="secondary outline">
-      {% if success %}Edit again{% else %}Try again{% endif %}
+      {% if success %}{{ _("Edit again") }}{% else %}{{ _("Try again") }}{% endif %}
     </a>
     <a href="/admin"
        hx-get="/admin"
@@ -69,7 +69,8 @@
        hx-push-url="true"
        role="button"
        class="outline">
-      Back to overview
+      {{ _("Back to overview") }}
     </a>
   </div>
 </article>
+</content>

@@ -17,6 +17,13 @@
        mode   : "wizard" or "admin"
 
    Contract source: OPERATIONS-MANUAL.md §4.1 render_field macro contract
+
+   i18n: field.label, field.help_text, field.wizard_help, field.placeholder,
+   and option labels/descriptions are operator-authored strings coming from
+   the ConfigField registry (weewx_clearskies_config/registry/). They are
+   passed through the Jinja2 _() global here, at render time, so registry
+   authors only need to register the English string once (as an en.json key)
+   rather than every template that happens to render a given field.
    ------------------------------------------------------------------------- #}
 
 
@@ -28,9 +35,9 @@
 {# Choose the correct help text based on render mode. #}
 {%- macro _help_text(field, mode) -%}
   {%- if mode == "wizard" and field.wizard_help -%}
-    {{ field.wizard_help }}
+    {{ _(field.wizard_help) }}
   {%- else -%}
-    {{ field.help_text }}
+    {{ _(field.help_text) }}
   {%- endif -%}
 {%- endmacro -%}
 
@@ -61,23 +68,23 @@
 
   {# ── text ── #}
   {%- if field.field_type == "text" %}
-  <label for="{{ eid }}">{{ field.label }}</label>
+  <label for="{{ eid }}">{{ _(field.label) }}</label>
   <input type="text"
          id="{{ eid }}"
          name="{{ field.config_key }}"
          value="{{ value if value is not none else '' }}"
-         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         {% if field.placeholder %}placeholder="{{ _(field.placeholder) }}"{% endif %}
          aria-describedby="{{ hid }}">
   <small id="{{ hid }}">{{ help }}</small>
 
   {# ── url ── #}
   {%- elif field.field_type == "url" %}
-  <label for="{{ eid }}">{{ field.label }}</label>
+  <label for="{{ eid }}">{{ _(field.label) }}</label>
   <input type="url"
          id="{{ eid }}"
          name="{{ field.config_key }}"
          value="{{ value if value is not none else '' }}"
-         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         {% if field.placeholder %}placeholder="{{ _(field.placeholder) }}"{% endif %}
          aria-describedby="{{ hid }}">
   <small id="{{ hid }}">{{ help }}</small>
 
@@ -89,7 +96,7 @@
     {%- if rule.rule_type == "max" %}{% set ns.max_val = rule.value %}{% endif %}
     {%- if rule.rule_type == "step" %}{% set ns.step_val = rule.value %}{% endif %}
   {%- endfor %}
-  <label for="{{ eid }}">{{ field.label }}</label>
+  <label for="{{ eid }}">{{ _(field.label) }}</label>
   <input type="number"
          id="{{ eid }}"
          name="{{ field.config_key }}"
@@ -97,7 +104,7 @@
          {% if ns.min_val is not none %}min="{{ ns.min_val }}"{% endif %}
          {% if ns.max_val is not none %}max="{{ ns.max_val }}"{% endif %}
          {% if ns.step_val is not none %}step="{{ ns.step_val }}"{% endif %}
-         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         {% if field.placeholder %}placeholder="{{ _(field.placeholder) }}"{% endif %}
          aria-describedby="{{ hid }}">
   <small id="{{ hid }}">{{ help }}</small>
 
@@ -110,18 +117,18 @@
            role="switch"
            {% if value %}checked{% endif %}
            aria-describedby="{{ hid }}">
-    {{ field.label }}
+    {{ _(field.label) }}
   </label>
   <small id="{{ hid }}">{{ help }}</small>
 
   {# ── select ── #}
   {%- elif field.field_type == "select" %}
-  <label for="{{ eid }}">{{ field.label }}</label>
+  <label for="{{ eid }}">{{ _(field.label) }}</label>
   <select id="{{ eid }}"
           name="{{ field.config_key }}"
           aria-describedby="{{ hid }}">
     {% for opt in field.options %}
-    <option value="{{ opt.value }}"{% if value == opt.value %} selected{% endif %}>{{ opt.label }}</option>
+    <option value="{{ opt.value }}"{% if value == opt.value %} selected{% endif %}>{{ _(opt.label) }}</option>
     {% endfor %}
   </select>
   <small id="{{ hid }}">{{ help }}</small>
@@ -129,7 +136,7 @@
   {# ── radio ── #}
   {%- elif field.field_type == "radio" %}
   <fieldset>
-    <legend>{{ field.label }}</legend>
+    <legend>{{ _(field.label) }}</legend>
     {% for opt in field.options %}
     <label>
       <input type="radio"
@@ -138,8 +145,8 @@
              value="{{ opt.value }}"
              {% if value == opt.value %}checked{% endif %}
              aria-describedby="{{ hid }}">
-      {{ opt.label }}
-      {% if opt.description %}<small>{{ opt.description }}</small>{% endif %}
+      {{ _(opt.label) }}
+      {% if opt.description %}<small>{{ _(opt.description) }}</small>{% endif %}
     </label>
     {% endfor %}
   </fieldset>
@@ -147,17 +154,17 @@
 
   {# ── password ── #}
   {%- elif field.field_type == "password" %}
-  <label for="{{ eid }}">{{ field.label }}</label>
+  <label for="{{ eid }}">{{ _(field.label) }}</label>
   <div class="password-field">
     <input type="password"
            id="{{ eid }}"
            name="{{ field.config_key }}"
            value="{{ value if value is not none else '' }}"
-           {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+           {% if field.placeholder %}placeholder="{{ _(field.placeholder) }}"{% endif %}
            aria-describedby="{{ hid }}">
     <button type="button"
             class="password-toggle"
-            aria-label="Show/Hide {{ field.label }}"
+            aria-label="{{ _('Show/Hide') }} {{ _(field.label) }}"
             aria-controls="{{ eid }}"
             onclick="togglePassword(this)">
       <svg aria-hidden="true" focusable="false" width="20" height="20" viewBox="0 0 24 24"
@@ -171,19 +178,19 @@
 
   {# ── file_or_url (URL input only; file upload handled by route handler) ── #}
   {%- elif field.field_type == "file_or_url" %}
-  <label for="{{ eid }}">{{ field.label }}</label>
+  <label for="{{ eid }}">{{ _(field.label) }}</label>
   <input type="url"
          id="{{ eid }}"
          name="{{ field.config_key }}"
          value="{{ value if value is not none else '' }}"
-         {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+         {% if field.placeholder %}placeholder="{{ _(field.placeholder) }}"{% endif %}
          aria-describedby="{{ hid }}">
   <small id="{{ hid }}">{{ help }}</small>
 
   {# ── radio_swatch ── #}
   {%- elif field.field_type == "radio_swatch" %}
   <fieldset class="accent-swatches">
-    <legend>{{ field.label }}</legend>
+    <legend>{{ _(field.label) }}</legend>
     {% for opt in field.options %}
     <label class="swatch-label">
       <input type="radio"
@@ -195,8 +202,8 @@
              class="swatch-radio">
       <span class="swatch"
             style="background-color: var(--accent-{{ opt.value }})"
-            title="{{ opt.label }}"
-            aria-label="{{ opt.label }}"></span>
+            title="{{ _(opt.label) }}"
+            aria-label="{{ _(opt.label) }}"></span>
     </label>
     {% endfor %}
   </fieldset>
@@ -204,11 +211,11 @@
 
   {# ── textarea ── #}
   {%- elif field.field_type == "textarea" %}
-  <label for="{{ eid }}">{{ field.label }}</label>
+  <label for="{{ eid }}">{{ _(field.label) }}</label>
   <textarea id="{{ eid }}"
             name="{{ field.config_key }}"
             rows="4"
-            {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+            {% if field.placeholder %}placeholder="{{ _(field.placeholder) }}"{% endif %}
             aria-describedby="{{ hid }}">{{ value if value is not none else '' }}</textarea>
   <small id="{{ hid }}">{{ help }}</small>
 
@@ -216,7 +223,7 @@
   {%- elif field.field_type == "checkbox_group" %}
   {%- set checked_values = value if value is iterable and value is not string else [] %}
   <fieldset>
-    <legend>{{ field.label }}</legend>
+    <legend>{{ _(field.label) }}</legend>
     {% for opt in field.options %}
     <label>
       <input type="checkbox"
@@ -225,7 +232,7 @@
              value="{{ opt.value }}"
              {% if opt.value in checked_values %}checked{% endif %}
              aria-describedby="{{ hid }}">
-      {{ opt.label }}
+      {{ _(opt.label) }}
     </label>
     {% endfor %}
   </fieldset>
@@ -247,3 +254,4 @@
   {% endfor %}
 </div>
 {% endmacro %}
+</content>

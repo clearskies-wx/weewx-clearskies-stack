@@ -20,29 +20,29 @@
    ------------------------------------------------------------------------- #}
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin"
              hx-get="/admin"
              hx-target="#admin-content"
              hx-swap="innerHTML"
-             hx-push-url="true">Admin</a>
+             hx-push-url="true">{{ _("Admin") }}</a>
         </li>
-        <li>Haze Calibration</li>
+        <li>{{ _("Haze Calibration") }}</li>
       </ul>
     </nav>
-    <h2>Haze Calibration</h2>
+    <h2>{{ _("Haze Calibration") }}</h2>
   </header>
 
-  <p>The haze detection system uses particulate matter (PM2.5) data and a
+  <p>{{ _("The haze detection system uses particulate matter (PM2.5) data and a
      hygroscopic scattering model to identify haze conditions. Calibration
      collects clear-sky solar transmittance samples month-by-month to establish
-     a local seasonal baseline.</p>
+     a local seasonal baseline.") }}</p>
 
   {# Calibration status section #}
   <section aria-labelledby="cal-status-heading">
-    <h3 id="cal-status-heading">Calibration Status</h3>
+    <h3 id="cal-status-heading">{{ _("Calibration Status") }}</h3>
 
     {% if calibration is none %}
       {# API unreachable — show a warning instead of the grid #}
@@ -51,9 +51,9 @@
                   border-left:3px solid var(--pico-color-amber-500,#f59e0b);
                   padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
                   margin-block:1rem;font-size:0.875rem">
-        <strong>Calibration data unavailable.</strong>
-        The API is unreachable or not yet configured. Start the API service and
-        reload this page to view calibration status.
+        <strong>{{ _("Calibration data unavailable.") }}</strong>
+        {{ _("The API is unreachable or not yet configured. Start the API service and
+        reload this page to view calibration status.") }}
       </div>
     {% else %}
       {% set state = calibration.get("overall_state", "no-data") %}
@@ -61,53 +61,53 @@
 
       {# Overall status + months calibrated #}
       <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem;margin-block-end:1rem">
-        <dt>Overall status</dt>
+        <dt>{{ _("Overall status") }}</dt>
         <dd>
           {% if state == "fully-calibrated" %}
-            <span aria-label="Fully calibrated"
+            <span aria-label="{{ _('Fully calibrated') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-color-green-500,#22c55e)"></span>
-              Fully calibrated
+              {{ _("Fully calibrated") }}
             </span>
           {% elif state == "partial" %}
-            <span aria-label="Partially calibrated"
+            <span aria-label="{{ _('Partially calibrated') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-color-amber-500,#f59e0b)"></span>
-              Partial
+              {{ _("Partial") }}
             </span>
           {% elif state == "bootstrapping" %}
-            <span aria-label="Bootstrapping — still collecting samples"
+            <span aria-label="{{ _('Bootstrapping — still collecting samples') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-color-amber-500,#f59e0b)"></span>
-              Bootstrapping
+              {{ _("Bootstrapping") }}
             </span>
           {% else %}
-            <span aria-label="No calibration data yet"
+            <span aria-label="{{ _('No calibration data yet') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-muted-color,#9ca3af)"></span>
-              No data
+              {{ _("No data") }}
             </span>
           {% endif %}
         </dd>
 
-        <dt>Months calibrated</dt>
+        <dt>{{ _("Months calibrated") }}</dt>
         <dd>{{ months_cal }} / 12</dd>
 
         {% if calibration.get("station_type") %}
-        <dt>Station type</dt>
+        <dt>{{ _("Station type") }}</dt>
         <dd>{{ calibration.station_type }}</dd>
         {% endif %}
 
         {% if calibration.get("flat_baseline") is not none and calibration.get("flat_baseline") %}
-        <dt>Flat fallback baseline K<sub>cs</sub></dt>
+        <dt>{{ _("Flat fallback baseline K<sub>cs</sub>") | safe }}</dt>
         <dd>{{ calibration.flat_baseline }}</dd>
         {% endif %}
       </dl>
@@ -119,13 +119,13 @@
                   border:1px solid var(--pico-color-amber-500,#f59e0b);
                   padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
                   margin-block:1rem;font-size:0.875rem">
-        <strong>Drift detected in {{ calibration.drift_warnings | length }} month(s):</strong>
+        <strong>{{ _("Drift detected in") }} {{ calibration.drift_warnings | length }} {{ _("month(s):") }}</strong>
         <ul style="margin:0.5rem 0 0;padding-inline-start:1.25rem">
-          {% set month_names = ["", "January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"] %}
+          {% set month_names = ["", _("January"), _("February"), _("March"), _("April"), _("May"), _("June"), _("July"), _("August"), _("September"), _("October"), _("November"), _("December")] %}
           {% for w in calibration.drift_warnings %}
           <li>
-            <strong>{{ month_names[w.month] }}</strong> — recent mean {{ w.recent_mean }},
-            baseline {{ w.baseline }}, divergence {{ w.divergence }}
+            <strong>{{ month_names[w.month] }}</strong> — {{ _("recent mean") }} {{ w.recent_mean }},
+            {{ _("baseline") }} {{ w.baseline }}, {{ _("divergence") }} {{ w.divergence }}
           </li>
           {% endfor %}
         </ul>
@@ -135,7 +135,7 @@
       {# Per-month calibration grid #}
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(8rem,1fr));
                   gap:0.5rem;margin-block:1rem"
-           aria-label="Per-month calibration status">
+           aria-label="{{ _('Per-month calibration status') }}">
         {% for m in calibration.get("per_month", []) %}
         <div style="border:1px solid var(--pico-muted-border-color);
                     border-radius:var(--pico-border-radius);
@@ -149,7 +149,7 @@
                          border-radius:50%;flex-shrink:0;
                          background:{% if m.is_calibrated %}var(--pico-color-green-500,#22c55e){% else %}var(--pico-muted-color,#9ca3af){% endif %}"></span>
           </div>
-          <div style="color:var(--pico-muted-color)">{{ m.sample_count }} samples</div>
+          <div style="color:var(--pico-muted-color)">{{ m.sample_count }} {{ _("samples") }}</div>
           <div>K<sub>cs</sub>: {% if m.baseline_kcs is not none and m.baseline_kcs %}{{ m.baseline_kcs }}{% else %}&mdash;{% endif %}</div>
         </div>
         {% endfor %}
@@ -160,28 +160,28 @@
 
   {# Bootstrap sensor info section #}
   <section aria-labelledby="sensor-heading" style="margin-block-start:1.5rem">
-    <h3 id="sensor-heading">Bootstrap Sensor</h3>
+    <h3 id="sensor-heading">{{ _("Bootstrap Sensor") }}</h3>
 
     {% if calibration is not none and calibration.get("openaq_sensor") %}
       {% set sensor = calibration.openaq_sensor %}
       <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem">
-        <dt>Active sensor</dt>
-        <dd>{{ sensor.name }} (ID: {{ sensor.sensor_id }})</dd>
-        <dt>Distance</dt>
+        <dt>{{ _("Active sensor") }}</dt>
+        <dd>{{ sensor.name }} ({{ _("ID:") }} {{ sensor.sensor_id }})</dd>
+        <dt>{{ _("Distance") }}</dt>
         <dd>{{ "%.1f"|format(sensor.distance_km) }} km</dd>
-        <dt>Coordinates</dt>
+        <dt>{{ _("Coordinates") }}</dt>
         <dd>{{ "%.4f"|format(sensor.lat) }}, {{ "%.4f"|format(sensor.lon) }}</dd>
       </dl>
     {% elif calibration is not none %}
       <p style="font-size:0.875rem;color:var(--pico-muted-color)">
-        No sensor selected yet. The system will select a reference sensor automatically
-        on the next bootstrap run.
+        {{ _("No sensor selected yet. The system will select a reference sensor automatically
+        on the next bootstrap run.") }}
       </p>
     {% endif %}
 
     {# Sensor override controls #}
     <details style="margin-block-start:1rem;border:1px solid var(--pico-muted-border-color);border-radius:var(--pico-border-radius);padding:0.75rem 1rem">
-      <summary style="cursor:pointer;font-weight:600;font-size:0.9rem">Override sensor selection</summary>
+      <summary style="cursor:pointer;font-weight:600;font-size:0.9rem">{{ _("Override sensor selection") }}</summary>
       <div style="margin-block-start:0.75rem">
 
         {# Dropdown of nearby reference sensors — loaded via HTMX #}
@@ -189,12 +189,12 @@
              hx-get="/admin/openaq-sensors-fragment"
              hx-trigger="revealed"
              hx-swap="innerHTML">
-          <p style="font-size:0.875rem;color:var(--pico-muted-color)">Loading nearby sensors...</p>
+          <p style="font-size:0.875rem;color:var(--pico-muted-color)">{{ _("Loading nearby sensors...") }}</p>
         </div>
 
         {# Manual ID entry — the sole form submission path #}
         <fieldset style="margin-block-start:1rem">
-          <legend style="font-size:0.875rem">Manual sensor ID</legend>
+          <legend style="font-size:0.875rem">{{ _("Manual sensor ID") }}</legend>
           <form hx-post="/admin/haze-calibration"
                 hx-target="#admin-content"
                 hx-swap="innerHTML">
@@ -204,7 +204,7 @@
             <input type="hidden" name="gamma"
                    value="{{ values.get('gamma', defaults.gamma) }}">
             <label for="manual_sensor_id" style="font-size:0.875rem">
-              Enter any OpenAQ sensor ID
+              {{ _("Enter any OpenAQ sensor ID") }}
               <input type="number" id="manual_sensor_id" name="openaq_sensor_id"
                      placeholder="e.g. 1502"
                      style="max-width:12rem"
@@ -212,14 +212,14 @@
                      value="{{ values.get('openaq_sensor_id', '') }}">
             </label>
             <small style="display:block;margin-block:0.25rem 0.5rem">
-              Non-reference sensors (PurpleAir, private) are accepted here but not
-              listed in the dropdown above.
+              {{ _("Non-reference sensors (PurpleAir, private) are accepted here but not
+              listed in the dropdown above.") }}
             </small>
             <div role="group">
-              <button type="submit" class="outline" style="font-size:0.85rem">Set sensor override</button>
+              <button type="submit" class="outline" style="font-size:0.85rem">{{ _("Set sensor override") }}</button>
               {% if values.get('openaq_sensor_id') %}
               <button type="submit" name="openaq_sensor_id" value=""
-                      class="secondary outline" style="font-size:0.85rem">Clear override</button>
+                      class="secondary outline" style="font-size:0.85rem">{{ _("Clear override") }}</button>
               {% endif %}
             </div>
           </form>
@@ -235,7 +235,7 @@
         hx-swap="innerHTML">
 
     <fieldset style="margin-block-start:1rem">
-      <legend>Haze detection</legend>
+      <legend>{{ _("Haze detection") }}</legend>
 
       <label for="haze_detection" style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
         <input
@@ -246,19 +246,19 @@
           {% if values.get("haze_detection", defaults.haze_detection) == "true" %}checked{% endif %}
           aria-describedby="haze-detection-hint"
         >
-        Enable haze detection
+        {{ _("Enable haze detection") }}
       </label>
       <small id="haze-detection-hint" style="display:block;margin-block-start:0.25rem">
-        Default: enabled. When disabled, haze conditions will not be reported
-        regardless of PM2.5 levels.
+        {{ _("Default: enabled. When disabled, haze conditions will not be reported
+        regardless of PM2.5 levels.") }}
       </small>
     </fieldset>
 
     <fieldset style="margin-block-start:1rem">
-      <legend>Hygroscopic correction</legend>
+      <legend>{{ _("Hygroscopic correction") }}</legend>
 
       <label for="gamma">
-        Gamma exponent (&gamma;, 0.1 &ndash; 1.0)
+        {{ _("Gamma exponent (γ, 0.1 – 1.0)") }}
         <input
           type="number"
           id="gamma"
@@ -272,15 +272,15 @@
         >
       </label>
       <small id="gamma-hint">
-        Default: {{ defaults.gamma }}.
-        Hygroscopic correction exponent (H&auml;nel 1976). Default 0.45 is suitable
+        {{ _("Default:") }} {{ defaults.gamma }}.
+        {{ _("Hygroscopic correction exponent (Hänel 1976). Default 0.45 is suitable
         for most locations. Lower values reduce humidity sensitivity; higher values
-        increase it.
+        increase it.") }}
       </small>
     </fieldset>
 
     <div role="group" style="margin-block-start:1rem">
-      <button type="submit">Save</button>
+      <button type="submit">{{ _("Save") }}</button>
 
       <a href="/admin"
          hx-get="/admin"
@@ -288,27 +288,28 @@
          hx-swap="innerHTML"
          hx-push-url="true"
          role="button"
-         class="outline">Cancel</a>
+         class="outline">{{ _("Cancel") }}</a>
     </div>
   </form>
 
   {# Reset calibration — separate form, destructive action #}
   <section aria-labelledby="reset-cal-heading" style="margin-block-start:2rem">
-    <h3 id="reset-cal-heading">Reset Calibration Data</h3>
+    <h3 id="reset-cal-heading">{{ _("Reset Calibration Data") }}</h3>
     <p style="font-size:0.875rem;color:var(--pico-muted-color)">
-      Deletes all per-month baselines from the API. The system will re-bootstrap
-      as new clear-sky samples are collected. This cannot be undone.
+      {{ _("Deletes all per-month baselines from the API. The system will re-bootstrap
+      as new clear-sky samples are collected. This cannot be undone.") }}
     </p>
     <form hx-post="/admin/haze-calibration/reset"
           hx-target="#admin-content"
           hx-swap="innerHTML"
-          hx-confirm="This will delete all calibration data and require re-bootstrap. Continue?">
+          hx-confirm="{{ _('This will delete all calibration data and require re-bootstrap. Continue?') }}">
       <button type="submit"
               class="secondary outline"
-              aria-label="Reset all haze calibration data — this cannot be undone">
-        Reset Calibration
+              aria-label="{{ _('Reset all haze calibration data — this cannot be undone') }}">
+        {{ _("Reset Calibration") }}
       </button>
     </form>
   </section>
 
 </article>
+</content>

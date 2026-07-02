@@ -11,24 +11,24 @@
    ------------------------------------------------------------------------- #}
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin"
              hx-get="/admin"
              hx-target="#admin-content"
              hx-swap="innerHTML"
-             hx-push-url="true">Admin</a>
+             hx-push-url="true">{{ _("Admin") }}</a>
         </li>
-        <li>Now Page Layout</li>
+        <li>{{ _("Now Page Layout") }}</li>
       </ul>
     </nav>
-    <h2>Now Page Card Layout</h2>
+    <h2>{{ _("Now Page Card Layout") }}</h2>
   </header>
 
   <p style="margin-block-end:1rem;font-size:0.875rem">
-    Drag cards between the zones to build your Now page layout, or use the
-    keyboard buttons. Changes take effect when you click <strong>Save Layout</strong>.
+    {{ _("Drag cards between the zones to build your Now page layout, or use the
+    keyboard buttons. Changes take effect when you click") }} <strong>{{ _("Save Layout") }}</strong>.
   </p>
 
   <form hx-post="/admin/now-layout"
@@ -37,14 +37,14 @@
 
     {# --- Active grid --- #}
     <fieldset>
-      <legend>Active Cards (drag to reorder)</legend>
+      <legend>{{ _("Active Cards (drag to reorder)") }}</legend>
       <p id="active-grid-hint" style="font-size:0.8rem;color:var(--pico-muted-color);margin:0 0 0.5rem">
-        Cards shown here appear on the Now page in this order. Drag to reorder,
-        or use the ↑ ↓ buttons.
+        {{ _("Cards shown here appear on the Now page in this order. Drag to reorder,
+        or use the") }} ↑ ↓ {{ _("buttons.") }}
       </p>
       <div id="active-grid"
            class="card-editor-zone"
-           aria-label="Active cards — drag or use buttons to reorder"
+           aria-label="{{ _('Active cards — drag or use buttons to reorder') }}"
            aria-describedby="active-grid-hint"
            role="list">
         {% for card in active_cards %}
@@ -55,7 +55,7 @@
              data-allowed-layouts="{{ card.allowedLayouts | tojson | e }}"
              role="listitem">
           {# Drag handle — decorative, hidden from AT #}
-          <span class="drag-handle" aria-hidden="true" title="Drag to reorder">&#x2807;</span>
+          <span class="drag-handle" aria-hidden="true" title="{{ _('Drag to reorder') }}">&#x2807;</span>
 
           {# Thumbnail — decorative (card name provides the label) #}
           <img src="{{ card.thumbnail | e }}"
@@ -70,7 +70,7 @@
           {# Footprint / row-span selector #}
           {% if card.allowedLayouts | length > 1 %}
           <select class="footprint-select"
-                  aria-label="Layout for {{ card.displayName | e }}">
+                  aria-label="{{ _('Layout for') }} {{ card.displayName | e }}">
             {% for layout in card.allowedLayouts %}
             <option value="{{ layout.footprint | e }}:{{ layout.rowSpan }}"
               {% if layout.footprint == card.currentFootprint and layout.rowSpan == card.currentRowSpan %}selected{% endif %}>
@@ -93,18 +93,18 @@
 
           <button type="button"
                   class="btn-move-up outline secondary"
-                  aria-label="Move {{ card.displayName | e }} up">&#x2191;</button>
+                  aria-label="{{ _('Move') }} {{ card.displayName | e }} {{ _('up') }}">&#x2191;</button>
           <button type="button"
                   class="btn-move-down outline secondary"
-                  aria-label="Move {{ card.displayName | e }} down">&#x2193;</button>
+                  aria-label="{{ _('Move') }} {{ card.displayName | e }} {{ _('down') }}">&#x2193;</button>
           <button type="button"
                   class="btn-remove outline contrast"
-                  aria-label="Remove {{ card.displayName | e }} from layout">&#x2715;</button>
+                  aria-label="{{ _('Remove') }} {{ card.displayName | e }} {{ _('from layout') }}">&#x2715;</button>
         </div>
         {% else %}
         <p class="empty-zone-note" aria-live="polite">
-          No cards in the active layout yet. Drag from the palette below or
-          click <strong>+ Add</strong> on a card.
+          {{ _("No cards in the active layout yet. Drag from the palette below or
+          click") }} <strong>{{ _("+ Add") }}</strong>.
         </p>
         {% endfor %}
       </div>
@@ -112,14 +112,14 @@
 
     {# --- Card palette --- #}
     <fieldset>
-      <legend>Available Cards (drag to add)</legend>
+      <legend>{{ _("Available Cards (drag to add)") }}</legend>
       <p id="palette-hint" style="font-size:0.8rem;color:var(--pico-muted-color);margin:0 0 0.5rem">
-        Cards shown here are available but not in the current layout.
-        Drag into the Active zone above, or click <strong>+ Add</strong>.
+        {{ _("Cards shown here are available but not in the current layout.
+        Drag into the Active zone above, or click") }} <strong>{{ _("+ Add") }}</strong>.
       </p>
       <div id="card-palette"
            class="card-editor-zone"
-           aria-label="Available cards — drag or click Add to include"
+           aria-label="{{ _('Available cards — drag or click Add to include') }}"
            aria-describedby="palette-hint"
            role="list">
         {% for card in palette_cards %}
@@ -138,11 +138,11 @@
           <span class="card-name">{{ card.displayName | e }}</span>
           <button type="button"
                   class="btn-add outline"
-                  aria-label="Add {{ card.displayName | e }} to layout">+ Add</button>
+                  aria-label="{{ _('Add') }} {{ card.displayName | e }} {{ _('to layout') }}">+ {{ _("Add") }}</button>
         </div>
         {% else %}
         <p class="empty-zone-note">
-          All available cards are already in the active layout.
+          {{ _("All available cards are already in the active layout.") }}
         </p>
         {% endfor %}
       </div>
@@ -161,8 +161,8 @@
               hx-get="/admin"
               hx-target="#admin-content"
               hx-swap="innerHTML"
-              hx-push-url="true">Cancel</button>
-      <button type="submit">Save Layout</button>
+              hx-push-url="true">{{ _("Cancel") }}</button>
+      <button type="submit">{{ _("Save Layout") }}</button>
     </div>
 
   </form>
@@ -273,3 +273,4 @@
 
 <script src="/static/vendor/Sortable.min.js"></script>
 <script src="/static/card-layout-editor.js"></script>
+</content>

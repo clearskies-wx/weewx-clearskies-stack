@@ -23,29 +23,29 @@
    ------------------------------------------------------------------------- #}
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin"
              hx-get="/admin"
              hx-target="#admin-content"
              hx-swap="innerHTML"
-             hx-push-url="true">Admin</a>
+             hx-push-url="true">{{ _("Admin") }}</a>
         </li>
-        <li>Forecast Correction</li>
+        <li>{{ _("Forecast Correction") }}</li>
       </ul>
     </nav>
-    <h2>Forecast Correction</h2>
+    <h2>{{ _("Forecast Correction") }}</h2>
   </header>
 
-  <p>The forecast correction engine learns systematic temperature bias patterns
+  <p>{{ _("The forecast correction engine learns systematic temperature bias patterns
      at your station using Random Forest regression. It collects forecast-observation
      pairs, trains a model, and applies corrections to hourly forecast temperatures
-     before serving them.</p>
+     before serving them.") }}</p>
 
   {# Status section #}
   <section aria-labelledby="fc-status-heading">
-    <h3 id="fc-status-heading">Engine Status</h3>
+    <h3 id="fc-status-heading">{{ _("Engine Status") }}</h3>
 
     {% if status is none %}
       <div role="alert"
@@ -53,49 +53,49 @@
                   border-left:3px solid var(--pico-color-amber-500,#f59e0b);
                   padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
                   margin-block:1rem;font-size:0.875rem">
-        <strong>API unreachable.</strong>
-        The API is unreachable or not yet configured. Start the API service and
-        reload this page to view forecast correction status.
+        <strong>{{ _("API unreachable.") }}</strong>
+        {{ _("The API is unreachable or not yet configured. Start the API service and
+        reload this page to view forecast correction status.") }}
       </div>
     {% else %}
       {% set min_samples = values.get("min_samples", defaults.min_samples) | int %}
 
       <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem;margin-block-end:1rem">
-        <dt>Correction active</dt>
+        <dt>{{ _("Correction active") }}</dt>
         <dd>
           {% if status.get("is_active") %}
-            <span aria-label="Active"
+            <span aria-label="{{ _('Active') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-color-green-500,#22c55e)"></span>
-              Active
+              {{ _("Active") }}
             </span>
           {% else %}
-            <span aria-label="Inactive"
+            <span aria-label="{{ _('Inactive') }}"
                   style="display:inline-flex;align-items:center;gap:0.4rem">
               <span aria-hidden="true"
                     style="display:inline-block;width:0.7rem;height:0.7rem;
                            border-radius:50%;background:var(--pico-muted-color,#9ca3af)"></span>
-              Inactive
+              {{ _("Inactive") }}
             </span>
           {% endif %}
         </dd>
 
-        <dt>Model available</dt>
-        <dd>{% if status.get("model_available") %}Yes{% else %}No{% endif %}</dd>
+        <dt>{{ _("Model available") }}</dt>
+        <dd>{% if status.get("model_available") %}{{ _("Yes") }}{% else %}{{ _("No") }}{% endif %}</dd>
 
-        <dt>Pairs collected</dt>
+        <dt>{{ _("Pairs collected") }}</dt>
         <dd>
           {% set pair_count = status.get("pair_count", 0) %}
           {% if pair_count < min_samples %}
-            {{ pair_count }} / {{ min_samples }} needed for training
+            {{ pair_count }} / {{ min_samples }} {{ _("needed for training") }}
           {% else %}
             {{ pair_count }}
           {% endif %}
         </dd>
 
-        <dt>Date range</dt>
+        <dt>{{ _("Date range") }}</dt>
         <dd>
           {% if fmt_date_start and fmt_date_end %}
             {{ fmt_date_start }} &ndash; {{ fmt_date_end }}
@@ -104,11 +104,11 @@
           {% endif %}
         </dd>
 
-        <dt>Last trained</dt>
-        <dd>{{ status.get("last_trained") or "Never" }}</dd>
+        <dt>{{ _("Last trained") }}</dt>
+        <dd>{{ status.get("last_trained") or _("Never") }}</dd>
 
-        <dt>Training status</dt>
-        <dd>{{ status.get("training_status", "idle") | capitalize }}</dd>
+        <dt>{{ _("Training status") }}</dt>
+        <dd>{{ _(status.get("training_status", "idle") | capitalize) }}</dd>
       </dl>
     {% endif %}
   </section>
@@ -116,47 +116,47 @@
   {# TruScore metrics — only when a model has been trained #}
   {% if status is not none and status.get("mae_raw") is not none %}
   <section aria-labelledby="fc-metrics-heading" style="margin-block-start:1.5rem">
-    <h3 id="fc-metrics-heading">TruScore Metrics</h3>
+    <h3 id="fc-metrics-heading">{{ _("TruScore Metrics") }}</h3>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:0.5rem;margin-block:1rem">
 
       <div style="border:1px solid var(--pico-muted-border-color);
                   border-radius:var(--pico-border-radius);
                   padding:0.75rem 1rem;background:var(--pico-card-background-color)">
-        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">Provider Score</div>
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">{{ _("Provider Score") }}</div>
         <div style="font-size:1.25rem;font-weight:600">{{ status.get("provider_score", "&mdash;") }}</div>
         <small style="font-size:0.75rem;color:var(--pico-muted-color)">
-          100 &minus; MAE. Higher = more accurate raw forecast.
+          {{ _("100 − MAE. Higher = more accurate raw forecast.") }}
         </small>
       </div>
 
       <div style="border:1px solid var(--pico-muted-border-color);
                   border-radius:var(--pico-border-radius);
                   padding:0.75rem 1rem;background:var(--pico-card-background-color)">
-        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">Correction Score</div>
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">{{ _("Correction Score") }}</div>
         <div style="font-size:1.25rem;font-weight:600">{{ status.get("correction_score", "&mdash;") }}</div>
         <small style="font-size:0.75rem;color:var(--pico-muted-color)">
-          100 &minus; MAE. Higher = more accurate corrected forecast.
+          {{ _("100 − MAE. Higher = more accurate corrected forecast.") }}
         </small>
       </div>
 
       <div style="border:1px solid var(--pico-muted-border-color);
                   border-radius:var(--pico-border-radius);
                   padding:0.75rem 1rem;background:var(--pico-card-background-color)">
-        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">MAE (raw)</div>
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">{{ _("MAE (raw)") }}</div>
         <div style="font-size:1.25rem;font-weight:600">{{ status.get("mae_raw", "&mdash;") }}&deg;</div>
       </div>
 
       <div style="border:1px solid var(--pico-muted-border-color);
                   border-radius:var(--pico-border-radius);
                   padding:0.75rem 1rem;background:var(--pico-card-background-color)">
-        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">MAE (corrected)</div>
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">{{ _("MAE (corrected)") }}</div>
         <div style="font-size:1.25rem;font-weight:600">{{ status.get("mae_corrected", "&mdash;") }}&deg;</div>
       </div>
 
       <div style="border:1px solid var(--pico-muted-border-color);
                   border-radius:var(--pico-border-radius);
                   padding:0.75rem 1rem;background:var(--pico-card-background-color)">
-        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">Training samples</div>
+        <div style="font-size:0.8rem;color:var(--pico-muted-color);margin-block-end:0.25rem">{{ _("Training samples") }}</div>
         <div style="font-size:1.25rem;font-weight:600">{{ status.get("sample_count", "&mdash;") }}</div>
       </div>
 
@@ -167,13 +167,13 @@
   {# Action buttons section #}
   {% if status is not none %}
   <section aria-labelledby="fc-controls-heading" style="margin-block-start:1.5rem">
-    <h3 id="fc-controls-heading">Engine Controls</h3>
+    <h3 id="fc-controls-heading">{{ _("Engine Controls") }}</h3>
 
     <form hx-post="/admin/forecast-correction/toggle"
           hx-target="#admin-content"
           hx-swap="innerHTML">
       <fieldset>
-        <legend>Enable / Disable</legend>
+        <legend>{{ _("Enable / Disable") }}</legend>
 
         <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer">
           <input type="checkbox"
@@ -181,10 +181,10 @@
                  value="true"
                  {% if status.get("enabled") %}checked{% endif %}
                  aria-describedby="fc-enabled-hint">
-          Apply corrections to forecasts
+          {{ _("Apply corrections to forecasts") }}
         </label>
         <small id="fc-enabled-hint" style="display:block;margin-block-start:0.25rem">
-          Enable only after a model has been trained.
+          {{ _("Enable only after a model has been trained.") }}
         </small>
 
         <label style="display:flex;align-items:center;gap:0.5rem;cursor:pointer;margin-block-start:0.75rem">
@@ -193,14 +193,14 @@
                  value="true"
                  {% if status.get("collection_enabled") %}checked{% endif %}
                  aria-describedby="fc-collection-hint">
-          Collect forecast-observation pairs
+          {{ _("Collect forecast-observation pairs") }}
         </label>
         <small id="fc-collection-hint" style="display:block;margin-block-start:0.25rem">
-          Collection runs independently &mdash; pairs are stored even when correction is disabled.
+          {{ _("Collection runs independently — pairs are stored even when correction is disabled.") }}
         </small>
 
         <div role="group" style="margin-block-start:1rem">
-          <button type="submit">Save</button>
+          <button type="submit">{{ _("Save") }}</button>
         </div>
       </fieldset>
     </form>
@@ -208,25 +208,25 @@
     <form hx-post="/admin/forecast-correction/retrain"
           hx-target="#admin-content"
           hx-swap="innerHTML"
-          hx-confirm="This will retrain the correction model. Training typically takes a few seconds."
+          hx-confirm="{{ _('This will retrain the correction model. Training typically takes a few seconds.') }}"
           style="margin-block-start:1rem">
-      <button type="submit" class="outline">Retrain Now</button>
+      <button type="submit" class="outline">{{ _("Retrain Now") }}</button>
     </form>
   </section>
   {% endif %}
 
   {# Configuration section (read-only display) #}
   <section aria-labelledby="fc-config-heading" style="margin-block-start:1.5rem">
-    <h3 id="fc-config-heading">Configuration</h3>
+    <h3 id="fc-config-heading">{{ _("Configuration") }}</h3>
 
-    {% set day_names = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"] %}
+    {% set day_names = [_("Monday"), _("Tuesday"), _("Wednesday"), _("Thursday"), _("Friday"), _("Saturday"), _("Sunday")] %}
     {% set retrain_day_idx = values.get("retrain_day", defaults.retrain_day) | int %}
 
     <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.25rem 1rem;font-size:0.9rem;margin-block-end:1rem">
-      <dt>Retrain schedule</dt>
-      <dd>{{ values.get("retrain_schedule", defaults.retrain_schedule) | capitalize }}</dd>
+      <dt>{{ _("Retrain schedule") }}</dt>
+      <dd>{{ _(values.get("retrain_schedule", defaults.retrain_schedule) | capitalize) }}</dd>
 
-      <dt>Retrain day</dt>
+      <dt>{{ _("Retrain day") }}</dt>
       <dd>
         {% if retrain_day_idx >= 0 and retrain_day_idx < 7 %}
           {{ day_names[retrain_day_idx] }}
@@ -235,23 +235,24 @@
         {% endif %}
       </dd>
 
-      <dt>Min samples</dt>
+      <dt>{{ _("Min samples") }}</dt>
       <dd>{{ values.get("min_samples", defaults.min_samples) }}</dd>
 
-      <dt>Retention years</dt>
+      <dt>{{ _("Retention years") }}</dt>
       <dd>{{ values.get("retention_years", defaults.retention_years) }}</dd>
 
-      <dt>DB path</dt>
+      <dt>{{ _("DB path") }}</dt>
       <dd><code style="font-size:0.8rem">{{ values.get("db_path", defaults.db_path) }}</code></dd>
 
-      <dt>Model path</dt>
+      <dt>{{ _("Model path") }}</dt>
       <dd><code style="font-size:0.8rem">{{ values.get("model_path", defaults.model_path) }}</code></dd>
     </dl>
 
     <small style="color:var(--pico-muted-color);font-size:0.875rem">
-      These settings are configured in <code>api.conf</code> [forecast_correction].
-      Edit the file directly or re-run the setup wizard to change them.
+      {{ _("These settings are configured in") }} <code>api.conf</code> [forecast_correction].
+      {{ _("Edit the file directly or re-run the setup wizard to change them.") }}
     </small>
   </section>
 
 </article>
+</content>

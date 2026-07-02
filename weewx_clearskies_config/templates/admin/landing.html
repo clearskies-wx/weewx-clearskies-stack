@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Clear Skies — Admin{% endblock %}
+{% block title %}{{ _("Clear Skies — Admin") }}{% endblock %}
 {% block content %}
 
 <style>
@@ -141,8 +141,8 @@
 </style>
 
 <header>
-  <h1>Clear Skies Admin</h1>
-  <p>Manage your Clear Skies configuration. Click <strong>Edit</strong> on any section to update settings.</p>
+  <h1>{{ _("Clear Skies Admin") }}</h1>
+  <p>{{ _("Manage your Clear Skies configuration. Click") }} <strong>{{ _("Edit") }}</strong> {{ _("on any section to update settings.") }}</p>
 </header>
 
 <div class="admin-layout">
@@ -151,9 +151,9 @@
   {# Left sidebar — quick nav generated from registry + custom sections  #}
   {# ------------------------------------------------------------------ #}
   <aside class="admin-sidebar">
-    <nav aria-label="Admin sections">
+    <nav aria-label="{{ _('Admin sections') }}">
       {% for group_name, group_label in domain_groups %}
-      <span class="nav-group-label">{{ group_label }}</span>
+      <span class="nav-group-label">{{ _(group_label) }}</span>
       <ul>
         {% for entry in sections_by_group[group_name] %}
         {% if entry.type == "registry" %}
@@ -161,14 +161,14 @@
           <a href="/admin/section/{{ entry.section.section_id }}"
              hx-get="/admin/section/{{ entry.section.section_id }}"
              hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true">
-            {{ entry.section.display_name }}</a>
+            {{ _(entry.section.display_name) }}</a>
         </li>
         {% else %}
         <li>
           <a href="{{ entry.section.url }}"
              hx-get="{{ entry.section.url }}"
              hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true">
-            {{ entry.section.display_name }}</a>
+            {{ _(entry.section.display_name) }}</a>
         </li>
         {% endif %}
         {% endfor %}
@@ -178,14 +178,14 @@
 
     <div class="admin-sidebar-footer">
       <a href="/admin/config" style="display:block;font-size:0.85rem;margin-block-end:0.5rem">
-        Advanced config editor
+        {{ _("Advanced config editor") }}
       </a>
       <a href="/wizard" style="display:block;font-size:0.85rem;margin-block-end:0.75rem">
-        Re-run Setup Wizard
+        {{ _("Re-run Setup Wizard") }}
       </a>
       <form action="/logout" method="post">
         <button type="submit" class="secondary outline" style="width:100%;font-size:0.85rem">
-          Log out
+          {{ _("Log out") }}
         </button>
       </form>
     </div>
@@ -194,10 +194,10 @@
   {# ------------------------------------------------------------------ #}
   {# Right content area — section overview cards                          #}
   {# ------------------------------------------------------------------ #}
-  <div id="admin-content" aria-label="Admin configuration">
+  <div id="admin-content" aria-label="{{ _('Admin configuration') }}">
     {% for group_name, group_label in domain_groups %}
     <div class="admin-domain-group">
-      <h2 class="admin-domain-heading">{{ group_label }}</h2>
+      <h2 class="admin-domain-heading">{{ _(group_label) }}</h2>
 
       {% for entry in sections_by_group[group_name] %}
       {% if entry.type == "registry" %}
@@ -205,16 +205,16 @@
       {% set section = entry.section %}
       <article class="admin-section-card">
         <header>
-          <h3>{{ section.display_name }}</h3>
+          <h3>{{ _(section.display_name) }}</h3>
           <a href="/admin/section/{{ section.section_id }}"
              hx-get="/admin/section/{{ section.section_id }}"
              hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true"
-             class="edit-link">Edit</a>
+             class="edit-link">{{ _("Edit") }}</a>
         </header>
         {% if landing_values.get(section.section_id) %}
         <dl>
           {% for field_label, field_value in landing_values[section.section_id] %}
-          <dt>{{ field_label }}</dt>
+          <dt>{{ _(field_label) }}</dt>
           <dd>{{ field_value or "—" }}</dd>
           {% endfor %}
         </dl>
@@ -226,20 +226,20 @@
       {% set cs = entry.section %}
       <article class="admin-section-card">
         <header>
-          <h3>{{ cs.display_name }}</h3>
+          <h3>{{ _(cs.display_name) }}</h3>
           <a href="{{ cs.url }}" hx-get="{{ cs.url }}"
              hx-target="#admin-content" hx-swap="innerHTML" hx-push-url="true"
-             class="edit-link">Edit</a>
+             class="edit-link">{{ _("Edit") }}</a>
         </header>
         {% if custom_landing_values.get(cs.section_id) %}
         <dl>
           {% for field_label, field_value in custom_landing_values[cs.section_id] %}
-          <dt>{{ field_label }}</dt>
+          <dt>{{ _(field_label) }}</dt>
           <dd>{{ field_value or "—" }}</dd>
           {% endfor %}
         </dl>
         {% elif cs.description %}
-        <p style="font-size:0.85rem;margin:0.25rem 0 0">{{ cs.description }}</p>
+        <p style="font-size:0.85rem;margin:0.25rem 0 0">{{ _(cs.description) }}</p>
         {% endif %}
       </article>
       {% endif %}
@@ -252,3 +252,4 @@
 </div>{# /.admin-layout #}
 
 {% endblock %}
+</content>
