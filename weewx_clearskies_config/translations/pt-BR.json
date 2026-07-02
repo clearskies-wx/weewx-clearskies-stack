@@ -1,5 +1,4 @@
 {
-  "\"\"{submitted}\" is not a valid unit for {group}.\"": "\"\"{submitted}\" não é uma unidade válida para {group}.\"",
   "(government reference monitors, 141 countries). This API key is required\n           for the": "(estações de referência governamentais, 141 países). Esta API key é necessária\n           para o",
   "(mode 0600)": "(modo 0600)",
   "(mode 0600) and are never written to the config file. Use the": "(modo 0600) e nunca são gravados no arquivo de configuração. Use o",
@@ -377,7 +376,7 @@
   "I Agree — Continue": "Eu concordo — Continuar",
   "I have read and agree to the Clear Skies Operator License Agreement\n          (EULA Version 1.0, Last Updated 2026-06-10).": "Eu li e concordo com o Contrato de Licença do Operador do Clear Skies\n          (EULA versão 1.0, última atualização em 10/06/2026).",
   "IANA timezone name, e.g.": "Nome de fuso horário IANA, ex.:",
-  "ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.": "ICO ou PNG, máx. 100 KB. Substitui a URL abaixo quando um arquivo é escolhido.",
+  "ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.": "ICO ou PNG, máx. 100 KB. Substitui a URL abaixo quando um arquivo é escolhido.",
   "ID:": "ID:",
   "IP address or hostname of the server running the Clear Skies API.": "Endereço IP ou nome de host do servidor que executa a API do Clear Skies.",
   "IQAir returns both US EPA and China MEP indices.": "O IQAir retorna os índices do US EPA e do China MEP.",
@@ -525,7 +524,7 @@
   "Override detected unit for": "Substituir unidade detectada para",
   "Override sensor selection": "Substituir seleção de sensor",
   "Override unit for": "Substituir unidade para",
-  "PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.": "PNG ou SVG, máx. 500 KB. Substitui a URL abaixo quando um arquivo é escolhido.",
+  "PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.": "PNG ou SVG, máx. 500 KB. Substitui a URL abaixo quando um arquivo é escolhido.",
   "Pages Visibility": "Visibilidade de páginas",
   "Pairs collected": "Pares coletados",
   "Partial": "Parcial",
@@ -648,8 +647,8 @@
   "Show/Hide": "Mostrar/Ocultar",
   "Shown in the dashboard header. Leave blank to use the default.": "Exibido no cabeçalho do painel. Deixe em branco para usar o padrão.",
   "Shown on the About page. Supports plain text. Leave empty to skip.": "Exibido na página Sobre. Aceita texto simples. Deixe vazio para pular.",
-  "Shown when the visitor uses a dark colour scheme. PNG or SVG, max 500 KB.": "Exibido quando o visitante usa um esquema de cores escuro. PNG ou SVG, máx. 500 KB.",
-  "Shown when the visitor uses a light colour scheme. PNG or SVG, max 500 KB.": "Exibido quando o visitante usa um esquema de cores claro. PNG ou SVG, máx. 500 KB.",
+  "Shown when the visitor uses a dark colour scheme. PNG or SVG, max 500 KB.": "Exibido quando o visitante usa um esquema de cores escuro. PNG ou SVG, máx. 500 KB.",
+  "Shown when the visitor uses a light colour scheme. PNG or SVG, max 500 KB.": "Exibido quando o visitante usa um esquema de cores claro. PNG ou SVG, máx. 500 KB.",
   "Single-use token printed when the API first starts. It cannot be re-used — if you\n        need a new token, restart the API with": "Token de uso único impresso quando a API é iniciada pela primeira vez. Ele não pode ser reutilizado — se você\n        precisar de um novo token, reinicie a API com",
   "Site Identity": "Identidade do site",
   "Site Title": "Título do site",
@@ -658,7 +657,7 @@
   "Skip — Start Fresh": "Pular — Começar do zero",
   "Sky Classification": "Classificação do céu",
   "Sky Classification Calibration": "Calibração da classificação do céu",
-  "Small icon shown in the browser tab. ICO or PNG, max 100 KB. Leave blank to use the default Clear Skies icon.": "Ícone pequeno exibido na aba do navegador. ICO ou PNG, máx. 100 KB. Deixe em branco para usar o ícone padrão do Clear Skies.",
+  "Small icon shown in the browser tab. ICO or PNG, max 100 KB. Leave blank to use the default Clear Skies icon.": "Ícone pequeno exibido na aba do navegador. ICO ou PNG, máx. 100 KB. Deixe em branco para usar o ícone padrão do Clear Skies.",
   "Social Links": "Links sociais",
   "Social Media": "Redes sociais",
   "Social Media Links": "Links de redes sociais",
@@ -920,5 +919,6 @@
   "— choose a provider —": "— escolha um provedor —",
   "— not mapped —": "— não mapeado —",
   "— or enter a URL": "— ou informe uma URL",
-  "— select a timezone —": "— selecione um fuso horário —"
+  "— select a timezone —": "— selecione um fuso horário —",
+  "\"{submitted}\" is not a valid unit for {group}.": "\"{submitted}\" não é uma unidade válida para {group}."
 }
