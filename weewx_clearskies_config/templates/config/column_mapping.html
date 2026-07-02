@@ -48,7 +48,7 @@
 
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin/config"
@@ -56,16 +56,16 @@
              hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
-            Configuration
+            {{ _("Configuration") }}
           </a>
         </li>
-        <li>Column Mapping</li>
+        <li>{{ _("Column Mapping") }}</li>
       </ul>
     </nav>
-    <h2>Column Mapping</h2>
+    <h2>{{ _("Column Mapping") }}</h2>
     <p>
-      Map database column names to canonical weewx field names.
-      <strong>Changes take effect on the next API request — no restart needed.</strong>
+      {{ _("Map database column names to canonical weewx field names.") }}
+      <strong>{{ _("Changes take effect on the next API request — no restart needed.") }}</strong>
     </p>
   </header>
 
@@ -80,12 +80,12 @@
     {% if mapping %}
     <div style="overflow-x:auto">
       <table class="mapping-table">
-        <caption class="sr-only">Column mapping — database column to canonical weewx field</caption>
+        <caption class="sr-only">{{ _("Column mapping — database column to canonical weewx field") }}</caption>
         <thead>
           <tr>
-            <th scope="col">Database column</th>
-            <th scope="col">Canonical weewx field</th>
-            <th scope="col">Status</th>
+            <th scope="col">{{ _("Database column") }}</th>
+            <th scope="col">{{ _("Canonical weewx field") }}</th>
+            <th scope="col">{{ _("Status") }}</th>
           </tr>
         </thead>
         <tbody>
@@ -107,7 +107,7 @@
             </th>
             <td>
               <label for="{{ field_id }}" class="sr-only">
-                Canonical name for database column {{ db_col }}
+                {{ _("Canonical name for database column") }} {{ db_col }}
               </label>
               <input type="text"
                      id="{{ field_id }}"
@@ -116,7 +116,7 @@
                      list="canonical-fields-list"
                      autocomplete="off"
                      aria-describedby="{{ field_id }}-status"
-                     placeholder="e.g. outTemp">
+                     placeholder="{{ _('e.g. outTemp') }}">
             </td>
             <td>
               <span id="{{ field_id }}-status"
@@ -124,9 +124,9 @@
                            {% if is_stock %}status-stock
                            {% elif is_custom %}status-custom
                            {% else %}status-unmapped{% endif %}">
-                {% if is_stock %}stock
-                {% elif is_custom %}custom
-                {% else %}unmapped{% endif %}
+                {% if is_stock %}{{ _("stock") }}
+                {% elif is_custom %}{{ _("custom") }}
+                {% else %}{{ _("unmapped") }}{% endif %}
               </span>
             </td>
           </tr>
@@ -143,24 +143,23 @@
     </datalist>
 
     {% else %}
-    <p>No column mappings configured. Add your DB columns and their canonical
-       weewx equivalents below — or
-       <a href="/wizard">run the setup wizard</a> to configure mappings interactively.
+    <p>{{ _("No column mappings configured. Add your DB columns and their canonical weewx equivalents below — or") }}
+       <a href="/wizard">{{ _("run the setup wizard") }}</a> {{ _("to configure mappings interactively.") }}
     </p>
     {% endif %}
 
     <p>
       <small>
-        Type a weewx field name or choose from the autocomplete list.
-        Leave a field blank to remove the mapping.
-        Status: <strong class="status-badge status-stock">stock</strong> = standard weewx field,
-        <strong class="status-badge status-custom">custom</strong> = operator-defined mapping,
-        <strong class="status-badge status-unmapped">unmapped</strong> = no mapping set.
+        {{ _("Type a weewx field name or choose from the autocomplete list.") }}
+        {{ _("Leave a field blank to remove the mapping.") }}
+        {{ _("Status:") }} <strong class="status-badge status-stock">{{ _("stock") }}</strong> = {{ _("standard weewx field,") }}
+        <strong class="status-badge status-custom">{{ _("custom") }}</strong> = {{ _("operator-defined mapping,") }}
+        <strong class="status-badge status-unmapped">{{ _("unmapped") }}</strong> = {{ _("no mapping set.") }}
       </small>
     </p>
 
     <div role="group">
-      <button type="submit">Save Column Mapping</button>
+      <button type="submit">{{ _("Save Column Mapping") }}</button>
       <a href="/admin/config"
          hx-get="/admin/config"
          hx-target="#admin-content"
@@ -168,7 +167,7 @@
          hx-push-url="true"
          role="button"
          class="secondary outline">
-        Cancel
+        {{ _("Cancel") }}
       </a>
     </div>
   </form>

@@ -57,7 +57,7 @@
 
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin/config"
@@ -65,18 +65,16 @@
              hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
-            Configuration
+            {{ _("Configuration") }}
           </a>
         </li>
-        <li>{{ display_name }}</li>
+        <li>{{ _(display_name) }}</li>
       </ul>
     </nav>
-    <h2>{{ display_name }}</h2>
+    <h2>{{ _(display_name) }}</h2>
     <p>
-      Choose a data provider for <strong>{{ section }}</strong>.
-      API keys are stored in <code>secrets.env</code> (mode 0600) and are never
-      written to the config file. Use the <em>Test</em> button to verify
-      connectivity before saving.
+      {{ _("Choose a data provider for") }} <strong>{{ section }}</strong>.
+      {{ _("API keys are stored in") }} <code>secrets.env</code> {{ _("(mode 0600) and are never written to the config file. Use the") }} <em>{{ _("Test") }}</em> {{ _("button to verify connectivity before saving.") }}
     </p>
   </header>
 
@@ -92,31 +90,31 @@
         hx-target="#admin-content"
         hx-swap="innerHTML">
 
-    <label for="provider-select-{{ section }}">Provider</label>
+    <label for="provider-select-{{ section }}">{{ _("Provider") }}</label>
     <select id="provider-select-{{ section }}"
             name="provider"
             aria-describedby="provider-select-hint-{{ section }}"
             onchange="onProviderChange_{{ section }}(this.value)">
       <option value="" {% if not current_provider %}selected{% endif %}>
-        — choose a provider —
+        {{ _("— choose a provider —") }}
       </option>
       {% for pid in available_providers %}
       {% set meta = provider_meta.get(pid, {}) %}
       <option value="{{ pid }}"
               {% if current_provider == pid %}selected{% endif %}>
         {{ meta.get("display", pid) }}
-        ({{ meta.get("coverage", "") }}{% if meta.get("keyless") %}, keyless{% endif %})
+        ({{ meta.get("coverage", "") }}{% if meta.get("keyless") %}, {{ _("keyless") }}{% endif %})
       </option>
       {% endfor %}
     </select>
     <small id="provider-select-hint-{{ section }}">
       {% if current_provider and provider_meta.get(current_provider) %}
-      Currently: <strong>{{ provider_meta[current_provider].display }}</strong>
+      {{ _("Currently:") }} <strong>{{ provider_meta[current_provider].display }}</strong>
       {% if provider_meta[current_provider].notes %}
         — {{ provider_meta[current_provider].notes }}
       {% endif %}
       {% else %}
-      No provider configured yet.
+      {{ _("No provider configured yet.") }}
       {% endif %}
     </small>
 
@@ -134,43 +132,41 @@
          {% if current_provider != pid %}inert{% endif %}>
 
       <fieldset class="provider-key-fields">
-        <legend>{{ meta.get("display", pid) }} — API credentials</legend>
-        <p><small>Enter credentials to test connectivity.
-          Keys are stored in <code>secrets.env</code> when you use the
-          wizard or update them in the Secrets section.</small></p>
+        <legend>{{ meta.get("display", pid) }} — {{ _("API credentials") }}</legend>
+        <p><small>{{ _("Enter credentials to test connectivity. Keys are stored in") }}
+          <code>secrets.env</code> {{ _("when you use the wizard or update them in the Secrets section.") }}</small></p>
 
         {% for field_name in meta.get("fields", []) %}
         {% set key_field_id = "key_" + section + "_" + pid + "_" + field_name %}
         <label for="{{ key_field_id }}">
           {{ field_name | replace("_", " ") | title }}
-          <small style="color:var(--pico-muted-color)">(stored in secrets.env)</small>
+          <small style="color:var(--pico-muted-color)">{{ _("(stored in secrets.env)") }}</small>
         </label>
         <div style="display:flex;gap:0.5rem;align-items:center">
           <input type="password"
                  id="{{ key_field_id }}"
                  name="{{ field_name }}"
-                 placeholder="Enter key to test (not saved here)"
+                 placeholder="{{ _('Enter key to test (not saved here)') }}"
                  autocomplete="new-password"
                  aria-describedby="{{ key_field_id }}-hint"
                  style="flex:1;margin-bottom:0">
           <button type="button"
                   class="secondary outline"
                   style="white-space:nowrap;margin-bottom:0;padding:0.4rem 0.75rem;font-size:0.85rem"
-                  aria-label="Show value for {{ field_name | replace('_', ' ') | title }}"
+                  aria-label="{{ _('Show') }} {{ _('value for') }} {{ field_name | replace('_', ' ') | title }}"
                   onclick="(function(btn){
                     var inp = document.getElementById('{{ key_field_id }}');
                     var showing = inp.type === 'text';
                     inp.type = showing ? 'password' : 'text';
-                    btn.textContent = showing ? 'Show' : 'Hide';
+                    btn.textContent = showing ? {{ _('Show') | tojson }} : {{ _('Hide') | tojson }};
                     btn.setAttribute('aria-label',
-                      (showing ? 'Show' : 'Hide') + ' value for {{ field_name | replace("_", " ") | title }}');
+                      (showing ? {{ _('Show') | tojson }} : {{ _('Hide') | tojson }}) + ' {{ _('value for') }} {{ field_name | replace("_", " ") | title }}');
                   })(this)">
-            Show
+            {{ _("Show") }}
           </button>
         </div>
         <small id="{{ key_field_id }}-hint">
-          Enter the key to run a connectivity test below.
-          To permanently update this key use the setup wizard.
+          {{ _("Enter the key to run a connectivity test below. To permanently update this key use the setup wizard.") }}
         </small>
         {% endfor %}
 
@@ -184,22 +180,22 @@
           #}
           <button type="button"
                   class="secondary"
-                  aria-label="Test connectivity for {{ meta.get('display', pid) }}"
+                  aria-label="{{ _('Test connectivity for') }} {{ meta.get('display', pid) }}"
                   hx-post="/admin/config/test-provider"
                   hx-target="#admin-content"
                   hx-swap="innerHTML"
                   hx-include="#provider-keys-{{ section }}-{{ pid }}"
                   hx-vals='{"provider_id": "{{ pid }}"}'
                   hx-indicator="#test-spinner-{{ section }}-{{ pid }}">
-            Test {{ meta.get("display", pid) }}
+            {{ _("Test") }} {{ meta.get("display", pid) }}
           </button>
           <span id="test-spinner-{{ section }}-{{ pid }}"
                 class="htmx-indicator"
-                aria-label="Testing…"
+                aria-label="{{ _('Testing…') }}"
                 aria-live="polite"
                 style="display:inline;margin-inline-start:0.5rem;font-size:0.85rem;
                        color:var(--pico-muted-color)">
-            Testing…
+            {{ _("Testing…") }}
           </span>
         </div>
 
@@ -222,34 +218,32 @@
          {% if current_provider != 'librewxr' %}inert{% endif %}>
 
       <fieldset class="provider-key-fields">
-        <legend>LibreWxR Configuration</legend>
-        <p><small>LibreWxR provides high-quality radar (zoom 12), 13 color schemes,
-           60-minute nowcast, and weather alerts. Use the public API for zero-setup,
-           or point to your own self-hosted instance for production reliability.</small></p>
+        <legend>{{ _("LibreWxR Configuration") }}</legend>
+        <p><small>{{ _("LibreWxR provides high-quality radar (zoom 12), 13 color schemes, 60-minute nowcast, and weather alerts. Use the public API for zero-setup, or point to your own self-hosted instance for production reliability.") }}</small></p>
 
-        <label>Endpoint</label>
+        <label>{{ _("Endpoint") }}</label>
         <label>
           <input type="radio"
                  name="librewxr_endpoint_mode"
                  value="public"
                  {% if not is_selfhosted %}checked{% endif %}>
-          <strong>Public API</strong> (api.librewxr.net)
+          <strong>{{ _("Public API") }}</strong> (api.librewxr.net)
           <br>
-          <small>No infrastructure needed. No SLA — best-effort availability.</small>
+          <small>{{ _("No infrastructure needed. No SLA — best-effort availability.") }}</small>
         </label>
         <label>
           <input type="radio"
                  name="librewxr_endpoint_mode"
                  value="selfhosted"
                  {% if is_selfhosted %}checked{% endif %}>
-          <strong>Self-hosted</strong>
+          <strong>{{ _("Self-hosted") }}</strong>
           <br>
-          <small>You deploy and maintain your own LibreWxR instance.</small>
+          <small>{{ _("You deploy and maintain your own LibreWxR instance.") }}</small>
         </label>
 
         <div id="librewxr-selfhosted-url-{{ section }}"
              {% if not is_selfhosted %}style="display: none;"{% endif %}>
-          <label for="librewxr_endpoint">LibreWxR instance URL</label>
+          <label for="librewxr_endpoint">{{ _("LibreWxR instance URL") }}</label>
           <input type="url"
                  id="librewxr_endpoint"
                  name="librewxr_endpoint"
@@ -257,16 +251,14 @@
                  placeholder="https://librewxr.example.com"
                  aria-describedby="librewxr-url-hint-{{ section }}">
           <small id="librewxr-url-hint-{{ section }}">
-            Full URL to your LibreWxR instance. Must be reachable by Caddy.
+            {{ _("Full URL to your LibreWxR instance. Must be reachable by Caddy.") }}
           </small>
         </div>
 
         <details style="margin-block-start: 0.75rem;">
-          <summary>Geographic bounds (optional)</summary>
-          <p><small>For self-hosted instances with BBOX cropping, enter the bounding box
-             so the dashboard limits zoom-out to your coverage area. Leave empty for
-             global coverage (public API).</small></p>
-          <label for="librewxr_bounds">Bounds (south,west,north,east)</label>
+          <summary>{{ _("Geographic bounds (optional)") }}</summary>
+          <p><small>{{ _("For self-hosted instances with BBOX cropping, enter the bounding box so the dashboard limits zoom-out to your coverage area. Leave empty for global coverage (public API).") }}</small></p>
+          <label for="librewxr_bounds">{{ _("Bounds (south,west,north,east)") }}</label>
           <input type="text"
                  id="librewxr_bounds"
                  name="librewxr_bounds"
@@ -275,7 +267,7 @@
                  pattern="^-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*$"
                  aria-describedby="librewxr-bounds-hint-{{ section }}">
           <small id="librewxr-bounds-hint-{{ section }}">
-            Four comma-separated decimal values. Example for SoCal: 32.0,-120.5,35.5,-114.5
+            {{ _("Four comma-separated decimal values. Example for SoCal: 32.0,-120.5,35.5,-114.5") }}
           </small>
         </details>
       </fieldset>
@@ -284,7 +276,7 @@
 
     {# Save button row #}
     <div role="group" style="margin-block-start:1.25rem">
-      <button type="submit">Save Provider Selection</button>
+      <button type="submit">{{ _("Save Provider Selection") }}</button>
       <a href="/admin/config"
          hx-get="/admin/config"
          hx-target="#admin-content"
@@ -292,7 +284,7 @@
          hx-push-url="true"
          role="button"
          class="secondary outline">
-        Cancel
+        {{ _("Cancel") }}
       </a>
     </div>
 

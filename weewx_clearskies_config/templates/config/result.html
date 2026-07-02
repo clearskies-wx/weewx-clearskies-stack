@@ -6,7 +6,7 @@
    ------------------------------------------------------------------------- #}
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin/config"
@@ -14,13 +14,13 @@
              hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
-            Configuration
+            {{ _("Configuration") }}
           </a>
         </li>
-        <li>{{ display_name }}</li>
+        <li>{{ _(display_name) }}</li>
       </ul>
     </nav>
-    <h2>{{ display_name }}</h2>
+    <h2>{{ _(display_name) }}</h2>
   </header>
 
   {# ------------------------------------------------------------------ #}
@@ -42,18 +42,18 @@
               background-color:var(--pico-del-color, #f8d7da);border:1px solid #f5c6cb;color:#721c24;
               {% endif %}">
     {% if success %}
-    <strong>Saved.</strong>
+    <strong>{{ _("Saved.") }}</strong>
     {% if section == "column_mapping" %}
-      Column mapping updated.
-      The API will apply the new mapping on the next request — no service restart needed.
+      {{ _("Column mapping updated.") }}
+      {{ _("The API will apply the new mapping on the next request — no service restart needed.") }}
     {% elif section == "test-provider" %}
-      Provider connectivity test passed.
+      {{ _("Provider connectivity test passed.") }}
     {% else %}
-      {{ display_name }} settings written to <code>{{ component }}.conf</code>.
-      Changes take effect on the next service restart.
+      {{ _(display_name) }} {{ _("settings written to") }} <code>{{ component }}.conf</code>.
+      {{ _("Changes take effect on the next service restart.") }}
     {% endif %}
     {% else %}
-    <strong>Error saving {{ display_name }}:</strong>
+    <strong>{{ _("Error saving") }} {{ _(display_name) }}:</strong>
     {{ error }}
     {% endif %}
   </div>
@@ -76,32 +76,32 @@
   {# ------------------------------------------------------------------ #}
   {% if test_result is defined %}
   <section aria-labelledby="test-result-heading">
-    <h3 id="test-result-heading">Connectivity test result</h3>
+    <h3 id="test-result-heading">{{ _("Connectivity test result") }}</h3>
     <dl>
-      <dt>Provider</dt>
-      <dd>{{ test_provider_name | default(display_name) }}</dd>
+      <dt>{{ _("Provider") }}</dt>
+      <dd>{{ test_provider_name if test_provider_name else _(display_name) }}</dd>
 
-      <dt>Result</dt>
+      <dt>{{ _("Result") }}</dt>
       <dd>
         {% if test_result.success %}
-        <span style="color:#155724;font-weight:600">Success</span>
+        <span style="color:#155724;font-weight:600">{{ _("Success") }}</span>
         {% else %}
-        <span style="color:#721c24;font-weight:600">Failed</span>
+        <span style="color:#721c24;font-weight:600">{{ _("Failed") }}</span>
         {% endif %}
       </dd>
 
       {% if test_result.response_time_ms is defined %}
-      <dt>Response time</dt>
+      <dt>{{ _("Response time") }}</dt>
       <dd>{{ test_result.response_time_ms }} ms</dd>
       {% endif %}
 
       {% if test_result.status_code is defined %}
-      <dt>HTTP status</dt>
+      <dt>{{ _("HTTP status") }}</dt>
       <dd>{{ test_result.status_code }}</dd>
       {% endif %}
 
       {% if test_result.error is defined and test_result.error %}
-      <dt>Error</dt>
+      <dt>{{ _("Error") }}</dt>
       <dd>{{ test_result.error }}</dd>
       {% endif %}
     </dl>
@@ -120,7 +120,7 @@
        hx-push-url="true"
        role="button"
        class="secondary outline">
-      {% if success %}Edit again{% else %}Try again{% endif %}
+      {% if success %}{{ _("Edit again") }}{% else %}{{ _("Try again") }}{% endif %}
     </a>
     {% endif %}
     <a href="/admin/config"
@@ -130,7 +130,7 @@
        hx-push-url="true"
        role="button"
        class="outline">
-      Back to overview
+      {{ _("Back to overview") }}
     </a>
   </div>
 </article>

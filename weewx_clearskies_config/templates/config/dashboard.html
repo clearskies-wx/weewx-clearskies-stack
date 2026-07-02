@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Clear Skies — Configuration{% endblock %}
+{% block title %}{{ _("Clear Skies — Configuration") }}{% endblock %}
 {% block content %}
 
 {# Group nav_sections by component for sidebar grouping #}
 {% set components = ["api", "stack"] %}
-{% set component_labels = {"api": "API", "stack": "Stack"} %}
+{% set component_labels = {"api": _("API"), "stack": _("Stack")} %}
 
 <style>
   /* Config dashboard layout */
@@ -116,10 +116,8 @@
 </style>
 
 <header>
-  <h1>Clear Skies Configuration</h1>
-  <p>Edit component settings. Each section is independently saved.
-     Changes are merged into the managed region of the relevant config file —
-     your free-form customisations below the managed region are not touched.</p>
+  <h1>{{ _("Clear Skies Configuration") }}</h1>
+  <p>{{ _("Edit component settings. Each section is independently saved. Changes are merged into the managed region of the relevant config file — your free-form customisations below the managed region are not touched.") }}</p>
 </header>
 
 <div class="config-layout">
@@ -128,7 +126,7 @@
   {# Left sidebar — navigation grouped by component                      #}
   {# ------------------------------------------------------------------ #}
   <aside class="config-sidebar">
-    <nav aria-label="Configuration sections">
+    <nav aria-label="{{ _('Configuration sections') }}">
       {% for comp in components %}
       {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | list %}
       {% if comp_sections %}
@@ -144,7 +142,7 @@
                hx-target="#admin-content"
                hx-swap="innerHTML"
                hx-push-url="true">
-              <span class="section-name">{{ s.display_name }}</span>
+              <span class="section-name">{{ _(s.display_name) }}</span>
               {# Show a one-line value summary next to the section name #}
               {% if s.values %}
               {% set summary_items = [] %}
@@ -174,8 +172,8 @@
            hx-target="#admin-content"
            hx-swap="innerHTML"
            hx-push-url="true">
-          <span class="section-name">Column Mapping</span>
-          <span class="section-summary" aria-hidden="true">DB column → weewx field</span>
+          <span class="section-name">{{ _("Column Mapping") }}</span>
+          <span class="section-summary" aria-hidden="true">{{ _("DB column → weewx field") }}</span>
         </a>
       </div>
     </nav>
@@ -183,7 +181,7 @@
     <div class="config-sidebar-footer">
       <form action="/logout" method="post">
         <button type="submit" class="secondary outline" style="width:100%;font-size:0.85rem">
-          Log out
+          {{ _("Log out") }}
         </button>
       </form>
     </div>
@@ -192,15 +190,15 @@
   {# ------------------------------------------------------------------ #}
   {# Right content area — section edit forms load here via HTMX         #}
   {# ------------------------------------------------------------------ #}
-  <div id="admin-content" aria-label="Configuration editor">
+  <div id="admin-content" aria-label="{{ _('Configuration editor') }}">
 
     <section aria-labelledby="overview-heading">
       <header>
-        <h2 id="overview-heading">Configuration Overview</h2>
+        <h2 id="overview-heading">{{ _("Configuration Overview") }}</h2>
       </header>
 
       {% if nav_sections %}
-      <p>Select a section from the sidebar to view and edit its settings.</p>
+      <p>{{ _("Select a section from the sidebar to view and edit its settings.") }}</p>
 
       {% for comp in components %}
       {% set comp_sections = nav_sections | selectattr("component", "equalto", comp) | list %}
@@ -216,14 +214,14 @@
         <article class="overview-card">
           <header>
             <h4 style="margin-bottom:0.25rem">
-              {{ s.display_name }}
+              {{ _(s.display_name) }}
               <a href="/admin/config/{{ s.component }}/{{ s.section }}"
                  hx-get="/admin/config/{{ s.component }}/{{ s.section }}"
                  hx-target="#admin-content"
                  hx-swap="innerHTML"
                  hx-push-url="true"
                  style="font-size:0.75em;margin-inline-start:0.75rem;font-weight:400">
-                Edit
+                {{ _("Edit") }}
               </a>
             </h4>
           </header>
@@ -235,13 +233,13 @@
             <dd>{{ val }}</dd>
             {% else %}
             <dt>{{ key }}</dt>
-            <dd><em style="color:var(--pico-muted-color)">(stored in secrets.env)</em></dd>
+            <dd><em style="color:var(--pico-muted-color)">{{ _("(stored in secrets.env)") }}</em></dd>
             {% endif %}
             {% endfor %}
           </dl>
           {% else %}
           <p><em style="color:var(--pico-muted-color)">
-            No values configured — run the setup wizard first.
+            {{ _("No values configured — run the setup wizard first.") }}
           </em></p>
           {% endif %}
         </article>
@@ -251,8 +249,8 @@
       {% endfor %}
 
       {% else %}
-      <p>No configuration files found in <code>{{ config_dir }}</code>.
-        <a href="/wizard">Run the setup wizard</a> to create them.</p>
+      <p>{{ _("No configuration files found in") }} <code>{{ config_dir }}</code>.
+        <a href="/wizard">{{ _("Run the setup wizard") }}</a> {{ _("to create them.") }}</p>
       {% endif %}
     </section>
 

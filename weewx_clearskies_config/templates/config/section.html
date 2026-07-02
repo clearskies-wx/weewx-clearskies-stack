@@ -21,7 +21,7 @@
 {# ======================================================================== #}
 <article>
   <header>
-    <nav aria-label="Breadcrumb">
+    <nav aria-label="{{ _('Breadcrumb') }}">
       <ul>
         <li>
           <a href="/admin/config"
@@ -29,17 +29,17 @@
              hx-target="#admin-content"
              hx-swap="innerHTML"
              hx-push-url="true">
-            Configuration
+            {{ _("Configuration") }}
           </a>
         </li>
-        <li>{{ display_name }}</li>
+        <li>{{ _(display_name) }}</li>
       </ul>
     </nav>
-    <h2>{{ display_name }}</h2>
+    <h2>{{ _(display_name) }}</h2>
     <p>
-      Edit settings for the <strong>{{ section }}</strong> section of
+      {{ _("Edit settings for the") }} <strong>{{ section }}</strong> {{ _("section of") }}
       <code>{{ component }}.conf</code>.
-      Non-secret values are written into the managed region of the config file.
+      {{ _("Non-secret values are written into the managed region of the config file.") }}
     </p>
   </header>
 
@@ -52,7 +52,7 @@
         hx-swap="innerHTML">
 
     <fieldset>
-      <legend>{{ display_name }} settings</legend>
+      <legend>{{ _(display_name) }} {{ _("settings") }}</legend>
 
       {% if values %}
         {% for key in values | sort %}
@@ -64,9 +64,9 @@
           <label for="{{ field_id }}">
             {{ key | replace("_", " ") | title }}
             {% if is_secret %}
-            <small aria-label="Stored in secrets.env"
+            <small aria-label="{{ _('Stored in secrets.env') }}"
                    style="color:var(--pico-muted-color)">
-              (secret — stored in secrets.env)
+              {{ _("(secret — stored in secrets.env)") }}
             </small>
             {% endif %}
           </label>
@@ -80,28 +80,28 @@
             <input type="password"
                    id="{{ field_id }}"
                    name="{{ key }}"
-                   placeholder="Enter new value to update, or leave blank to keep existing"
+                   placeholder="{{ _('Enter new value to update, or leave blank to keep existing') }}"
                    autocomplete="new-password"
                    aria-describedby="{{ field_id }}-hint"
                    style="flex:1;margin-bottom:0">
             <button type="button"
                     class="secondary outline"
                     style="white-space:nowrap;margin-bottom:0;padding:0.4rem 0.75rem;font-size:0.85rem"
-                    aria-label="Show password for {{ key | replace('_', ' ') | title }}"
+                    aria-label="{{ _('Show') }} {{ _('password for') }} {{ key | replace('_', ' ') | title }}"
                     onclick="(function(btn){
                       var inp = document.getElementById('{{ field_id }}');
                       var showing = inp.type === 'text';
                       inp.type = showing ? 'password' : 'text';
-                      btn.textContent = showing ? 'Show' : 'Hide';
+                      btn.textContent = showing ? {{ _('Show') | tojson }} : {{ _('Hide') | tojson }};
                       btn.setAttribute('aria-label',
-                        (showing ? 'Show' : 'Hide') + ' password for {{ key | replace("_", " ") | title }}');
+                        (showing ? {{ _('Show') | tojson }} : {{ _('Hide') | tojson }}) + ' {{ _('password for') }} {{ key | replace("_", " ") | title }}');
                     })(this)">
-              Show
+              {{ _("Show") }}
             </button>
           </div>
           <small id="{{ field_id }}-hint">
-            Leave blank to keep the current value.
-            Enter a new value to update <code>secrets.env</code>.
+            {{ _("Leave blank to keep the current value.") }}
+            {{ _("Enter a new value to update") }} <code>secrets.env</code>.
           </small>
 
           {% else %}
@@ -112,7 +112,7 @@
                  autocomplete="off"
                  aria-describedby="{{ field_id }}-hint">
           <small id="{{ field_id }}-hint" class="sr-only">
-            Setting <code>{{ key }}</code> in {{ component }}.conf [{{ section }}]
+            {{ _("Setting") }} <code>{{ key }}</code> {{ _("in") }} {{ component }}.conf [{{ section }}]
           </small>
           {% endif %}
         </div>
@@ -121,15 +121,13 @@
 
       {% else %}
       <p>
-        <em>No values found for this section.
-          This section may not have been configured during setup.
-          Save with new values to create it.</em>
+        <em>{{ _("No values found for this section. This section may not have been configured during setup. Save with new values to create it.") }}</em>
       </p>
       {% endif %}
     </fieldset>
 
     <div role="group">
-      <button type="submit">Save {{ display_name }}</button>
+      <button type="submit">{{ _("Save") }} {{ _(display_name) }}</button>
       <a href="/admin/config"
          hx-get="/admin/config"
          hx-target="#admin-content"
@@ -137,7 +135,7 @@
          hx-push-url="true"
          role="button"
          class="secondary outline">
-        Cancel
+        {{ _("Cancel") }}
       </a>
     </div>
   </form>
