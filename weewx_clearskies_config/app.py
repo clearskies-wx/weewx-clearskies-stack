@@ -23,6 +23,16 @@ from weewx_clearskies_config.auth import (
     write_secrets,
 )
 from weewx_clearskies_config.admin.routes import create_admin_router
+from weewx_clearskies_config.i18n import (
+    DEFAULT_LOCALE,
+    LOCALE_COOKIE_NAME,
+    get_current_locale,
+    get_supported_locales,
+    load_translations,
+    reset_current_locale,
+    set_current_locale,
+    translate,
+)
 from weewx_clearskies_config.wizard.routes import create_wizard_router
 
 
@@ -67,10 +77,43 @@ class _RateLimitMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+class _LocaleMiddleware(BaseHTTPMiddleware):
+    """Make the operator's chosen wizard UI language available to templates.
+
+    Reads the ``clearskies-wizard-locale`` cookie (set by
+    ``wizard.routes.wizard_set_language``) and stores it in a contextvars
+    ContextVar for the duration of the request. The Jinja2 ``_()`` global
+    registered below reads that ContextVar, so templates never need the
+    locale threaded through their render context explicitly.
+
+    This is unrelated to ``state.default_locale`` (ADR-021), which controls
+    the *dashboard's* default language for visitors and is stored in the
+    generated site config, not a cookie.
+    """
+
+    async def dispatch(
+        self,
+        request: Request,
+        call_next: Callable[[Request], Awaitable[Response]],
+    ) -> Response:
+        cookie_locale = request.cookies.get(LOCALE_COOKIE_NAME, "")
+        supported = {loc["code"] for loc in get_supported_locales()}
+        locale = cookie_locale if cookie_locale in supported else DEFAULT_LOCALE
+        token = set_current_locale(locale)
+        try:
+            return await call_next(request)
+        finally:
+            reset_current_locale(token)
+
+
 def create_app(config: AppConfig) -> FastAPI:
     app = FastAPI(title="Clear Skies Config", docs_url=None, redoc_url=None)
 
+    load_translations()
+
     templates = Jinja2Templates(directory=str(_templates_dir()))
+    templates.env.globals["_"] = lambda key: translate(key, get_current_locale())
+    templates.env.globals["current_locale"] = get_current_locale
     rate_limiter = RateLimiter()
     session_manager = SessionManager(tls_enabled=config.tls_enabled)
     bootstrap_manager = config.bootstrap_manager or BootstrapManager()
@@ -85,6 +128,7 @@ def create_app(config: AppConfig) -> FastAPI:
         return response
 
     app.add_middleware(_RateLimitMiddleware, rate_limiter=rate_limiter)
+    app.add_middleware(_LocaleMiddleware)
     app.mount("/static", StaticFiles(directory=str(_static_dir())), name="static")
     app.mount("/wizard/static", StaticFiles(directory=str(_static_dir())), name="wizard-static")
 
