@@ -45,7 +45,7 @@ zur Verfügung.
 Die Software kann so konfiguriert werden, dass sie mit einem oder mehreren
 Drittanbieter-Datendiensten kommuniziert, einschließlich, aber nicht beschränkt auf:
 
-  - Aeris Weather (aerisweather.com) — Wetter- und Warnungsdaten
+  - Xweather (xweather.com) — Wetter- und Warnungsdaten
   - National Weather Service / NOAA (weather.gov) — Wetter-, Warnungs- und Radardaten
   - OpenWeatherMap (openweathermap.org) — Wetter- und Luftqualitätsdaten
   - IQAir (iqair.com) — Luftqualitätsdaten

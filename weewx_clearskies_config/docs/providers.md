@@ -106,25 +106,25 @@ Some providers are free and keyless — you just select them and they work. Othe
 
 ---
 
-### Aeris Weather
+### Xweather (Vaisala)
 
 | | |
 |---|---|
-| **Data source** | Aeris (AerisWeather / Xweather) — aerisweather.com |
+| **Data source** | Xweather (Vaisala) — xweather.com |
 | **Coverage** | Global |
 | **API key required** | Yes (client ID + client secret pair) |
-| **Signup URL** | https://www.aerisweather.com/signup/ |
-| **Rate limits** | Varies by plan. Free developer accounts exist for testing. Check the Aeris pricing page for current plan limits. |
+| **Signup URL** | https://www.xweather.com/signup/ |
+| **Rate limits** | Varies by plan. Free developer accounts exist for testing. Check the Xweather pricing page for current plan limits. |
 
 **What it provides:** Hourly (up to 240 hours) and 14-day day/night daily forecasts including temperature, humidity, wind, gusts, precipitation probability and amount, cloud cover, UV index, sunrise and sunset, and weather codes. On paid plans with the `summary` field, a forecast discussion is also available.
 
 **What it does not provide:** Forecast discussion on free/entry-level plans (the `summary` field is not present; Clear Skies automatically omits it rather than showing an error).
 
-**Limitations:** Requires registering an Aeris application and generating a client ID + client secret. The credentials are bound to a registered domain or bundle ID in the Aeris dashboard.
+**Limitations:** Requires registering a Xweather application and generating a client ID + client secret. The credentials are bound to a registered domain or bundle ID in the Xweather dashboard.
 
-**Shared key across domains:** The Aeris client ID and client secret (`WEEWX_CLEARSKIES_AERIS_CLIENT_ID` and `WEEWX_CLEARSKIES_AERIS_CLIENT_SECRET`) work across all Aeris-powered domains. If Aeris adds alerts or AQI support in a future release, the same credentials apply.
+**Shared key across domains:** The Xweather client ID and client secret (`WEEWX_CLEARSKIES_AERIS_CLIENT_ID` and `WEEWX_CLEARSKIES_AERIS_CLIENT_SECRET`) work across all Xweather-powered domains (module id: `aeris`). If Xweather adds alerts or AQI support in a future release, the same credentials apply.
 
-**Best for:** Operators who want the longest hourly forecast window (up to 10 days of hourly data) or who already have an Aeris subscription.
+**Best for:** Operators who want the longest hourly forecast window (up to 10 days of hourly data) or who already have a Xweather subscription.
 
 ---
 

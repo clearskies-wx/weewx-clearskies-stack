@@ -48,7 +48,7 @@ https://www.gnu.org/licenses/gpl-3.0.html
 Программное обеспечение может быть настроено для взаимодействия с одним или несколькими
 сторонними поставщиками данных и сервисами, включая, но не ограничиваясь:
 
-  - Aeris Weather (aerisweather.com) — данные прогнозов и предупреждений
+  - Xweather (xweather.com) — данные прогнозов и предупреждений
   - National Weather Service / NOAA (weather.gov) — данные прогнозов, предупреждений и
     радаров
   - OpenWeatherMap (openweathermap.org) — данные прогнозов и качества воздуха

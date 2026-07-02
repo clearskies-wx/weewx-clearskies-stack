@@ -46,7 +46,7 @@ voorwaarden.
 De Software kan worden geconfigureerd om te communiceren met een of meer externe
 gegevensleveranciers en -diensten, waaronder maar niet beperkt tot:
 
-  - Aeris Weather (aerisweather.com) — weersverwachting en waarschuwingsdata
+  - Xweather (xweather.com) — weersverwachting en waarschuwingsdata
   - National Weather Service / NOAA (weather.gov) — weersverwachting, waarschuwingen en
     radardata
   - OpenWeatherMap (openweathermap.org) — weersverwachting en luchtkwaliteitsdata

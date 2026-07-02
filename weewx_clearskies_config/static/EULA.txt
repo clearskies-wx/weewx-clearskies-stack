@@ -41,7 +41,7 @@ features are available to all operators under the same GPL v3 terms.
 The Software may be configured to communicate with one or more third-party data providers and
 services, including but not limited to:
 
-  - Aeris Weather (aerisweather.com) — forecast and alerts data
+  - Xweather (xweather.com) — forecast and alerts data
   - National Weather Service / NOAA (weather.gov) — forecast, alerts, and radar data
   - OpenWeatherMap (openweathermap.org) — forecast and AQI data
   - IQAir (iqair.com) — air quality data

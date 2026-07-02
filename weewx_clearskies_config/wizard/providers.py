@@ -63,13 +63,13 @@ PROVIDERS: list[ProviderInfo] = [
     ),
     ProviderInfo(
         "aeris",
-        "Aeris Weather",
+        "Xweather (Vaisala)",
         "forecast",
         "Global",
         ("client_id", "client_secret"),
         "https://api.aerisapi.com/conditions/washington,dc?client_id={client_id}&client_secret={client_secret}",
         "get",
-        signup_url="https://www.aerisweather.com/signup/",
+        signup_url="https://www.xweather.com/signup/",
     ),
     # ------------------------------------------------------------------
     # Alerts
@@ -116,7 +116,7 @@ PROVIDERS: list[ProviderInfo] = [
         "https://data.api.xweather.com/airquality/38.8,-77.0?client_id={client_id}&client_secret={client_secret}",
         "get",
         notes="Observed data — eligible for haze confirmation (ADR-066). Uses same Aeris credentials as forecast.",
-        signup_url="https://www.aerisweather.com/signup/",
+        signup_url="https://www.xweather.com/signup/",
     ),
     ProviderInfo(
         "openaq",

@@ -45,7 +45,7 @@ ilalim ng parehong mga tuntunin ng GPL v3.
 Ang Software ay maaaring i-configure upang makipag-communicate sa isa o higit pang mga
 tagapaglaan ng data at serbisyo ng ikatlong partido, kabilang ngunit hindi limitado sa:
 
-  - Aeris Weather (aerisweather.com) — data ng paghula at alerto
+  - Xweather (xweather.com) — data ng paghula at alerto
   - National Weather Service / NOAA (weather.gov) — data ng paghula, alerto, at radar
   - OpenWeatherMap (openweathermap.org) — data ng paghula at kalidad ng hangin
   - IQAir (iqair.com) — data ng kalidad ng hangin

@@ -39,7 +39,7 @@ https://www.gnu.org/licenses/gpl-3.0.html
 
 本软件可配置为与一个或多个第三方数据提供商及服务通信，包括但不限于：
 
-  - Aeris Weather（aerisweather.com）——预报和警报数据
+  - Xweather（xweather.com）——预报和警报数据
   - National Weather Service / NOAA（weather.gov）——预报、警报和雷达数据
   - OpenWeatherMap（openweathermap.org）——预报和空气质量数据
   - IQAir（iqair.com）——空气质量数据

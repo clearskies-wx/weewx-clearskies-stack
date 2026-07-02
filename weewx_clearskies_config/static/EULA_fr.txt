@@ -45,7 +45,7 @@ opérateurs selon les mêmes termes de la GPL v3.
 Le Logiciel peut être configuré pour communiquer avec un ou plusieurs fournisseurs de données
 et services tiers, notamment :
 
-  - Aeris Weather (aerisweather.com) — données de prévisions et d'alertes
+  - Xweather (xweather.com) — données de prévisions et d'alertes
   - National Weather Service / NOAA (weather.gov) — données de prévisions, alertes et radar
   - OpenWeatherMap (openweathermap.org) — données de prévisions et de qualité de l'air
   - IQAir (iqair.com) — données de qualité de l'air

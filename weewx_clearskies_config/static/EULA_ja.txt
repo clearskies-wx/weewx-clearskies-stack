@@ -43,7 +43,7 @@ GPL v3に基づき、お客様には以下の権利が付与されます：
 本ソフトウェアは、以下を含む（ただしこれらに限定されない）1つ以上のサードパーティデータプロ
 バイダーおよびサービスと通信するように設定できます：
 
-  - Aeris Weather（aerisweather.com）— 予報およびアラートデータ
+  - Xweather（xweather.com）— 予報およびアラートデータ
   - National Weather Service / NOAA（weather.gov）— 予報、アラート、レーダーデータ
   - OpenWeatherMap（openweathermap.org）— 予報および大気質データ
   - IQAir（iqair.com）— 大気質データ
