@@ -1,6 +1,8 @@
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <h2>{{ _("Step 2 of 15 — Import Existing Configuration") }}</h2>
+    {{ help_trigger("/wizard/help/step_import") }}
     <p>{{ _("If you have an existing weewx skin (like Belchertown), enter its name to import
        the configuration and pre-fill the steps that follow.
        Otherwise, click") }} <strong>{{ _("Skip — Start Fresh") }}</strong> {{ _("to begin with US defaults.") }}</p>

@@ -1,6 +1,8 @@
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <h2>{{ _("Step 4 of 15 — Database Connection") }}</h2>
+    {{ help_trigger("/wizard/help/step_db") }}
     <p>{{ _("Enter your weewx MariaDB/MySQL connection details.
        Fields are pre-filled from the API's weewx.conf where available.") }}</p>
   </header>

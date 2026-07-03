@@ -1,7 +1,9 @@
 {% from "macros/form_fields.html" import render_section_fields %}
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <h2>{{ _("Step 13 of 15 — Feature Settings") }}</h2>
+    {{ help_trigger("/wizard/help/step_feature_settings") }}
     <p>{{ _("Configure optional feature-specific settings for your weather site.") }}</p>
   </header>
 

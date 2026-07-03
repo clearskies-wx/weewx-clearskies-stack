@@ -10,6 +10,7 @@
    Posts to /admin/section/sky_classification (generic POST handler).
    ------------------------------------------------------------------------- #}
 {% from "macros/form_fields.html" import render_section_fields %}
+{% from "macros/help_panel.html" import help_trigger %}
 
 <article>
   <header>
@@ -26,6 +27,7 @@
       </ul>
     </nav>
     <h2>{{ _("Sky Classification Calibration") }}</h2>
+    {{ help_trigger("/admin/help/sky_classification") }}
   </header>
 
   {# This string contains literal <sub> markup as part of the message (the

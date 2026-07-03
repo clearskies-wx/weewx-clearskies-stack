@@ -1,6 +1,8 @@
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <h2>{{ _("Step 7 of 15") }} &mdash; {{ _("Display Units") }}</h2>
+    {{ help_trigger("/wizard/help/step_units") }}
     <p>{{ _("Choose how values are displayed on your weather dashboard.
        Use the preset buttons to fill all fields at once, or adjust individual groups below.") }}</p>
   </header>

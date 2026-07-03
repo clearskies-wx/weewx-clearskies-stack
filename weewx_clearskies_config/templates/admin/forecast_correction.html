@@ -21,6 +21,7 @@
      values   — dict of current [forecast_correction] settings from api.conf
      defaults — dict of default values (_FC_DEFAULTS)
    ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <nav aria-label="{{ _('Breadcrumb') }}">
@@ -36,6 +37,7 @@
       </ul>
     </nav>
     <h2>{{ _("Forecast Correction") }}</h2>
+    {{ help_trigger("/admin/help/forecast_correction") }}
   </header>
 
   <p>{{ _("The forecast correction engine learns systematic temperature bias patterns

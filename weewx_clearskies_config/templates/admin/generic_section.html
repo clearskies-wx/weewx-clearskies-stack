@@ -1,4 +1,5 @@
 {% from "macros/form_fields.html" import render_section_fields %}
+{% from "macros/help_panel.html" import help_trigger %}
 
 <nav aria-label="{{ _('Breadcrumb') }}">
   <ul>
@@ -10,6 +11,7 @@
 <article>
   <header>
     <h2>{{ _(section.display_name) }}</h2>
+    {{ help_trigger("/admin/help/" ~ section.section_id) }}
   </header>
 
   {% if error %}

@@ -1,6 +1,8 @@
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <h2>{{ _("Step 9 of 15 — Providers & API Keys") }}</h2>
+    {{ help_trigger("/wizard/help/step_providers") }}
     <p>{{ _("Choose a data provider for each service domain.
        Providers that match your station location are pre-selected.
        For providers that require an API key, the key fields appear inline when you select them.") }}</p>

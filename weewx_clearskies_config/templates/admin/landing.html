@@ -1,6 +1,8 @@
 {% extends "base.html" %}
+{% from "macros/help_panel.html" import help_panel, help_trigger %}
 {% block title %}{{ _("Clear Skies — Admin") }}{% endblock %}
 {% block content %}
+<link rel="stylesheet" href="/static/css/help-panel.css">
 
 <style>
   /* Admin landing layout — mirrors config/dashboard.html grid pattern */
@@ -142,6 +144,7 @@
 
 <header>
   <h1>{{ _("Clear Skies Admin") }}</h1>
+  {{ help_trigger("/admin/help/landing") }}
   <p>{{ _("Manage your Clear Skies configuration. Click") }} <strong>{{ _("Edit") }}</strong> {{ _("on any section to update settings.") }}</p>
 </header>
 
@@ -251,5 +254,7 @@
 
 </div>{# /.admin-layout #}
 
+{{ help_panel() }}
+<script src="/static/js/help-panel.js"></script>
 {% endblock %}
 </content>

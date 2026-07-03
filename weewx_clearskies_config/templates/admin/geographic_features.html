@@ -10,6 +10,7 @@
      flash   — str|null, success message after a completed update
    Triggers download via POST /admin/geographic-features/update (synchronous).
    ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <nav aria-label="{{ _('Breadcrumb') }}">
@@ -25,6 +26,7 @@
       </ul>
     </nav>
     <h2>{{ _("Geographic Features") }}</h2>
+    {{ help_trigger("/admin/help/geographic_features") }}
   </header>
 
   <p>

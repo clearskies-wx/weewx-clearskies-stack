@@ -9,6 +9,7 @@
                      Each dict: type, displayName, thumbnail, allowedLayouts.
    Writes now-layout.json to config_dir on POST /admin/now-layout.
    ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <nav aria-label="{{ _('Breadcrumb') }}">
@@ -24,6 +25,7 @@
       </ul>
     </nav>
     <h2>{{ _("Now Page Card Layout") }}</h2>
+    {{ help_trigger("/admin/help/card_layout") }}
   </header>
 
   <p style="margin-block-end:1rem;font-size:0.875rem">

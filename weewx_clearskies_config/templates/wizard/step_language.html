@@ -1,6 +1,8 @@
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <h2>{{ _("Choose your language") }}</h2>
+    {{ help_trigger("/wizard/help/step_language") }}
     <p>{{ _("Select the language for the setup wizard.") }}</p>
   </header>
 

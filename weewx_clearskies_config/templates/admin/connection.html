@@ -3,6 +3,7 @@
    Loaded via HTMX into #admin-content.
    Context: api_url, bind_host, bind_port
    ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
     <nav aria-label="{{ _('Breadcrumb') }}">
@@ -18,6 +19,7 @@
       </ul>
     </nav>
     <h2>{{ _("API Connection") }}</h2>
+    {{ help_trigger("/admin/help/connection") }}
   </header>
 
   <p>{{ _("The API URL is where the reverse proxy (Caddy) routes") }}
