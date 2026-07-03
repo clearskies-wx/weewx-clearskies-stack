@@ -1,0 +1,7 @@
+<h3>{{ title }}</h3>
+<div class="help-body">{{ body }}</div>
+{% if tip %}
+<aside class="help-tip" role="note">
+  <strong>{{ _("Tip:") }}</strong> {{ tip }}
+</aside>
+{% endif %}

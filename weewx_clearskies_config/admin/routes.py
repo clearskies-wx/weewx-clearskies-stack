@@ -65,7 +65,7 @@ from weewx_clearskies_config.config.updater import (
     update_managed_region,
     update_secrets,
 )
-from weewx_clearskies_config.i18n import get_current_locale, translate
+from weewx_clearskies_config.i18n import get_current_locale, translate, translate_md
 from weewx_clearskies_config.wizard.providers import PROVIDERS, get_provider, test_provider
 
 logger = logging.getLogger(__name__)
@@ -458,6 +458,36 @@ def _get_api_provider_values(section: str) -> dict[str, Any] | None:
         if val:
             values[key] = str(val)
     return values
+
+
+# ---------------------------------------------------------------------------
+# Help content endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.get("/help/{section_id}", response_class=HTMLResponse)
+async def admin_help(request: Request, section_id: str) -> HTMLResponse:
+    """Return help content fragment for an admin section.
+
+    HTMX loads this into the help panel on first open.
+    Keys: help.admin.{section_id}.title, help.admin.{section_id}.body,
+          help.admin.{section_id}.tip (optional)
+    """
+    _require_session(request)
+    locale = get_current_locale()
+    title = translate(f"help.admin.{section_id}.title", locale)
+    body = translate_md(f"help.admin.{section_id}.body", locale)
+    tip_key = f"help.admin.{section_id}.tip"
+    tip: str | None = translate(tip_key, locale)
+    # If tip == tip_key, no translation exists — treat as absent.
+    if tip == tip_key:
+        tip = None
+    assert _templates is not None, "Admin router not initialised"
+    return _templates.TemplateResponse(
+        request=request,
+        name="wizard/help_fragment.html",
+        context={"title": title, "body": body, "tip": tip},
+    )
 
 
 # ---------------------------------------------------------------------------

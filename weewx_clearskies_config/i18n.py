@@ -73,6 +73,28 @@ def translate(key: str, locale: str = DEFAULT_LOCALE) -> str:
     return Markup(key)
 
 
+def translate_md(key: str, locale: str = DEFAULT_LOCALE) -> Markup:
+    """Look up a translation and render markdown to HTML.
+
+    Used for help body content (long-form markdown).  Field labels and short
+    help text continue using ``translate()``.
+
+    Falls back to the default locale, then to the raw key — same fallback
+    chain as ``translate()``.  The resulting HTML is wrapped in
+    ``markupsafe.Markup`` so Jinja2 autoescape does not re-escape it.
+    """
+    raw = _translations.get(locale, {}).get(key)
+    if not raw:
+        if locale != DEFAULT_LOCALE:
+            raw = _translations.get(DEFAULT_LOCALE, {}).get(key)
+    if not raw:
+        return Markup(key)
+    import markdown
+
+    html = markdown.markdown(raw, extensions=["tables", "fenced_code"])
+    return Markup(html)
+
+
 def get_current_locale() -> str:
     """Return the wizard UI locale for the request currently being handled."""
     return _current_locale.get()

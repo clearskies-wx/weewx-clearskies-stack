@@ -1,0 +1,48 @@
+{# -------------------------------------------------------------------------
+   help_panel.html — Reusable Jinja2 macros for the contextual help system.
+
+   Macros:
+     help_trigger(help_url, label="Help")
+       Renders a ? button that opens the help panel and triggers an HTMX
+       load of the given URL on first open.
+
+     help_panel()
+       Renders the panel container (aside + backdrop). Include once per
+       page, typically in layout.html.
+
+   CSS: static/css/help-panel.css
+   JS:  static/js/help-panel.js
+   ------------------------------------------------------------------------- #}
+
+
+{# ── Trigger button ──────────────────────────────────────────────────── #}
+
+{% macro help_trigger(help_url, label="Help") %}
+<button type="button"
+        class="help-trigger"
+        aria-label="{{ label }}"
+        aria-expanded="false"
+        aria-controls="help-panel"
+        data-help-url="{{ help_url }}">?</button>
+{% endmacro %}
+
+
+{# ── Panel container ─────────────────────────────────────────────────── #}
+
+{% macro help_panel() %}
+<div class="help-panel-backdrop" aria-hidden="true"></div>
+<aside id="help-panel"
+       class="help-panel"
+       role="complementary"
+       aria-label="{{ _('Help') }}">
+  <div class="help-panel-header">
+    <h3>{{ _("Help") }}</h3>
+    <button type="button"
+            class="help-panel-close"
+            aria-label="{{ _('Close help') }}">&times;</button>
+  </div>
+  <div id="help-panel-content" class="help-panel-content">
+    {# Content loaded on demand via HTMX #}
+  </div>
+</aside>
+{% endmacro %}

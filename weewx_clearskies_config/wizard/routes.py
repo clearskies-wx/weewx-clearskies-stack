@@ -65,6 +65,7 @@ from weewx_clearskies_config.i18n import (
     get_current_locale,
     get_supported_locales,
     translate,
+    translate_md,
 )
 from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
 from weewx_clearskies_config.wizard.config_writer import apply_wizard, build_skin_conf_payload, write_branding_json
@@ -107,6 +108,35 @@ def _(key: str) -> str:
     weewx_clearskies_config.i18n.translate().
     """
     return translate(key, get_current_locale())
+
+
+# ---------------------------------------------------------------------------
+# Help content endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.get("/help/{step_id}", response_class=HTMLResponse)
+async def wizard_help(request: Request, step_id: str) -> HTMLResponse:
+    """Return help content fragment for a wizard step.
+
+    HTMX loads this into the help panel on first open.
+    Keys: help.wizard.{step_id}.title, help.wizard.{step_id}.body,
+          help.wizard.{step_id}.tip (optional)
+    """
+    _require_session(request)
+    locale = get_current_locale()
+    title = translate(f"help.wizard.{step_id}.title", locale)
+    body = translate_md(f"help.wizard.{step_id}.body", locale)
+    tip_key = f"help.wizard.{step_id}.tip"
+    tip: str | None = translate(tip_key, locale)
+    # If tip == tip_key, no translation exists — treat as absent.
+    if tip == tip_key:
+        tip = None
+    return _render(
+        request,
+        "help_fragment.html",
+        {"title": title, "body": body, "tip": tip},
+    )
 
 
 # ---------------------------------------------------------------------------
