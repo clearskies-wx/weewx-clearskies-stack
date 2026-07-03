@@ -6,13 +6,52 @@ on:
 
 # NOTE (coding.md §1): Third-party actions should be SHA-pinned in production.
 # actions/checkout SHA (v4): 34e114876b0b11c390a56381ad16ebd13914f8d5
+# actions/setup-python SHA (v5): a26af69be951a213d495a4c3e4e4022e16d87065
 
 permissions:
   contents: write
+  packages: write
+  id-token: write
 
 jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065  # v5
+        with:
+          python-version: '3.12'
+      - run: pip install build
+      - run: python -m build
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/metadata-action@v5
+        id: meta
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/weewx-clearskies-config
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=beta
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+
   github-release:
     runs-on: ubuntu-latest
+    needs: [pypi, docker]
     steps:
       - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4
       - uses: softprops/action-gh-release@v2
