@@ -10,7 +10,7 @@ This repo provides:
 - **Example Home Assistant configs** for REST and MQTT integration
 - **Cross-repo compatibility matrix**
 
-Distributed AS-IS under [GPL v3](LICENSE).
+Distributed AS-IS under [PolyForm Noncommercial 1.0.0](LICENSE).
 
 ---
 
@@ -147,4 +147,6 @@ See [INSTALL.md](INSTALL.md) §Home Assistant for details.
 
 ## License
 
-[GNU General Public License v3.0](LICENSE)
+[PolyForm Noncommercial License 1.0.0](LICENSE)
+
+This software is licensed for noncommercial use. See [ADDITIONAL-USES.md](ADDITIONAL-USES.md) for permitted uses and commercial licensing requirements.

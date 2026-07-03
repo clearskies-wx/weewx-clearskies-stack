@@ -1,6 +1,6 @@
 # Security — weewx-clearskies-stack
 
-This repository is part of [Clear Skies](https://github.com/clearskies-wx/weewx-clearskies-stack), distributed AS-IS under [GPL v3](LICENSE). There is no support window, no LTS, and no security backport policy — only the current release is available.
+This repository is part of [Clear Skies](https://github.com/clearskies-wx/weewx-clearskies-stack), distributed AS-IS under [PolyForm Noncommercial 1.0.0](LICENSE). There is no support window, no LTS, and no security backport policy — only the current release is available.
 
 ---
 
