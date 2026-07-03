@@ -6,9 +6,16 @@
 # Format: configobj INI (https://configobj.readthedocs.io/)
 
 [api]
-# Listen address. Use 0.0.0.0 for container deployments so Docker
-# port forwarding works. Native installs can keep 127.0.0.1.
-bind_host = 0.0.0.0
+# Listen address — controls which network stack the API accepts connections on.
+# Set by setup.sh based on your network configuration.
+#   0.0.0.0  = IPv4 only (safest default for most home networks)
+#   ::       = IPv6 only
+#   *        = Dual-stack — both IPv4 and IPv6 (recommended if your network
+#              and DNS support both families reliably)
+# If unsure: many ISP-provided routers enable IPv6 via SLAAC but don't
+# register local hostnames in IPv6 DNS. If Caddy can't reach the API,
+# try switching to 0.0.0.0 (IPv4 only).
+bind_host = *
 bind_port = 8765
 # max_request_bytes = 1048576
 # cors_origins =

@@ -7,8 +7,13 @@ Type=simple
 User=clearskies
 Group=clearskies
 WorkingDirectory=/etc/weewx-clearskies
-ExecStart=/usr/local/bin/weewx-clearskies-config --bind :: --port 9876
-# If installed in a venv: ExecStart=/path/to/venv/bin/weewx-clearskies-config --bind :: --port 9876
+EnvironmentFile=-/etc/weewx-clearskies/network.env
+ExecStart=/usr/local/bin/weewx-clearskies-config --bind ${CLEARSKIES_BIND_HOST:-0.0.0.0} --port 9876
+# If installed in a venv: ExecStart=/path/to/venv/bin/weewx-clearskies-config --bind ${CLEARSKIES_BIND_HOST:-0.0.0.0} --port 9876
+# CLEARSKIES_BIND_HOST is set by setup.sh in network.env:
+#   IPv4 only:  0.0.0.0
+#   IPv6 only:  ::
+#   Dual-stack: *
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
