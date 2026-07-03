@@ -30,7 +30,7 @@ services:
     restart: unless-stopped
 
   dashboard:
-    image: ghcr.io/clearskies-wx/weewx-clearskies-dashboard:${CLEARSKIES_VERSION:-0.1.0}
+    image: ghcr.io/clearskies-wx/weewx-clearskies-dashboard:${CLEARSKIES_VERSION:-1.0.0b1}
     build:
       context: ../../weewx-clearskies-dashboard
     volumes:
@@ -42,7 +42,7 @@ services:
     restart: "no"
 
   api:
-    image: ghcr.io/clearskies-wx/weewx-clearskies-api:${CLEARSKIES_VERSION:-0.1.0}
+    image: ghcr.io/clearskies-wx/weewx-clearskies-api:${CLEARSKIES_VERSION:-1.0.0b1}
     build:
       context: ../../weewx-clearskies-api
     volumes:
@@ -68,7 +68,7 @@ services:
     restart: unless-stopped
 
   config:
-    image: ghcr.io/clearskies-wx/weewx-clearskies-config:${CLEARSKIES_VERSION:-0.1.0}
+    image: ghcr.io/clearskies-wx/weewx-clearskies-config:${CLEARSKIES_VERSION:-1.0.0b1}
     build:
       context: ../..
       dockerfile: weewx-clearskies-stack/Dockerfile
