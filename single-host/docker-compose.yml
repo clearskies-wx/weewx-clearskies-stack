@@ -49,6 +49,7 @@ services:
       - ${CLEARSKIES_CONFIG_DIR:-./config}:/etc/weewx-clearskies:rw
       - ${WEEWX_CONF_PATH:-/etc/weewx/weewx.conf}:/etc/weewx/weewx.conf:ro
       - ${WEEWX_DB_PATH:-/var/lib/weewx/weewx.sdb}:/data/weewx.sdb:ro
+      - ${WEEWX_SOCKET_DIR:-/var/run/weewx-clearskies}:/var/run/weewx-clearskies:ro
       - clearskies-cache:/var/cache/weewx-clearskies
     env_file: ${CLEARSKIES_SECRETS_FILE:-./config/secrets.env}
     cap_drop:
