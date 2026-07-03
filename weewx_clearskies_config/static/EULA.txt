@@ -1,7 +1,7 @@
 Clear Skies Weather Dashboard
 Operator License Agreement (End User License Agreement)
-EULA Version: 1.0
-Last Updated: 2026-06-10
+EULA Version: 2.0
+Last Updated: 2026-07-02
 
 This End User License Agreement ("Agreement") is a legal contract between you ("Operator") and
 Shane Burkhardt ("Developer") governing your installation and use of the Clear Skies Weather
@@ -13,27 +13,39 @@ Dashboard software ("Software"). Read it carefully before proceeding.
 By installing, configuring, or operating this Software, you agree to be bound by the terms of
 this Agreement. If you do not agree to these terms, do not install or use the Software.
 
-This Agreement supplements — and does not replace — the GNU General Public License version 3
-("GPL v3"), which governs the Software's source code. Where this Agreement and the GPL v3
-address the same matter, the GPL v3 governs; where this Agreement addresses matters the GPL v3
-is silent on (warranty, liability, operator responsibilities), this Agreement controls.
+This Agreement supplements — and does not replace — the PolyForm Noncommercial License 1.0.0
+("Base License") and the ADDITIONAL-USES.md document ("Additional Uses"), which together
+govern the Software's source code. Where this Agreement and the Base License address the same
+matter, the Base License governs; where this Agreement addresses matters the Base License is
+silent on (warranty, liability, operator responsibilities), this Agreement controls.
 
 
 2. LICENSE GRANT
 
-The Software is free and open-source software licensed under the GNU General Public License
-version 3. A copy of the GPL v3 is included in the Software source repository at the root
-level as LICENSE.txt and is available at: https://www.gnu.org/licenses/gpl-3.0.html
+The Software is licensed under the PolyForm Noncommercial License 1.0.0. A copy of the Base
+License is included in the Software source repository at the root level as LICENSE, and is
+available at: https://polyformproject.org/licenses/noncommercial/1.0.0
 
-Under the GPL v3, you are granted the rights to:
+Under the Base License and the Additional Uses document, you are granted the rights to:
 
-  (a) Run the Software for any purpose.
-  (b) Study and modify the source code.
-  (c) Distribute verbatim copies of the Software.
-  (d) Distribute your modified versions under the GPL v3.
+  (a) Use the Software for any noncommercial purpose, including personal use, research,
+      experimentation, hobby projects, and religious observance.
+  (b) Use the Software if you are a charitable organization, educational institution, public
+      research organization, public safety or health organization, environmental protection
+      organization, or government institution — regardless of funding source.
+  (c) Use the Software for the additional permitted uses enumerated in ADDITIONAL-USES.md,
+      including community weather sharing, family-owned farms (fewer than 50 employees, not
+      publicly traded), amateur radio weather stations, agricultural cooperatives, and
+      tax-exempt organizations.
+  (d) Study and modify the source code for any permitted purpose.
+  (e) Distribute copies of the Software (with or without modifications) for any permitted
+      purpose, provided you include a copy of the Base License.
 
-No proprietary license tiers, activation keys, device limits, or usage fees apply. All
-features are available to all operators under the same GPL v3 terms.
+Commercial use — including displaying advertising, charging for access, operating a managed
+hosting service, revenue-generating marketing, use by publicly traded companies or
+organizations with more than 50 employees (except government and tax-exempt organizations),
+or reselling, white-labeling, or bundling — requires a separate paid commercial license from
+the Developer. See ADDITIONAL-USES.md for the complete list.
 
 
 3. THIRD-PARTY SERVICES
@@ -49,7 +61,7 @@ services, including but not limited to:
   - United States Geological Survey (USGS) — earthquake data
   - Google Analytics / Google Tag Manager — website usage analytics (operator-configured)
   - Map tile providers (OpenStreetMap, Mapbox, or others) — map rendering
-  - Any MQTT broker the operator configures for real-time data delivery
+  - LibreWxR — radar and satellite tile rendering
 
 By configuring and using these services through the Software, you acknowledge:
 
@@ -107,23 +119,25 @@ your data practices accordingly.
 
 6. INTELLECTUAL PROPERTY
 
-The Software is licensed under the GPL v3. All rights not explicitly granted by the GPL v3
-are reserved by the Developer. Nothing in this Agreement grants you any right to use the
-Developer's name, trademarks, or service marks beyond what is permitted by applicable law
-or the GPL v3.
+The Software is licensed under the PolyForm Noncommercial License 1.0.0. All rights not
+explicitly granted by the Base License or the Additional Uses document are reserved by the
+Developer. Nothing in this Agreement grants you any right to use the Developer's name,
+trademarks, or service marks beyond what is permitted by applicable law.
 
 Weather data (temperature, precipitation, wind, atmospheric readings) is factual information
 and is generally not subject to copyright protection. Display formats, charts, UI elements,
 and source code authored by the Developer are protected by copyright and licensed under the
-GPL v3 as set forth in Section 2 above.
+PolyForm Noncommercial License 1.0.0 as set forth in Section 2 above.
 
 
 7. DISCLAIMER OF WARRANTIES
 
 THE SOFTWARE IS PROVIDED "AS IS" AND "AS AVAILABLE" WITHOUT WARRANTY OF ANY KIND, EXPRESS
 OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-PARTICULAR PURPOSE, TITLE, AND NONINFRINGEMENT. THIS DISCLAIMER INCORPORATES AND EXTENDS
-THE NO-WARRANTY PROVISIONS OF THE GPL v3 (SECTIONS 15 AND 16).
+PARTICULAR PURPOSE, TITLE, AND NONINFRINGEMENT. AS STATED IN THE BASE LICENSE: AS FAR AS
+THE LAW ALLOWS, THE SOFTWARE COMES AS IS, WITHOUT ANY WARRANTY OR CONDITION, AND THE
+LICENSOR WILL NOT BE LIABLE TO YOU FOR ANY DAMAGES ARISING OUT OF THESE TERMS OR THE USE
+OR NATURE OF THE SOFTWARE, UNDER ANY KIND OF LEGAL CLAIM.
 
 SPECIFIC DISCLAIMERS:
 
@@ -146,8 +160,8 @@ SPECIFIC DISCLAIMERS:
 
 8. LIMITATION OF LIABILITY
 
-TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, AND AS FURTHER SET FORTH IN SECTIONS 15
-AND 16 OF THE GPL v3, IN NO EVENT SHALL THE DEVELOPER BE LIABLE FOR ANY INDIRECT,
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, AND CONSISTENT WITH THE "NO LIABILITY"
+PROVISION OF THE BASE LICENSE, IN NO EVENT SHALL THE DEVELOPER BE LIABLE FOR ANY INDIRECT,
 INCIDENTAL, SPECIAL, CONSEQUENTIAL, EXEMPLARY, OR PUNITIVE DAMAGES, OR ANY LOSS OF
 PROFITS, DATA, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATED TO:
 
@@ -164,7 +178,7 @@ PROFITS, DATA, GOODWILL, OR OTHER INTANGIBLE LOSSES, ARISING OUT OF OR RELATED T
 
 The Developer's total cumulative liability to you for all claims arising under or related to
 this Agreement shall not exceed zero United States dollars ($0.00), reflecting that the
-Software is provided at no charge under the GPL v3.
+Software is provided at no charge for noncommercial use under the Base License.
 
 
 9. OPERATOR RESPONSIBILITIES
@@ -189,20 +203,24 @@ built with this Software, you bear sole responsibility for:
       This includes obtaining required accounts, keys, and permissions before enabling
       any data provider.
 
-  (d) SECURITY. Securing your server, network configuration, API credentials, database,
+  (d) LICENSE COMPLIANCE. Complying with the PolyForm Noncommercial License 1.0.0 and the
+      ADDITIONAL-USES.md commercial use requirements. If your use falls into a category
+      requiring a commercial license, you must obtain one before deploying the Software.
+
+  (e) SECURITY. Securing your server, network configuration, API credentials, database,
       and any secrets stored by the Software. The Developer does not audit, monitor, or
       secure your deployment.
 
-  (e) DATA YOUR STATION COLLECTS. If your weather station collects, stores, or transmits
+  (f) DATA YOUR STATION COLLECTS. If your weather station collects, stores, or transmits
       data beyond raw meteorological readings — including visitor-generated data — you are
       responsible for that data's handling, protection, retention, and any required
       disclosures.
 
-  (f) ACCURACY DISCLAIMER TO VISITORS. Publishing a clear disclaimer to website visitors
+  (g) ACCURACY DISCLAIMER TO VISITORS. Publishing a clear disclaimer to website visitors
       stating that weather data is for general informational purposes only and is not
       suitable for safety-critical decisions.
 
-  (g) BACKUPS AND DISASTER RECOVERY. Maintaining adequate backups of your configuration
+  (h) BACKUPS AND DISASTER RECOVERY. Maintaining adequate backups of your configuration
       files, database, and any customizations. The Developer is not responsible for data
       loss resulting from hardware failure, software bugs, or accidental deletion.
 
@@ -219,6 +237,8 @@ attorneys' fees) arising out of or in connection with:
   (d) Your violation of any third-party service's terms of service.
   (e) Any claim by a visitor to your website.
   (f) Your failure to provide required legal notices or privacy disclosures to visitors.
+  (g) Your use of the Software in violation of the Base License or the commercial use
+      requirements in ADDITIONAL-USES.md.
 
 
 11. NO OBLIGATION TO SUPPORT
@@ -233,8 +253,8 @@ is under no obligation to:
   (d) Continue developing, distributing, or hosting the Software.
 
 Any support or updates provided are voluntary acts of goodwill and do not create an ongoing
-obligation. The GPL v3 ensures you always have the right to maintain your own fork of the
-Software if the Developer ceases development.
+obligation. The Base License ensures you always have the right to use and modify the Software
+for noncommercial purposes as described in the license terms.
 
 
 12. GOVERNING LAW
@@ -278,9 +298,10 @@ in full force and effect.
 Waiver. Failure to enforce any provision of this Agreement is not a waiver of that
 provision or the right to enforce it in the future.
 
-Entire Agreement. This Agreement, together with the GPL v3 (incorporated by reference),
-constitutes the entire agreement between the parties regarding the Software and supersedes
-all prior agreements, representations, or understandings regarding its subject matter.
+Entire Agreement. This Agreement, together with the PolyForm Noncommercial License 1.0.0
+and the ADDITIONAL-USES.md document (both incorporated by reference), constitutes the entire
+agreement between the parties regarding the Software and supersedes all prior agreements,
+representations, or understandings regarding its subject matter.
 
 
 16. TERMINATION
@@ -289,18 +310,18 @@ This Agreement is effective from the date you first install or use the Software 
 continues until terminated.
 
 Your rights under this Agreement terminate automatically — without notice from the Developer —
-if you fail to comply with any material term of this Agreement. Upon termination, you must
-cease operating the Software and destroy all copies in your possession.
+if you fail to comply with any material term of this Agreement, the Base License, or the
+commercial use requirements in ADDITIONAL-USES.md. Upon termination, you must cease operating
+the Software and destroy all copies in your possession.
 
 Operator termination. You may terminate this Agreement at any time by ceasing to use and
-uninstalling the Software. Your GPL v3 rights (including rights to retain your own modified
-copy of the source code) survive termination of this Agreement.
+uninstalling the Software.
 
 Developer-initiated revocation. The Developer may revoke your rights under this Agreement
-(in addition to GPL v3 rights, to the extent permitted by that license) if you: (a) use the
-Software in a manner that violates applicable law; (b) impersonate the Developer or falsely
-represent the Software as endorsed by the Developer; or (c) distribute the Software in
-violation of the GPL v3.
+if you: (a) use the Software in a manner that violates applicable law; (b) impersonate the
+Developer or falsely represent the Software as endorsed by the Developer; (c) use the
+Software for commercial purposes without a valid commercial license; or (d) distribute the
+Software in violation of the Base License.
 
 Sections 7 (Disclaimer of Warranties), 8 (Limitation of Liability), 9 (Operator
 Responsibilities), 10 (Indemnification), 12 (Governing Law), 13 (Arbitration), 14 (Class
