@@ -4,6 +4,26 @@ This guide covers deploying the full Clear Skies stack. For installing individua
 
 ---
 
+## Install order — dependency chain
+
+Install components in this order. Each step depends on the ones above it.
+
+| # | Component | Install method | Why this order |
+|---|-----------|---------------|----------------|
+| 1 | **weewx** (5.x) | Operator's existing install | Everything depends on the weewx engine running and producing archive records |
+| 2 | **ClearSkiesLoopRelay extension** | `weectl extension install <tarball>` → restart weewx | Creates the Unix socket (`/var/run/weewx-clearskies/loop.sock`) that the API reads loop packets from |
+| 3 | **(Optional) ClearSkiesTruesun extension** | `weectl extension install <tarball>` + `pip install pvlib cdsapi h5netcdf` into weewx's Python environment → restart weewx | Overrides `maxSolarRad` with pvlib Simplified Solis model. Not required — weewx falls back to built-in Ryan-Stolzenbach |
+| 4 | **Filesystem setup** (native only) | `sudo bash scripts/install-prerequisites.sh` | Creates `clearskies` user, `weewx-ro` group, config/runtime directories, DB permissions |
+| 5 | **API** | `pip install --pre weewx-clearskies-api` (native) or `docker compose up` (Docker) | Starts in life-support mode if no `api.conf` — serves `/setup/*` endpoints for the wizard |
+| 6 | **Config UI** | `pip install --pre weewx-clearskies-config` (native) or included in compose | Connects to the API's `/setup/*` endpoints. Run the wizard to generate `api.conf` and `secrets.env` |
+| 7 | **Dashboard** | `npm run build` + rsync to web root (native) or init container in compose | Static SPA — needs the API running to display data |
+| 8 | **Caddy** | Install + configure with provided Caddyfile example | Reverse proxy, TLS termination. Routes `/api/v1/*` and `/sse` to the API, `/wizard*` and `/admin*` to the Config UI, `/*` to dashboard static files |
+| 9 | **Verify** | `curl https://your-site/api/v1/status` | Should return `{"configured": true}` after wizard completes |
+
+For Docker compose deployments, steps 4–8 are handled by `docker compose up` — only steps 1–3 (weewx + extensions) are manual.
+
+---
+
 ## Supported environments
 
 | Environment | Recommended install path | Notes |
@@ -24,7 +44,7 @@ This guide covers deploying the full Clear Skies stack. For installing individua
 | Docker Engine | 24+ | [Install guide](https://docs.docker.com/engine/install/) |
 | Docker Compose plugin | v2.20+ | Bundled with Docker Desktop; `apt install docker-compose-plugin` on Linux |
 | weewx | 5.x | Running on the host or a reachable host; archive DB accessible |
-| MQTT broker | Any MQTT 3.1.1 broker | Required for multi-host realtime. Mosquitto or EMQX. Optional for single-host (use direct mode). |
+| ClearSkiesLoopRelay | weewx extension | Creates the Unix socket the API reads loop packets from. Install via `weectl extension install`. |
 
 ---
 
