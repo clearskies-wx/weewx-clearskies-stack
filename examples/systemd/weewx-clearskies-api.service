@@ -4,18 +4,23 @@ After=network.target
 
 [Service]
 Type=simple
-User=ubuntu
-Group=ubuntu
+User=clearskies
+Group=clearskies
+WorkingDirectory=/etc/weewx-clearskies
 EnvironmentFile=/etc/weewx-clearskies/secrets.env
-ExecStart=/home/ubuntu/repos/weewx-clearskies-api/.venv/bin/weewx-clearskies-api
+ExecStart=/usr/local/bin/weewx-clearskies-api
+# If installed in a venv: ExecStart=/path/to/venv/bin/weewx-clearskies-api
 Restart=on-failure
 RestartSec=5
 NoNewPrivileges=true
 ProtectSystem=strict
-# The API caches processed weather data under ~/.cache/weewx-clearskies.
+# The API caches processed weather data under /var/cache/weewx-clearskies.
 # This exemption allows writes to that directory while keeping the rest of
 # the filesystem read-only under ProtectSystem=strict.
-ReadWritePaths=/home/ubuntu/.cache/weewx-clearskies
+ReadWritePaths=/var/cache/weewx-clearskies
+# The ClearSkiesLoopRelay weewx extension writes loop.sock here; the API
+# reads it via the direct adapter.
+ReadWritePaths=/var/run/weewx-clearskies
 PrivateTmp=true
 
 [Install]
