@@ -1,12 +1,26 @@
+═══════════════════════════════════════════════════════════════
+IMPORTANT / MAHALAGA:
+This is a translation provided for your convenience. The
+English version (EULA.txt) is the sole legally binding
+document. In case of any conflict between this translation
+and the English original, the English version prevails.
+
+Ito ay isang salin na ibinigay para sa inyong kaginhawahan.
+Ang bersyong Ingles (EULA.txt) ang tanging legal na
+umaangkin na dokumento. Sakaling magkaroon ng anumang
+salungatan sa pagitan ng salin na ito at ang orihinal na
+Ingles, ang bersyong Ingles ang mananaig.
+═══════════════════════════════════════════════════════════════
+
 Clear Skies Weather Dashboard
 Kasunduan sa Lisensya ng Operator (End User License Agreement)
-EULA Version: 1.0
-Huling Na-update: 2026-06-10
+Bersyon ng EULA: 2.0
+Huling Na-update: 2026-07-02
 
-Ang End User License Agreement na ito («Kasunduan») ay isang legal na kontrata sa pagitan
-ninyo («Operator») at Shane Burkhardt («Developer») na namamahala sa inyong pag-install at
-paggamit ng Clear Skies Weather Dashboard software («Software»). Basahin ito nang maingat
-bago magpatuloy.
+Ang Kasunduan sa Lisensya ng Operator na ito («Kasunduan») ay isang legal na kontrata sa
+pagitan ninyo («Operator») at Shane Burkhardt («Developer») na namamahala sa inyong
+pag-install at paggamit ng Clear Skies Weather Dashboard software («Software»). Basahin ito
+nang maingat bago magpatuloy.
 
 
 1. PAGTANGGAP
@@ -15,29 +29,43 @@ Sa pamamagitan ng pag-install, pag-configure, o pagpapatakbo ng Software na ito,
 kayo na mapasaklaw ng mga tuntunin ng Kasunduang ito. Kung hindi kayo sumasang-ayon sa mga
 tuntuning ito, huwag i-install o gamitin ang Software.
 
-Ang Kasunduang ito ay nagdaragdag — at hindi pinapalitan — ng GNU General Public License
-bersyon 3 («GPL v3»), na namamahala sa source code ng Software. Kung saan ang Kasunduang ito
-at ang GPL v3 ay tumutugon sa parehong bagay, ang GPL v3 ang manaig; kung saan ang
-Kasunduang ito ay tumutugon sa mga bagay na hindi tinutugunan ng GPL v3 (warranty, pananagutan,
-mga responsibilidad ng operator), ang Kasunduang ito ang manaig.
+Ang Kasunduang ito ay nagdaragdag — at hindi pinapalitan — ng PolyForm Noncommercial License
+1.0.0 («Batayang Lisensya») at ng dokumentong ADDITIONAL-USES.md («Karagdagang mga Gamit»),
+na magkasamang namamahala sa source code ng Software. Kung saan ang Kasunduang ito at ang
+Batayang Lisensya ay tumutugon sa parehong bagay, ang Batayang Lisensya ang manaig; kung
+saan ang Kasunduang ito ay tumutugon sa mga bagay na hindi tinutugunan ng Batayang Lisensya
+(warranty, pananagutan, mga responsibilidad ng operator), ang Kasunduang ito ang manaig.
 
 
 2. PAGBIBIGAY NG LISENSYA
 
-Ang Software ay libreng open-source software na lisensyado sa ilalim ng GNU General Public
-License bersyon 3. Ang kopya ng GPL v3 ay kasama sa source repository ng Software sa
-ugat na antas bilang LICENSE.txt at makukuha sa: https://www.gnu.org/licenses/gpl-3.0.html
+Ang Software ay lisensyado sa ilalim ng PolyForm Noncommercial License 1.0.0. Ang kopya ng
+Batayang Lisensya ay kasama sa source repository ng Software sa ugat na antas bilang LICENSE
+at makukuha sa: https://polyformproject.org/licenses/noncommercial/1.0.0
 
-Sa ilalim ng GPL v3, binibigyan kayo ng mga karapatang:
+Sa ilalim ng Batayang Lisensya at ng dokumentong Karagdagang mga Gamit, binibigyan kayo ng
+mga karapatang:
 
-  (a) Patakbuhin ang Software para sa anumang layunin.
-  (b) Pag-aralan at baguhin ang source code.
-  (c) Ipamahagi ang mga literal na kopya ng Software.
-  (d) Ipamahagi ang inyong mga binagong bersyon sa ilalim ng GPL v3.
+  (a) Gamitin ang Software para sa anumang non-commercial na layunin, kabilang ang personal
+      na paggamit, pananaliksik, eksperimentasyon, mga hobby project, at pagsamba.
+  (b) Gamitin ang Software kung kayo ay isang charitable organization, institusyong
+      pang-edukasyon, public research organization, organisasyon para sa public safety o
+      kalusugan, organisasyon para sa proteksyon ng kapaligiran, o institusyong
+      pampamahalaan — anuman ang pinagmumulan ng pondo.
+  (c) Gamitin ang Software para sa mga karagdagang pinapahintulutang gamit na nakalista sa
+      ADDITIONAL-USES.md, kabilang ang community weather sharing, mga pamilyang sakahan
+      (mas mababa sa 50 empleyado, hindi publicly traded), amateur radio weather station,
+      mga kooperatiba sa agrikultura, at mga tax-exempt na organisasyon.
+  (d) Pag-aralan at baguhin ang source code para sa anumang pinapahintulutang layunin.
+  (e) Ipamahagi ang mga kopya ng Software (na may o walang mga pagbabago) para sa anumang
+      pinapahintulutang layunin, basta't isama ninyo ang kopya ng Batayang Lisensya.
 
-Walang naaangkop na proprietary na mga antas ng lisensya, mga activation key, limitasyon sa
-device, o mga bayarin sa paggamit. Lahat ng mga feature ay available sa lahat ng operator sa
-ilalim ng parehong mga tuntunin ng GPL v3.
+Ang commercial na paggamit — kabilang ang pagpapakita ng advertising, pagsingil para sa
+access, pagpapatakbo ng managed hosting service, revenue-generating marketing, paggamit ng
+mga publicly traded na kumpanya o mga organisasyong may higit sa 50 empleyado (maliban sa
+gobyerno at tax-exempt na organisasyon), o reselling, white-labeling, o bundling — ay
+nangangailangan ng hiwalay na bayad na commercial license mula sa Developer. Tingnan ang
+ADDITIONAL-USES.md para sa kumpletong listahan.
 
 
 3. MGA SERBISYO NG IKATLONG PARTIDO
@@ -54,7 +82,7 @@ tagapaglaan ng data at serbisyo ng ikatlong partido, kabilang ngunit hindi limit
   - Google Analytics / Google Tag Manager — analytics ng paggamit ng website (na-configure
     ng operator)
   - Mga tagapaglaan ng map tile (OpenStreetMap, Mapbox, o iba pa) — pag-render ng mapa
-  - Anumang MQTT broker na kino-configure ng operator para sa paghahatid ng data sa real-time
+  - LibreWxR — pag-render ng radar at satellite tile
 
 Sa pamamagitan ng pag-configure at paggamit ng mga serbisyong ito sa pamamagitan ng Software,
 kinikilala ninyo:
@@ -125,25 +153,28 @@ naaayon.
 
 6. INTELLECTUAL PROPERTY
 
-Ang Software ay lisensyado sa ilalim ng GPL v3. Ang lahat ng mga karapatang hindi tahasang
-ibinibigay ng GPL v3 ay nakalaan ng Developer. Walang anuman sa Kasunduang ito ang nagbibigay
-sa inyo ng anumang karapatang gamitin ang pangalan, mga trademark, o mga service mark ng
-Developer nang higit pa sa pinahihintulutan ng naaangkop na batas o ng GPL v3.
+Ang Software ay lisensyado sa ilalim ng PolyForm Noncommercial License 1.0.0. Ang lahat ng
+mga karapatang hindi tahasang ibinibigay ng Batayang Lisensya o ng dokumentong Karagdagang
+mga Gamit ay nakalaan ng Developer. Walang anuman sa Kasunduang ito ang nagbibigay sa inyo
+ng anumang karapatang gamitin ang pangalan, mga trademark, o mga service mark ng Developer
+nang higit pa sa pinahihintulutan ng naaangkop na batas.
 
 Ang datos ng panahon (temperatura, pag-ulan, hangin, mga pagbabasa sa atmospera) ay
 katotohanan at sa pangkalahatan ay hindi napapailalim sa proteksyon ng copyright. Ang mga
 format ng display, tsart, mga elemento ng UI, at source code na ginawa ng Developer ay
-protektado ng copyright at lisensyado sa ilalim ng GPL v3 ayon sa itinakda sa Seksyon 2
-sa itaas.
+protektado ng copyright at lisensyado sa ilalim ng PolyForm Noncommercial License 1.0.0
+ayon sa itinakda sa Seksyon 2 sa itaas.
 
 
 7. DISCLAIMER NG MGA WARRANTY
 
 ANG SOFTWARE AY IBINIBIGAY «AS IS» AT «AS AVAILABLE» NANG WALANG WARRANTY NG ANUMANG URI,
 TAHAS O IPINAHIWATIG, KABILANG NGUNIT HINDI LIMITADO SA MGA WARRANTY NG MERCHANTABILITY,
-ANGKOP PARA SA ISANG PARTIKULAR NA LAYUNIN, TITULO, AT NON-INFRINGEMENT. ANG DISCLAIMER NA
-ITO AY NAGSASAMA AT NAGPAPALAWAK NG MGA PROBISYON NA WALANG WARRANTY NG GPL v3 (SEKSYON 15
-AT 16).
+ANGKOP PARA SA ISANG PARTIKULAR NA LAYUNIN, TITULO, AT NON-INFRINGEMENT. ALINSUNOD SA
+BATAYANG LISENSYA: SA ABOT NG PINAHIHINTULUTAN NG BATAS, ANG SOFTWARE AY IBINIBIGAY NANG
+AS IS, WALANG ANUMANG WARRANTY O KONDISYON, AT ANG LICENSOR AY HINDI MANANAGOT SA INYO
+PARA SA ANUMANG PINSALA NA NAGMUMULA SA MGA TUNTUNING ITO O SA PAGGAMIT O KALIKASAN NG
+SOFTWARE, SA ILALIM NG ANUMANG URI NG LEGAL NA CLAIM.
 
 MGA PARTIKULAR NA DISCLAIMER:
 
@@ -169,11 +200,11 @@ MGA PARTIKULAR NA DISCLAIMER:
 
 8. LIMITASYON NG PANANAGUTAN
 
-SA PINAKAMATAAS NA LAWAK NA PINAHIHINTULUTAN NG NAAANGKOP NA BATAS, AT AYON SA KARAGDAGANG
-ITINAKDA SA MGA SEKSYON 15 AT 16 NG GPL v3, SA ANUMANG PAGKAKATAON ANG DEVELOPER AY HINDI
-MANANAGOT PARA SA ANUMANG HINDI DIREKTA, INCIDENTAL, ESPESYAL, CONSEQUENTIAL, EXEMPLARY, O
-PUNITIVE NA PINSALA, O ANUMANG PAGKAWALA NG KITA, DATA, GOODWILL, O IBA PANG HINDI
-MATERYAL NA PAGKAWALA, NA NAGMUMULA SA O NAUUGNAY SA:
+SA PINAKAMATAAS NA LAWAK NA PINAHIHINTULUTAN NG NAAANGKOP NA BATAS, AT ALINSUNOD SA
+PROBISYON NG «WALANG PANANAGUTAN» NG BATAYANG LISENSYA, SA ANUMANG PAGKAKATAON ANG
+DEVELOPER AY HINDI MANANAGOT PARA SA ANUMANG HINDI DIREKTA, INCIDENTAL, ESPESYAL,
+CONSEQUENTIAL, EXEMPLARY, O PUNITIVE NA PINSALA, O ANUMANG PAGKAWALA NG KITA, DATA,
+GOODWILL, O IBA PANG HINDI MATERYAL NA PAGKAWALA, NA NAGMUMULA SA O NAUUGNAY SA:
 
   (a) Ang inyong paggamit o kawalan ng kakayahang gumamit ng Software.
   (b) Kawalan ng katumpakan, pagkakumpleto, o pagiging napapanahon ng datos ng panahon na
@@ -191,8 +222,8 @@ MATERYAL NA PAGKAWALA, NA NAGMUMULA SA O NAUUGNAY SA:
 
 Ang kabuuang cumulative na pananagutan ng Developer sa inyo para sa lahat ng mga claim na
 nagmumula sa o nauugnay sa Kasunduang ito ay hindi lalampas sa zero na dolyar ng Estados
-Unidos ($0.00), na sumasalamin na ang Software ay ibinibigay nang walang bayad sa ilalim
-ng GPL v3.
+Unidos ($0.00), na sumasalamin na ang Software ay ibinibigay nang walang bayad para sa
+non-commercial na paggamit sa ilalim ng Batayang Lisensya.
 
 
 9. MGA RESPONSIBILIDAD NG OPERATOR
@@ -222,21 +253,26 @@ responsibilidad para sa:
       pagkuha ng kinakailangang mga account, key, at pahintulot bago paganahin ang anumang
       tagapaglaan ng datos.
 
-  (d) SEGURIDAD. Pag-secure ng inyong server, configuration ng network, mga kredensyal ng
+  (d) PAGSUNOD SA LISENSYA. Pagsunod sa PolyForm Noncommercial License 1.0.0 at sa mga
+      kinakailangan sa commercial na paggamit sa ADDITIONAL-USES.md. Kung ang inyong
+      paggamit ay nabibilang sa isang kategoryang nangangailangan ng commercial license,
+      dapat kayong kumuha ng isa bago i-deploy ang Software.
+
+  (e) SEGURIDAD. Pag-secure ng inyong server, configuration ng network, mga kredensyal ng
       API, database, at anumang mga lihim na nakaimbak ng Software. Ang Developer ay hindi
       nag-o-audit, nagmo-monitor, o nag-se-secure ng inyong deployment.
 
-  (e) DATA NA KINOKOLEKTA NG INYONG ISTASYON. Kung ang inyong istasyon ng panahon ay
+  (f) DATA NA KINOKOLEKTA NG INYONG ISTASYON. Kung ang inyong istasyon ng panahon ay
       nangongolekta, nagtatago, o naghahatid ng datos na higit pa sa mga raw na pagbabasa
       ng meteorolohiko — kabilang ang data na generated ng bisita — kayo ay responsable para
       sa paghawak, proteksyon, pagpapanatili, at anumang kinakailangang pagsisiwalat ng
       data na iyon.
 
-  (f) DISCLAIMER NG KATUMPAKAN SA MGA BISITA. Paglalathala ng malinaw na disclaimer sa
+  (g) DISCLAIMER NG KATUMPAKAN SA MGA BISITA. Paglalathala ng malinaw na disclaimer sa
       mga bisita ng website na nagtatakda na ang datos ng panahon ay para sa pangkalahatang
       layunin ng impormasyon lamang at hindi angkop para sa mga safety-critical na desisyon.
 
-  (g) MGA BACKUP AT DISASTER RECOVERY. Pagpapanatili ng sapat na mga backup ng inyong mga
+  (h) MGA BACKUP AT DISASTER RECOVERY. Pagpapanatili ng sapat na mga backup ng inyong mga
       configuration file, database, at anumang mga customization. Ang Developer ay hindi
       responsable para sa pagkawala ng data na nagresulta mula sa pagkabigo ng hardware,
       mga bug ng software, o aksidenteng pagtanggal.
@@ -255,6 +291,8 @@ sa lahat ng mga claim, demand, pananagutan, pinsala, pagkawala, gastos, at mga g
   (e) Anumang claim ng isang bisita sa inyong website.
   (f) Ang inyong kabiguan sa pagbibigay ng kinakailangang mga legal na abiso o mga
       pagsisiwalat ng privacy sa mga bisita.
+  (g) Ang inyong paggamit ng Software na lumalabag sa Batayang Lisensya o sa mga
+      kinakailangan sa commercial na paggamit sa ADDITIONAL-USES.md.
 
 
 11. WALANG OBLIGASYON SA SUPORTA
@@ -269,8 +307,9 @@ batayan ng boluntaryo. Ang Developer ay walang obligasyon na:
   (d) Ipagpatuloy ang pagbuo, pamamahagi, o pag-host ng Software.
 
 Anumang suporta o mga update na ibinibigay ay mga boluntaryong kilos ng mabuting kalooban at
-hindi lumilikha ng patuloy na obligasyon. Tinitiyak ng GPL v3 na palagi kayong may karapatang
-mapanatili ang inyong sariling fork ng Software kung ang Developer ay titigil sa pagbuo.
+hindi lumilikha ng patuloy na obligasyon. Tinitiyak ng Batayang Lisensya na palagi kayong may
+karapatang gamitin at baguhin ang Software para sa non-commercial na mga layunin ayon sa
+itinakda sa mga tuntunin ng lisensya.
 
 
 12. NAMAMAHALANG BATAS
@@ -278,7 +317,6 @@ mapanatili ang inyong sariling fork ng Software kung ang Developer ay titigil sa
 Ang Kasunduang ito ay pamamahalaan at bibigyang-kahulugan ayon sa mga batas ng Estado ng
 California, Estados Unidos ng Amerika, nang walang pagsasaalang-alang sa mga probisyon ng
 salungatan ng batas nito.
-(Namamahalang batas: Estado ng California, USA — naaangkop anuman ang lokasyon ng Operator.)
 
 
 13. ARBITRASYON
@@ -289,7 +327,6 @@ magkasamang napagkasunduang serbisyo ng arbitrasyon, na isinasagawa sa Californi
 Unidos ng Amerika, ayon sa mga kasalukuyang panuntunan nito. Ang desisyon ng arbitrator ay
 magiging panghuling at may bisa, at ang paghatol sa award ay maaaring ipasok sa anumang
 husgado ng may kakayahang hurisdiksyon.
-(Binding arbitration clause — lugar: California, USA. Pagwawaiver ng paglilitis ng jury.)
 
 Ang sugnay ng arbitrasyon na ito ay hindi naaangkop sa injunctive relief para sa mga
 paglabag ng intellectual property, na maaaring hanapin ng alinmang partido sa anumang
@@ -304,7 +341,6 @@ NG INDIBIDWAL. HINDI KAYO NI ANG DEVELOPER ANG MAAARING MAG-BRING O LUMAHOK SA A
 KLASE, KOLEKTIBO, PINAGSAMA, O REPRESENTATIBONG PROSESO. Hindi maaaring pagsama-samahin ng
 arbitrator ang mga claim ng higit sa isang tao nang walang tahasang nakasulat na pahintulot
 ng lahat ng partido.
-(Pagwawaiver ng class action — naaangkop sa ilalim ng batas ng California.)
 
 
 15. FORCE MAJEURE / SEVERABILITY / PAGWAWAIVER / BUONG KASUNDUAN
@@ -322,10 +358,10 @@ Ang mga natitirang probisyon ay magpapatuloy sa buong lakas at bisa.
 Pagwawaiver. Ang kabiguang magpatupad ng anumang probisyon ng Kasunduang ito ay hindi isang
 pagwawaiver ng probisyon na iyon o ng karapatang ipatupad ito sa hinaharap.
 
-Buong Kasunduan. Ang Kasunduang ito, kasama ang GPL v3 (na isinama sa pamamagitan ng
-sanggunian), ay bumubuo ng buong kasunduan sa pagitan ng mga partido tungkol sa Software at
-pinapalitan ang lahat ng nakaraang mga kasunduan, representasyon, o pag-unawa tungkol sa
-paksa nito.
+Buong Kasunduan. Ang Kasunduang ito, kasama ang PolyForm Noncommercial License 1.0.0 at ang
+dokumentong ADDITIONAL-USES.md (na parehong isinama sa pamamagitan ng sanggunian), ay
+bumubuo ng buong kasunduan sa pagitan ng mga partido tungkol sa Software at pinapalitan ang
+lahat ng nakaraang mga kasunduan, representasyon, o pag-unawa tungkol sa paksa nito.
 
 
 16. PAGWAWAKAS
@@ -335,19 +371,18 @@ ng Software at nagpapatuloy hanggang sa wakasan.
 
 Ang inyong mga karapatan sa ilalim ng Kasunduang ito ay awtomatikong mawawakas — nang walang
 abiso mula sa Developer — kung kayo ay nabigo na sumunod sa anumang mahalagang tuntunin ng
-Kasunduang ito. Sa pagwawakas, kailangan ninyong tigilan ang pagpapatakbo ng Software at
+Kasunduang ito, ng Batayang Lisensya, o ng mga kinakailangan sa commercial na paggamit sa
+ADDITIONAL-USES.md. Sa pagwawakas, kailangan ninyong tigilan ang pagpapatakbo ng Software at
 sirain ang lahat ng kopya sa inyong pag-aari.
 
 Pagwawakas ng Operator. Maaari ninyong wakasan ang Kasunduang ito anumang oras sa pamamagitan
-ng pagtigil sa paggamit at pag-uninstall ng Software. Ang inyong mga karapatan sa GPL v3
-(kabilang ang mga karapatang mapanatili ang inyong sariling binagong kopya ng source code)
-ay nakaligtas sa pagwawakas ng Kasunduang ito.
+ng pagtigil sa paggamit at pag-uninstall ng Software.
 
 Pagbawi na inisyado ng Developer. Maaaring bawiin ng Developer ang inyong mga karapatan sa
-ilalim ng Kasunduang ito (bukod sa mga karapatan ng GPL v3, sa lawak na pinahihintulutan ng
-lisensyang iyon) kung kayo: (a) gumamit ng Software sa paraang lumalabag sa naaangkop na
-batas; (b) nagpapanggap na Developer o maling kumakatawan na ang Software ay sinusuportahan
-ng Developer; o (c) namamahagi ng Software na lumalabag sa GPL v3.
+ilalim ng Kasunduang ito kung kayo: (a) gumamit ng Software sa paraang lumalabag sa naaangkop
+na batas; (b) nagpapanggap na Developer o maling kumakatawan na ang Software ay sinusuportahan
+ng Developer; (c) gumamit ng Software para sa commercial na layunin nang walang balidong
+commercial license; o (d) namamahagi ng Software na lumalabag sa Batayang Lisensya.
 
 Ang mga Seksyon 7 (Disclaimer ng mga Warranty), 8 (Limitasyon ng Pananagutan), 9 (Mga
 Responsibilidad ng Operator), 10 (Indemnification), 12 (Namamahalang Batas), 13

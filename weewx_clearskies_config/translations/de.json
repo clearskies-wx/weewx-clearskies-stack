@@ -375,7 +375,7 @@
   "Hygroscopic correction": "Hygroskopische Korrektur",
   "Hygroscopic correction exponent (Hänel 1976). Default 0.45 is suitable\n        for most locations. Lower values reduce humidity sensitivity; higher values\n        increase it.": "Hygroskopischer Korrekturexponent (Hänel 1976). Der Standardwert 0,45 eignet sich\n        für die meisten Standorte. Niedrigere Werte verringern die Feuchtigkeitsempfindlichkeit; höhere Werte\n        erhöhen sie.",
   "I Agree — Continue": "Ich stimme zu — weiter",
-  "I have read and agree to the Clear Skies Operator License Agreement\n          (EULA Version 1.0, Last Updated 2026-06-10).": "Ich habe die Clear-Skies-Betreiberlizenzvereinbarung gelesen und stimme ihr zu\n          (EULA Version 1.0, zuletzt aktualisiert am 10.06.2026).",
+  "I have read and agree to the Clear Skies Operator License Agreement\n          (EULA Version 2.0, Last Updated 2026-07-02).": "Ich habe die Clear-Skies-Betreiberlizenzvereinbarung gelesen und stimme ihr zu\n          (EULA Version 2.0, zuletzt aktualisiert am 02.07.2026).",
   "IANA timezone name, e.g.": "IANA-Zeitzonenname, z. B.",
   "ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.": "ICO oder PNG, max. 100 KB. Ersetzt die untenstehende URL, wenn eine Datei ausgewählt wird.",
   "ID:": "ID:",

@@ -375,7 +375,7 @@
   "Hygroscopic correction": "吸溼性修正",
   "Hygroscopic correction exponent (Hänel 1976). Default 0.45 is suitable\n        for most locations. Lower values reduce humidity sensitivity; higher values\n        increase it.": "吸溼性修正指數（Hänel 1976）。預設值 0.45 適用於\n        大多數地區。數值越低，溼度敏感度越低；數值越高，\n        溼度敏感度越高。",
   "I Agree — Continue": "我同意 — 繼續",
-  "I have read and agree to the Clear Skies Operator License Agreement\n          (EULA Version 1.0, Last Updated 2026-06-10).": "我已閱讀並同意 Clear Skies 營運商許可協議\n          （EULA 版本 1.0，最後更新於 2026-06-10）。",
+  "I have read and agree to the Clear Skies Operator License Agreement\n          (EULA Version 2.0, Last Updated 2026-07-02).": "我已閱讀並同意 Clear Skies 營運商許可協議\n          （EULA 版本 2.0，最後更新於 2026-07-02）。",
   "IANA timezone name, e.g.": "IANA 時區名稱，例如",
   "ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.": "ICO 或 PNG 格式，最大 100 KB。選擇檔案後將替換下方的 URL。",
   "ID:": "ID：",

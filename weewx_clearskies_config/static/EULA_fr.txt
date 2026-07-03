@@ -1,9 +1,22 @@
+═══════════════════════════════════════════════════════════════
+IMPORTANT / IMPORTANT :
+This is a translation provided for your convenience. The
+English version (EULA.txt) is the sole legally binding
+document. In case of any conflict between this translation
+and the English original, the English version prevails.
+
+Ceci est une traduction fournie pour votre commodité. La
+version anglaise (EULA.txt) est le seul document juridiquement
+contraignant. En cas de conflit entre cette traduction et
+l'original anglais, la version anglaise prévaut.
+═══════════════════════════════════════════════════════════════
+
 Clear Skies Weather Dashboard
 Contrat de Licence pour Opérateurs (Contrat de Licence Utilisateur Final)
-EULA Version: 1.0
-Dernière mise à jour : 2026-06-10
+Version de l'EULA : 2.0
+Dernière mise à jour : 2026-07-02
 
-Ce Contrat de Licence Utilisateur Final (« Contrat ») est un contrat juridiquement
+Ce Contrat de Licence pour Opérateurs (« Contrat ») est un contrat juridiquement
 contraignant entre vous (« Opérateur ») et Shane Burkhardt (« Développeur ») régissant
 votre installation et utilisation du logiciel Clear Skies Weather Dashboard (« Logiciel »).
 Lisez-le attentivement avant de continuer.
@@ -15,29 +28,45 @@ En installant, configurant ou exploitant ce Logiciel, vous acceptez d'être lié
 termes de ce Contrat. Si vous n'acceptez pas ces termes, n'installez pas et n'utilisez pas
 le Logiciel.
 
-Ce Contrat complète — et ne remplace pas — la Licence Publique Générale GNU version 3
-(« GPL v3 »), qui régit le code source du Logiciel. Lorsque ce Contrat et la GPL v3 traitent
-du même sujet, la GPL v3 prévaut ; lorsque ce Contrat traite de sujets sur lesquels la GPL v3
-est silencieuse (garantie, responsabilité, obligations de l'opérateur), ce Contrat s'applique.
+Ce Contrat complète — et ne remplace pas — la Licence PolyForm Noncommercial 1.0.0
+(« Licence de Base ») et le document ADDITIONAL-USES.md (« Usages Additionnels »), qui
+régissent ensemble le code source du Logiciel. Lorsque ce Contrat et la Licence de Base
+traitent du même sujet, la Licence de Base prévaut ; lorsque ce Contrat traite de sujets sur
+lesquels la Licence de Base est silencieuse (garantie, responsabilité, obligations de
+l'opérateur), ce Contrat s'applique.
 
 
 2. OCTROI DE LICENCE
 
-Le Logiciel est un logiciel libre et open-source licencié sous la Licence Publique Générale
-GNU version 3. Une copie de la GPL v3 est incluse dans le dépôt source du Logiciel au niveau
-racine sous le nom LICENSE.txt et est disponible à l'adresse :
-https://www.gnu.org/licenses/gpl-3.0.html
+Le Logiciel est licencié sous la Licence PolyForm Noncommercial 1.0.0. Une copie de la
+Licence de Base est incluse dans le dépôt source du Logiciel au niveau racine sous le nom
+LICENSE et est disponible à l'adresse :
+https://polyformproject.org/licenses/noncommercial/1.0.0
 
-En vertu de la GPL v3, vous bénéficiez des droits suivants :
+En vertu de la Licence de Base et du document Usages Additionnels, vous bénéficiez des
+droits suivants :
 
-  (a) Exécuter le Logiciel à toutes fins.
-  (b) Étudier et modifier le code source.
-  (c) Distribuer des copies conformes du Logiciel.
-  (d) Distribuer vos versions modifiées sous la GPL v3.
+  (a) Utiliser le Logiciel à toute fin non commerciale, y compris l'usage personnel, la
+      recherche, l'expérimentation, les projets de loisir et la pratique religieuse.
+  (b) Utiliser le Logiciel si vous êtes un organisme caritatif, un établissement
+      d'enseignement, un organisme de recherche public, un organisme de sécurité publique
+      ou de santé, un organisme de protection de l'environnement, ou une institution
+      gouvernementale — quelle que soit la source de financement.
+  (c) Utiliser le Logiciel pour les usages additionnels autorisés énumérés dans
+      ADDITIONAL-USES.md, notamment le partage communautaire de données météorologiques,
+      les exploitations agricoles familiales (moins de 50 employés, non cotées en bourse),
+      les stations météorologiques radioamateurs, les coopératives agricoles et les
+      organismes exonérés d'impôts.
+  (d) Étudier et modifier le code source à toute fin autorisée.
+  (e) Distribuer des copies du Logiciel (avec ou sans modifications) à toute fin autorisée,
+      à condition d'inclure une copie de la Licence de Base.
 
-Aucun niveau de licence propriétaire, clé d'activation, limitation de périphérique ou frais
-d'utilisation ne s'applique. Toutes les fonctionnalités sont disponibles pour tous les
-opérateurs selon les mêmes termes de la GPL v3.
+L'utilisation commerciale — y compris l'affichage de publicité, la facturation de l'accès,
+l'exploitation d'un service d'hébergement géré, le marketing générateur de revenus,
+l'utilisation par des sociétés cotées en bourse ou des organisations de plus de 50 employés
+(à l'exception des organismes gouvernementaux et exonérés d'impôts), ou la revente, le
+marquage blanc ou le regroupement — nécessite une licence commerciale payante distincte du
+Développeur. Consultez ADDITIONAL-USES.md pour la liste complète.
 
 
 3. SERVICES TIERS
@@ -54,7 +83,7 @@ et services tiers, notamment :
   - Google Analytics / Google Tag Manager — analyses d'utilisation du site web (configuré
     par l'opérateur)
   - Fournisseurs de tuiles cartographiques (OpenStreetMap, Mapbox ou autres) — rendu de cartes
-  - Tout courtier MQTT que l'opérateur configure pour la diffusion de données en temps réel
+  - LibreWxR — rendu des tuiles radar et satellite
 
 En configurant et utilisant ces services via le Logiciel, vous reconnaissez :
 
@@ -67,7 +96,7 @@ En configurant et utilisant ces services via le Logiciel, vous reconnaissez :
   (d) Le Développeur n'est pas responsable de la disponibilité, de l'exactitude, de la
       tarification ou des conditions d'un service tiers, et ne garantit pas la compatibilité
       continue.
-  (e) Le Développeur ne reçoit, ne stocke ni ne traite aucune credential d'API tiers que
+  (e) Le Développeur ne reçoit, ne stocke ni ne traite aucun identifiant d'API tiers que
       vous saisissez dans le Logiciel ; ces identifiants sont stockés localement sur votre
       serveur.
 
@@ -120,25 +149,28 @@ et divulguer vos pratiques en matière de données en conséquence.
 
 6. PROPRIÉTÉ INTELLECTUELLE
 
-Le Logiciel est licencié sous la GPL v3. Tous les droits non expressément accordés par la
-GPL v3 sont réservés au Développeur. Rien dans ce Contrat ne vous accorde le droit d'utiliser
-le nom, les marques commerciales ou les marques de service du Développeur au-delà de ce qui
-est autorisé par la loi applicable ou la GPL v3.
+Le Logiciel est licencié sous la Licence PolyForm Noncommercial 1.0.0. Tous les droits non
+expressément accordés par la Licence de Base ou le document Usages Additionnels sont réservés
+au Développeur. Rien dans ce Contrat ne vous accorde le droit d'utiliser le nom, les marques
+commerciales ou les marques de service du Développeur au-delà de ce qui est autorisé par la
+loi applicable.
 
 Les données météorologiques (température, précipitations, vent, relevés atmosphériques) sont
 des informations factuelles et ne sont généralement pas protégées par le droit d'auteur. Les
 formats d'affichage, les graphiques, les éléments d'interface utilisateur et le code source
-rédigé par le Développeur sont protégés par le droit d'auteur et licenciés sous la GPL v3
-conformément à la Section 2 ci-dessus.
+rédigé par le Développeur sont protégés par le droit d'auteur et licenciés sous la Licence
+PolyForm Noncommercial 1.0.0 conformément à la Section 2 ci-dessus.
 
 
 7. EXCLUSION DE GARANTIE
 
 LE LOGICIEL EST FOURNI « EN L'ÉTAT » ET « TEL QUE DISPONIBLE » SANS GARANTIE D'AUCUNE
 SORTE, EXPRESSE OU IMPLICITE, Y COMPRIS MAIS SANS LIMITATION LES GARANTIES DE QUALITÉ
-MARCHANDE, D'ADÉQUATION À UN USAGE PARTICULIER, DE TITRE ET DE NON-CONTREFAÇON. CETTE
-EXCLUSION INCORPORE ET ÉTEND LES DISPOSITIONS D'ABSENCE DE GARANTIE DE LA GPL v3
-(ARTICLES 15 ET 16).
+MARCHANDE, D'ADÉQUATION À UN USAGE PARTICULIER, DE TITRE ET DE NON-CONTREFAÇON. COMME
+INDIQUÉ DANS LA LICENCE DE BASE : DANS LA MESURE PERMISE PAR LA LOI, LE LOGICIEL EST FOURNI
+TEL QUEL, SANS AUCUNE GARANTIE NI CONDITION, ET LE CONCÉDANT NE SERA PAS RESPONSABLE ENVERS
+VOUS DE TOUT DOMMAGE DÉCOULANT DE CES CONDITIONS OU DE L'UTILISATION OU DE LA NATURE DU
+LOGICIEL, QUELLE QUE SOIT LA RÉCLAMATION JURIDIQUE.
 
 EXCLUSIONS SPÉCIFIQUES :
 
@@ -163,11 +195,11 @@ EXCLUSIONS SPÉCIFIQUES :
 
 8. LIMITATION DE RESPONSABILITÉ
 
-DANS LA MESURE MAXIMALE AUTORISÉE PAR LA LOI APPLICABLE, ET COMME ÉNONCÉ AUX ARTICLES 15
-ET 16 DE LA GPL v3, LE DÉVELOPPEUR NE SAURAIT EN AUCUN CAS ÊTRE TENU RESPONSABLE DES
-DOMMAGES INDIRECTS, ACCESSOIRES, SPÉCIAUX, CONSÉCUTIFS, EXEMPLAIRES OU PUNITIFS, NI DE
-TOUTE PERTE DE BÉNÉFICES, DE DONNÉES, DE CLIENTÈLE OU D'AUTRES PERTES IMMATÉRIELLES,
-DÉCOULANT DE OU LIÉS À :
+DANS LA MESURE MAXIMALE AUTORISÉE PAR LA LOI APPLICABLE, ET CONFORMÉMENT À LA DISPOSITION
+« ABSENCE DE RESPONSABILITÉ » DE LA LICENCE DE BASE, LE DÉVELOPPEUR NE SAURAIT EN AUCUN CAS
+ÊTRE TENU RESPONSABLE DES DOMMAGES INDIRECTS, ACCESSOIRES, SPÉCIAUX, CONSÉCUTIFS, EXEMPLAIRES
+OU PUNITIFS, NI DE TOUTE PERTE DE BÉNÉFICES, DE DONNÉES, DE CLIENTÈLE OU D'AUTRES PERTES
+IMMATÉRIELLES, DÉCOULANT DE OU LIÉS À :
 
   (a) Votre utilisation du Logiciel ou votre incapacité à l'utiliser.
   (b) L'inexactitude, l'incomplétude ou le manque d'actualité des données météorologiques
@@ -185,7 +217,8 @@ DÉCOULANT DE OU LIÉS À :
 
 La responsabilité cumulative totale du Développeur envers vous pour toutes les réclamations
 découlant de ou liées à ce Contrat ne dépassera pas zéro dollar américain (0,00 USD), ce
-qui reflète le fait que le Logiciel est fourni gratuitement sous la GPL v3.
+qui reflète le fait que le Logiciel est fourni gratuitement pour un usage non commercial
+sous la Licence de Base.
 
 
 9. OBLIGATIONS DE L'OPÉRATEUR
@@ -214,21 +247,26 @@ accessible au public construit avec ce Logiciel, vous assumez l'entière respons
       configurez dans le Logiciel. Cela inclut l'obtention des comptes, clés et autorisations
       requis avant d'activer un fournisseur de données.
 
-  (d) SÉCURITÉ. Sécuriser votre serveur, la configuration réseau, les identifiants d'API,
+  (d) CONFORMITÉ DE LA LICENCE. Respecter la Licence PolyForm Noncommercial 1.0.0 et les
+      exigences d'usage commercial dans ADDITIONAL-USES.md. Si votre usage relève d'une
+      catégorie nécessitant une licence commerciale, vous devez en obtenir une avant de
+      déployer le Logiciel.
+
+  (e) SÉCURITÉ. Sécuriser votre serveur, la configuration réseau, les identifiants d'API,
       la base de données et tout secret stocké par le Logiciel. Le Développeur n'audite, ne
       surveille ni ne sécurise votre déploiement.
 
-  (e) DONNÉES COLLECTÉES PAR VOTRE STATION. Si votre station météorologique collecte,
+  (f) DONNÉES COLLECTÉES PAR VOTRE STATION. Si votre station météorologique collecte,
       stocke ou transmet des données au-delà des relevés météorologiques bruts — y compris
       les données générées par les visiteurs — vous êtes responsable du traitement, de la
       protection, de la conservation et de toute divulgation requise concernant ces données.
 
-  (f) AVIS DE PRÉCISION AUX VISITEURS. Publier un avertissement clair aux visiteurs du
+  (g) AVIS DE PRÉCISION AUX VISITEURS. Publier un avertissement clair aux visiteurs du
       site web indiquant que les données météorologiques sont fournies à des fins
       d'information générale uniquement et ne sont pas adaptées aux décisions critiques
       pour la sécurité.
 
-  (g) SAUVEGARDES ET REPRISE APRÈS SINISTRE. Maintenir des sauvegardes adéquates de vos
+  (h) SAUVEGARDES ET REPRISE APRÈS SINISTRE. Maintenir des sauvegardes adéquates de vos
       fichiers de configuration, de votre base de données et de toutes vos personnalisations.
       Le Développeur n'est pas responsable de la perte de données résultant d'une défaillance
       matérielle, de bogues logiciels ou d'une suppression accidentelle.
@@ -247,6 +285,8 @@ les honoraires d'avocat raisonnables) découlant de ou en lien avec :
   (e) Toute réclamation d'un visiteur de votre site web.
   (f) Votre manquement à fournir les mentions légales ou divulgations de confidentialité
       requises aux visiteurs.
+  (g) Votre utilisation du Logiciel en violation de la Licence de Base ou des exigences
+      d'usage commercial dans ADDITIONAL-USES.md.
 
 
 11. ABSENCE D'OBLIGATION DE SUPPORT
@@ -262,16 +302,15 @@ capacités. Le Développeur n'a aucune obligation de :
   (d) Continuer à développer, distribuer ou héberger le Logiciel.
 
 Tout support ou mise à jour fournis sont des actes volontaires de bonne volonté et ne créent
-pas d'obligation continue. La GPL v3 vous garantit toujours le droit de maintenir votre propre
-fork du Logiciel si le Développeur cesse le développement.
+pas d'obligation continue. La Licence de Base garantit que vous avez toujours le droit
+d'utiliser et de modifier le Logiciel à des fins non commerciales conformément aux termes de
+la licence.
 
 
 12. LOI APPLICABLE
 
 Ce Contrat est régi par et interprété conformément aux lois de l'État de Californie, États-Unis
 d'Amérique, sans égard à ses dispositions sur les conflits de lois.
-(Loi applicable : État de Californie, États-Unis — s'applique quelle que soit la localisation
-de l'Opérateur.)
 
 
 13. ARBITRAGE
@@ -281,7 +320,6 @@ sera résolu par arbitrage contraignant administré par un service d'arbitrage c
 mutuellement, conduit en Californie, États-Unis d'Amérique, conformément à ses règles en
 vigueur. La décision de l'arbitre sera définitive et contraignante, et le jugement sur la
 sentence pourra être rendu dans tout tribunal compétent.
-(Clause d'arbitrage contraignant — siège : Californie, États-Unis. Renonciation au jury.)
 
 Cette clause d'arbitrage ne s'applique pas à la demande de mesures provisoires pour violations
 de propriété intellectuelle, que l'une ou l'autre partie peut solliciter devant tout tribunal
@@ -295,7 +333,6 @@ DÉCOULANT DE OU LIÉES À CE CONTRAT SERA CONDUITE EXCLUSIVEMENT SUR UNE BASE I
 NI VOUS NI LE DÉVELOPPEUR NE POUVEZ INTRODUIRE NI PARTICIPER À UNE PROCÉDURE COLLECTIVE,
 GROUPÉE, CONSOLIDÉE OU REPRÉSENTATIVE. L'arbitre ne peut pas consolider les réclamations de
 plus d'une personne sans le consentement écrit exprès de toutes les parties.
-(Renonciation aux actions collectives — applicable en vertu du droit californien.)
 
 
 15. FORCE MAJEURE / DIVISIBILITÉ / RENONCIATION / INTÉGRALITÉ DU CONTRAT
@@ -313,9 +350,10 @@ s'appliquer pleinement.
 Renonciation. Le défaut d'appliquer une disposition de ce Contrat ne constitue pas une
 renonciation à cette disposition ni au droit de l'appliquer à l'avenir.
 
-Intégralité du Contrat. Ce Contrat, conjointement avec la GPL v3 (incorporée par référence),
-constitue l'intégralité de l'accord entre les parties concernant le Logiciel et remplace
-tous les accords, représentations ou ententes antérieurs concernant son objet.
+Intégralité du Contrat. Ce Contrat, conjointement avec la Licence PolyForm Noncommercial
+1.0.0 et le document ADDITIONAL-USES.md (tous deux incorporés par référence), constitue
+l'intégralité de l'accord entre les parties concernant le Logiciel et remplace tous les
+accords, représentations ou ententes antérieurs concernant son objet.
 
 
 16. RÉSILIATION
@@ -324,19 +362,18 @@ Ce Contrat prend effet à la date de votre première installation ou utilisation
 et se poursuit jusqu'à sa résiliation.
 
 Vos droits en vertu de ce Contrat se terminent automatiquement — sans notification du
-Développeur — si vous ne respectez pas un terme essentiel de ce Contrat. À la résiliation,
-vous devez cesser d'exploiter le Logiciel et détruire toutes les copies en votre possession.
+Développeur — si vous ne respectez pas un terme essentiel de ce Contrat, de la Licence de
+Base ou des exigences d'usage commercial dans ADDITIONAL-USES.md. À la résiliation, vous
+devez cesser d'exploiter le Logiciel et détruire toutes les copies en votre possession.
 
 Résiliation par l'Opérateur. Vous pouvez résilier ce Contrat à tout moment en cessant
-d'utiliser et en désinstallant le Logiciel. Vos droits en vertu de la GPL v3 (y compris les
-droits de conserver votre propre copie modifiée du code source) survivent à la résiliation
-de ce Contrat.
+d'utiliser et en désinstallant le Logiciel.
 
 Révocation à l'initiative du Développeur. Le Développeur peut révoquer vos droits en vertu
-de ce Contrat (en plus des droits GPL v3, dans la mesure permise par cette licence) si vous :
-(a) utilisez le Logiciel d'une manière qui viole la loi applicable ; (b) usurpez l'identité
-du Développeur ou représentez faussement que le Logiciel est cautionné par le Développeur ;
-ou (c) distribuez le Logiciel en violation de la GPL v3.
+de ce Contrat si vous : (a) utilisez le Logiciel d'une manière qui viole la loi applicable ;
+(b) usurpez l'identité du Développeur ou représentez faussement que le Logiciel est
+cautionné par le Développeur ; (c) utilisez le Logiciel à des fins commerciales sans licence
+commerciale valide ; ou (d) distribuez le Logiciel en violation de la Licence de Base.
 
 Les Sections 7 (Exclusion de Garantie), 8 (Limitation de Responsabilité), 9 (Obligations de
 l'Opérateur), 10 (Indemnisation), 12 (Loi Applicable), 13 (Arbitrage), 14 (Renonciation aux

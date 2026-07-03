@@ -1,9 +1,22 @@
+═══════════════════════════════════════════════════════════════
+IMPORTANT / IMPORTANTE:
+This is a translation provided for your convenience. The
+English version (EULA.txt) is the sole legally binding
+document. In case of any conflict between this translation
+and the English original, the English version prevails.
+
+Questa è una traduzione fornita per vostra comodità. La
+versione inglese (EULA.txt) è l'unico documento giuridicamente
+vincolante. In caso di conflitto tra questa traduzione e
+l'originale inglese, prevale la versione inglese.
+═══════════════════════════════════════════════════════════════
+
 Clear Skies Weather Dashboard
 Contratto di Licenza per Operatori (Contratto di Licenza per l'Utente Finale)
-EULA Version: 1.0
-Ultimo aggiornamento: 2026-06-10
+Versione EULA: 2.0
+Ultimo aggiornamento: 2026-07-02
 
-Il presente Contratto di Licenza per l'Utente Finale («Contratto») è un contratto legalmente
+Il presente Contratto di Licenza per Operatori («Contratto») è un contratto legalmente
 vincolante tra voi («Operatore») e Shane Burkhardt («Sviluppatore») che disciplina
 l'installazione e l'utilizzo del software Clear Skies Weather Dashboard («Software»).
 Leggetelo attentamente prima di procedere.
@@ -15,30 +28,44 @@ Installando, configurando o utilizzando questo Software, accettate di essere vin
 termini del presente Contratto. Se non accettate questi termini, non installate né utilizzate
 il Software.
 
-Il presente Contratto integra — e non sostituisce — la Licenza Pubblica Generica GNU versione 3
-(«GPL v3»), che disciplina il codice sorgente del Software. Nei casi in cui il presente
-Contratto e la GPL v3 trattino la stessa materia, prevale la GPL v3; nei casi in cui il
-presente Contratto tratti materie su cui la GPL v3 è silente (garanzia, responsabilità,
-obblighi dell'operatore), prevale il presente Contratto.
+Il presente Contratto integra — e non sostituisce — la Licenza PolyForm Noncommercial 1.0.0
+(«Licenza Base») e il documento ADDITIONAL-USES.md («Usi Aggiuntivi»), che insieme
+disciplinano il codice sorgente del Software. Nei casi in cui il presente Contratto e la
+Licenza Base trattino la stessa materia, prevale la Licenza Base; nei casi in cui il presente
+Contratto tratti materie su cui la Licenza Base è silente (garanzia, responsabilità, obblighi
+dell'operatore), prevale il presente Contratto.
 
 
 2. CONCESSIONE DI LICENZA
 
-Il Software è software libero e open-source concesso in licenza ai sensi della Licenza Pubblica
-Generica GNU versione 3. Una copia della GPL v3 è inclusa nel repository sorgente del Software
-al livello radice come LICENSE.txt ed è disponibile all'indirizzo:
-https://www.gnu.org/licenses/gpl-3.0.html
+Il Software è concesso in licenza ai sensi della Licenza PolyForm Noncommercial 1.0.0. Una
+copia della Licenza Base è inclusa nel repository sorgente del Software al livello radice
+come LICENSE ed è disponibile all'indirizzo:
+https://polyformproject.org/licenses/noncommercial/1.0.0
 
-Ai sensi della GPL v3, vi sono concessi i diritti di:
+Ai sensi della Licenza Base e del documento Usi Aggiuntivi, vi sono concessi i diritti di:
 
-  (a) Eseguire il Software per qualsiasi scopo.
-  (b) Studiare e modificare il codice sorgente.
-  (c) Distribuire copie letterali del Software.
-  (d) Distribuire le proprie versioni modificate ai sensi della GPL v3.
+  (a) Utilizzare il Software per qualsiasi scopo non commerciale, incluso uso personale,
+      ricerca, sperimentazione, progetti amatoriali e pratica religiosa.
+  (b) Utilizzare il Software se siete un'organizzazione di beneficenza, un'istituzione
+      educativa, un'organizzazione di ricerca pubblica, un'organizzazione di sicurezza
+      pubblica o sanitaria, un'organizzazione di protezione ambientale o un'istituzione
+      governativa — indipendentemente dalla fonte di finanziamento.
+  (c) Utilizzare il Software per gli usi aggiuntivi consentiti elencati in
+      ADDITIONAL-USES.md, inclusa la condivisione comunitaria di dati meteorologici, le
+      aziende agricole familiari (meno di 50 dipendenti, non quotate in borsa), le stazioni
+      meteorologiche radioamatoriali, le cooperative agricole e le organizzazioni esenti da
+      imposte.
+  (d) Studiare e modificare il codice sorgente per qualsiasi scopo consentito.
+  (e) Distribuire copie del Software (con o senza modifiche) per qualsiasi scopo consentito,
+      a condizione di includere una copia della Licenza Base.
 
-Non si applicano livelli di licenza proprietaria, chiavi di attivazione, limiti di dispositivi
-o tariffe di utilizzo. Tutte le funzionalità sono disponibili per tutti gli operatori alle
-stesse condizioni della GPL v3.
+L'uso commerciale — inclusa la visualizzazione di pubblicità, l'addebito per l'accesso, la
+gestione di un servizio di hosting gestito, il marketing generatore di ricavi, l'uso da
+parte di società quotate in borsa o organizzazioni con più di 50 dipendenti (esclusi enti
+governativi ed esenti da imposte), o la rivendita, il white-labeling o il bundling —
+richiede una licenza commerciale a pagamento separata dallo Sviluppatore. Consultate
+ADDITIONAL-USES.md per l'elenco completo.
 
 
 3. SERVIZI DI TERZE PARTI
@@ -55,7 +82,7 @@ di terze parti, inclusi ma non limitati a:
   - Google Analytics / Google Tag Manager — analisi dell'utilizzo del sito web (configurato
     dall'operatore)
   - Fornitori di tile cartografiche (OpenStreetMap, Mapbox o altri) — rendering di mappe
-  - Qualsiasi broker MQTT configurato dall'operatore per la consegna di dati in tempo reale
+  - LibreWxR — rendering di tile radar e satellitari
 
 Configurando e utilizzando questi servizi tramite il Software, riconoscete:
 
@@ -117,24 +144,29 @@ e divulgare le vostre pratiche in materia di dati di conseguenza.
 
 6. PROPRIETÀ INTELLETTUALE
 
-Il Software è concesso in licenza ai sensi della GPL v3. Tutti i diritti non espressamente
-concessi dalla GPL v3 sono riservati allo Sviluppatore. Nulla nel presente Contratto vi
-concede il diritto di utilizzare il nome, i marchi commerciali o i marchi di servizio dello
-Sviluppatore oltre quanto consentito dalla legge applicabile o dalla GPL v3.
+Il Software è concesso in licenza ai sensi della Licenza PolyForm Noncommercial 1.0.0. Tutti
+i diritti non espressamente concessi dalla Licenza Base o dal documento Usi Aggiuntivi sono
+riservati allo Sviluppatore. Nulla nel presente Contratto vi concede il diritto di utilizzare
+il nome, i marchi commerciali o i marchi di servizio dello Sviluppatore oltre quanto consentito
+dalla legge applicabile.
 
 I dati meteorologici (temperatura, precipitazioni, vento, rilevazioni atmosferiche) sono
 informazioni fattuali e generalmente non sono soggetti a protezione del diritto d'autore.
 I formati di visualizzazione, i grafici, gli elementi dell'interfaccia utente e il codice
 sorgente realizzato dallo Sviluppatore sono protetti dal diritto d'autore e concessi in
-licenza ai sensi della GPL v3 come indicato nella Sezione 2 precedente.
+licenza ai sensi della Licenza PolyForm Noncommercial 1.0.0 come indicato nella Sezione 2
+precedente.
 
 
 7. ESCLUSIONE DI GARANZIA
 
 IL SOFTWARE VIENE FORNITO «COSÌ COM'È» E «COME DISPONIBILE» SENZA ALCUNA GARANZIA, ESPRESSA
 O IMPLICITA, INCLUSE, A TITOLO ESEMPLIFICATIVO, LE GARANZIE DI COMMERCIABILITÀ, IDONEITÀ
-PER UNO SCOPO SPECIFICO, TITOLO E NON VIOLAZIONE. QUESTA ESCLUSIONE INCORPORA ED ESTENDE LE
-DISPOSIZIONI DI ASSENZA DI GARANZIA DELLA GPL v3 (ARTICOLI 15 E 16).
+PER UNO SCOPO SPECIFICO, TITOLO E NON VIOLAZIONE. COME STABILITO NELLA LICENZA BASE: NELLA
+MISURA CONSENTITA DALLA LEGGE, IL SOFTWARE VIENE FORNITO COSÌ COM'È, SENZA ALCUNA GARANZIA
+O CONDIZIONE, E IL LICENZIANTE NON SARÀ RESPONSABILE NEI VOSTRI CONFRONTI PER DANNI
+DERIVANTI DA QUESTI TERMINI O DALL'USO O NATURA DEL SOFTWARE, PER QUALSIASI TIPO DI PRETESA
+LEGALE.
 
 ESCLUSIONI SPECIFICHE:
 
@@ -158,10 +190,11 @@ ESCLUSIONI SPECIFICHE:
 
 8. LIMITAZIONE DI RESPONSABILITÀ
 
-NELLA MISURA MASSIMA CONSENTITA DALLA LEGGE APPLICABILE, E COME ULTERIORMENTE STABILITO NEGLI
-ARTICOLI 15 E 16 DELLA GPL v3, IN NESSUN CASO LO SVILUPPATORE SARÀ RESPONSABILE PER DANNI
-INDIRETTI, INCIDENTALI, SPECIALI, CONSEQUENZIALI, ESEMPLARI O PUNITIVI, NÉ PER PERDITA DI
-PROFITTI, DATI, AVVIAMENTO O ALTRE PERDITE IMMATERIALI, DERIVANTI DA O CONNESSI A:
+NELLA MISURA MASSIMA CONSENTITA DALLA LEGGE APPLICABILE, E IN CONFORMITÀ CON LA DISPOSIZIONE
+DI «ASSENZA DI RESPONSABILITÀ» DELLA LICENZA BASE, IN NESSUN CASO LO SVILUPPATORE SARÀ
+RESPONSABILE PER DANNI INDIRETTI, INCIDENTALI, SPECIALI, CONSEQUENZIALI, ESEMPLARI O
+PUNITIVI, NÉ PER PERDITA DI PROFITTI, DATI, AVVIAMENTO O ALTRE PERDITE IMMATERIALI,
+DERIVANTI DA O CONNESSI A:
 
   (a) Il vostro utilizzo o l'impossibilità di utilizzare il Software.
   (b) Inesattezza, incompletezza o intempestività dei dati meteorologici visualizzati dal
@@ -179,8 +212,8 @@ PROFITTI, DATI, AVVIAMENTO O ALTRE PERDITE IMMATERIALI, DERIVANTI DA O CONNESSI 
 
 La responsabilità complessiva totale dello Sviluppatore nei vostri confronti per tutte le
 rivendicazioni derivanti da o connesse al presente Contratto non supererà zero dollari
-statunitensi ($ 0,00), a riflesso del fatto che il Software è fornito gratuitamente ai sensi
-della GPL v3.
+statunitensi ($ 0,00), a riflesso del fatto che il Software è fornito gratuitamente per uso
+non commerciale ai sensi della Licenza Base.
 
 
 9. OBBLIGHI DELL'OPERATORE
@@ -208,20 +241,25 @@ pubblicamente accessibile realizzato con questo Software, siete i soli responsab
       configurato nel Software. Ciò include l'ottenimento degli account, delle chiavi e delle
       autorizzazioni richieste prima di abilitare qualsiasi fornitore di dati.
 
-  (d) SICUREZZA. Proteggere il vostro server, la configurazione di rete, le credenziali API,
+  (d) CONFORMITÀ DELLA LICENZA. Rispettare la Licenza PolyForm Noncommercial 1.0.0 e i
+      requisiti di uso commerciale in ADDITIONAL-USES.md. Se il vostro uso rientra in una
+      categoria che richiede una licenza commerciale, dovete ottenerne una prima di
+      distribuire il Software.
+
+  (e) SICUREZZA. Proteggere il vostro server, la configurazione di rete, le credenziali API,
       il database e qualsiasi segreto conservato dal Software. Lo Sviluppatore non verifica,
       monitora né protegge il vostro deployment.
 
-  (e) DATI RACCOLTI DALLA VOSTRA STAZIONE. Se la vostra stazione meteorologica raccoglie,
+  (f) DATI RACCOLTI DALLA VOSTRA STAZIONE. Se la vostra stazione meteorologica raccoglie,
       conserva o trasmette dati al di là delle rilevazioni meteorologiche grezze — inclusi
       dati generati dai visitatori — siete responsabili del trattamento, della protezione,
       della conservazione e di qualsiasi divulgazione richiesta relativamente a tali dati.
 
-  (f) AVVISO DI ACCURATEZZA AI VISITATORI. Pubblicare un chiaro avviso ai visitatori del
+  (g) AVVISO DI ACCURATEZZA AI VISITATORI. Pubblicare un chiaro avviso ai visitatori del
       sito web che indichi che i dati meteorologici sono forniti esclusivamente a fini
       informativi generali e non sono adatti a decisioni critiche per la sicurezza.
 
-  (g) BACKUP E RIPRISTINO DI EMERGENZA. Mantenere backup adeguati dei file di configurazione,
+  (h) BACKUP E RIPRISTINO DI EMERGENZA. Mantenere backup adeguati dei file di configurazione,
       del database e di qualsiasi personalizzazione. Lo Sviluppatore non è responsabile per
       la perdita di dati risultante da guasti hardware, bug software o eliminazione accidentale.
 
@@ -239,6 +277,8 @@ onorari legali) derivanti da o connessi a:
   (e) Qualsiasi reclamo di un visitatore del vostro sito web.
   (f) Il vostro mancato rispetto degli avvisi legali o delle informative sulla privacy
       richieste ai visitatori.
+  (g) Il vostro utilizzo del Software in violazione della Licenza Base o dei requisiti di
+      uso commerciale in ADDITIONAL-USES.md.
 
 
 11. NESSUN OBBLIGO DI SUPPORTO
@@ -253,8 +293,8 @@ possibilità. Lo Sviluppatore non ha alcun obbligo di:
   (d) Continuare a sviluppare, distribuire o ospitare il Software.
 
 Qualsiasi supporto o aggiornamento fornito sono atti volontari di buona volontà e non creano
-un obbligo continuativo. La GPL v3 vi garantisce sempre il diritto di mantenere il vostro
-fork del Software qualora lo Sviluppatore cessasse lo sviluppo.
+un obbligo continuativo. La Licenza Base garantisce che abbiate sempre il diritto di utilizzare
+e modificare il Software per scopi non commerciali secondo i termini della licenza.
 
 
 12. LEGGE APPLICABILE
@@ -262,8 +302,6 @@ fork del Software qualora lo Sviluppatore cessasse lo sviluppo.
 Il presente Contratto è disciplinato e interpretato in conformità con le leggi dello Stato
 della California, Stati Uniti d'America, senza riguardo alle sue disposizioni in materia di
 conflitto di leggi.
-(Legge applicabile: Stato della California, USA — si applica indipendentemente dalla
-posizione dell'Operatore.)
 
 
 13. ARBITRATO
@@ -273,7 +311,6 @@ alla sua violazione, sarà risolto mediante arbitrato vincolante amministrato da
 di arbitrato concordato reciprocamente, condotto in California, Stati Uniti d'America, in
 conformità con le sue norme vigenti. La decisione dell'arbitro sarà definitiva e vincolante,
 e il giudizio sull'arbitrato potrà essere eseguito presso qualsiasi tribunale competente.
-(Clausola di arbitrato vincolante — sede: California, USA. Rinuncia al processo con giuria.)
 
 La presente clausola arbitrale non si applica alle misure cautelari per violazioni di
 proprietà intellettuale, che ciascuna parte può richiedere presso qualsiasi tribunale
@@ -287,7 +324,6 @@ DERIVANTI DA O CONNESSE AL PRESENTE CONTRATTO SARÀ CONDOTTO ESCLUSIVAMENTE SU B
 INDIVIDUALE. NÉ VOI NÉ LO SVILUPPATORE POTETE AVVIARE O PARTECIPARE A PROCEDIMENTI
 COLLETTIVI, CONSOLIDATI O RAPPRESENTATIVI. L'arbitro non può consolidare le rivendicazioni
 di più di una persona senza il previo consenso scritto di tutte le parti.
-(Rinuncia alle azioni collettive — applicabile ai sensi del diritto californiano.)
 
 
 15. FORZA MAGGIORE / SALVAGUARDIA / RINUNCIA / INTERO ACCORDO
@@ -305,9 +341,10 @@ continueranno ad applicarsi pienamente.
 Rinuncia. Il mancato rispetto di qualsiasi disposizione del presente Contratto non costituisce
 rinuncia a tale disposizione né al diritto di farla rispettare in futuro.
 
-Intero Accordo. Il presente Contratto, unitamente alla GPL v3 (incorporata per riferimento),
-costituisce l'intero accordo tra le parti riguardante il Software e sostituisce tutti i
-precedenti accordi, dichiarazioni o intese riguardanti il suo oggetto.
+Intero Accordo. Il presente Contratto, unitamente alla Licenza PolyForm Noncommercial 1.0.0
+e al documento ADDITIONAL-USES.md (entrambi incorporati per riferimento), costituisce
+l'intero accordo tra le parti riguardante il Software e sostituisce tutti i precedenti
+accordi, dichiarazioni o intese riguardanti il suo oggetto.
 
 
 16. RISOLUZIONE
@@ -317,19 +354,18 @@ la prima volta e continua fino alla sua risoluzione.
 
 I vostri diritti ai sensi del presente Contratto si estinguono automaticamente — senza
 preavviso da parte dello Sviluppatore — in caso di mancato rispetto di un termine essenziale
-del presente Contratto. Alla risoluzione, dovete cessare di utilizzare il Software e
-distruggere tutte le copie in vostro possesso.
+del presente Contratto, della Licenza Base o dei requisiti di uso commerciale in
+ADDITIONAL-USES.md. Alla risoluzione, dovete cessare di utilizzare il Software e distruggere
+tutte le copie in vostro possesso.
 
 Risoluzione da parte dell'Operatore. Potete risolvere il presente Contratto in qualsiasi
-momento cessando di utilizzare e disinstallando il Software. I vostri diritti ai sensi della
-GPL v3 (inclusi i diritti di conservare la propria copia modificata del codice sorgente)
-sopravvivono alla risoluzione del presente Contratto.
+momento cessando di utilizzare e disinstallando il Software.
 
 Revoca da parte dello Sviluppatore. Lo Sviluppatore può revocare i vostri diritti ai sensi
-del presente Contratto (in aggiunta ai diritti GPL v3, nella misura consentita da tale
-licenza) se: (a) utilizzate il Software in modo che violi la legge applicabile; (b) vi
-spacciate per lo Sviluppatore o rappresentate falsamente che il Software è approvato dallo
-Sviluppatore; o (c) distribuite il Software in violazione della GPL v3.
+del presente Contratto se voi: (a) utilizzate il Software in modo che violi la legge
+applicabile; (b) vi spacciate per lo Sviluppatore o rappresentate falsamente che il Software
+è approvato dallo Sviluppatore; (c) utilizzate il Software per scopi commerciali senza una
+licenza commerciale valida; o (d) distribuite il Software in violazione della Licenza Base.
 
 Le Sezioni 7 (Esclusione di Garanzia), 8 (Limitazione di Responsabilità), 9 (Obblighi
 dell'Operatore), 10 (Manleva), 12 (Legge Applicabile), 13 (Arbitrato), 14 (Rinuncia alle

@@ -1,9 +1,22 @@
+═══════════════════════════════════════════════════════════════
+IMPORTANT / IMPORTANTE:
+This is a translation provided for your convenience. The
+English version (EULA.txt) is the sole legally binding
+document. In case of any conflict between this translation
+and the English original, the English version prevails.
+
+Esta é uma tradução fornecida para sua conveniência. A versão
+em inglês (EULA.txt) é o único documento juridicamente
+vinculante. Em caso de qualquer conflito entre esta tradução
+e o original em inglês, a versão em inglês prevalecerá.
+═══════════════════════════════════════════════════════════════
+
 Clear Skies Weather Dashboard
 Contrato de Licença para Operadores (Contrato de Licença de Usuário Final)
-EULA Version: 1.0
-Última atualização: 2026-06-10
+Versão da EULA: 2.0
+Última atualização: 2026-07-02
 
-Este Contrato de Licença de Usuário Final ("Contrato") é um contrato legalmente vinculante
+Este Contrato de Licença para Operadores ("Contrato") é um contrato legalmente vinculante
 entre você ("Operador") e Shane Burkhardt ("Desenvolvedor") que rege a sua instalação e uso
 do software Clear Skies Weather Dashboard ("Software"). Leia-o com atenção antes de
 prosseguir.
@@ -14,30 +27,42 @@ prosseguir.
 Ao instalar, configurar ou operar este Software, você concorda em ficar vinculado pelos
 termos deste Contrato. Se não concordar com estes termos, não instale nem use o Software.
 
-Este Contrato complementa — e não substitui — a Licença Pública Geral GNU versão 3
-("GPL v3"), que rege o código-fonte do Software. Quando este Contrato e a GPL v3 tratarem
-da mesma matéria, prevalecerá a GPL v3; quando este Contrato tratar de matérias sobre as
-quais a GPL v3 é omissa (garantia, responsabilidade, obrigações do operador), este Contrato
+Este Contrato complementa — e não substitui — a Licença PolyForm Noncommercial 1.0.0
+("Licença Base") e o documento ADDITIONAL-USES.md ("Usos Adicionais"), que juntos regem o
+código-fonte do Software. Quando este Contrato e a Licença Base tratarem da mesma matéria,
+prevalecerá a Licença Base; quando este Contrato tratar de matérias sobre as quais a Licença
+Base é omissa (garantia, responsabilidade, obrigações do operador), este Contrato
 prevalecerá.
 
 
 2. CONCESSÃO DE LICENÇA
 
-O Software é um software livre e de código aberto licenciado sob a Licença Pública Geral
-GNU versão 3. Uma cópia da GPL v3 está incluída no repositório de código-fonte do Software
-no nível raiz como LICENSE.txt e está disponível em:
-https://www.gnu.org/licenses/gpl-3.0.html
+O Software é licenciado sob a Licença PolyForm Noncommercial 1.0.0. Uma cópia da Licença
+Base está incluída no repositório de código-fonte do Software no nível raiz como LICENSE e
+está disponível em: https://polyformproject.org/licenses/noncommercial/1.0.0
 
-Nos termos da GPL v3, são concedidos a você os direitos de:
+Nos termos da Licença Base e do documento de Usos Adicionais, são concedidos a você os
+direitos de:
 
-  (a) Executar o Software para qualquer finalidade.
-  (b) Estudar e modificar o código-fonte.
-  (c) Distribuir cópias literais do Software.
-  (d) Distribuir suas versões modificadas sob a GPL v3.
+  (a) Usar o Software para qualquer finalidade não comercial, incluindo uso pessoal,
+      pesquisa, experimentação, projetos pessoais e prática religiosa.
+  (b) Usar o Software se você for uma organização de caridade, instituição de ensino,
+      organização de pesquisa pública, organização de segurança pública ou saúde,
+      organização de proteção ambiental, ou instituição governamental — independentemente
+      da fonte de financiamento.
+  (c) Usar o Software para os usos adicionais permitidos enumerados em ADDITIONAL-USES.md,
+      incluindo compartilhamento comunitário de dados meteorológicos, fazendas familiares
+      (menos de 50 funcionários, não listadas em bolsa), estações meteorológicas de rádio
+      amador, cooperativas agrícolas e organizações isentas de impostos.
+  (d) Estudar e modificar o código-fonte para qualquer finalidade permitida.
+  (e) Distribuir cópias do Software (com ou sem modificações) para qualquer finalidade
+      permitida, desde que você inclua uma cópia da Licença Base.
 
-Não se aplicam níveis de licença proprietária, chaves de ativação, limites de dispositivos
-ou taxas de uso. Todos os recursos estão disponíveis para todos os operadores sob os mesmos
-termos da GPL v3.
+O uso comercial — incluindo exibição de publicidade, cobrança por acesso, operação de um
+serviço de hospedagem gerenciado, marketing gerador de receita, uso por empresas de capital
+aberto ou organizações com mais de 50 funcionários (exceto governo e organizações isentas
+de impostos), ou revenda, white-labeling ou empacotamento — requer uma licença comercial
+paga separada do Desenvolvedor. Consulte ADDITIONAL-USES.md para a lista completa.
 
 
 3. SERVIÇOS DE TERCEIROS
@@ -54,7 +79,7 @@ serviços de terceiros, incluindo, mas não se limitando a:
   - Google Analytics / Google Tag Manager — análise de uso do site (configurado pelo
     operador)
   - Provedores de tiles de mapa (OpenStreetMap, Mapbox ou outros) — renderização de mapas
-  - Qualquer broker MQTT que o operador configure para entrega de dados em tempo real
+  - LibreWxR — renderização de tiles de radar e satélite
 
 Ao configurar e usar esses serviços por meio do Software, você reconhece:
 
@@ -115,24 +140,28 @@ divulgar suas práticas de dados de acordo.
 
 6. PROPRIEDADE INTELECTUAL
 
-O Software é licenciado sob a GPL v3. Todos os direitos não expressamente concedidos pela
-GPL v3 são reservados ao Desenvolvedor. Nada neste Contrato concede a você o direito de
-usar o nome, marcas comerciais ou marcas de serviço do Desenvolvedor além do que é permitido
-pela lei aplicável ou pela GPL v3.
+O Software é licenciado sob a Licença PolyForm Noncommercial 1.0.0. Todos os direitos não
+expressamente concedidos pela Licença Base ou pelo documento de Usos Adicionais são
+reservados ao Desenvolvedor. Nada neste Contrato concede a você o direito de usar o nome,
+marcas comerciais ou marcas de serviço do Desenvolvedor além do que é permitido pela lei
+aplicável.
 
 Dados meteorológicos (temperatura, precipitação, vento, leituras atmosféricas) são
 informações factuais e geralmente não estão sujeitos a proteção por direitos autorais.
 Formatos de exibição, gráficos, elementos de interface do usuário e código-fonte de autoria
-do Desenvolvedor são protegidos por direitos autorais e licenciados sob a GPL v3 conforme
-estabelecido na Seção 2 acima.
+do Desenvolvedor são protegidos por direitos autorais e licenciados sob a Licença PolyForm
+Noncommercial 1.0.0 conforme estabelecido na Seção 2 acima.
 
 
 7. ISENÇÃO DE GARANTIAS
 
 O SOFTWARE É FORNECIDO "NO ESTADO EM QUE SE ENCONTRA" E "CONFORME DISPONÍVEL" SEM GARANTIA
 DE QUALQUER TIPO, EXPRESSA OU IMPLÍCITA, INCLUINDO, MAS NÃO SE LIMITANDO ÀS GARANTIAS DE
-COMERCIALIZAÇÃO, ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA, TÍTULO E NÃO VIOLAÇÃO. ESTA ISENÇÃO
-INCORPORA E ESTENDE AS DISPOSIÇÕES DE AUSÊNCIA DE GARANTIA DA GPL v3 (ARTIGOS 15 E 16).
+COMERCIALIZAÇÃO, ADEQUAÇÃO A UMA FINALIDADE ESPECÍFICA, TÍTULO E NÃO VIOLAÇÃO. CONFORME
+ESTABELECIDO NA LICENÇA BASE: NA MEDIDA EM QUE A LEI PERMITIR, O SOFTWARE É FORNECIDO NO
+ESTADO EM QUE SE ENCONTRA, SEM QUALQUER GARANTIA OU CONDIÇÃO, E O LICENCIANTE NÃO SERÁ
+RESPONSÁVEL PERANTE VOCÊ POR QUAISQUER DANOS DECORRENTES DESTES TERMOS OU DO USO OU
+NATUREZA DO SOFTWARE, SOB QUALQUER TIPO DE REIVINDICAÇÃO LEGAL.
 
 ISENÇÕES ESPECÍFICAS:
 
@@ -156,10 +185,11 @@ ISENÇÕES ESPECÍFICAS:
 
 8. LIMITAÇÃO DE RESPONSABILIDADE
 
-NA EXTENSÃO MÁXIMA PERMITIDA PELA LEI APLICÁVEL, E CONFORME ADICIONALMENTE ESTABELECIDO
-NOS ARTIGOS 15 E 16 DA GPL v3, O DESENVOLVEDOR NÃO SERÁ RESPONSÁVEL POR DANOS INDIRETOS,
-INCIDENTAIS, ESPECIAIS, CONSEQUENTES, EXEMPLARES OU PUNITIVOS, NEM POR PERDA DE LUCROS,
-DADOS, FUNDO DE COMÉRCIO OU OUTRAS PERDAS IMATERIAIS, DECORRENTES DE OU RELACIONADOS A:
+NA EXTENSÃO MÁXIMA PERMITIDA PELA LEI APLICÁVEL, E EM CONFORMIDADE COM A DISPOSIÇÃO DE
+"AUSÊNCIA DE RESPONSABILIDADE" DA LICENÇA BASE, O DESENVOLVEDOR NÃO SERÁ RESPONSÁVEL POR
+DANOS INDIRETOS, INCIDENTAIS, ESPECIAIS, CONSEQUENTES, EXEMPLARES OU PUNITIVOS, NEM POR
+PERDA DE LUCROS, DADOS, FUNDO DE COMÉRCIO OU OUTRAS PERDAS IMATERIAIS, DECORRENTES DE OU
+RELACIONADOS A:
 
   (a) Seu uso ou incapacidade de usar o Software.
   (b) Imprecisão, incompletude ou intempestividade de dados meteorológicos exibidos pelo
@@ -176,7 +206,8 @@ DADOS, FUNDO DE COMÉRCIO OU OUTRAS PERDAS IMATERIAIS, DECORRENTES DE OU RELACIO
 
 A responsabilidade cumulativa total do Desenvolvedor perante você por todas as reclamações
 decorrentes de ou relacionadas a este Contrato não excederá zero dólares americanos ($0,00),
-refletindo que o Software é fornecido gratuitamente sob a GPL v3.
+refletindo que o Software é fornecido gratuitamente para uso não comercial sob a Licença
+Base.
 
 
 9. OBRIGAÇÕES DO OPERADOR
@@ -204,20 +235,24 @@ criado com este Software, assume a responsabilidade exclusiva por:
       Software. Isso inclui obter contas, chaves e permissões necessárias antes de habilitar
       qualquer provedor de dados.
 
-  (d) SEGURANÇA. Proteger seu servidor, configuração de rede, credenciais de API, banco de
+  (d) CONFORMIDADE DE LICENÇA. Cumprir a Licença PolyForm Noncommercial 1.0.0 e os requisitos
+      de uso comercial em ADDITIONAL-USES.md. Se seu uso se enquadrar em uma categoria que
+      exige uma licença comercial, você deve obtê-la antes de implantar o Software.
+
+  (e) SEGURANÇA. Proteger seu servidor, configuração de rede, credenciais de API, banco de
       dados e quaisquer segredos armazenados pelo Software. O Desenvolvedor não audita,
       monitora nem protege seu ambiente de implantação.
 
-  (e) DADOS COLETADOS PELA SUA ESTAÇÃO. Se sua estação meteorológica coletar, armazenar ou
+  (f) DADOS COLETADOS PELA SUA ESTAÇÃO. Se sua estação meteorológica coletar, armazenar ou
       transmitir dados além de leituras meteorológicas brutas — incluindo dados gerados por
       visitantes — você é responsável pelo tratamento, proteção, retenção e quaisquer
       divulgações exigidas em relação a esses dados.
 
-  (f) AVISO DE PRECISÃO AOS VISITANTES. Publicar um aviso claro aos visitantes do site
+  (g) AVISO DE PRECISÃO AOS VISITANTES. Publicar um aviso claro aos visitantes do site
       informando que os dados meteorológicos são apenas para fins informativos gerais e não
       são adequados para decisões críticas de segurança.
 
-  (g) BACKUPS E RECUPERAÇÃO DE DESASTRES. Manter backups adequados de seus arquivos de
+  (h) BACKUPS E RECUPERAÇÃO DE DESASTRES. Manter backups adequados de seus arquivos de
       configuração, banco de dados e quaisquer personalizações. O Desenvolvedor não é
       responsável por perda de dados decorrente de falhas de hardware, bugs de software ou
       exclusão acidental.
@@ -236,6 +271,8 @@ honorários advocatícios razoáveis) decorrentes de ou relacionados a:
   (e) Qualquer reclamação de um visitante do seu site.
   (f) Sua omissão em fornecer os avisos legais ou divulgações de privacidade exigidos
       aos visitantes.
+  (g) Seu uso do Software em violação da Licença Base ou dos requisitos de uso comercial
+      em ADDITIONAL-USES.md.
 
 
 11. SEM OBRIGAÇÃO DE SUPORTE
@@ -250,16 +287,14 @@ O Desenvolvedor não tem obrigação de:
   (d) Continuar desenvolvendo, distribuindo ou hospedando o Software.
 
 Qualquer suporte ou atualização fornecida é um ato voluntário de boa vontade e não cria uma
-obrigação contínua. A GPL v3 garante que você sempre tenha o direito de manter seu próprio
-fork do Software caso o Desenvolvedor cesse o desenvolvimento.
+obrigação contínua. A Licença Base garante que você sempre tenha o direito de usar e
+modificar o Software para fins não comerciais conforme descrito nos termos da licença.
 
 
 12. LEI APLICÁVEL
 
 Este Contrato será regido e interpretado de acordo com as leis do Estado da Califórnia,
 Estados Unidos da América, sem considerar suas disposições sobre conflito de leis.
-(Lei aplicável: Estado da Califórnia, EUA — aplica-se independentemente da localização do
-Operador.)
 
 
 13. ARBITRAGEM
@@ -269,8 +304,6 @@ ou a sua violação, será resolvida por arbitragem vinculante administrada por 
 arbitragem mutuamente acordado, conduzida na Califórnia, Estados Unidos da América, de
 acordo com suas regras vigentes. A decisão do árbitro será definitiva e vinculante, e a
 sentença arbitral poderá ser executada em qualquer tribunal competente.
-(Cláusula de arbitragem vinculante — sede: Califórnia, EUA. Renúncia ao julgamento por
-júri.)
 
 Esta cláusula de arbitragem não se aplica a medidas cautelares por violações de propriedade
 intelectual, que qualquer das partes pode buscar em qualquer tribunal competente.
@@ -283,7 +316,6 @@ DE OU RELACIONADAS A ESTE CONTRATO SERÁ CONDUZIDO EXCLUSIVAMENTE EM BASE INDIVI
 VOCÊ NEM O DESENVOLVEDOR PODERÃO PROPOR OU PARTICIPAR DE QUALQUER PROCESSO COLETIVO,
 CONSOLIDADO OU REPRESENTATIVO. O árbitro não pode consolidar as reclamações de mais de uma
 pessoa sem o consentimento expresso e por escrito de todas as partes.
-(Renúncia a ações coletivas — aplicável nos termos da lei da Califórnia.)
 
 
 15. FORÇA MAIOR / DIVISIBILIDADE / RENÚNCIA / ACORDO INTEGRAL
@@ -300,9 +332,10 @@ continuarão em pleno vigor e efeito.
 Renúncia. A não aplicação de qualquer disposição deste Contrato não constitui renúncia a
 essa disposição nem ao direito de aplicá-la no futuro.
 
-Acordo Integral. Este Contrato, em conjunto com a GPL v3 (incorporada por referência),
-constitui o acordo integral entre as partes em relação ao Software e substitui todos os
-acordos, representações ou entendimentos anteriores referentes ao seu objeto.
+Acordo Integral. Este Contrato, em conjunto com a Licença PolyForm Noncommercial 1.0.0 e o
+documento ADDITIONAL-USES.md (ambos incorporados por referência), constitui o acordo integral
+entre as partes em relação ao Software e substitui todos os acordos, representações ou
+entendimentos anteriores referentes ao seu objeto.
 
 
 16. RESCISÃO
@@ -311,18 +344,18 @@ Este Contrato entra em vigor na data em que você instala ou usa o Software pela
 e permanece válido até ser rescindido.
 
 Seus direitos nos termos deste Contrato se extinguem automaticamente — sem notificação do
-Desenvolvedor — se você descumprir qualquer cláusula essencial deste Contrato. Após a
-rescisão, você deve cessar a operação do Software e destruir todas as cópias em sua posse.
+Desenvolvedor — se você descumprir qualquer cláusula essencial deste Contrato, da Licença
+Base ou dos requisitos de uso comercial em ADDITIONAL-USES.md. Após a rescisão, você deve
+cessar a operação do Software e destruir todas as cópias em sua posse.
 
 Rescisão pelo Operador. Você pode rescindir este Contrato a qualquer momento cessando o uso
-e desinstalando o Software. Seus direitos nos termos da GPL v3 (incluindo os direitos de
-reter sua própria cópia modificada do código-fonte) sobrevivem à rescisão deste Contrato.
+e desinstalando o Software.
 
 Revogação iniciada pelo Desenvolvedor. O Desenvolvedor pode revogar seus direitos nos termos
-deste Contrato (além dos direitos da GPL v3, na medida permitida por essa licença) se você:
-(a) usar o Software de maneira que viole a lei aplicável; (b) se passar pelo Desenvolvedor
-ou declarar falsamente que o Software é endossado pelo Desenvolvedor; ou (c) distribuir o
-Software em violação à GPL v3.
+deste Contrato se você: (a) usar o Software de maneira que viole a lei aplicável; (b) se
+passar pelo Desenvolvedor ou declarar falsamente que o Software é endossado pelo
+Desenvolvedor; (c) usar o Software para fins comerciais sem uma licença comercial válida;
+ou (d) distribuir o Software em violação à Licença Base.
 
 As Seções 7 (Isenção de Garantias), 8 (Limitação de Responsabilidade), 9 (Obrigações do
 Operador), 10 (Indenização), 12 (Lei Aplicável), 13 (Arbitragem), 14 (Renúncia a Ações

@@ -375,7 +375,7 @@
   "Hygroscopic correction": "吸湿補正",
   "Hygroscopic correction exponent (Hänel 1976). Default 0.45 is suitable\n        for most locations. Lower values reduce humidity sensitivity; higher values\n        increase it.": "吸湿補正指数（Hänel 1976）。デフォルトの0.45は、\n        ほとんどの場所に適しています。値を小さくすると湿度への感度が下がり、\n        値を大きくすると感度が上がります。",
   "I Agree — Continue": "同意する — 続行",
-  "I have read and agree to the Clear Skies Operator License Agreement\n          (EULA Version 1.0, Last Updated 2026-06-10).": "Clear Skies 運用者ライセンス契約書\n          （EULAバージョン1.0、最終更新日 2026-06-10）を読み、同意します。",
+  "I have read and agree to the Clear Skies Operator License Agreement\n          (EULA Version 2.0, Last Updated 2026-07-02).": "Clear Skies 運用者ライセンス契約書\n          （EULAバージョン2.0、最終更新日 2026-07-02）を読み、同意します。",
   "IANA timezone name, e.g.": "IANAタイムゾーン名。例:",
   "ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.": "ICOまたはPNG、最大100KB。ファイルを選択すると、以下のURLが置き換えられます。",
   "ID:": "ID:",

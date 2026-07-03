@@ -1,12 +1,26 @@
+═══════════════════════════════════════════════════════════════
+IMPORTANT / BELANGRIJK:
+This is a translation provided for your convenience. The
+English version (EULA.txt) is the sole legally binding
+document. In case of any conflict between this translation
+and the English original, the English version prevails.
+
+Dit is een vertaling die voor uw gemak wordt aangeboden. De
+Engelse versie (EULA.txt) is het enige juridisch bindende
+document. In geval van een tegenstrijdigheid tussen deze
+vertaling en het Engelse origineel, prevaleert de Engelse
+versie.
+═══════════════════════════════════════════════════════════════
+
 Clear Skies Weather Dashboard
 Licentieovereenkomst voor Operators (Eindgebruikerslicentieovereenkomst)
-EULA Version: 1.0
-Laatste update: 2026-06-10
+EULA-versie: 2.0
+Laatste update: 2026-07-02
 
-Deze Eindgebruikerslicentieovereenkomst («Overeenkomst») is een juridisch bindende overeenkomst
-tussen u («Operator») en Shane Burkhardt («Ontwikkelaar») die uw installatie en gebruik van
-de Clear Skies Weather Dashboard-software («Software») regelt. Lees hem zorgvuldig door
-voordat u verdergaat.
+Deze Licentieovereenkomst voor Operators («Overeenkomst») is een juridisch bindende
+overeenkomst tussen u («Operator») en Shane Burkhardt («Ontwikkelaar») die uw installatie en
+gebruik van de Clear Skies Weather Dashboard-software («Software») regelt. Lees hem
+zorgvuldig door voordat u verdergaat.
 
 
 1. ACCEPTATIE
@@ -15,30 +29,43 @@ Door deze Software te installeren, configureren of in gebruik te nemen, stemt u 
 gebonden te zijn aan de voorwaarden van deze Overeenkomst. Als u niet akkoord gaat met deze
 voorwaarden, installeer of gebruik de Software dan niet.
 
-Deze Overeenkomst vormt een aanvulling op — en vervangt niet — de GNU General Public License
-versie 3 («GPL v3»), die de broncode van de Software regelt. Waar deze Overeenkomst en de
-GPL v3 dezelfde materie behandelen, prevaleert de GPL v3; waar deze Overeenkomst zaken
-behandelt waarover de GPL v3 zwijgt (garantie, aansprakelijkheid, verantwoordelijkheden van
-de operator), is deze Overeenkomst van toepassing.
+Deze Overeenkomst vormt een aanvulling op — en vervangt niet — de PolyForm Noncommercial
+License 1.0.0 («Basislicentie») en het document ADDITIONAL-USES.md («Aanvullende
+Toepassingen»), die samen de broncode van de Software regelen. Waar deze Overeenkomst en de
+Basislicentie dezelfde materie behandelen, prevaleert de Basislicentie; waar deze Overeenkomst
+zaken behandelt waarover de Basislicentie zwijgt (garantie, aansprakelijkheid,
+verantwoordelijkheden van de operator), is deze Overeenkomst van toepassing.
 
 
 2. LICENTIEVERLENING
 
-De Software is gratis opensourcesoftware gelicentieerd onder de GNU General Public License
-versie 3. Een kopie van de GPL v3 is opgenomen in het broncoderepository van de Software op
-het rootniveau als LICENSE.txt en is beschikbaar op:
-https://www.gnu.org/licenses/gpl-3.0.html
+De Software is gelicentieerd onder de PolyForm Noncommercial License 1.0.0. Een kopie van de
+Basislicentie is opgenomen in het broncoderepository van de Software op het rootniveau als
+LICENSE en is beschikbaar op: https://polyformproject.org/licenses/noncommercial/1.0.0
 
-Op grond van de GPL v3 worden u de volgende rechten verleend:
+Op grond van de Basislicentie en het document Aanvullende Toepassingen worden u de volgende
+rechten verleend:
 
-  (a) De Software voor elk doel uitvoeren.
-  (b) De broncode bestuderen en wijzigen.
-  (c) Letterlijke kopieën van de Software verspreiden.
-  (d) Uw gewijzigde versies verspreiden onder de GPL v3.
+  (a) De Software gebruiken voor elk niet-commercieel doel, waaronder persoonlijk gebruik,
+      onderzoek, experimenten, hobbyprojecten en religieuze uitoefening.
+  (b) De Software gebruiken als u een liefdadigheidsorganisatie, onderwijsinstelling,
+      publieke onderzoeksorganisatie, organisatie voor openbare veiligheid of gezondheid,
+      milieubeschermingsorganisatie of overheidsinstelling bent — ongeacht de
+      financieringsbron.
+  (c) De Software gebruiken voor de aanvullende toegestane toepassingen die zijn opgesomd
+      in ADDITIONAL-USES.md, waaronder gemeenschappelijke weerdatadeling, familiebedrijven
+      in de landbouw (minder dan 50 werknemers, niet beursgenoteerd), amateurradio-
+      weerstations, landbouwcoöperaties en van belasting vrijgestelde organisaties.
+  (d) De broncode bestuderen en wijzigen voor elk toegestaan doel.
+  (e) Kopieën van de Software (met of zonder wijzigingen) verspreiden voor elk toegestaan
+      doel, mits u een kopie van de Basislicentie bijvoegt.
 
-Er zijn geen eigendomslicentieniveaus, activeringssleutels, apparaatlimieten of gebruikskosten
-van toepassing. Alle functies zijn beschikbaar voor alle operators onder dezelfde GPL v3-
-voorwaarden.
+Commercieel gebruik — waaronder het weergeven van advertenties, het in rekening brengen van
+toegang, het exploiteren van een beheerde hostingdienst, inkomstengenererende marketing,
+gebruik door beursgenoteerde bedrijven of organisaties met meer dan 50 werknemers (met
+uitzondering van overheids- en van belasting vrijgestelde organisaties), of doorverkoop,
+white-labeling of bundeling — vereist een afzonderlijke betaalde commerciële licentie van de
+Ontwikkelaar. Zie ADDITIONAL-USES.md voor de volledige lijst.
 
 
 3. DIENSTEN VAN DERDEN
@@ -56,7 +83,7 @@ gegevensleveranciers en -diensten, waaronder maar niet beperkt tot:
   - Google Analytics / Google Tag Manager — websitegebruiksanalyses (door de operator
     geconfigureerd)
   - Kaarttegelaanbieders (OpenStreetMap, Mapbox of andere) — kaartweergave
-  - Elke MQTT-broker die de operator configureert voor levering van realtime data
+  - LibreWxR — radar- en satellietkachelweergave
 
 Door deze diensten via de Software te configureren en te gebruiken, erkent u:
 
@@ -122,23 +149,28 @@ het dienovereenkomstig configureren en openbaar maken van uw gegevenspraktijken.
 
 6. INTELLECTUELE EIGENDOM
 
-De Software is gelicentieerd onder de GPL v3. Alle rechten die niet uitdrukkelijk worden
-verleend door de GPL v3 zijn voorbehouden aan de Ontwikkelaar. Niets in deze Overeenkomst
-verleent u het recht om de naam, handelsmerken of dienstmerken van de Ontwikkelaar te
-gebruiken buiten wat is toegestaan door toepasselijk recht of de GPL v3.
+De Software is gelicentieerd onder de PolyForm Noncommercial License 1.0.0. Alle rechten die
+niet uitdrukkelijk worden verleend door de Basislicentie of het document Aanvullende
+Toepassingen zijn voorbehouden aan de Ontwikkelaar. Niets in deze Overeenkomst verleent u het
+recht om de naam, handelsmerken of dienstmerken van de Ontwikkelaar te gebruiken buiten wat
+is toegestaan door toepasselijk recht.
 
 Weerdata (temperatuur, neerslag, wind, atmosferische metingen) zijn feitelijke informatie
 en zijn over het algemeen niet onderworpen aan auteursrechtbescherming. Weergaveformaten,
 grafieken, UI-elementen en door de Ontwikkelaar geschreven broncode zijn beschermd door
-auteursrecht en gelicentieerd onder de GPL v3 zoals uiteengezet in Sectie 2 hierboven.
+auteursrecht en gelicentieerd onder de PolyForm Noncommercial License 1.0.0 zoals uiteengezet
+in Sectie 2 hierboven.
 
 
 7. UITSLUITING VAN GARANTIES
 
 DE SOFTWARE WORDT GELEVERD «ALS IS» EN «ZOALS BESCHIKBAAR» ZONDER ENIGE GARANTIE, UITDRUKKELIJK
 OF IMPLICIET, MET INBEGRIP VAN MAAR NIET BEPERKT TOT DE GARANTIES VAN VERKOOPBAARHEID,
-GESCHIKTHEID VOOR EEN BEPAALD DOEL, TITEL EN NIET-INBREUK. DEZE UITSLUITING OMVAT EN BREIDT
-DE GEEN-GARANTIEBEPALINGEN VAN DE GPL v3 UIT (ARTIKELEN 15 EN 16).
+GESCHIKTHEID VOOR EEN BEPAALD DOEL, TITEL EN NIET-INBREUK. ZOALS BEPAALD IN DE BASISLICENTIE:
+VOOR ZOVER WETTELIJK TOEGESTAAN, WORDT DE SOFTWARE ALS IS GELEVERD, ZONDER ENIGE GARANTIE OF
+VOORWAARDE, EN DE LICENTIEGEVER ZAL NIET AANSPRAKELIJK ZIJN JEGENS U VOOR SCHADE DIE VOORTVLOEIT
+UIT DEZE VOORWAARDEN OF HET GEBRUIK OF DE AARD VAN DE SOFTWARE, ONDER GEEN ENKELE JURIDISCHE
+VORDERING.
 
 SPECIFIEKE UITSLUITINGEN:
 
@@ -162,11 +194,11 @@ SPECIFIEKE UITSLUITINGEN:
 
 8. BEPERKING VAN AANSPRAKELIJKHEID
 
-VOOR ZOVER MAXIMAAL TOEGESTAAN DOOR TOEPASSELIJK RECHT, EN ZOALS NADER UITEENGEZET IN
-ARTIKELEN 15 EN 16 VAN DE GPL v3, IS DE ONTWIKKELAAR IN GEEN GEVAL AANSPRAKELIJK VOOR ENIGE
-INDIRECTE, INCIDENTELE, BIJZONDERE, GEVOLGSCHADE, EXEMPLAIRE OF PUNITIEVE SCHADE, OF ENIG
-VERLIES VAN WINST, DATA, GOODWILL OF ANDERE IMMATERIËLE VERLIEZEN, VOORTKOMEND UIT OF
-VERBAND HOUDEND MET:
+VOOR ZOVER MAXIMAAL TOEGESTAAN DOOR TOEPASSELIJK RECHT, EN IN OVEREENSTEMMING MET DE
+BEPALING "GEEN AANSPRAKELIJKHEID" VAN DE BASISLICENTIE, IS DE ONTWIKKELAAR IN GEEN GEVAL
+AANSPRAKELIJK VOOR ENIGE INDIRECTE, INCIDENTELE, BIJZONDERE, GEVOLGSCHADE, EXEMPLAIRE OF
+PUNITIEVE SCHADE, OF ENIG VERLIES VAN WINST, DATA, GOODWILL OF ANDERE IMMATERIËLE VERLIEZEN,
+VOORTKOMEND UIT OF VERBAND HOUDEND MET:
 
   (a) Uw gebruik van of onvermogen om de Software te gebruiken.
   (b) Onnauwkeurigheid, onvolledigheid of ontijdigheid van weerdata weergegeven door de
@@ -183,8 +215,8 @@ VERBAND HOUDEND MET:
 
 De totale cumulatieve aansprakelijkheid van de Ontwikkelaar jegens u voor alle claims
 voortkomend uit of verband houdend met deze Overeenkomst zal niet meer bedragen dan nul
-Amerikaanse dollar ($ 0,00), wat weerspiegelt dat de Software kosteloos wordt verstrekt
-onder de GPL v3.
+Amerikaanse dollar ($ 0,00), wat weerspiegelt dat de Software kosteloos wordt verstrekt voor
+niet-commercieel gebruik onder de Basislicentie.
 
 
 9. VERANTWOORDELIJKHEDEN VAN DE OPERATOR
@@ -211,20 +243,25 @@ die met deze Software is gebouwd, de uitsluitende verantwoordelijkheid draagt vo
       Software configureert. Dit omvat het verkrijgen van vereiste accounts, sleutels en
       machtigingen voordat een gegevensprovider wordt ingeschakeld.
 
-  (d) BEVEILIGING. Uw server, netwerkconfiguratie, API-inloggegevens, database en door de
+  (d) LICENTIENALEVING. Naleven van de PolyForm Noncommercial License 1.0.0 en de vereisten
+      voor commercieel gebruik in ADDITIONAL-USES.md. Als uw gebruik onder een categorie valt
+      die een commerciële licentie vereist, moet u er een verkrijgen voordat u de Software
+      implementeert.
+
+  (e) BEVEILIGING. Uw server, netwerkconfiguratie, API-inloggegevens, database en door de
       Software opgeslagen geheimen beveiligen. De Ontwikkelaar controleert, bewaakt of
       beveiligt uw implementatie niet.
 
-  (e) DATA VAN UW STATION. Als uw weerstation gegevens verzamelt, opslaat of doorgeeft die
+  (f) DATA VAN UW STATION. Als uw weerstation gegevens verzamelt, opslaat of doorgeeft die
       verder gaan dan ruwe meteorologische metingen — inclusief door bezoekers gegenereerde
       data — bent u verantwoordelijk voor de verwerking, bescherming, bewaring en vereiste
       openbaarmakingen van die data.
 
-  (f) NAUWKEURIGHEIDSDISCLAIMER AAN BEZOEKERS. Een duidelijke disclaimer publiceren aan
+  (g) NAUWKEURIGHEIDSDISCLAIMER AAN BEZOEKERS. Een duidelijke disclaimer publiceren aan
       websitebezoekers waarin staat dat weerdata uitsluitend voor algemene informatiedoeleinden
       zijn en niet geschikt zijn voor veiligheidskritische beslissingen.
 
-  (g) BACK-UPS EN NOODHERSTEL. Adequate back-ups bijhouden van uw configuratiebestanden,
+  (h) BACK-UPS EN NOODHERSTEL. Adequate back-ups bijhouden van uw configuratiebestanden,
       database en eventuele aanpassingen. De Ontwikkelaar is niet verantwoordelijk voor
       gegevensverlies als gevolg van hardwarestoringen, softwarefouten of onbedoelde wissing.
 
@@ -242,6 +279,8 @@ van en voor alle claims, eisen, aansprakelijkheden, schaden, verliezen, kosten e
   (e) Enige claim van een bezoeker van uw website.
   (f) Uw nalaten de vereiste juridische kennisgevingen of privacymededelingen aan bezoekers
       te verstrekken.
+  (g) Uw gebruik van de Software in strijd met de Basislicentie of de vereisten voor
+      commercieel gebruik in ADDITIONAL-USES.md.
 
 
 11. GEEN SUPPORTVERPLICHTING
@@ -256,8 +295,9 @@ onderhouden. De Ontwikkelaar is niet verplicht tot:
   (d) Het voortdurend ontwikkelen, verspreiden of hosten van de Software.
 
 Verleende ondersteuning of updates zijn vrijwillige daden van goede wil en creëren geen
-voortdurende verplichting. De GPL v3 garandeert dat u altijd het recht heeft uw eigen fork
-van de Software te onderhouden als de Ontwikkelaar de ontwikkeling stopt.
+voortdurende verplichting. De Basislicentie garandeert dat u altijd het recht heeft de
+Software te gebruiken en te wijzigen voor niet-commerciële doeleinden zoals beschreven in de
+licentievoorwaarden.
 
 
 12. TOEPASSELIJK RECHT
@@ -265,8 +305,6 @@ van de Software te onderhouden als de Ontwikkelaar de ontwikkeling stopt.
 Deze Overeenkomst wordt beheerst door en uitgelegd in overeenstemming met de wetten van de
 staat Californië, Verenigde Staten van Amerika, zonder rekening te houden met de bepalingen
 inzake wetsconflicten.
-(Toepasselijk recht: staat Californië, VS — van toepassing ongeacht de locatie van de
-Operator.)
 
 
 13. ARBITRAGE
@@ -277,7 +315,6 @@ een wederzijds overeengekomen arbitragedienst, uitgevoerd in Californië, Vereni
 van Amerika, overeenkomstig de dan geldende regels. De beslissing van de arbiter is
 definitief en bindend, en het vonnis over de uitspraak kan worden ingeschreven bij elk
 bevoegd gerecht.
-(Bindende arbitrageclausule — zetel: Californië, VS. Afstand van juryrechtspraak.)
 
 Deze arbitrageclausule is niet van toepassing op voorlopige voorzieningen voor inbreuken op
 intellectuele eigendomsrechten, die elke partij bij elk bevoegd gerecht kan aanvragen.
@@ -291,7 +328,6 @@ WORDEN GEVOERD. NOCH U NOCH DE ONTWIKKELAAR MAG EEN GROEPS-, COLLECTIEVE, GECONS
 OF REPRESENTATIEVE PROCEDURE AANSPANNEN OF DAARAAN DEELNEMEN. De arbiter mag claims van meer
 dan één persoon niet consolideren zonder de uitdrukkelijke schriftelijke toestemming van alle
 partijen.
-(Afstandsdoen van groepsacties — van toepassing op grond van het recht van Californië.)
 
 
 15. OVERMACHT / SCHEIDBAARHEID / AFSTANDSDOEN / VOLLEDIGE OVEREENKOMST
@@ -309,10 +345,11 @@ kracht.
 Afstandsdoen. Het niet handhaven van een bepaling van deze Overeenkomst vormt geen afstand
 van die bepaling of het recht om deze in de toekomst te handhaven.
 
-Volledige Overeenkomst. Deze Overeenkomst vormt, samen met de GPL v3 (door middel van
-verwijzing opgenomen), de volledige overeenkomst tussen de partijen met betrekking tot de
-Software en vervangt alle voorafgaande overeenkomsten, verklaringen of afspraken met
-betrekking tot het onderwerp ervan.
+Volledige Overeenkomst. Deze Overeenkomst vormt, samen met de PolyForm Noncommercial License
+1.0.0 en het document ADDITIONAL-USES.md (beide door middel van verwijzing opgenomen), de
+volledige overeenkomst tussen de partijen met betrekking tot de Software en vervangt alle
+voorafgaande overeenkomsten, verklaringen of afspraken met betrekking tot het onderwerp
+ervan.
 
 
 16. BEËINDIGING
@@ -321,20 +358,18 @@ Deze Overeenkomst is van kracht vanaf de datum waarop u de Software voor het eer
 installeert of gebruikt en duurt voort totdat deze wordt beëindigd.
 
 Uw rechten onder deze Overeenkomst eindigen automatisch — zonder kennisgeving van de
-Ontwikkelaar — als u een materiële bepaling van deze Overeenkomst niet naleeft. Bij
-beëindiging moet u de Software buiten gebruik stellen en alle exemplaren in uw bezit
-vernietigen.
+Ontwikkelaar — als u een materiële bepaling van deze Overeenkomst, de Basislicentie of de
+vereisten voor commercieel gebruik in ADDITIONAL-USES.md niet naleeft. Bij beëindiging moet
+u de Software buiten gebruik stellen en alle exemplaren in uw bezit vernietigen.
 
 Beëindiging door de Operator. U kunt deze Overeenkomst op elk moment beëindigen door de
-Software niet meer te gebruiken en te verwijderen. Uw GPL v3-rechten (inclusief rechten om
-uw eigen gewijzigde kopie van de broncode te bewaren) blijven na beëindiging van deze
-Overeenkomst van kracht.
+Software niet meer te gebruiken en te verwijderen.
 
 Door de Ontwikkelaar geïnitieerde intrekking. De Ontwikkelaar kan uw rechten onder deze
-Overeenkomst intrekken (naast GPL v3-rechten, voor zover toegestaan door die licentie) als
-u: (a) de Software gebruikt op een manier die toepasselijk recht schendt; (b) de Ontwikkelaar
-imiteert of de Software ten onrechte als door de Ontwikkelaar aanbevolen voorstelt; of
-(c) de Software verspreidt in strijd met de GPL v3.
+Overeenkomst intrekken als u: (a) de Software gebruikt op een manier die toepasselijk recht
+schendt; (b) de Ontwikkelaar imiteert of de Software ten onrechte als door de Ontwikkelaar
+aanbevolen voorstelt; (c) de Software voor commerciële doeleinden gebruikt zonder geldige
+commerciële licentie; of (d) de Software verspreidt in strijd met de Basislicentie.
 
 De Secties 7 (Uitsluiting van Garanties), 8 (Beperking van Aansprakelijkheid), 9
 (Verantwoordelijkheden van de Operator), 10 (Vrijwaring), 12 (Toepasselijk Recht), 13
