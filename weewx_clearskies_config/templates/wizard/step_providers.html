@@ -4,7 +4,6 @@
     <h2>{{ _("Step 8 of 14 — Providers & API Keys") }}</h2>
     {{ help_trigger("/wizard/help/step_providers") }}
     <p>{{ _("Choose a data provider for each service domain.
-       Providers that match your station location are pre-selected.
        For providers that require an API key, the key fields appear inline when you select them.") }}</p>
   </header>
 
@@ -44,7 +43,7 @@
       <p><small>{{ domain_descriptions[domain] }}</small></p>
       {% endif %}
 
-      {% set selected_id = state.providers.get(domain) or recommendations.get(domain) %}
+      {% set selected_id = state.providers.get(domain) %}
 
       {% if providers | length == 1 and not providers[0].auth_fields %}
       {# Single keyless provider: show as informational text, no radio button needed. #}
@@ -58,7 +57,6 @@
       {% else %}
 
       {% for provider in providers %}
-      {% set is_recommended = (recommendations.get(domain) == provider.provider_id) %}
       {% set is_selected = (provider.provider_id == selected_id) %}
       <label>
         <input type="radio"
@@ -75,9 +73,6 @@
                hx-on:change="htmx.ajax('GET', '/wizard/step/6/aqi-regional/{{ provider.provider_id }}', {target: '#aqi-regional-fields', swap: 'innerHTML'})"
                {% endif %}>
         <strong>{{ provider.display_name }}</strong>
-        {% if is_recommended %}
-        <span class="provider-recommended" aria-label="{{ _('Matches your location') }}">{{ _("Selected for your location") }}</span>
-        {% endif %}
         {% if provider.auth_fields %}
         <span class="badge-key-required" aria-label="{{ _('API key required') }}">{{ _("Key required") }}</span>
         {% endif %}
@@ -111,31 +106,6 @@
         {% include "wizard/step_aqi_regional_fields.html" %}
         {% endif %}
       </div>
-
-      {# OpenAQ bootstrap API key — required for calibration bootstrap regardless
-         of which AQI provider is selected for real-time use. #}
-      <fieldset>
-        <legend>{{ _("Haze Calibration Bootstrap (OpenAQ)") }}</legend>
-        <p><small>{{ _("The haze detection calibration bootstrap pulls historical PM2.5 data
-           from") }} <a href="https://openaq.org" target="_blank" rel="noopener">OpenAQ</a>
-           {{ _("(government reference monitors, 141 countries). This API key is required
-           for the") }} <code>clearskies-api bootstrap</code> {{ _("command regardless of your
-           AQI provider selection above.") }}</small></p>
-        <label for="openaq_api_key">{{ _("OpenAQ API Key") }}</label>
-        <input type="password"
-               id="openaq_api_key"
-               name="openaq_api_key"
-               value="{{ state.openaq_api_key or '' }}"
-               placeholder="Register free at explore.openaq.org/register"
-               aria-describedby="openaq-key-hint"
-               autocomplete="off">
-        <small id="openaq-key-hint">
-          {{ _("Free API key.") }} <a href="https://explore.openaq.org/register"
-                           target="_blank" rel="noopener">{{ _("Register here") }}</a>.
-          {{ _("Stored in") }} <code>secrets.env</code> {{ _("as") }}
-          <code>WEEWX_CLEARSKIES_OPENAQ_API_KEY</code>.
-        </small>
-      </fieldset>
       {% endif %}
 
       {# Aeris forecast model selection (ADR-063) — only when Aeris is the forecast provider #}
@@ -222,24 +192,6 @@
               {{ _("Full URL to your LibreWxR instance. Must be reachable by Caddy.") }}
             </small>
           </div>
-
-          <details>
-            <summary>{{ _("Geographic bounds (optional)") }}</summary>
-            <p><small>{{ _("For self-hosted instances with BBOX cropping, enter the bounding box
-               so the dashboard limits zoom-out to your coverage area. Leave empty for
-               global coverage (public API).") }}</small></p>
-            <label for="librewxr_bounds">{{ _("Bounds (south,west,north,east)") }}</label>
-            <input type="text"
-                   id="librewxr_bounds"
-                   name="librewxr_bounds"
-                   value="{{ state.librewxr_bounds or '' }}"
-                   placeholder="32.0,-120.5,35.5,-114.5"
-                   pattern="^-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*,-?\d+\.?\d*$"
-                   aria-describedby="librewxr-bounds-hint">
-            <small id="librewxr-bounds-hint">
-              {{ _("Four comma-separated decimal values. Example for SoCal: 32.0,-120.5,35.5,-114.5") }}
-            </small>
-          </details>
         </fieldset>
       </div>
       {% endif %}

@@ -75,10 +75,6 @@ class WizardState:
     # [station] default_locale in api.conf by the API.
     default_locale: str = "en"
 
-    # OpenAQ API key for calibration bootstrap (separate from provider API keys
-    # because it's needed regardless of which AQI provider is selected).
-    openaq_api_key: str = ""
-
     # Webcam configuration
     webcam_enabled: bool = False
     webcam_image_url: str = "/webcam/weather_cam.jpg"
@@ -123,15 +119,6 @@ class WizardState:
     accent: str = ""
     # default_theme_mode: one of "light", "dark", "auto-os", "auto-sunrise-sunset"
     default_theme_mode: str = ""
-    # custom_css_url: optional URL to a custom CSS file (sent as None when blank)
-    custom_css_url: str = ""
-
-    # Social media URLs (step 8) — sent in a separate "social" block on apply
-    facebook_url: str = ""
-    twitter_url: str = ""
-    instagram_url: str = ""
-    youtube_url: str = ""
-
     # Analytics (step 8) — Phase 4 API fields; saved to state/stack.conf only
     # GA4 Measurement ID (format: G-XXXXXXXXXX)
     google_analytics_id: str = ""

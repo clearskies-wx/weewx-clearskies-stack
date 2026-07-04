@@ -403,19 +403,6 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 state.accent = str(branding_section["accent"])
             if branding_section.get("default_theme_mode"):
                 state.default_theme_mode = str(branding_section["default_theme_mode"])
-            if branding_section.get("custom_css_url"):
-                state.custom_css_url = str(branding_section["custom_css_url"])
-
-        social_section = stack_cfg.get("social", {})
-        if isinstance(social_section, dict):
-            if social_section.get("facebook"):
-                state.facebook_url = str(social_section["facebook"])
-            if social_section.get("twitter"):
-                state.twitter_url = str(social_section["twitter"])
-            if social_section.get("instagram"):
-                state.instagram_url = str(social_section["instagram"])
-            if social_section.get("youtube"):
-                state.youtube_url = str(social_section["youtube"])
 
         analytics_section = stack_cfg.get("analytics", {})
         if isinstance(analytics_section, dict):
@@ -545,8 +532,6 @@ def populate_from_branding_json(state: WizardState, config_dir: Path) -> None:
         state.accent = str(data["accent"])
     if data.get("defaultThemeMode"):
         state.default_theme_mode = str(data["defaultThemeMode"])
-    if data.get("customCssUrl"):
-        state.custom_css_url = str(data["customCssUrl"])
     if data.get("googleAnalyticsId"):
         state.google_analytics_id = str(data["googleAnalyticsId"])
     if data.get("privacyRegions"):
@@ -561,18 +546,6 @@ def populate_from_branding_json(state: WizardState, config_dir: Path) -> None:
             state.logo_dark_url = str(logo["darkUrl"])
         if logo.get("alt"):
             state.logo_alt = str(logo["alt"])
-
-    # Nested social object
-    social = data.get("social")
-    if isinstance(social, dict):
-        if social.get("facebook"):
-            state.facebook_url = str(social["facebook"])
-        if social.get("twitter"):
-            state.twitter_url = str(social["twitter"])
-        if social.get("instagram"):
-            state.instagram_url = str(social["instagram"])
-        if social.get("youtube"):
-            state.youtube_url = str(social["youtube"])
 
     # Station photo (optional)
     if data.get("stationPhotoUrl"):

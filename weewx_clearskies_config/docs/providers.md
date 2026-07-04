@@ -106,11 +106,11 @@ Some providers are free and keyless — you just select them and they work. Othe
 
 ---
 
-### Xweather (Vaisala)
+### Vaisala Xweather
 
 | | |
 |---|---|
-| **Data source** | Xweather (Vaisala) — xweather.com |
+| **Data source** | Vaisala Xweather — xweather.com |
 | **Coverage** | Global |
 | **API key required** | Yes (client ID + client secret pair) |
 | **Signup URL** | https://www.xweather.com/signup/ |

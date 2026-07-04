@@ -75,54 +75,7 @@ registry.register_section(
 )
 
 # ---------------------------------------------------------------------------
-# 2. Social Links
-# ---------------------------------------------------------------------------
-
-registry.register_section(
-    SectionDef(
-        section_id="social",
-        display_name="Social Links",
-        domain_group="appearance",
-        config_source="branding.json",
-    ),
-    (
-        ConfigField(
-            field_id="social.facebook_url",
-            field_type="url",
-            label="Facebook URL",
-            help_text="Full URL to your Facebook page or profile.",
-            config_target="branding.json:social",
-            config_key="facebook_url",
-        ),
-        ConfigField(
-            field_id="social.twitter_url",
-            field_type="url",
-            label="Twitter / X URL",
-            help_text="Full URL to your Twitter / X profile.",
-            config_target="branding.json:social",
-            config_key="twitter_url",
-        ),
-        ConfigField(
-            field_id="social.instagram_url",
-            field_type="url",
-            label="Instagram URL",
-            help_text="Full URL to your Instagram profile.",
-            config_target="branding.json:social",
-            config_key="instagram_url",
-        ),
-        ConfigField(
-            field_id="social.youtube_url",
-            field_type="url",
-            label="YouTube URL",
-            help_text="Full URL to your YouTube channel.",
-            config_target="branding.json:social",
-            config_key="youtube_url",
-        ),
-    ),
-)
-
-# ---------------------------------------------------------------------------
-# 3. Analytics & Privacy
+# 2. Analytics & Privacy
 # ---------------------------------------------------------------------------
 
 registry.register_section(
@@ -164,7 +117,7 @@ registry.register_section(
 )
 
 # ---------------------------------------------------------------------------
-# 4. Webcam
+# 3. Webcam
 # ---------------------------------------------------------------------------
 
 registry.register_section(
@@ -219,7 +172,7 @@ registry.register_section(
 )
 
 # ---------------------------------------------------------------------------
-# 5. Branding
+# 4. Branding
 # ---------------------------------------------------------------------------
 
 registry.register_section(
@@ -292,14 +245,6 @@ registry.register_section(
             config_key="favicon_url",
         ),
         ConfigField(
-            field_id="branding.custom_css_url",
-            field_type="url",
-            label="Custom CSS URL",
-            help_text="URL to a custom CSS file loaded after default styles. Use for advanced visual overrides.",
-            config_target="branding.json",
-            config_key="custom_css_url",
-        ),
-        ConfigField(
             field_id="branding.logo_light_url",
             field_type="file_or_url",
             label="Logo (Light Mode)",
@@ -328,7 +273,7 @@ registry.register_section(
 )
 
 # ---------------------------------------------------------------------------
-# 6. Pages Visibility
+# 5. Pages Visibility
 # ---------------------------------------------------------------------------
 # "now" is always visible and cannot be hidden — excluded from options.
 
@@ -363,7 +308,7 @@ registry.register_section(
 )
 
 # ---------------------------------------------------------------------------
-# 7. TLS
+# 6. TLS
 # ---------------------------------------------------------------------------
 
 _TLS_MODE_FIELD_ID = "tls.mode"
@@ -488,7 +433,7 @@ registry.register_section(
 )
 
 # ---------------------------------------------------------------------------
-# 8. Sky Classification
+# 7. Sky Classification
 # ---------------------------------------------------------------------------
 
 registry.register_section(

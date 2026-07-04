@@ -118,14 +118,6 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
         "favicon_url": state.favicon_url,
         "accent": state.accent,
         "default_theme_mode": state.default_theme_mode,
-        "custom_css_url": state.custom_css_url,
-    }
-
-    cfg["social"] = {
-        "facebook": state.facebook_url,
-        "twitter": state.twitter_url,
-        "instagram": state.instagram_url,
-        "youtube": state.youtube_url,
     }
 
     # Phase 4 fields — saved locally so wizard re-run can pre-populate them.
@@ -184,13 +176,6 @@ def write_branding_json(state: WizardState, config_dir: Path) -> Path:
         "faviconUrl": state.favicon_url or "",
         "accent": state.accent or "blue",
         "defaultThemeMode": state.default_theme_mode or "auto-os",
-        "customCssUrl": state.custom_css_url or None,
-        "social": {
-            "facebook": state.facebook_url or "",
-            "twitter": state.twitter_url or "",
-            "instagram": state.instagram_url or "",
-            "youtube": state.youtube_url or "",
-        },
         "googleAnalyticsId": state.google_analytics_id or "",
         "privacyRegions": state.privacy_regions or "global",
         "stationPhotoUrl": state.station_photo_url or "",

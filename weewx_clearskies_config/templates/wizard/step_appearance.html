@@ -157,23 +157,6 @@
 
     {{ render_field(fields_by_key["accent"], values.get("accent", "blue"), "wizard") }}
     {{ render_field(fields_by_key["default_theme_mode"], values.get("default_theme_mode", "auto-os"), "wizard") }}
-    {{ render_field(fields_by_key["custom_css_url"], values.get("custom_css_url", ""), "wizard") }}
-
-    {# ================================================================== #}
-    {# Section 4: Social Media                                             #}
-    {# ================================================================== #}
-
-    <h3>{{ _("Social Media") }}</h3>
-
-    <fieldset>
-      <legend>{{ _("Social Media Links") }}</legend>
-      <p><small>{{ _("Optional. Leave blank if not used. When provided, social media links appear in the dashboard footer.") }}</small></p>
-
-      {{ render_field(social_fields_by_key["facebook_url"], values.get("facebook_url", ""), "wizard") }}
-      {{ render_field(social_fields_by_key["twitter_url"], values.get("twitter_url", ""), "wizard") }}
-      {{ render_field(social_fields_by_key["instagram_url"], values.get("instagram_url", ""), "wizard") }}
-      {{ render_field(social_fields_by_key["youtube_url"], values.get("youtube_url", ""), "wizard") }}
-    </fieldset>
 
     <div role="group">
       <button type="button"

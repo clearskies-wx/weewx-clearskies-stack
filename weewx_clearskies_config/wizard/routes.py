@@ -73,7 +73,6 @@ from weewx_clearskies_config.wizard.known_apis import load_known_apis, verify_or
 from weewx_clearskies_config.wizard.providers import (
     get_provider,
     providers_by_domain,
-    recommend_providers,
     test_provider,
 )
 from weewx_clearskies_config.wizard.schema import (
@@ -985,16 +984,6 @@ async def wizard_index(request: Request) -> HTMLResponse | RedirectResponse:
                 state.accent = prior.accent
             if not state.default_theme_mode and prior.default_theme_mode:
                 state.default_theme_mode = prior.default_theme_mode
-            if not state.custom_css_url and prior.custom_css_url:
-                state.custom_css_url = prior.custom_css_url
-            if not state.facebook_url and prior.facebook_url:
-                state.facebook_url = prior.facebook_url
-            if not state.twitter_url and prior.twitter_url:
-                state.twitter_url = prior.twitter_url
-            if not state.instagram_url and prior.instagram_url:
-                state.instagram_url = prior.instagram_url
-            if not state.youtube_url and prior.youtube_url:
-                state.youtube_url = prior.youtube_url
             if not state.google_analytics_id and prior.google_analytics_id:
                 state.google_analytics_id = prior.google_analytics_id
             if not state.privacy_regions and prior.privacy_regions:
@@ -1829,9 +1818,6 @@ async def step6_get(request: Request) -> HTMLResponse:
         _merge_from_existing_config(state)
 
     by_domain = providers_by_domain()
-    recommendations: dict[str, str] = {}
-    if state.latitude is not None and state.longitude is not None:
-        recommendations = recommend_providers(state.latitude, state.longitude)
 
     aqi_suggestion = _aqi_suggestion_from_state(state)
 
@@ -1842,7 +1828,6 @@ async def step6_get(request: Request) -> HTMLResponse:
             "step": 8,
             "state": state,
             "providers_by_domain": by_domain,
-            "recommendations": recommendations,
             "aqi_suggestion": aqi_suggestion,
             "error": None,
         },
@@ -1952,7 +1937,7 @@ async def step6_aqi_regional(request: Request, provider_id: str) -> HTMLResponse
     state = get_wizard_state(session_id)
 
     # Validate provider_id is an AQI provider to prevent arbitrary template injection.
-    _VALID_AQI_PROVIDERS = {"aeris_aqi", "openmeteo_aqi", "iqair", "openaq", "openweathermap_aqi"}
+    _VALID_AQI_PROVIDERS = {"aeris_aqi", "openmeteo_aqi", "iqair", "openweathermap_aqi"}
     if provider_id not in _VALID_AQI_PROVIDERS:
         assert _templates is not None
         return HTMLResponse(content="", status_code=200)
@@ -2090,11 +2075,6 @@ async def step6_post(request: Request) -> HTMLResponse:
 
     submitted_bounds = str(form.get("librewxr_bounds", "")).strip()
     state.librewxr_bounds = submitted_bounds
-
-    # OpenAQ bootstrap API key (needed regardless of AQI provider selection)
-    submitted_openaq_key = str(form.get("openaq_api_key", "")).strip()
-    if submitted_openaq_key:
-        state.openaq_api_key = submitted_openaq_key
 
     save_wizard_state(session_id, state)
     return await step7_get(request)
@@ -2261,9 +2241,7 @@ async def step8_appearance_get(request: Request) -> HTMLResponse:
         _merge_from_existing_config(state)
     from weewx_clearskies_config.registry import registry
     branding_fields = registry.get_fields_for_section("branding")
-    social_fields = registry.get_fields_for_section("social")
     fields_by_key = {f.config_key: f for f in branding_fields}
-    social_fields_by_key = {f.config_key: f for f in social_fields}
     values = {
         "site_title": state.site_title,
         "copyright_entity": state.copyright_entity,
@@ -2273,17 +2251,11 @@ async def step8_appearance_get(request: Request) -> HTMLResponse:
         "favicon_url": state.favicon_url,
         "accent": state.accent or "blue",
         "default_theme_mode": state.default_theme_mode or "auto-os",
-        "custom_css_url": state.custom_css_url,
-        "facebook_url": state.facebook_url,
-        "twitter_url": state.twitter_url,
-        "instagram_url": state.instagram_url,
-        "youtube_url": state.youtube_url,
     }
     return _render(request, "step_appearance.html", {
         "step": 10,
         "state": state,
         "fields_by_key": fields_by_key,
-        "social_fields_by_key": social_fields_by_key,
         "values": values,
         "error": None,
     })
@@ -2325,9 +2297,7 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
     if errors:
         from weewx_clearskies_config.registry import registry as _reg
         _bf = _reg.get_fields_for_section("branding")
-        _sf = _reg.get_fields_for_section("social")
         _fbk = {f.config_key: f for f in _bf}
-        _sfbk = {f.config_key: f for f in _sf}
         _vals = {
             "site_title": state.site_title,
             "copyright_entity": state.copyright_entity,
@@ -2337,16 +2307,11 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
             "favicon_url": state.favicon_url,
             "accent": state.accent or "blue",
             "default_theme_mode": state.default_theme_mode or "auto-os",
-            "custom_css_url": state.custom_css_url,
-            "facebook_url": state.facebook_url,
-            "twitter_url": state.twitter_url,
-            "instagram_url": state.instagram_url,
-            "youtube_url": state.youtube_url,
         }
         return _render(
             request,
             "step_appearance.html",
-            {"step": 10, "state": state, "fields_by_key": _fbk, "social_fields_by_key": _sfbk, "values": _vals, "error": " ".join(errors)},
+            {"step": 10, "state": state, "fields_by_key": _fbk, "values": _vals, "error": " ".join(errors)},
             status_code=422,
         )
 
@@ -2372,15 +2337,6 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
         state.default_theme_mode = submitted_theme_mode if submitted_theme_mode in _valid_theme_modes else ""
     else:
         state.default_theme_mode = submitted_theme_mode
-
-    # Custom CSS URL — allow empty string (means "no custom CSS").
-    state.custom_css_url = str(form.get("custom_css_url", "")).strip()
-
-    # --- Social Media ---
-    state.facebook_url = str(form.get("facebook_url", "")).strip()
-    state.twitter_url = str(form.get("twitter_url", "")).strip()
-    state.instagram_url = str(form.get("instagram_url", "")).strip()
-    state.youtube_url = str(form.get("youtube_url", "")).strip()
 
     save_wizard_state(session_id, state)
     return await step_privacy_legal_get(request)
@@ -2895,12 +2851,6 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "min_magnitude": state.earthquake_min_magnitude,
         "default_days": state.earthquake_default_days,
     }
-
-    # OpenAQ bootstrap API key — sent to the API so it writes
-    # WEEWX_CLEARSKIES_OPENAQ_API_KEY to its secrets.env.  Needed for
-    # calibration bootstrap regardless of which AQI provider is active.
-    if state.openaq_api_key:
-        api_payload["openaq_api_key"] = state.openaq_api_key
 
     # Unit configuration — sent to the API so it writes to api.conf [units].
     # This is the single unit authority (T2A.5, ADR-042).
@@ -3428,16 +3378,6 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.accent = existing.accent
     if not state.default_theme_mode and existing.default_theme_mode:
         state.default_theme_mode = existing.default_theme_mode
-    if not state.custom_css_url and existing.custom_css_url:
-        state.custom_css_url = existing.custom_css_url
-    if not state.facebook_url and existing.facebook_url:
-        state.facebook_url = existing.facebook_url
-    if not state.twitter_url and existing.twitter_url:
-        state.twitter_url = existing.twitter_url
-    if not state.instagram_url and existing.instagram_url:
-        state.instagram_url = existing.instagram_url
-    if not state.youtube_url and existing.youtube_url:
-        state.youtube_url = existing.youtube_url
     if not state.google_analytics_id and existing.google_analytics_id:
         state.google_analytics_id = existing.google_analytics_id
     if not state.privacy_regions and existing.privacy_regions:
@@ -3691,11 +3631,5 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
             ords = api_units.get("ordinates")
             if ords:
                 imp_units["ordinates"] = {"directions": ords}
-
-    # --- OpenAQ API key (bootstrap + AQI) ---
-    if not state.openaq_api_key:
-        oaq_key = config.get("openaq_api_key")
-        if oaq_key and isinstance(oaq_key, str):
-            state.openaq_api_key = oaq_key
 
 

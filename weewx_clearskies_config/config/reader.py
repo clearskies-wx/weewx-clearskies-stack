@@ -173,8 +173,7 @@ def read_branding(config_dir: Path) -> dict[str, Any]:
     The schema follows config_writer.write_branding_json():
       siteTitle, copyrightEntity,
       logo: {lightUrl, darkUrl, alt},
-      faviconUrl, accent, defaultThemeMode, customCssUrl,
-      social: {facebook, twitter, instagram, youtube},
+      faviconUrl, accent, defaultThemeMode,
       googleAnalyticsId, privacyRegions,
       stationPhotoUrl, stationPhotoAlt, aboutContent,
       customTermsMd, customPrivacyMd
