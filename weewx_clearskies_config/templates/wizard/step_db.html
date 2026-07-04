@@ -1,10 +1,24 @@
 {% from "macros/help_panel.html" import help_trigger %}
+{% set db_kind = db_kind if db_kind is defined else state.db_kind %}
 <article>
   <header>
     <h2>{{ _("Step 4 of 14 — Database Connection") }}</h2>
     {{ help_trigger("/wizard/help/step_db") }}
+    {% if db_kind == "sqlite" %}
+    <p>{{ _("Enter the path to your weewx SQLite database file.
+       The path is pre-filled from the API's weewx.conf where available.") }}</p>
+    {% else %}
     <p>{{ _("Enter your weewx MariaDB/MySQL connection details.
        Fields are pre-filled from the API's weewx.conf where available.") }}</p>
+    {% endif %}
+    <p class="db-detected">
+      <strong>{{ _("Detected:") }}</strong>
+      {% if db_kind == "sqlite" %}
+      {{ _("SQLite") }}
+      {% else %}
+      {{ _("MySQL/MariaDB") }}
+      {% endif %}
+    </p>
   </header>
 
   {% if error %}
@@ -19,6 +33,25 @@
         hx-swap="innerHTML show:window:top"
         hx-indicator="#wizard-spinner"
         autocomplete="off">
+    <input type="hidden" id="db_kind" name="db_kind" value="{{ db_kind }}">
+
+    {% if db_kind == "sqlite" %}
+    <fieldset>
+      <legend>{{ _("SQLite database file") }}</legend>
+
+      <label for="db_path">{{ _("Database file path") }} <span aria-hidden="true">*</span></label>
+      <input type="text"
+             id="db_path"
+             name="db_path"
+             value="{{ state.db_path or '' }}"
+             required
+             autocomplete="off"
+             placeholder="/var/lib/weewx/weewx.sdb"
+             aria-describedby="db-path-hint"
+             {% if error and not state.db_path %}aria-invalid="true"{% endif %}>
+      <small id="db-path-hint">{{ _("Path to the SQLite database file. This should match the path configured in your weewx.conf. The default weewx SQLite database is usually at /var/lib/weewx/weewx.sdb.") }}</small>
+    </fieldset>
+    {% else %}
     <fieldset>
       <legend>{{ _("Database connection settings") }}</legend>
 
@@ -97,6 +130,7 @@
              aria-describedby="db-name-hint">
       <small id="db-name-hint">{{ _("Name of the weewx archive database. The default is usually correct.") }}</small>
     </fieldset>
+    {% endif %}
 
     <div role="group">
       <button type="button"

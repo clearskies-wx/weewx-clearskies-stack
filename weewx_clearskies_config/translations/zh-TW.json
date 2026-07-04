@@ -920,5 +920,12 @@
   "— choose a provider —": "— 選擇提供商 —",
   "— not mapped —": "— 未對映 —",
   "— or enter a URL": "— 或輸入 URL",
-  "— select a timezone —": "— 選擇時區 —"
+  "— select a timezone —": "— 選擇時區 —",
+  "Detected:": "Detected:",
+  "Database file path": "Database file path",
+  "MySQL/MariaDB": "MySQL/MariaDB",
+  "SQLite": "SQLite",
+  "SQLite database file": "SQLite database file",
+  "Path to the SQLite database file. This should match the path configured in your weewx.conf. The default weewx SQLite database is usually at /var/lib/weewx/weewx.sdb.": "Path to the SQLite database file. This should match the path configured in your weewx.conf. The default weewx SQLite database is usually at /var/lib/weewx/weewx.sdb.",
+  "Enter the path to your weewx SQLite database file.\n       The path is pre-filled from the API's weewx.conf where available.": "Enter the path to your weewx SQLite database file.\n       The path is pre-filled from the API's weewx.conf where available."
 }

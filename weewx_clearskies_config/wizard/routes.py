@@ -924,6 +924,8 @@ async def wizard_index(request: Request) -> HTMLResponse | RedirectResponse:
                 state.api_address = prior.api_address
             if not state.cert_fingerprint and prior.cert_fingerprint:
                 state.cert_fingerprint = prior.cert_fingerprint
+            if state.db_kind == "mysql" and prior.db_kind != "mysql":
+                state.db_kind = prior.db_kind
             if state.db_host is None and prior.db_host is not None:
                 state.db_host = prior.db_host
             if state.db_port == 3306 and prior.db_port != 3306:
@@ -934,6 +936,8 @@ async def wizard_index(request: Request) -> HTMLResponse | RedirectResponse:
                 state.db_password = prior.db_password
             if state.db_name == "weewx" and prior.db_name != "weewx":
                 state.db_name = prior.db_name
+            if not state.db_path and prior.db_path:
+                state.db_path = prior.db_path
             if not state.column_mapping and prior.column_mapping:
                 state.column_mapping = prior.column_mapping
             if state.station_name is None and prior.station_name is not None:
@@ -1320,22 +1324,29 @@ async def step2_db_get(request: Request) -> HTMLResponse:
     state = get_wizard_state(session_id)
 
     # Merge from existing config files (e.g. wizard re-run).
-    if state.db_host is None:
+    if state.db_host is None and not state.db_path:
         _merge_from_existing_config(state)
 
     # If still no DB info, ask the API for defaults from its weewx.conf.
     api_warning: str | None = None
-    if state.db_host is None:
+    if state.db_host is None and not state.db_path:
         try:
             client = _get_api_client(state)
             defaults = client.get_db_defaults()
-            state.db_host = str(defaults.get("host", "localhost")) or "localhost"
-            if defaults.get("port"):
-                state.db_port = int(defaults["port"])
-            if defaults.get("user"):
-                state.db_user = str(defaults["user"])
-            if defaults.get("db_name"):
-                state.db_name = str(defaults["db_name"])
+            kind = str(defaults.get("kind", "mysql")).strip().lower()
+            if kind not in ("sqlite", "mysql"):
+                kind = "mysql"
+            state.db_kind = kind
+            if kind == "sqlite":
+                state.db_path = str(defaults.get("path", "")) or state.db_path
+            else:
+                state.db_host = str(defaults.get("host", "localhost")) or "localhost"
+                if defaults.get("port"):
+                    state.db_port = int(defaults["port"])
+                if defaults.get("user"):
+                    state.db_user = str(defaults["user"])
+                if defaults.get("name"):
+                    state.db_name = str(defaults["name"])
             # Never pre-fill the password from the API response — the operator
             # must enter it explicitly (the API doesn't transmit passwords).
         except ValueError:
@@ -1354,7 +1365,7 @@ async def step2_db_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_db.html",
-        {"step": 4, "state": state, "result": None, "error": api_warning},
+        {"step": 4, "state": state, "result": None, "error": api_warning, "db_kind": state.db_kind},
     )
 
 
@@ -1364,16 +1375,23 @@ async def step2_db_test(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     form = await request.form()
-    host = str(form.get("db_host", "localhost")).strip()
-    port = _parse_int(str(form.get("db_port", "3306")), default=3306)
-    user = str(form.get("db_user", "")).strip()
-    password = str(form.get("db_password", ""))
-    db_name = str(form.get("db_name", "weewx")).strip()
+    db_kind = str(form.get("db_kind", "mysql")).strip().lower()
+    if db_kind not in ("sqlite", "mysql"):
+        db_kind = "mysql"
 
     result: dict[str, Any]
     try:
         client = _get_api_client(state)
-        result = client.test_db(host, port, user, password, db_name)
+        if db_kind == "sqlite":
+            db_path = str(form.get("db_path", "")).strip()
+            result = client.test_db(kind="sqlite", path=db_path)
+        else:
+            host = str(form.get("db_host", "localhost")).strip()
+            port = _parse_int(str(form.get("db_port", "3306")), default=3306)
+            user = str(form.get("db_user", "")).strip()
+            password = str(form.get("db_password", ""))
+            db_name = str(form.get("db_name", "weewx")).strip()
+            result = client.test_db(kind="mysql", host=host, port=port, user=user, password=password, name=db_name)
     except ValueError:
         result = {"success": False, "error": _("API not connected. Go back to step 1 and reconnect."), "version": None}
     except ApiClientError as exc:
@@ -1397,32 +1415,45 @@ async def step2_db_post(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
-    state.db_host = str(form.get("db_host", "")).strip() or None
-    state.db_port = _parse_int(str(form.get("db_port", "3306")), default=3306)
-    state.db_user = str(form.get("db_user", "")).strip() or None
-    # Password handling: the template sends db_password_unchanged=1 and an empty
-    # password field when the user has not re-typed a password on re-render.
-    # Only overwrite the stored secret when the user actually supplies a value.
-    submitted_db_password = str(form.get("db_password", ""))
-    db_password_unchanged = str(form.get("db_password_unchanged", "0")).strip() == "1"
-    if submitted_db_password:
-        state.db_password = submitted_db_password
-    elif not db_password_unchanged:
-        # Explicit blank entry with the flag cleared — user cleared the password.
-        state.db_password = ""
-    # else: flag is set and field is empty — keep existing state.db_password.
-    state.db_name = str(form.get("db_name", "weewx")).strip() or "weewx"
 
-    # Auto-detect topology from DB host: loopback → same-host, anything else → cross-host.
-    _LOOPBACK = {"localhost", "127.0.0.1", "::1"}
-    if (state.db_host or "").lower() in _LOOPBACK:
+    db_kind = str(form.get("db_kind", "mysql")).strip().lower()
+    if db_kind not in ("sqlite", "mysql"):
+        db_kind = "mysql"
+    state.db_kind = db_kind
+
+    if db_kind == "sqlite":
+        state.db_path = str(form.get("db_path", "")).strip()
+        # A SQLite database is always a local file next to the API process —
+        # there is no remote host to reach, so topology is always same-host.
         state.topology = "same-host"
         state.api_bind_host = "127.0.0.1"
     else:
-        state.topology = "cross-host"
-        if not state.proxy_secret:
-            state.proxy_secret = generate_proxy_secret()
-        state.api_bind_host = "0.0.0.0"
+        state.db_host = str(form.get("db_host", "")).strip() or None
+        state.db_port = _parse_int(str(form.get("db_port", "3306")), default=3306)
+        state.db_user = str(form.get("db_user", "")).strip() or None
+        # Password handling: the template sends db_password_unchanged=1 and an empty
+        # password field when the user has not re-typed a password on re-render.
+        # Only overwrite the stored secret when the user actually supplies a value.
+        submitted_db_password = str(form.get("db_password", ""))
+        db_password_unchanged = str(form.get("db_password_unchanged", "0")).strip() == "1"
+        if submitted_db_password:
+            state.db_password = submitted_db_password
+        elif not db_password_unchanged:
+            # Explicit blank entry with the flag cleared — user cleared the password.
+            state.db_password = ""
+        # else: flag is set and field is empty — keep existing state.db_password.
+        state.db_name = str(form.get("db_name", "weewx")).strip() or "weewx"
+
+        # Auto-detect topology from DB host: loopback → same-host, anything else → cross-host.
+        _LOOPBACK = {"localhost", "127.0.0.1", "::1"}
+        if (state.db_host or "").lower() in _LOOPBACK:
+            state.topology = "same-host"
+            state.api_bind_host = "127.0.0.1"
+        else:
+            state.topology = "cross-host"
+            if not state.proxy_secret:
+                state.proxy_secret = generate_proxy_secret()
+            state.api_bind_host = "0.0.0.0"
     state.api_bind_port = 8765
 
     # Persist the DB fields entered by the user so partial progress survives even
@@ -1432,26 +1463,30 @@ async def step2_db_post(request: Request) -> HTMLResponse:
     # Test the connection via API before proceeding.
     try:
         client = _get_api_client(state)
-        test_result = client.test_db(
-            state.db_host or "",
-            state.db_port,
-            state.db_user or "",
-            state.db_password or "",
-            state.db_name,
-        )
+        if state.db_kind == "sqlite":
+            test_result = client.test_db(kind="sqlite", path=state.db_path or "")
+        else:
+            test_result = client.test_db(
+                kind="mysql",
+                host=state.db_host or "",
+                port=state.db_port,
+                user=state.db_user or "",
+                password=state.db_password or "",
+                name=state.db_name,
+            )
         if not test_result.get("success"):
             error_msg = f"Connection test failed: {test_result.get('error', 'unknown error')}"
             return _render(
                 request,
                 "step_db.html",
-                {"step": 4, "state": state, "result": None, "error": error_msg},
+                {"step": 4, "state": state, "result": None, "error": error_msg, "db_kind": state.db_kind},
                 status_code=422,
             )
     except ValueError:
         return _render(
             request,
             "step_db.html",
-            {"step": 4, "state": state, "result": None, "error": _("API not connected. Go back to step 1 and reconnect.")},
+            {"step": 4, "state": state, "result": None, "error": _("API not connected. Go back to step 1 and reconnect."), "db_kind": state.db_kind},
             status_code=422,
         )
     except ApiClientError as exc:
@@ -1460,14 +1495,14 @@ async def step2_db_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_db.html",
-            {"step": 4, "state": state, "result": None, "error": _api_error_message(exc)},
+            {"step": 4, "state": state, "result": None, "error": _api_error_message(exc), "db_kind": state.db_kind},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
         return _render(
             request,
             "step_db.html",
-            {"step": 4, "state": state, "result": None, "error": _("Could not reach the API to test the connection. Check that the API is running and try again.")},
+            {"step": 4, "state": state, "result": None, "error": _("Could not reach the API to test the connection. Check that the API is running and try again."), "db_kind": state.db_kind},
             status_code=422,
         )
 
@@ -2809,11 +2844,13 @@ async def wizard_apply(request: Request) -> HTMLResponse:
 
     api_payload: dict[str, Any] = {
         "database": {
+            "kind": state.db_kind,
             "host": state.db_host or "",
             "port": state.db_port,
             "user": state.db_user or "",
             "password": state.db_password or "",
             "name": state.db_name,
+            "path": state.db_path or "",
         },
         "column_mapping": api_column_mapping,
         "station": {
@@ -3309,6 +3346,8 @@ def _merge_from_existing_config(state: WizardState) -> None:
         logger.warning("populate_from_config failed; skipping pre-populate", exc_info=True)
         return
 
+    if state.db_kind == "mysql" and existing.db_kind != "mysql":
+        state.db_kind = existing.db_kind
     if state.db_host is None and existing.db_host is not None:
         state.db_host = existing.db_host
     if state.db_port == 3306 and existing.db_port != 3306:
@@ -3319,6 +3358,8 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.db_password = existing.db_password
     if state.db_name == "weewx" and existing.db_name != "weewx":
         state.db_name = existing.db_name
+    if not state.db_path and existing.db_path:
+        state.db_path = existing.db_path
 
     if not state.column_mapping and existing.column_mapping:
         state.column_mapping = existing.column_mapping
@@ -3454,6 +3495,8 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
     # --- Database ---
     db = config.get("database", {})
     if isinstance(db, dict):
+        if state.db_kind == "mysql" and db.get("kind") and db["kind"] != "mysql":
+            state.db_kind = str(db["kind"])
         if state.db_host is None and db.get("host"):
             state.db_host = str(db["host"])
         if state.db_port == 3306 and db.get("port"):
@@ -3467,6 +3510,8 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
             state.db_password = str(db["password"])
         if state.db_name == "weewx" and db.get("name") and db["name"] != "weewx":
             state.db_name = str(db["name"])
+        if not state.db_path and db.get("path"):
+            state.db_path = str(db["path"])
 
     # --- Providers + API keys ---
     # Response: {"forecast": {"provider": "nws", "credentials": {...}}, ...}

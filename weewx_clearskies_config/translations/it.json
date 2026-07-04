@@ -920,5 +920,12 @@
   "— choose a provider —": "— scegli un provider —",
   "— not mapped —": "— non mappato —",
   "— or enter a URL": "— oppure inserisci un URL",
-  "— select a timezone —": "— seleziona un fuso orario —"
+  "— select a timezone —": "— seleziona un fuso orario —",
+  "Detected:": "Detected:",
+  "Database file path": "Database file path",
+  "MySQL/MariaDB": "MySQL/MariaDB",
+  "SQLite": "SQLite",
+  "SQLite database file": "SQLite database file",
+  "Path to the SQLite database file. This should match the path configured in your weewx.conf. The default weewx SQLite database is usually at /var/lib/weewx/weewx.sdb.": "Path to the SQLite database file. This should match the path configured in your weewx.conf. The default weewx SQLite database is usually at /var/lib/weewx/weewx.sdb.",
+  "Enter the path to your weewx SQLite database file.\n       The path is pre-filled from the API's weewx.conf where available.": "Enter the path to your weewx SQLite database file.\n       The path is pre-filled from the API's weewx.conf where available."
 }

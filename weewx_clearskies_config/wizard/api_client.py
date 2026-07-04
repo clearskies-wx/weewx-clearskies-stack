@@ -185,7 +185,9 @@ class ApiClient:
         """GET /setup/db-defaults — DB connection defaults from weewx.conf.
 
         Returns:
-            Dict with keys such as "host", "port", "user", "db_name".
+            Dict with a "kind" key ("sqlite" or "mysql") plus either
+            "host"/"port"/"user"/"name" (MySQL) or "path" (SQLite), and
+            "conf_path" (the weewx.conf path used for detection).
         """
         _log.info("Fetching DB defaults from API")
         response = self._request("GET", "/setup/db-defaults", timeout=_DEFAULT_TIMEOUT)
@@ -194,39 +196,49 @@ class ApiClient:
 
     def test_db(
         self,
-        host: str,
-        port: int,
-        user: str,
-        password: str,
-        name: str,
+        kind: str = "mysql",
+        host: str = "",
+        port: int = 3306,
+        user: str = "",
+        password: str = "",
+        name: str = "",
+        path: str = "",
     ) -> dict[str, Any]:
         """POST /setup/db-test — test a DB connection via the API.
 
         The API performs the actual connection attempt (it has DB access; the
         wizard does not).  Uses an extended timeout because the probe may be
-        slow on a distant or unresponsive DB host.
+        slow on a distant or unresponsive DB host (MySQL) or an unreadable
+        file (SQLite).
 
         Args:
-            host: Database hostname or IP.
-            port: Database port.
-            user: Database username.
-            password: Database password.
-            name: Database name.
+            kind: "mysql" or "sqlite".
+            host: Database hostname or IP. MySQL only.
+            port: Database port. MySQL only.
+            user: Database username. MySQL only.
+            password: Database password. MySQL only.
+            name: Database name. MySQL only.
+            path: SQLite database file path. SQLite only.
 
         Returns:
             Dict with keys:
                 "success" (bool), "version" (str | None), "error" (str | None).
         """
-        _log.info("Requesting DB test for %s@%s:%d/%s via API", user, host, port, name)
+        if kind == "sqlite":
+            _log.info("Requesting DB test for SQLite path %s via API", path)
+        else:
+            _log.info("Requesting DB test for %s@%s:%d/%s via API", user, host, port, name)
         response = self._request(
             "POST",
             "/setup/db-test",
             json={
+                "kind": kind,
                 "host": host,
                 "port": port,
                 "user": user,
                 "password": password,
                 "name": name,
+                "path": path,
             },
             timeout=_DB_TEST_TIMEOUT,
         )

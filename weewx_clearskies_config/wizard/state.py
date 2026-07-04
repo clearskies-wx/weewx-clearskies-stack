@@ -27,6 +27,12 @@ class WizardState:
     db_user: str | None = None
     db_password: str | None = None
     db_name: str = "weewx"
+    # Database kind, detected from the API's GET /setup/db-defaults response
+    # ("sqlite" or "mysql").  db_path holds the SQLite database file path when
+    # db_kind == "sqlite"; the db_host/db_port/db_user/db_name fields above are
+    # used only when db_kind == "mysql".
+    db_kind: str = "mysql"
+    db_path: str = ""
 
     # Column mapping — key=db_column_name, value=canonical_name or None (unmapped/skip)
     column_mapping: dict[str, str | None] = field(default_factory=dict)

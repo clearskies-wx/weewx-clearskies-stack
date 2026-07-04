@@ -275,6 +275,11 @@ def populate_from_config(config_dir: Path) -> WizardState:
     if api_cfg is not None:
         db_section = api_cfg.get("database", {})
         if isinstance(db_section, dict):
+            kind_val = str(db_section.get("kind", "")).strip().lower()
+            if kind_val in ("sqlite", "mysql"):
+                state.db_kind = kind_val
+            if db_section.get("path"):
+                state.db_path = str(db_section["path"])
             if db_section.get("host"):
                 state.db_host = str(db_section["host"])
             if db_section.get("port"):
