@@ -110,33 +110,6 @@ def _(key: str) -> str:
     return translate(key, get_current_locale())
 
 
-# ---------------------------------------------------------------------------
-# Help content endpoint
-# ---------------------------------------------------------------------------
-
-
-@router.get("/help/{step_id}", response_class=HTMLResponse)
-async def wizard_help(request: Request, step_id: str) -> HTMLResponse:
-    """Return help content fragment for a wizard step.
-
-    HTMX loads this into the help panel on first open.
-    Keys: help.wizard.{step_id}.title, help.wizard.{step_id}.body,
-          help.wizard.{step_id}.tip (optional)
-    """
-    _require_session(request)
-    locale = get_current_locale()
-    title = translate(f"help.wizard.{step_id}.title", locale)
-    body = translate_md(f"help.wizard.{step_id}.body", locale)
-    tip_key = f"help.wizard.{step_id}.tip"
-    tip: str | None = translate(tip_key, locale)
-    # If tip == tip_key, no translation exists — treat as absent.
-    if tip == tip_key:
-        tip = None
-    return _render(
-        request,
-        "help_fragment.html",
-        {"title": title, "body": body, "tip": tip},
-    )
 
 
 # ---------------------------------------------------------------------------
@@ -285,6 +258,35 @@ _VALID_LOCALES: frozenset[str] = frozenset(tag for tag, _ in _SUPPORTED_LOCALES)
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/wizard", tags=["wizard"])
+
+
+# ---------------------------------------------------------------------------
+# Help content endpoint
+# ---------------------------------------------------------------------------
+
+
+@router.get("/help/{step_id}", response_class=HTMLResponse)
+async def wizard_help(request: Request, step_id: str) -> HTMLResponse:
+    """Return help content fragment for a wizard step.
+
+    HTMX loads this into the help panel on first open.
+    Keys: help.wizard.{step_id}.title, help.wizard.{step_id}.body,
+          help.wizard.{step_id}.tip (optional)
+    """
+    _require_session(request)
+    locale = get_current_locale()
+    title = translate(f"help.wizard.{step_id}.title", locale)
+    body = translate_md(f"help.wizard.{step_id}.body", locale)
+    tip_key = f"help.wizard.{step_id}.tip"
+    tip: str | None = translate(tip_key, locale)
+    if tip == tip_key:
+        tip = None
+    return _render(
+        request,
+        "help_fragment.html",
+        {"title": title, "body": body, "tip": tip},
+    )
+
 
 # Codes accepted for the wizard's own UI language (clearskies-wizard-locale
 # cookie). Deliberately not reused from _VALID_LOCALES above: that set
