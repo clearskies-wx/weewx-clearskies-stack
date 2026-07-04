@@ -24,6 +24,46 @@
   {% endif %}
 
   {# ------------------------------------------------------------------ #}
+  {# Translation notice                                                    #}
+  {# Shown when the EULA is displayed in a non-English locale.            #}
+  {# ------------------------------------------------------------------ #}
+  {% if eula_is_translated %}
+  <div role="note" style="
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--pico-primary);
+    border-radius: 0.375rem;
+    background: color-mix(in srgb, var(--pico-primary) 8%, var(--pico-card-background-color, #fff));
+    margin-block-end: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  ">
+    <strong>{{ _("Note:") }}</strong>
+    {{ _("This is a translated version provided for your convenience. The English version is the sole legally binding document.") }}
+    <a href="/wizard/eula?english=1"
+       hx-get="/wizard/eula?english=1"
+       hx-target="#wizard-content"
+       hx-swap="innerHTML show:window:top">{{ _("View the English version") }}</a>
+  </div>
+  {% elif eula_showing_english %}
+  <div role="note" style="
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--pico-primary);
+    border-radius: 0.375rem;
+    background: color-mix(in srgb, var(--pico-primary) 8%, var(--pico-card-background-color, #fff));
+    margin-block-end: 1rem;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  ">
+    <strong>{{ _("Note:") }}</strong>
+    {{ _("You are viewing the English (legally governing) version.") }}
+    <a href="/wizard/eula"
+       hx-get="/wizard/eula"
+       hx-target="#wizard-content"
+       hx-swap="innerHTML show:window:top">{{ _("Return to translated version") }}</a>
+  </div>
+  {% endif %}
+
+  {# ------------------------------------------------------------------ #}
   {# EULA text panel                                                      #}
   {# role="document" + tabindex="0" makes the panel a focusable reading  #}
   {# region accessible to keyboard and assistive-technology users.        #}

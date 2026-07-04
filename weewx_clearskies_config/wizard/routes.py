@@ -577,6 +577,7 @@ async def step_eula_get(request: Request) -> HTMLResponse:
 
     Auto-advances to step 4 (DB) on re-run if the EULA was previously accepted
     and the version hasn't changed.  Re-acceptance is required on version change.
+    Accepts ``?english=1`` to force the English (legally governing) text.
     """
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
@@ -584,11 +585,21 @@ async def step_eula_get(request: Request) -> HTMLResponse:
         _merge_from_existing_config(state)
     if state.eula_accepted_at:
         return await step2_db_get(request)
-    eula_text = _load_eula_text(state.default_locale)
+    force_english = request.query_params.get("english") == "1"
+    locale = get_current_locale()
+    eula_locale = "en" if force_english else locale
+    eula_text = _load_eula_text(eula_locale)
     return _render(
         request,
         "step_eula.html",
-        {"step": 3, "state": state, "error": None, "eula_text": eula_text},
+        {
+            "step": 3,
+            "state": state,
+            "error": None,
+            "eula_text": eula_text,
+            "eula_is_translated": eula_locale != "en",
+            "eula_showing_english": force_english and locale != "en",
+        },
     )
 
 
@@ -601,7 +612,8 @@ async def step_eula_post(request: Request) -> HTMLResponse:
 
     accepted = str(form.get("eula_accepted", "")).strip() == "1"
     if not accepted:
-        eula_text = _load_eula_text(state.default_locale)
+        locale = get_current_locale()
+        eula_text = _load_eula_text(locale)
         return _render(
             request,
             "step_eula.html",
@@ -613,6 +625,8 @@ async def step_eula_post(request: Request) -> HTMLResponse:
                     "Please scroll through the Agreement and check the box."
                 ),
                 "eula_text": eula_text,
+                "eula_is_translated": locale != "en",
+                "eula_showing_english": False,
             },
             status_code=422,
         )
