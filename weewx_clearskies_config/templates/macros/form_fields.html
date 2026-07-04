@@ -176,10 +176,10 @@
   </div>
   <small id="{{ hid }}">{{ help }}</small>
 
-  {# ── file_or_url (URL input only; file upload handled by route handler) ── #}
+  {# ── file_or_url (accepts relative paths or full URLs; file upload handled by route) ── #}
   {%- elif field.field_type == "file_or_url" %}
   <label for="{{ eid }}">{{ _(field.label) }}</label>
-  <input type="url"
+  <input type="text"
          id="{{ eid }}"
          name="{{ field.config_key }}"
          value="{{ value if value is not none else '' }}"
