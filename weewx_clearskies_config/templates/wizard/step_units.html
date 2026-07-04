@@ -66,7 +66,13 @@
               </option>
               {% endfor %}
             </select>
-            <small id="help_{{ group }}" class="sr-only">{{ _("Choose the display unit for this measurement.") }}</small>
+            <small id="help_{{ group }}" class="sr-only">
+              {% if group == "group_distance" %}
+              {{ _("Choose the display unit for this measurement. Also controls earthquake depth and distance display on the Seismic page.") }}
+              {% else %}
+              {{ _("Choose the display unit for this measurement.") }}
+              {% endif %}
+            </small>
           </td>
         </tr>
         {% endfor %}
