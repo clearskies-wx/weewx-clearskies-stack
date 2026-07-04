@@ -144,36 +144,48 @@
   }
 }
 
-/* ── Trigger button (? icon) ────────────────────────────────────────── */
+/* ── Trigger button (Phosphor Question icon) ───────────────────────── */
+
+/* Position the trigger in the top-right of its containing header. */
+:has(> .help-trigger) {
+  position: relative;
+}
 
 .help-trigger {
+  position: absolute;
+  top: 0;
+  right: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
-  border: 1px solid var(--pico-muted-border-color);
+  border: 2px solid var(--pico-primary);
   border-radius: 50%;
   background: var(--pico-card-background-color, #fff);
   color: var(--pico-primary);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease,
+              color 0.15s ease, transform 0.15s ease;
+}
+
+.help-trigger svg {
+  width: 1.5rem;
+  height: 1.5rem;
 }
 
 .help-trigger:hover {
   background: var(--pico-primary);
   color: var(--pico-primary-inverse);
   border-color: var(--pico-primary);
+  transform: scale(1.08);
 }
 
 .help-trigger:focus-visible {
   outline: 2px solid var(--pico-primary);
-  outline-offset: 2px;
+  outline-offset: 3px;
 }
 
 /* ── Mobile overlay (<=768px) ───────────────────────────────────────── */
