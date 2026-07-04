@@ -35,11 +35,10 @@ from weewx_clearskies_config.registry import (
 # ---------------------------------------------------------------------------
 
 
-def test_all_8_sections_registered():
-    """All 8 declared sections must be in the registry."""
+def test_all_7_sections_registered():
+    """All 7 declared sections must be in the registry."""
     expected_section_ids = {
         "earthquakes",
-        "social",
         "analytics",
         "webcam",
         "branding",
@@ -55,7 +54,6 @@ def test_get_fields_for_section_returns_correct_count():
     """Each section should have the expected number of fields."""
     counts = {
         "earthquakes": 3,
-        "social": 4,
         "analytics": 2,
         "webcam": 4,
         "branding": 9,
@@ -87,9 +85,8 @@ def test_get_sections_for_group_returns_correct_sections():
 
 
 def test_get_sections_for_group_appearance():
-    """Appearance group contains social, analytics, branding."""
+    """Appearance group contains analytics, branding."""
     appearance_sections = {s.section_id for s in registry.get_sections_for_group("appearance")}
-    assert "social" in appearance_sections
     assert "analytics" in appearance_sections
     assert "branding" in appearance_sections
 
