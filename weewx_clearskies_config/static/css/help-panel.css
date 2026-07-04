@@ -132,15 +132,16 @@
 .help-tip {
   padding: 0.75rem 1rem;
   border-radius: 0.375rem;
-  background: var(--pico-primary-background, #e8f0fe);
+  background: color-mix(in srgb, var(--pico-primary) 10%, var(--pico-card-background-color, #fff));
   border-left: 3px solid var(--pico-primary);
   font-size: 0.875rem;
   margin-top: 1rem;
+  color: var(--pico-color);
 }
 
 @media (prefers-color-scheme: dark) {
   .help-tip {
-    background: color-mix(in srgb, var(--pico-primary) 12%, transparent);
+    background: color-mix(in srgb, var(--pico-primary) 12%, var(--pico-card-background-color, #1a1a2e));
   }
 }
 
