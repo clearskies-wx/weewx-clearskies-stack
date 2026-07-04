@@ -2241,6 +2241,11 @@ _BRANDING_UPLOAD_RULES: dict[str, tuple[frozenset[str], frozenset[str], int]] = 
         frozenset({"image/jpeg", "image/png", "image/webp"}),
         2 * 1024 * 1024,  # 2 MB
     ),
+    "background_file": (
+        frozenset({".jpg", ".jpeg", ".png", ".webp"}),
+        frozenset({"image/jpeg", "image/png", "image/webp"}),
+        5 * 1024 * 1024,  # 5 MB
+    ),
 }
 
 # Sanitise a filename: keep only alphanumerics, hyphens, underscores, dots.
@@ -2262,12 +2267,14 @@ def _sanitise_filename(name: str) -> str:
 async def _handle_branding_upload(
     form: Any,
     field_name: str,
+    subdirectory: str | None = None,
 ) -> tuple[str | None, str | None]:
     """Process one branding file upload field.
 
     Returns ``(url, error)`` where *url* is the served URL to store in state
-    (``/wizard/branding/<filename>``), or None if no file was uploaded.
-    *error* is a human-readable message or None.
+    (``/wizard/branding/<filename>``, or ``/wizard/branding/<subdirectory>/
+    <filename>`` when *subdirectory* is given), or None if no file was
+    uploaded. *error* is a human-readable message or None.
 
     The caller uses None to mean "keep the URL text-field value instead."
     """
@@ -2303,12 +2310,16 @@ async def _handle_branding_upload(
 
     safe_name = _sanitise_filename(raw_filename)
     dest_dir = _config_dir / "branding"
+    url_prefix = "/wizard/branding"
+    if subdirectory:
+        dest_dir = dest_dir / subdirectory
+        url_prefix = f"{url_prefix}/{subdirectory}"
     dest_dir.mkdir(parents=True, exist_ok=True)
     dest = dest_dir / safe_name
     dest.write_bytes(data)
     logger.info("Saved branding upload %s → %s", field_name, dest)
 
-    return f"/wizard/branding/{safe_name}", None
+    return f"{url_prefix}/{safe_name}", None
 
 
 @router.get("/step/8", response_class=HTMLResponse)
@@ -2371,6 +2382,16 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
         errors.append(err)
     else:
         state.favicon_url = favicon_url or str(form.get("favicon_url", "")).strip()
+
+    # Custom background image (optional) — replaces the dashboard's built-in
+    # day/night scene backgrounds when set.
+    background_url, err = await _handle_branding_upload(form, "background_file", subdirectory="backgrounds")
+    if err:
+        errors.append(err)
+    elif background_url:
+        state.custom_background_url = background_url
+    elif str(form.get("remove_background", "")).strip():
+        state.custom_background_url = ""
 
     if errors:
         from weewx_clearskies_config.registry import registry as _reg
@@ -3610,6 +3631,8 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.logo_alt = existing.logo_alt
     if not state.favicon_url and existing.favicon_url:
         state.favicon_url = existing.favicon_url
+    if not state.custom_background_url and existing.custom_background_url:
+        state.custom_background_url = existing.custom_background_url
     if not state.accent and existing.accent:
         state.accent = existing.accent
     if not state.default_theme_mode and existing.default_theme_mode:

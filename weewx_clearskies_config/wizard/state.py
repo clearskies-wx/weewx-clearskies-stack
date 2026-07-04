@@ -125,6 +125,11 @@ class WizardState:
     logo_dark_url: str = ""
     logo_alt: str = ""
     favicon_url: str = ""
+    # Custom background image (optional) — URL to an operator-uploaded image
+    # that replaces the dashboard's built-in day/night scene backgrounds.
+    # Empty string means "use the built-in backgrounds." Written to
+    # branding.json as customBackgroundUrl; the dashboard reads it directly.
+    custom_background_url: str = ""
 
     # Appearance / theme (step 8)
     # accent: one of "blue", "teal", "indigo", "purple", "green", "amber"

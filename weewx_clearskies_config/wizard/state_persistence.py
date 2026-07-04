@@ -552,6 +552,8 @@ def populate_from_branding_json(state: WizardState, config_dir: Path) -> None:
         state.copyright_entity = str(data["copyrightEntity"])
     if data.get("faviconUrl"):
         state.favicon_url = str(data["faviconUrl"])
+    if data.get("customBackgroundUrl"):
+        state.custom_background_url = str(data["customBackgroundUrl"])
     if data.get("accent"):
         state.accent = str(data["accent"])
     if data.get("defaultThemeMode"):

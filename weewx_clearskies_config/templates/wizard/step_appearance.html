@@ -150,6 +150,38 @@
     {{ render_field(fields_by_key["logo_alt"], values.get("logo_alt", ""), "wizard") }}
 
     {# ================================================================== #}
+    {# Section: Background                                                 #}
+    {# ================================================================== #}
+
+    <h3>{{ _("Background Image") }}</h3>
+
+    <fieldset>
+      <legend>{{ _("Background Image") }}</legend>
+      <p><small>{{ _("Upload a custom background image to replace the built-in day/night backgrounds. Landscape orientation recommended, minimum 1920×1080. JPG, PNG, or WebP, max 5 MB.") }}</small></p>
+
+      <label for="background_file">{{ _("Upload background image (optional)") }}</label>
+      <input type="file"
+             id="background_file"
+             name="background_file"
+             accept=".jpg,.jpeg,.png,.webp"
+             aria-describedby="background-file-hint">
+      <small id="background-file-hint">{{ _("Replaces all built-in scene backgrounds with your image.") }}</small>
+
+      {% if state.custom_background_url %}
+      <div id="background_preview">
+        <p><small><strong>{{ _("Current custom background:") }}</strong></small></p>
+        <img src="{{ state.custom_background_url }}"
+             alt="{{ _('Custom background preview') }}"
+             style="max-width: 300px; max-height: 150px; display: block; border-radius: 0.25rem;">
+        <label>
+          <input type="checkbox" name="remove_background" value="1">
+          {{ _("Remove custom background (use built-in backgrounds)") }}
+        </label>
+      </div>
+      {% endif %}
+    </fieldset>
+
+    {# ================================================================== #}
     {# Section 3: Colors &amp; Theme                                       #}
     {# ================================================================== #}
 

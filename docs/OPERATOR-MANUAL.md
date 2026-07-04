@@ -649,7 +649,7 @@ The API restarts automatically and warms the new provider's cache. The dashboard
 
 ### Changing the appearance
 
-Update colors, logos, theme, and social links from the **Appearance & Branding** section. Changes are written to `branding.json` and take effect on the next page load — visitors see the change when they refresh.
+Update colors, logos, theme, custom background image, and social links from the **Appearance & Branding** section. Changes are written to `branding.json` and take effect on the next page load — visitors see the change when they refresh. A custom background image (JPG/PNG/WebP, max 5 MB) replaces the dashboard's built-in day/night scene backgrounds; remove it to return to the built-in backgrounds.
 
 ### Managing page visibility
 

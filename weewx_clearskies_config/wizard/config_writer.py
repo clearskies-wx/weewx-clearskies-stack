@@ -187,6 +187,8 @@ def write_branding_json(state: WizardState, config_dir: Path) -> Path:
         "customTermsMd": state.custom_terms_md or "",
         "customPrivacyMd": state.custom_privacy_md or "",
     }
+    if state.custom_background_url:
+        branding["customBackgroundUrl"] = state.custom_background_url
     dest = config_dir / "branding.json"
     if dest.exists():
         shutil.copy2(dest, dest.with_suffix(".json.bak"))
