@@ -60,8 +60,9 @@
       <input type="file"
              id="logo_light_file"
              name="logo_light_file"
-             accept=".png,.svg,image/png,image/svg+xml">
-      <small>{{ _("PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.") }}</small>
+             accept=".png,.svg,image/png,image/svg+xml"
+             aria-describedby="help_logo_light_file">
+      <small id="help_logo_light_file">{{ _("PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.") }}</small>
 
       <label for="logo_light_url">{{ _("— or enter a URL") }}</label>
       {{ render_field(fields_by_key["logo_light_url"], values.get("logo_light_url", ""), "wizard") }}
@@ -88,8 +89,9 @@
       <input type="file"
              id="logo_dark_file"
              name="logo_dark_file"
-             accept=".png,.svg,image/png,image/svg+xml">
-      <small>{{ _("PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.") }}</small>
+             accept=".png,.svg,image/png,image/svg+xml"
+             aria-describedby="help_logo_dark_file">
+      <small id="help_logo_dark_file">{{ _("PNG or SVG, max 500 KB. Replaces the URL below when a file is chosen.") }}</small>
 
       <label for="logo_dark_url">{{ _("— or enter a URL") }}</label>
       {{ render_field(fields_by_key["logo_dark_url"], values.get("logo_dark_url", ""), "wizard") }}
@@ -137,8 +139,9 @@
       <input type="file"
              id="favicon_file"
              name="favicon_file"
-             accept=".ico,.png,image/x-icon,image/vnd.microsoft.icon,image/png">
-      <small>{{ _("ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.") }}</small>
+             accept=".ico,.png,image/x-icon,image/vnd.microsoft.icon,image/png"
+             aria-describedby="help_favicon_file">
+      <small id="help_favicon_file">{{ _("ICO or PNG, max 100 KB. Replaces the URL below when a file is chosen.") }}</small>
 
       <label for="favicon_url">{{ _("— or enter a URL") }}</label>
       {{ render_field(fields_by_key["favicon_url"], values.get("favicon_url", ""), "wizard") }}

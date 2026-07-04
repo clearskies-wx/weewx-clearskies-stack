@@ -57,7 +57,9 @@
              name="db_user"
              value="{{ state.db_user or '' }}"
              required
-             autocomplete="off">
+             autocomplete="off"
+             aria-describedby="db-user-hint">
+      <small id="db-user-hint">{{ _("MariaDB/MySQL username with read access to the weewx database.") }}</small>
 
       <label for="db_password">{{ _("Password") }}
         <span class="sr-only">({{ _("stored in secrets.env, never in config files") }})</span>
@@ -69,6 +71,7 @@
                name="db_password"
                value="{{ state.db_password or '' }}"
                autocomplete="off"
+               aria-describedby="db-password-hint"
                oninput="document.getElementById('db_password_unchanged').value='0'">
         <button type="button"
                 class="password-toggle"
@@ -82,6 +85,7 @@
           </svg>
         </button>
       </div>
+      <small id="db-password-hint">{{ _("Leave blank to keep the existing password. Stored securely in secrets.env.") }}</small>
 
       <label for="db_name">{{ _("Database name") }} <span aria-hidden="true">*</span></label>
       <input type="text"
@@ -89,7 +93,9 @@
              name="db_name"
              value="{{ state.db_name or 'weewx' }}"
              required
-             placeholder="weewx">
+             placeholder="weewx"
+             aria-describedby="db-name-hint">
+      <small id="db-name-hint">{{ _("Name of the weewx archive database. The default is usually correct.") }}</small>
     </fieldset>
 
     <div role="group">

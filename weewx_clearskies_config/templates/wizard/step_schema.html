@@ -222,6 +222,7 @@
                            value="{{ col.resolved_unit }}"
                            placeholder="e.g. degree_F"
                            aria-label="{{ _('Override unit for') }} {{ col.db_name }}"
+                           aria-describedby="help_unit_entry"
                            disabled>
                   </span>
                 {% else %}
@@ -245,6 +246,7 @@
                          value=""
                          placeholder="e.g. degree_F"
                          aria-label="{{ _('Enter unit for') }} {{ col.db_name }}"
+                         aria-describedby="help_unit_entry"
                          {% if ns.has_suggestions and col.resolved_unit %}disabled{% endif %}>
                 </span>
               </td>
@@ -252,6 +254,7 @@
             {% endfor %}
           </tbody>
         </table>
+        <small id="help_unit_entry" class="sr-only">{{ _("Enter a weewx unit name, e.g. degree_F, km_per_hour, mm.") }}</small>
       </fieldset>
       {% else %}
       <p>{{ _("All columns are stock weewx columns — no custom mapping needed.") }}</p>

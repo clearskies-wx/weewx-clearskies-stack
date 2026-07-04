@@ -104,11 +104,12 @@
           <label for="altitude_unit_select">{{ _("Unit") }}</label>
           <select id="altitude_unit_select"
                   onchange="onAltUnitChange(this.value)"
-                  aria-label="{{ _('Altitude unit') }}">
+                  aria-label="{{ _('Altitude unit') }}"
+                  aria-describedby="alt-unit-hint">
             <option value="meters" {% if state.altitude_unit != 'feet' %}selected{% endif %}>{{ _("meters") }}</option>
             <option value="feet" {% if state.altitude_unit == 'feet' %}selected{% endif %}>{{ _("feet") }}</option>
           </select>
-          <small>&nbsp;</small>
+          <small id="alt-unit-hint">{{ _("Choose meters or feet for the altitude value.") }}</small>
         </div>
       </div>
 
