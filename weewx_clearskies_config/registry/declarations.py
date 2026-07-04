@@ -33,7 +33,7 @@ registry.register_section(
             field_id="earthquakes.radius_km",
             field_type="number",
             label="Radius (km)",
-            help_text="Search radius in kilometres from your station. Earthquakes beyond this distance are not shown on the Seismic page.",
+            help_text="Search radius in kilometers from your station. Earthquakes beyond this distance are not shown on the Seismic page.",
             default="250",
             validation=(
                 ValidationRule("min", 1),
@@ -46,7 +46,7 @@ registry.register_section(
             field_id="earthquakes.min_magnitude",
             field_type="number",
             label="Minimum Magnitude",
-            help_text="Only show earthquakes at or above this magnitude. The Richter scale is logarithmic — each whole number is roughly 32× more energy.",
+            help_text="Only show earthquakes at or above this magnitude on the Moment Magnitude scale (Mw). The scale is logarithmic — each whole number is roughly 32 times more energy.",
             default="2.0",
             validation=(
                 ValidationRule("min", 0),
@@ -60,7 +60,7 @@ registry.register_section(
             field_id="earthquakes.default_days",
             field_type="select",
             label="Default Time Range",
-            help_text="Initial time window shown when visitors open the Seismic page. Visitors can change this.",
+            help_text="How many days of earthquake history to show by default. Visitors can change this on the Seismic page.",
             default="30",
             options=(
                 FieldOption(value="1", label="1 day"),
