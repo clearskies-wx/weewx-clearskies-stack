@@ -101,6 +101,12 @@ class WizardState:
     # Used by image resolution to locate files under /etc/weewx/skins/<skin>/.
     source_skin: str | None = None
 
+    # Converted charts.conf content (from graphs.conf migration, T4.1).
+    # Empty string means no graphs.conf was uploaded / migration was not
+    # attempted or failed. Written to /etc/weewx-clearskies/charts.conf on
+    # apply when non-empty.
+    charts_conf_text: str = ""
+
     # Image resolution results from step 0 import (ADR-043).
     # Shape: {key: {"status": "local"|"api"|"unresolved"|"missing", "dest": str|None, "original": str}}
     # None means no image detection has been attempted.

@@ -475,6 +475,15 @@ def apply_wizard(state: WizardState, config_dir: Path) -> dict[str, Any]:
         files_written.append(str(caddy_env_path))
     secrets_written.append(str(write_secrets_env(state, config_dir)))
 
+    # Charts config (T4.1) — written only when a graphs.conf was uploaded and
+    # successfully converted during the import step (step_import_post).
+    if state.charts_conf_text:
+        charts_path = config_dir / "charts.conf"
+        if charts_path.exists():
+            shutil.copy2(charts_path, charts_path.with_suffix(charts_path.suffix + ".bak"))
+        _write_file(charts_path, state.charts_conf_text)
+        files_written.append(str(charts_path))
+
     result: dict[str, Any] = {
         "files_written": files_written,
         "secrets_written": secrets_written,

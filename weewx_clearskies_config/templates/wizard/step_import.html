@@ -73,6 +73,21 @@
 
     <hr>
 
+    {# --- Chart layout migration (optional) --- #}
+    <fieldset>
+      <legend>{{ _("Chart Layout Migration") }}</legend>
+      <p><small>{{ _("If you have a Belchertown graphs.conf file, upload it to automatically convert your chart layout to Clear Skies format. This is optional — you can configure charts manually later.") }}</small></p>
+      <label for="graphs_conf_file">{{ _("Upload graphs.conf (optional)") }}</label>
+      <input type="file"
+             id="graphs_conf_file"
+             name="graphs_conf_file"
+             accept=".conf"
+             aria-describedby="graphs-conf-hint">
+      <small id="graphs-conf-hint">{{ _("Belchertown graphs.conf file. Will be converted to Clear Skies charts.conf format.") }}</small>
+    </fieldset>
+
+    <hr>
+
     {# --- Fresh-start path --- #}
     <div>
       <input type="hidden" name="fresh_start" value="0">

@@ -414,6 +414,43 @@ async def step_import_post(request: Request) -> HTMLResponse:
     form = await request.form()
     fresh_start = str(form.get("fresh_start", "0")).strip() == "1"
 
+    # --- Charts migration (optional) ---
+    # Independent of the skin.conf import path chosen below (API fetch, file
+    # upload, or fresh start) — an operator may upload graphs.conf regardless
+    # of how (or whether) they import skin.conf. Failure here never blocks
+    # the wizard; charts can always be configured manually later.
+    graphs_file = form.get("graphs_conf_file")
+    if graphs_file is not None and hasattr(graphs_file, "read"):
+        filename = getattr(graphs_file, "filename", None)
+        if filename:
+            import tempfile
+
+            try:
+                from weewx_clearskies_api.tools.migrate_charts import migrate
+
+                content = await graphs_file.read()
+                tmp_path: Path | None = None
+                try:
+                    with tempfile.NamedTemporaryFile(mode="wb", suffix=".conf", delete=False) as tmp:
+                        tmp.write(content)
+                        tmp_path = Path(tmp.name)
+                    output_text, _log_lines, warnings = migrate(tmp_path)
+                    state.charts_conf_text = output_text
+                    if warnings:
+                        logger.info(
+                            "Charts migration completed with %d warning(s): %s",
+                            len(warnings),
+                            "; ".join(warnings),
+                        )
+                finally:
+                    if tmp_path is not None:
+                        tmp_path.unlink(missing_ok=True)
+            except ImportError:
+                logger.warning("migrate_charts not available — skipping charts migration")
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("Charts migration failed: %s", exc)
+                # Don't block the wizard — charts migration is optional.
+
     if fresh_start:
         # Clear any previously imported config and proceed to step 3 (EULA).
         state.imported_config = None
