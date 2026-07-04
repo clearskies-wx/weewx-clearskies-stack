@@ -1068,6 +1068,12 @@ async def wizard_index(request: Request) -> HTMLResponse | RedirectResponse:
                 state.tls_dns_provider = prior.tls_dns_provider
             if not state.tls_dns_api_token and prior.tls_dns_api_token:
                 state.tls_dns_api_token = prior.tls_dns_api_token
+            if not state.tls_cert_path and prior.tls_cert_path:
+                state.tls_cert_path = prior.tls_cert_path
+                state.tls_cert_uploaded = prior.tls_cert_uploaded
+            if not state.tls_key_path and prior.tls_key_path:
+                state.tls_key_path = prior.tls_key_path
+                state.tls_key_uploaded = prior.tls_key_uploaded
             save_wizard_state(session_id, state)
             logger.info("Restored wizard progress from prior session into session %s", session_id[:8])
         else:
@@ -2658,6 +2664,84 @@ async def step_feature_settings_post(request: Request) -> HTMLResponse:
 # Step 13: TLS / HTTPS Configuration
 # ---------------------------------------------------------------------------
 
+# Allowed file types for TLS certificate/key uploads (Manual mode).
+# These are NEVER written to the web-served branding/ directory — see
+# _handle_tls_upload.  MIME types are advisory only: browsers frequently
+# send application/octet-stream (or nothing at all) for PEM files, so a
+# missing/generic content_type is not treated as an error — only a content_type
+# that is present AND recognisably wrong is rejected.
+_TLS_UPLOAD_EXTS = frozenset({".pem", ".crt", ".key"})
+_TLS_UPLOAD_MIMES = frozenset({"text/plain", "application/x-pem-file", "application/octet-stream"})
+_TLS_UPLOAD_MAX_BYTES = 100 * 1024  # 100 KB
+
+
+async def _handle_tls_upload(form: Any, field_name: str) -> tuple[str | None, str | None]:
+    """Process one TLS certificate/key file upload (Manual mode).
+
+    Returns ``(file_path, error)`` where *file_path* is the full filesystem
+    path the file was written to (NOT a URL — unlike branding uploads, TLS
+    private keys must never live under the web-served branding/ directory),
+    or None if no file was uploaded.  *error* is a human-readable message or
+    None.
+
+    Files are written to ``{config_dir}/tls/`` with mode 0600.  The caller
+    uses (None, None) to mean "keep the typed path-field value instead."
+    """
+    if _config_dir is None:
+        return None, _("Configuration directory not set — cannot save uploaded files.")
+
+    upload = form.get(field_name)
+
+    # Starlette represents a non-selected file input as either None or a
+    # UploadFile with an empty .filename.  Both mean "no file chosen."
+    if upload is None or not hasattr(upload, "filename") or not upload.filename:
+        return None, None
+
+    raw_filename: str = str(upload.filename)
+    suffix = Path(raw_filename).suffix.lower()
+    if suffix not in _TLS_UPLOAD_EXTS:
+        return None, _(
+            'Unsupported file type "{suffix}" for {field}. Allowed: {allowed}.'
+        ).format(
+            suffix=suffix,
+            field=field_name.replace("_file", ""),
+            allowed=", ".join(sorted(_TLS_UPLOAD_EXTS)),
+        )
+
+    content_type = getattr(upload, "content_type", None)
+    if content_type and content_type not in _TLS_UPLOAD_MIMES:
+        return None, _(
+            'Unsupported content type "{content_type}" for {field}.'
+        ).format(content_type=content_type, field=field_name.replace("_file", ""))
+
+    data: bytes = await upload.read()
+    if len(data) > _TLS_UPLOAD_MAX_BYTES:
+        max_kb = _TLS_UPLOAD_MAX_BYTES // 1024
+        return None, _(
+            "{field}: file is {size} KB, exceeds the {limit} KB limit."
+        ).format(
+            field=field_name.replace("_file", "").replace("_", " ").title(),
+            size=len(data) // 1024,
+            limit=max_kb,
+        )
+
+    safe_name = _sanitise_filename(raw_filename)
+    dest_dir = _config_dir / "tls"
+    dest_dir.mkdir(parents=True, exist_ok=True)
+    try:
+        os.chmod(dest_dir, 0o700)
+    except OSError:
+        pass
+    dest = dest_dir / safe_name
+    dest.write_bytes(data)
+    try:
+        os.chmod(dest, 0o600)
+    except OSError:
+        pass
+    logger.info("Saved TLS upload %s → %s", field_name, dest)
+
+    return str(dest), None
+
 
 @router.get("/tls", response_class=HTMLResponse)
 async def step_tls_get(request: Request) -> HTMLResponse:
@@ -2674,6 +2758,8 @@ async def step_tls_get(request: Request) -> HTMLResponse:
         "acme_email": state.tls_acme_email,
         "dns_provider": state.tls_dns_provider,
         "dns_api_token": state.tls_dns_api_token,
+        "cert_path": state.tls_cert_path,
+        "key_path": state.tls_key_path,
     }
     return _render(request, "step_tls.html", {"step": 13, "state": state, "fields": fields, "values": values, "error": None})
 
@@ -2693,6 +2779,47 @@ async def step_tls_post(request: Request) -> HTMLResponse:
     state.tls_dns_provider = str(form.get("dns_provider", "")).strip()
     state.tls_dns_api_token = str(form.get("dns_api_token", "")).strip()
 
+    # --- Manual mode: certificate/key, either uploaded or typed as a path ---
+    # A hidden "cert_was_uploaded"/"key_was_uploaded" marker is rendered by
+    # the template when the current value came from a prior upload; it lets
+    # us distinguish "operator re-submitted the same uploaded file's path
+    # unchanged" from "operator is typing a fresh path" without requiring a
+    # new file on every submit.
+    cert_path_input = str(form.get("cert_path", "")).strip()
+    key_path_input = str(form.get("key_path", "")).strip()
+    cert_prev_uploaded = str(form.get("cert_was_uploaded", "")).strip() == "1"
+    key_prev_uploaded = str(form.get("key_was_uploaded", "")).strip() == "1"
+
+    upload_errors: list[str] = []
+
+    cert_upload_path, cert_err = await _handle_tls_upload(form, "cert_file")
+    if cert_err:
+        upload_errors.append(cert_err)
+    if cert_upload_path:
+        state.tls_cert_path = cert_upload_path
+        state.tls_cert_uploaded = True
+    elif cert_prev_uploaded and cert_path_input:
+        # No new file this submission — carry forward the previously
+        # uploaded file's path and uploaded status.
+        state.tls_cert_path = cert_path_input
+        state.tls_cert_uploaded = True
+    else:
+        state.tls_cert_path = cert_path_input
+        state.tls_cert_uploaded = False
+
+    key_upload_path, key_err = await _handle_tls_upload(form, "key_file")
+    if key_err:
+        upload_errors.append(key_err)
+    if key_upload_path:
+        state.tls_key_path = key_upload_path
+        state.tls_key_uploaded = True
+    elif key_prev_uploaded and key_path_input:
+        state.tls_key_path = key_path_input
+        state.tls_key_uploaded = True
+    else:
+        state.tls_key_path = key_path_input
+        state.tls_key_uploaded = False
+
     def _tls_error(msg: str) -> HTMLResponse:
         values = {
             "mode": state.tls_mode,
@@ -2700,6 +2827,8 @@ async def step_tls_post(request: Request) -> HTMLResponse:
             "acme_email": state.tls_acme_email,
             "dns_provider": state.tls_dns_provider,
             "dns_api_token": state.tls_dns_api_token,
+            "cert_path": state.tls_cert_path,
+            "key_path": state.tls_key_path,
         }
         return _render(
             request,
@@ -2707,6 +2836,9 @@ async def step_tls_post(request: Request) -> HTMLResponse:
             {"step": 13, "state": state, "fields": fields, "values": values, "error": msg},
             status_code=422,
         )
+
+    if upload_errors:
+        return _tls_error(" ".join(upload_errors))
 
     _VALID_TLS_MODES = {opt.value for f in fields for opt in (f.options or ()) if f.config_key == "mode"}
     if not _VALID_TLS_MODES:
@@ -2725,6 +2857,12 @@ async def step_tls_post(request: Request) -> HTMLResponse:
 
     if state.tls_mode == "acme_dns01" and not state.tls_dns_api_token:
         return _tls_error(_("DNS provider API token is required."))
+
+    if state.tls_mode == "manual" and not state.tls_cert_path:
+        return _tls_error(_("Certificate path is required for Manual mode. Upload a certificate file or enter its path."))
+
+    if state.tls_mode == "manual" and not state.tls_key_path:
+        return _tls_error(_("Key path is required for Manual mode. Upload a key file or enter its path."))
 
     save_wizard_state(session_id, state)
     return await step9_review_get(request)
@@ -3261,9 +3399,20 @@ async def wizard_restart_status(request: Request) -> HTMLResponse:
 
     The API health check is unauthenticated (GET /health) so it works even
     after the setup session has expired.
+
+    Poll count (T4.5): ``state.restart_poll_count`` tracks how many times
+    this endpoint has been hit while the API was still down. Once it
+    exceeds 150 (~5 minutes at the 2s poll interval), the fragment renders
+    a timeout message with a Retry button instead of the spinner, wrapped
+    in ``<div class="poll-timeout">`` — a second condition the HTMX
+    polling expression watches to stop polling. ``?retry=1`` resets the
+    counter so polling can resume.
     """
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+
+    if request.query_params.get("retry"):
+        state.restart_poll_count = 0
 
     api_up = False
     if state.api_address:
@@ -3273,11 +3422,20 @@ async def wizard_restart_status(request: Request) -> HTMLResponse:
         except Exception:  # noqa: BLE001
             api_up = False
 
+    if api_up:
+        state.restart_poll_count = 0
+    else:
+        state.restart_poll_count += 1
+
+    timed_out = (not api_up) and state.restart_poll_count > 150
+
     return _render(
         request,
         "restart_status_fragment.html",
         {
             "api_up": api_up,
+            "poll_count": state.restart_poll_count,
+            "timed_out": timed_out,
         },
     )
 
@@ -3503,6 +3661,12 @@ def _merge_from_existing_config(state: WizardState) -> None:
         state.tls_dns_provider = existing.tls_dns_provider
     if not state.tls_dns_api_token and existing.tls_dns_api_token:
         state.tls_dns_api_token = existing.tls_dns_api_token
+    if not state.tls_cert_path and existing.tls_cert_path:
+        state.tls_cert_path = existing.tls_cert_path
+        state.tls_cert_uploaded = existing.tls_cert_uploaded
+    if not state.tls_key_path and existing.tls_key_path:
+        state.tls_key_path = existing.tls_key_path
+        state.tls_key_uploaded = existing.tls_key_uploaded
 
 
 def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> None:

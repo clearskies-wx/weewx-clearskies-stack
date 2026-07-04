@@ -195,12 +195,31 @@ class WizardState:
     # tls_dns_api_token is stored in state for session recovery but written
     # only to secrets.env (mode 0600), never to stack.conf.
     tls_dns_api_token: str = ""
+    # Manual mode: filesystem paths to the operator-supplied certificate and
+    # private key (PEM format).  Populated either by typing a path directly
+    # or by uploading a file (see tls_cert_uploaded/tls_key_uploaded below).
+    # Written to stack.conf [tls] cert_path/key_path when tls_mode == "manual".
+    tls_cert_path: str = ""
+    tls_key_path: str = ""
+    # True when the corresponding path above was populated by a file upload
+    # (saved under {config_dir}/tls/) rather than an operator-typed path.
+    # Used by the TLS step template to show "Using uploaded certificate/key"
+    # instead of an editable path field on re-run.
+    tls_cert_uploaded: bool = False
+    tls_key_uploaded: bool = False
 
     # Registry-keyed values for wizard steps that delegate field rendering
     # to the config registry macros.  Key = registry config_key (e.g. "enabled",
     # "image_url"), value = current value.  Populated by step GET handlers and
     # read by step templates via render_section_fields / render_field.
     registry_values: dict[str, Any] = field(default_factory=dict)
+
+    # Restart-status polling counter (T4.5).  Incremented on every
+    # GET /wizard/restart-status call made while the API is still down;
+    # reset to 0 once the API responds healthy, or when the operator clicks
+    # Retry after a timeout is reached. Ephemeral — not written to disk,
+    # since it only matters for the few minutes right after Apply.
+    restart_poll_count: int = 0
 
 
 # ---------------------------------------------------------------------------

@@ -145,6 +145,9 @@ def write_stack_conf(state: WizardState, config_dir: Path) -> Path:
     if state.tls_mode == "acme_dns01":
         tls_section["dns_provider"] = state.tls_dns_provider
         # dns_api_token intentionally omitted — lives in secrets.env only.
+    if state.tls_mode == "manual":
+        tls_section["cert_path"] = state.tls_cert_path
+        tls_section["key_path"] = state.tls_key_path
     cfg["tls"] = tls_section
 
     content = _wrap_with_managed_region(cfg)

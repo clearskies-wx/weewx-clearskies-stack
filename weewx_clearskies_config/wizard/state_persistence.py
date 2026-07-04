@@ -451,6 +451,25 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 state.tls_acme_email = str(tls_section["acme_email"])
             if tls_section.get("dns_provider"):
                 state.tls_dns_provider = str(tls_section["dns_provider"])
+            if tls_section.get("cert_path"):
+                state.tls_cert_path = str(tls_section["cert_path"])
+                # A path under {config_dir}/tls/ was written by our own
+                # upload handler on a prior run; anything else was typed
+                # directly by the operator.
+                try:
+                    state.tls_cert_uploaded = (
+                        Path(state.tls_cert_path).resolve().parent == (config_dir / "tls").resolve()
+                    )
+                except OSError:
+                    state.tls_cert_uploaded = False
+            if tls_section.get("key_path"):
+                state.tls_key_path = str(tls_section["key_path"])
+                try:
+                    state.tls_key_uploaded = (
+                        Path(state.tls_key_path).resolve().parent == (config_dir / "tls").resolve()
+                    )
+                except OSError:
+                    state.tls_key_uploaded = False
         # DNS API token lives in secrets.env only — never in stack.conf.
         tls_token = secrets.get("WEEWX_CLEARSKIES_TLS_DNS_API_TOKEN", "")
         if tls_token:
@@ -584,7 +603,7 @@ def _state_from_dict(raw: dict[str, Any]) -> WizardState:
     """Construct a WizardState from a plain dict, validating types."""
     _INT_FIELDS = {"db_port", "api_bind_port", "webcam_refresh_interval", "earthquake_default_days"}
     _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters", "earthquake_radius_km", "earthquake_min_magnitude"}
-    _BOOL_FIELDS = {"schema_skipped", "webcam_enabled"}
+    _BOOL_FIELDS = {"schema_skipped", "webcam_enabled", "tls_cert_uploaded", "tls_key_uploaded"}
 
     kwargs: dict[str, Any] = {}
     for f in dataclasses.fields(WizardState):

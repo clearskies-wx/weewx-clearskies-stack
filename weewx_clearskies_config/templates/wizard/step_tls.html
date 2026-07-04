@@ -1,4 +1,4 @@
-{% from "macros/form_fields.html" import render_section_fields %}
+{% from "macros/form_fields.html" import render_section_fields, render_field %}
 {% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
@@ -16,9 +16,70 @@
         hx-target="#wizard-content"
         hx-swap="innerHTML show:window:top"
         hx-indicator="#wizard-spinner"
+        hx-encoding="multipart/form-data"
         autocomplete="off">
 
-    {{ render_section_fields(fields, values, "wizard") }}
+    {# cert_path / key_path are rendered manually below (upload + path,
+       with special-case display when a file was previously uploaded), so
+       they are excluded from the registry-driven pass here. #}
+    {{ render_section_fields(fields | rejectattr("config_key", "in", ["cert_path", "key_path"]) | list, values, "wizard") }}
+
+    {# Manual mode: certificate + key, upload or typed path. Shown/hidden by
+       conditional-visibility.js using the same data-condition-* contract as
+       the other TLS mode fields. #}
+    <div class="field-full" data-condition-field="tls.mode" data-condition-op="eq" data-condition-value="manual">
+      <fieldset>
+        <legend>{{ _("Certificate") }}</legend>
+
+        {% if state.tls_cert_uploaded and state.tls_cert_path %}
+        <p>
+          <small>
+            {{ _("Using uploaded certificate:") }}
+            <strong>{{ state.tls_cert_path.split('/')[-1].split('\\')[-1] }}</strong>
+          </small>
+        </p>
+        <input type="hidden" name="cert_path" value="{{ state.tls_cert_path }}">
+        <input type="hidden" name="cert_was_uploaded" value="1">
+        {% else %}
+        {% set cert_path_field = fields | selectattr("config_key", "eq", "cert_path") | first %}
+        {{ render_field(cert_path_field, values.get("cert_path", ""), "wizard") }}
+        {% endif %}
+
+        <label for="cert_file">{{ _("Upload a certificate file") }}</label>
+        <input type="file"
+               id="cert_file"
+               name="cert_file"
+               accept=".pem,.crt,.key"
+               aria-describedby="help_cert_file">
+        <small id="help_cert_file">{{ _("PEM-encoded certificate, max 100 KB. Replaces the path above when a file is chosen.") }}</small>
+      </fieldset>
+
+      <fieldset>
+        <legend>{{ _("Private Key") }}</legend>
+
+        {% if state.tls_key_uploaded and state.tls_key_path %}
+        <p>
+          <small>
+            {{ _("Using uploaded key:") }}
+            <strong>{{ state.tls_key_path.split('/')[-1].split('\\')[-1] }}</strong>
+          </small>
+        </p>
+        <input type="hidden" name="key_path" value="{{ state.tls_key_path }}">
+        <input type="hidden" name="key_was_uploaded" value="1">
+        {% else %}
+        {% set key_path_field = fields | selectattr("config_key", "eq", "key_path") | first %}
+        {{ render_field(key_path_field, values.get("key_path", ""), "wizard") }}
+        {% endif %}
+
+        <label for="key_file">{{ _("Upload a private key file") }}</label>
+        <input type="file"
+               id="key_file"
+               name="key_file"
+               accept=".pem,.crt,.key"
+               aria-describedby="help_key_file">
+        <small id="help_key_file">{{ _("PEM-encoded private key, max 100 KB. Stored securely on the server, never web-served. Replaces the path above when a file is chosen.") }}</small>
+      </fieldset>
+    </div>
 
     <div role="group">
       <button type="button"
