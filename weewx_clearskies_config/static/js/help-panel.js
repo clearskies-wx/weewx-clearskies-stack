@@ -95,10 +95,49 @@
   }
 
   /**
+   * Play a one-time discoverability pulse on the first .help-trigger found
+   * on the page, so first-time operators notice the help button exists.
+   * Plays only once per browser session (sessionStorage flag), and stops
+   * immediately if the operator clicks the trigger before it finishes.
+   */
+  function initHelpIntroAnimation() {
+    var seen;
+    try {
+      seen = sessionStorage.getItem("help-intro-seen");
+    } catch (e) {
+      // sessionStorage unavailable (e.g. privacy mode) — skip rather than
+      // risk replaying the animation on every step.
+      seen = "1";
+    }
+    if (seen) return;
+
+    var trigger = document.querySelector(".help-trigger");
+    if (!trigger) return;
+
+    var done = false;
+    function markSeen() {
+      if (done) return;
+      done = true;
+      trigger.classList.remove("help-intro-animate");
+      try { sessionStorage.setItem("help-intro-seen", "1"); } catch (e) { /* ignore */ }
+    }
+
+    trigger.addEventListener("animationend", markSeen);
+    // Fallback in case the animation never fires (e.g. reduced-motion).
+    setTimeout(markSeen, 3000);
+    // Stop right away if the operator interacts with the button.
+    trigger.addEventListener("click", markSeen, { once: true });
+
+    trigger.classList.add("help-intro-animate");
+  }
+
+  /**
    * Initialize help panel event listeners. Called on DOMContentLoaded.
    * Uses event delegation so dynamically added triggers (HTMX swaps) work.
    */
   function initHelpPanel() {
+    initHelpIntroAnimation();
+
     // Delegate clicks on .help-trigger buttons (works with HTMX-swapped content).
     document.addEventListener("click", function (e) {
       var trigger = e.target.closest(".help-trigger");

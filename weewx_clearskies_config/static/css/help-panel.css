@@ -187,6 +187,27 @@
   border-radius: 50%;
 }
 
+/* ── First-visit discoverability animation (T4.2) ───────────────────
+ * Applied once, via JS (help-panel.js), to the first .help-trigger found
+ * on the page's initial load. Removed by JS after it finishes (or after
+ * a click), and never re-applied within the same browser session
+ * (tracked with sessionStorage). Subtle: a soft glow pulse, not a bounce.
+ */
+@keyframes help-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--pico-primary) 40%, transparent); }
+  50% { box-shadow: 0 0 0 8px transparent; }
+}
+
+.help-trigger.help-intro-animate {
+  animation: help-pulse 1s ease-in-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .help-trigger.help-intro-animate {
+    animation: none;
+  }
+}
+
 /* ── Mobile overlay (<=768px) ───────────────────────────────────────── */
 
 .help-panel-backdrop {

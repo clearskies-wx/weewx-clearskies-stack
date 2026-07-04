@@ -2,25 +2,50 @@
   restart_status_fragment.html — HTMX polling fragment for service restart status.
 
   Context variables:
-    api_up  (bool) — True if GET /health returned 2xx.
+    api_up      (bool) — True if GET /health returned 2xx.
+    poll_count  (int)  — Number of consecutive polls since this page was
+                          reached (or since the operator last clicked Retry).
+                          Reset to 0 whenever api_up is True.
+    timed_out   (bool) — True once poll_count exceeds the ~5 minute budget
+                          (150 polls at the 2s interval) without the API
+                          coming back.
 
   The outer .all-done wrapper is emitted only when the API is confirmed up.
-  The HTMX trigger on the parent div watches for this class to stop polling:
-    hx-trigger="every 2s [!document.querySelector('#restart-status .all-done')]"
+  The outer .poll-timeout wrapper is emitted once the timeout is reached.
+  The HTMX trigger on the parent div watches for both classes to stop polling:
+    hx-trigger="every 2s [!document.querySelector('#restart-status .all-done')
+                          && !document.querySelector('#restart-status .poll-timeout')]"
 #}
 
-{% if api_up %}<div class="all-done">{% endif %}
-
-<div class="restart-item">
-  {% if api_up %}
-  <span class="alert-success" style="display:inline-flex; padding:0.3rem 0.6rem; margin-bottom:0; gap:0.4rem;">
-    <span aria-hidden="true">&#10003;</span> {{ _("API service — running") }}
-  </span>
-  {% else %}
+{% if api_up %}
+<div class="all-done" data-poll-count="{{ poll_count }}">
+  <div class="restart-item">
+    <span class="alert-success" style="display:inline-flex; padding:0.3rem 0.6rem; margin-bottom:0; gap:0.4rem;">
+      <span aria-hidden="true">&#10003;</span> {{ _("API service — running") }}
+    </span>
+  </div>
+</div>
+{% elif timed_out %}
+<div class="poll-timeout" data-poll-count="{{ poll_count }}">
+  <div class="restart-item" role="alert">
+    <div class="alert-error" style="display:block;">
+      <p style="margin:0 0 0.5rem 0;">
+        {{ _("The API service did not come back online within 5 minutes. It may need attention on the server.") }}
+      </p>
+      <button type="button"
+              hx-get="/wizard/restart-status?retry=1"
+              hx-target="#restart-status"
+              hx-swap="innerHTML"
+              hx-indicator="#wizard-spinner">
+        {{ _("Retry") }}
+      </button>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="restart-item" data-poll-count="{{ poll_count }}">
   <span class="cs-spinner" aria-hidden="true"></span>
   {{ _("Restarting API service…") }}
-  {% endif %}
 </div>
-
-{% if api_up %}</div>{% endif %}
+{% endif %}
 </content>

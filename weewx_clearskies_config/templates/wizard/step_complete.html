@@ -43,7 +43,7 @@
          aria-live="polite"
          aria-label="{{ _('Service restart progress') }}"
          hx-get="/wizard/restart-status"
-         hx-trigger="load, every 2s [!document.querySelector('#restart-status .all-done')]"
+         hx-trigger="load, every 2s [!document.querySelector('#restart-status .all-done') && !document.querySelector('#restart-status .poll-timeout')]"
          hx-swap="innerHTML">
       {# Initial placeholder — replaced immediately by the first HTMX poll. #}
       <div class="restart-item">
@@ -51,7 +51,86 @@
         {{ _("Restarting API service...") }}
       </div>
     </div>
+    {# ---- Auto-redirect once the API is confirmed up (T4.5) ------------ #}
+    {# Translated strings travel via data-* attributes (same convention as  #}
+    {# data-help-url on .help-trigger) rather than being interpolated      #}
+    {# directly into JS string literals, so a translated value can never   #}
+    {# break out of a JS string delimiter.                                 #}
+    <div id="restart-redirect"
+         aria-live="polite"
+         data-ready-text="{{ _('API is ready!') }}"
+         data-redirect-template="{{ _('Redirecting to your dashboard in {n} seconds...') }}"
+         data-go-to-dashboard-text="{{ _('Go to Dashboard') }}"></div>
   </section>
+
+  <script>
+  (function () {
+    "use strict";
+    var restartStatus = document.getElementById("restart-status");
+    var redirectBox = document.getElementById("restart-redirect");
+    if (!restartStatus || !redirectBox) return;
+
+    var redirectTemplate = redirectBox.getAttribute("data-redirect-template");
+    var readyText = redirectBox.getAttribute("data-ready-text");
+    var goToDashboardText = redirectBox.getAttribute("data-go-to-dashboard-text");
+    var handled = false;
+    var countdownTimer = null;
+
+    function showReadyUi() {
+      if (handled) return;
+      handled = true;
+
+      var readyP = document.createElement("p");
+      readyP.className = "alert-success";
+      readyP.textContent = readyText;
+
+      var countdownP = document.createElement("p");
+      countdownP.id = "redirect-countdown";
+      var seconds = 3;
+      countdownP.textContent = redirectTemplate.replace("{n}", seconds);
+
+      var dashboardLink = document.createElement("a");
+      dashboardLink.href = "/";
+      dashboardLink.setAttribute("role", "button");
+      dashboardLink.id = "go-to-dashboard-btn";
+      dashboardLink.textContent = goToDashboardText;
+
+      redirectBox.innerHTML = "";
+      redirectBox.appendChild(readyP);
+      redirectBox.appendChild(countdownP);
+      redirectBox.appendChild(dashboardLink);
+
+      countdownTimer = setInterval(function () {
+        seconds -= 1;
+        var countdownEl = document.getElementById("redirect-countdown");
+        if (seconds <= 0) {
+          clearInterval(countdownTimer);
+          window.location.href = "/";
+          return;
+        }
+        if (countdownEl) {
+          countdownEl.textContent = redirectTemplate.replace("{n}", seconds);
+        }
+      }, 1000);
+    }
+
+    function checkDone() {
+      if (restartStatus.querySelector(".all-done")) {
+        showReadyUi();
+        return true;
+      }
+      return false;
+    }
+
+    // Cover the case where the API was already up on the very first poll.
+    if (!checkDone()) {
+      var observer = new MutationObserver(function () {
+        if (checkDone() && observer) observer.disconnect();
+      });
+      observer.observe(restartStatus, { childList: true, subtree: true });
+    }
+  })();
+  </script>
 
   {% if result %}
   {# ---- Files written -------------------------------------------- #}
