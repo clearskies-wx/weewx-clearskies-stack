@@ -135,17 +135,17 @@
 
   {# ── radio ── #}
   {%- elif field.field_type == "radio" %}
-  <fieldset>
+  <fieldset class="theme-radio-group">
     <legend>{{ _(field.label) }}</legend>
     {% for opt in field.options %}
-    <label>
+    <label class="theme-radio-card">
       <input type="radio"
              id="{{ eid }}_{{ opt.value | replace('.', '_') | replace(' ', '_') }}"
              name="{{ field.config_key }}"
              value="{{ opt.value }}"
              {% if value == opt.value %}checked{% endif %}
              aria-describedby="{{ hid }}">
-      {{ _(opt.label) }}
+      <span class="theme-radio-label">{{ _(opt.label) }}</span>
       {% if opt.description %}<small>{{ _(opt.description) }}</small>{% endif %}
     </label>
     {% endfor %}
@@ -189,10 +189,10 @@
 
   {# ── radio_swatch ── #}
   {%- elif field.field_type == "radio_swatch" %}
-  <fieldset class="accent-swatches">
+  <fieldset class="accent-swatch-group">
     <legend>{{ _(field.label) }}</legend>
     {% for opt in field.options %}
-    <label class="swatch-label">
+    <label class="accent-swatch-label">
       <input type="radio"
              id="{{ eid }}_{{ opt.value | replace('.', '_') | replace(' ', '_') }}"
              name="{{ field.config_key }}"
@@ -200,10 +200,11 @@
              {% if value == opt.value %}checked{% endif %}
              aria-describedby="{{ hid }}"
              class="swatch-radio">
-      <span class="swatch"
+      <span class="accent-swatch-circle"
             style="background-color: var(--accent-{{ opt.value }})"
             title="{{ _(opt.label) }}"
             aria-label="{{ _(opt.label) }}"></span>
+      <span class="accent-swatch-name">{{ _(opt.label) }}</span>
     </label>
     {% endfor %}
   </fieldset>

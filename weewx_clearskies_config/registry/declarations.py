@@ -102,9 +102,10 @@ registry.register_section(
             field_id="analytics.privacy_regions",
             field_type="select",
             label="Privacy Regions",
-            help_text="Controls the consent banner shown to visitors based on their geographic region.",
+            help_text="Controls the consent banner shown to visitors based on their geographic region. Selecting 'None' disables the consent banner — you are responsible for compliance with applicable privacy laws in your jurisdiction.",
             default="global",
             options=(
+                FieldOption(value="none", label="None / Disabled"),
                 FieldOption(value="global", label="Global"),
                 FieldOption(value="eu_gdpr", label="EU (GDPR)"),
                 FieldOption(value="us_ccpa", label="US (CCPA)"),
