@@ -1710,6 +1710,11 @@ async def step4_get(request: Request) -> HTMLResponse:
         from weewx_clearskies_config.wizard.state_persistence import populate_from_branding_json
         populate_from_branding_json(state, _config_dir)
 
+    # Default the dashboard language to the wizard's UI locale if not already
+    # set — the operator likely wants visitors to see the same language.
+    if not state.default_locale:
+        state.default_locale = get_current_locale()
+
     return _render(
         request,
         "step_station.html",
