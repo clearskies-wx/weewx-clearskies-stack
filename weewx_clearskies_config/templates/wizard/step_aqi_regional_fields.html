@@ -3,7 +3,7 @@
    an AQI provider is already selected.
 
    Context variables:
-     provider_id  — the selected AQI provider ID (aeris_aqi, openmeteo_aqi, iqair, openweathermap_aqi)
+     provider_id  — the selected AQI provider ID (aeris_aqi, openmeteo_aqi, iqair)
      state        — WizardState (used to pre-select saved values)
      aqi_suggestion — dict with "filter", "index", "scale" suggestions from lat/lon
                        (may be empty if coordinates are unknown)
@@ -82,22 +82,6 @@
     {% endif %}
     {{ _("You can change this at any time.") }}
   </small>
-</div>
-
-{% elif provider_id == "openaq" %}
-<div class="aqi-regional-fields aqi-regional-note"
-     aria-label="{{ _('AQI note for OpenAQ') }}">
-  <p><small>{{ _("OpenAQ provides PM2.5 and PM10 from government reference monitors
-     in 141 countries. Observed data — eligible for haze confirmation.
-     Data lag is approximately 1–2 hours; Aeris or IQAir are preferred
-     when available. No regional scale configuration is required.") }}</small></p>
-</div>
-
-{% elif provider_id == "openweathermap_aqi" %}
-<div class="aqi-regional-fields aqi-regional-note"
-     aria-label="{{ _('AQI note for OpenWeatherMap') }}">
-  <p><small>{{ _("OpenWeatherMap uses its own 1–5 air quality scale.
-     No regional configuration is required.") }}</small></p>
 </div>
 
 {% endif %}

@@ -84,6 +84,28 @@ PROVIDERS: list[ProviderInfo] = [
         "get",
         "Keyless",
     ),
+    ProviderInfo(
+        "aeris_alerts",
+        "Vaisala Xweather Alerts",
+        "alerts",
+        "Global (US, Canada, Europe, UK, Japan, Australia, India, Brazil, South Africa, South Korea, Mexico)",
+        ("client_id", "client_secret"),
+        "https://data.api.xweather.com/alerts/38.8,-77.0?client_id={client_id}&client_secret={client_secret}",
+        "get",
+        notes="Requires Vaisala Xweather API key (same credentials as forecast/AQI).",
+        signup_url="https://www.xweather.com/signup/",
+    ),
+    ProviderInfo(
+        "openweathermap_alerts",
+        "OpenWeatherMap Alerts",
+        "alerts",
+        "Global (government alerts)",
+        ("api_key",),
+        "https://api.openweathermap.org/data/3.0/onecall?lat={latitude}&lon={longitude}&appid={api_key}",
+        "get",
+        notes="Requires One Call 3.0 subscription (paid tier).",
+        signup_url="https://home.openweathermap.org/api_keys",
+    ),
     # ------------------------------------------------------------------
     # AQI
     # ------------------------------------------------------------------
@@ -176,19 +198,56 @@ def providers_by_domain() -> dict[str, list[ProviderInfo]]:
     return result
 
 
+# ---------------------------------------------------------------------------
+# Alerts provider recommendation — lat/lon-based region bounding boxes.
+# Coarse checks; the operator can always override the suggestion.
+# Each entry is (region_name, lat_min, lat_max, lon_min, lon_max).
+# ---------------------------------------------------------------------------
+_AERIS_ALERT_REGIONS: list[tuple[str, float, float, float, float]] = [
+    ("canada",       41.0,  72.0, -141.0,  -52.0),
+    ("europe_uk",    34.0,  71.0,  -25.0,   40.0),
+    ("mexico",       14.0,  33.0, -118.0,  -86.0),
+    ("brazil",      -34.0,   5.0,  -74.0,  -34.0),
+    ("south_africa", -35.0, -22.0,  16.0,   33.0),
+    ("india",         6.0,  36.0,   68.0,   98.0),
+    ("japan",        24.0,  46.0,  122.0,  146.0),
+    ("south_korea",  33.0,  39.0,  124.0,  131.0),
+    ("australia",   -44.0, -10.0,  112.0,  154.0),
+]
+
+
+def _recommend_alerts_provider(latitude: float, longitude: float) -> str:
+    """Return the recommended alerts provider_id for a station location.
+
+    US bounding box (lat 24-50, lon -130 to -65) -> ``nws_alerts`` (keyless,
+    best choice for US operators). Vaisala Xweather coverage regions
+    (Canada, Europe/UK, Mexico, Brazil, South Africa, India, Japan, South
+    Korea, Australia) -> ``aeris_alerts``. Everywhere else ->
+    ``openweathermap_alerts`` (requires a paid One Call 3.0 subscription).
+    """
+    if (24.0 <= latitude <= 50.0) and (-130.0 <= longitude <= -65.0):
+        return "nws_alerts"
+    for _name, lat_min, lat_max, lon_min, lon_max in _AERIS_ALERT_REGIONS:
+        if lat_min <= latitude <= lat_max and lon_min <= longitude <= lon_max:
+            return "aeris_alerts"
+    return "openweathermap_alerts"
+
+
 def recommend_providers(latitude: float, longitude: float) -> dict[str, str]:
     """Return a recommended provider_id per domain based on the operator's location.
 
     US locations (approximately longitude between -130 and -60, latitude
-    between 24 and 50) prefer NWS for forecast and alerts.  All other
-    locations prefer Open-Meteo for forecast and NWS alerts (the only
-    current alerts provider).  Open-Meteo AQI is the keyless default for
-    all locations; operators can upgrade to IQAir or OWM AQI later.
+    between 24 and 50) prefer NWS for forecast.  All other locations prefer
+    Open-Meteo for forecast.  Alerts are recommended per
+    ``_recommend_alerts_provider`` — NWS for the US, Vaisala Xweather for
+    other regions it covers, and OpenWeatherMap elsewhere.  Open-Meteo AQI
+    is the keyless default for all locations; operators can upgrade to
+    IQAir or Aeris AQI later.
     """
     in_us = (-130.0 <= longitude <= -60.0) and (24.0 <= latitude <= 50.0)
     return {
         "forecast": "nws" if in_us else "openmeteo",
-        "alerts": "nws_alerts",
+        "alerts": _recommend_alerts_provider(latitude, longitude),
         "aqi": "openmeteo_aqi",
         "earthquakes": "usgs",
         "radar": "rainviewer",

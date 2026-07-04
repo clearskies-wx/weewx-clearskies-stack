@@ -2015,7 +2015,7 @@ async def step6_aqi_regional(request: Request, provider_id: str) -> HTMLResponse
     state = get_wizard_state(session_id)
 
     # Validate provider_id is an AQI provider to prevent arbitrary template injection.
-    _VALID_AQI_PROVIDERS = {"aeris_aqi", "openmeteo_aqi", "iqair", "openweathermap_aqi"}
+    _VALID_AQI_PROVIDERS = {"aeris_aqi", "openmeteo_aqi", "iqair"}
     if provider_id not in _VALID_AQI_PROVIDERS:
         assert _templates is not None
         return HTMLResponse(content="", status_code=200)
@@ -2913,6 +2913,8 @@ async def step9_review_get(request: Request) -> HTMLResponse:
 # providers are discovered to have a mismatch.
 _PROVIDER_NAME_MAP: dict[str, str] = {
     "nws_alerts": "nws",
+    "aeris_alerts": "aeris",
+    "openweathermap_alerts": "openweathermap",
     "aeris_aqi": "aeris",
     "openmeteo_aqi": "openmeteo",
     "openweathermap_aqi": "openweathermap",
@@ -3739,14 +3741,21 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
 
     # --- Providers + API keys ---
     # Response: {"forecast": {"provider": "nws", "credentials": {...}}, ...}
-    # Reverse mapping: API provider names → wizard provider IDs.  AQI providers
-    # use a domain-suffixed ID in the wizard (e.g. "aeris_aqi") but the API
-    # stores the short canonical name (e.g. "aeris").  Domain context resolves
-    # ambiguity (forecast "aeris" stays "aeris"; AQI "aeris" → "aeris_aqi").
+    # Reverse mapping: API provider names → wizard provider IDs.  AQI and
+    # alerts providers use a domain-suffixed ID in the wizard (e.g.
+    # "aeris_aqi", "aeris_alerts") but the API stores the short canonical
+    # name (e.g. "aeris").  Domain context resolves ambiguity (forecast
+    # "aeris" stays "aeris"; AQI "aeris" → "aeris_aqi"; alerts "aeris" →
+    # "aeris_alerts").
     _API_TO_WIZARD_AQI_MAP: dict[str, str] = {
         "aeris": "aeris_aqi",
         "openmeteo": "openmeteo_aqi",
         "openweathermap": "openweathermap_aqi",
+    }
+    _API_TO_WIZARD_ALERTS_MAP: dict[str, str] = {
+        "nws": "nws_alerts",
+        "aeris": "aeris_alerts",
+        "openweathermap": "openweathermap_alerts",
     }
     api_providers = config.get("providers", {})
     if isinstance(api_providers, dict):
@@ -3760,6 +3769,8 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 continue
             if domain == "aqi":
                 provider_id = _API_TO_WIZARD_AQI_MAP.get(provider_id, provider_id)
+            elif domain == "alerts":
+                provider_id = _API_TO_WIZARD_ALERTS_MAP.get(provider_id, provider_id)
             # Only fill if the domain has no provider set yet in state.
             if domain not in merged_providers:
                 merged_providers[domain] = provider_id
