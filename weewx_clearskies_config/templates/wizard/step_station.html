@@ -1,7 +1,7 @@
 {% from "macros/help_panel.html" import help_trigger %}
 <article>
   <header>
-    <h2>{{ _("Step 6 of 15 — Station Identity") }}</h2>
+    <h2>{{ _("Step 7 of 14 — Station Identity") }}</h2>
     {{ help_trigger("/wizard/help/step_station") }}
     <p>{{ _("Confirm your weather station's location and display name.
        These are used for provider geo-routing and the dashboard header.") }}</p>
@@ -216,24 +216,14 @@
     </fieldset>
 
     <div role="group">
-      {% if schema_skipped %}
       <button type="button"
-              hx-get="/wizard/step/2"
+              hx-get="/wizard/units"
               hx-target="#wizard-content"
               hx-swap="innerHTML show:window:top"
               hx-indicator="#wizard-spinner">
-        ← {{ _("Previous") }}
+        &#8592; {{ _("Previous: Units") }}
       </button>
-      {% else %}
-      <button type="button"
-              hx-get="/wizard/step/3"
-              hx-target="#wizard-content"
-              hx-swap="innerHTML show:window:top"
-              hx-indicator="#wizard-spinner">
-        ← {{ _("Previous") }}
-      </button>
-      {% endif %}
-      <button type="submit">{{ _("Next: Units") }} &#8594;</button>
+      <button type="submit">{{ _("Next: Providers") }} &#8594;</button>
     </div>
   </form>
 </article>

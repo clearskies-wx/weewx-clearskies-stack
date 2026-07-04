@@ -17,26 +17,26 @@ Route summary:
   POST /wizard/step/2           — save DB settings, fetch schema via API, return step 5 or 6 fragment
   GET  /wizard/step/3           — render column mapping form using schema from state or API
   POST /wizard/step/3           — save column mapping, return step 6 fragment
-  GET  /wizard/step/4           — read station identity from API, render step 6 fragment
+  GET  /wizard/units            — step 6 fragment (display units)
+  POST /wizard/units            — save unit selections, return step 7 (station) fragment
+  GET  /wizard/step/4           — read station identity from API, render step 7 fragment
   POST /wizard/step/4/timezone  — lookup timezone from lat/lon, return input fragment
-  POST /wizard/step/4           — save station info, return step 7 (units) fragment
-  GET  /wizard/units            — step 7 fragment (display units)
-  POST /wizard/units            — save unit selections, return step 8 (providers) fragment
+  POST /wizard/step/4           — save station info, return step 8 (providers) fragment
   GET  /wizard/step/6           — step 8 fragment (provider selection + inline key entry)
   GET  /wizard/step/6/key-fields/{domain}/{provider_id} — inline key fields fragment
   POST /wizard/step/6/test-key/{provider_id}            — test one provider's key, return result fragment
-  POST /wizard/step/6           — save provider choices + keys, return step 10 fragment (webcam)
-  GET  /wizard/step/7           — step 10 fragment (webcam configuration)
-  POST /wizard/step/7           — save webcam settings, return step 11 fragment (branding)
-  GET  /wizard/step/8           — step 11 fragment (appearance: branding + social)
-  POST /wizard/step/8           — save branding settings, return step 12 fragment (privacy)
-  GET  /wizard/privacy          — step 12 fragment (privacy, legal & analytics)
-  POST /wizard/privacy          — save privacy/legal settings, return step 13 fragment (features)
-  GET  /wizard/features         — step 13 fragment (feature settings: seismic page)
-  POST /wizard/features         — save feature settings, return step 14 fragment (TLS)
-  GET  /wizard/tls              — step 14 fragment (TLS / HTTPS configuration)
-  POST /wizard/tls              — save TLS config, return step 15 fragment (review)
-  GET  /wizard/step/9           — step 15 fragment (review summary)
+  POST /wizard/step/6           — save provider choices + keys, return step 9 fragment (webcam)
+  GET  /wizard/step/7           — step 9 fragment (webcam configuration)
+  POST /wizard/step/7           — save webcam settings, return step 10 fragment (branding)
+  GET  /wizard/step/8           — step 10 fragment (appearance: branding + social)
+  POST /wizard/step/8           — save branding settings, return step 11 fragment (privacy)
+  GET  /wizard/privacy          — step 11 fragment (privacy, legal & analytics)
+  POST /wizard/privacy          — save privacy/legal settings, return step 12 fragment (features)
+  GET  /wizard/features         — step 12 fragment (feature settings: seismic page)
+  POST /wizard/features         — save feature settings, return step 13 fragment (TLS)
+  GET  /wizard/tls              — step 13 fragment (TLS / HTTPS configuration)
+  POST /wizard/tls              — save TLS config, return step 14 fragment (review)
+  GET  /wizard/step/9           — step 14 fragment (review summary)
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -668,7 +668,7 @@ async def step_units_get(request: Request) -> HTMLResponse:
         request,
         "step_units.html",
         {
-            "step": 7,
+            "step": 6,
             "state": state,
             "current_units": current_units,
             "unit_options": UNIT_OPTIONS,
@@ -676,13 +676,14 @@ async def step_units_get(request: Request) -> HTMLResponse:
             "presets": UNIT_PRESETS,
             "error": None,
             "errors": {},
+            "schema_skipped": state.schema_skipped,
         },
     )
 
 
 @router.post("/units", response_class=HTMLResponse)
 async def step_units_post(request: Request) -> HTMLResponse:
-    """Save unit selections and advance to step 6 (providers)."""
+    """Save unit selections and advance to step 7 (station)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -713,7 +714,7 @@ async def step_units_post(request: Request) -> HTMLResponse:
 
     state.units = submitted_units
     save_wizard_state(session_id, state)
-    return await step6_get(request)
+    return await step4_get(request)
 
 
 def _get_api_client(state: WizardState) -> ApiClient:
@@ -1564,7 +1565,7 @@ async def step3_get(request: Request) -> HTMLResponse:
 
 @router.post("/step/3", response_class=HTMLResponse)
 async def step3_post(request: Request) -> HTMLResponse:
-    """Save column mapping choices and advance to step 4."""
+    """Save column mapping choices and advance to step 6 (units)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -1624,7 +1625,7 @@ async def step3_post(request: Request) -> HTMLResponse:
     state.column_mapping = merged
     state.schema_data = None  # Clear cached schema data — no longer needed.
     save_wizard_state(session_id, state)
-    return await step4_get(request)
+    return await step_units_get(request)
 
 
 # ---------------------------------------------------------------------------
@@ -1719,7 +1720,7 @@ async def step4_get(request: Request) -> HTMLResponse:
         request,
         "step_station.html",
         {
-            "step": 6,
+            "step": 7,
             "state": state,
             "error": error,
             "schema_skipped": state.schema_skipped,
@@ -1731,7 +1732,7 @@ async def step4_get(request: Request) -> HTMLResponse:
 
 @router.post("/step/4", response_class=HTMLResponse)
 async def step4_post(request: Request) -> HTMLResponse:
-    """Save station identity and advance to step 5."""
+    """Save station identity and advance to step 8 (providers)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -1768,7 +1769,7 @@ async def step4_post(request: Request) -> HTMLResponse:
             request,
             "step_station.html",
             {
-                "step": 6,
+                "step": 7,
                 "state": state,
                 "error": photo_err,
                 "schema_skipped": state.schema_skipped,
@@ -1785,7 +1786,7 @@ async def step4_post(request: Request) -> HTMLResponse:
     state.about_content = str(form.get("about_content", "")).strip()
 
     save_wizard_state(session_id, state)
-    return await step_units_get(request)
+    return await step6_get(request)
 
 
 @router.post("/step/4/timezone", response_class=HTMLResponse)
@@ -1838,7 +1839,7 @@ async def step6_get(request: Request) -> HTMLResponse:
         request,
         "step_providers.html",
         {
-            "step": 9,
+            "step": 8,
             "state": state,
             "providers_by_domain": by_domain,
             "recommendations": recommendations,
@@ -2118,7 +2119,7 @@ async def step7_get(request: Request) -> HTMLResponse:
         "video_url": state.webcam_video_url,
         "refresh_interval": state.webcam_refresh_interval,
     }
-    return _render(request, "step_webcam.html", {"step": 10, "state": state, "fields": fields, "values": values, "error": None})
+    return _render(request, "step_webcam.html", {"step": 9, "state": state, "fields": fields, "values": values, "error": None})
 
 
 @router.post("/step/7", response_class=HTMLResponse)
@@ -2140,7 +2141,7 @@ async def step7_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_webcam.html",
-            {"step": 10, "state": state, "fields": fields, "values": values, "error": " ".join(errors)},
+            {"step": 9, "state": state, "fields": fields, "values": values, "error": " ".join(errors)},
             status_code=422,
         )
     extracted = extract_field_values(form_data, fields)
@@ -2279,7 +2280,7 @@ async def step8_appearance_get(request: Request) -> HTMLResponse:
         "youtube_url": state.youtube_url,
     }
     return _render(request, "step_appearance.html", {
-        "step": 11,
+        "step": 10,
         "state": state,
         "fields_by_key": fields_by_key,
         "social_fields_by_key": social_fields_by_key,
@@ -2290,7 +2291,7 @@ async def step8_appearance_get(request: Request) -> HTMLResponse:
 
 @router.post("/step/8", response_class=HTMLResponse)
 async def step8_appearance_post(request: Request) -> HTMLResponse:
-    """Save branding and social settings; advance to step 12 (privacy)."""
+    """Save branding and social settings; advance to step 11 (privacy)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -2345,7 +2346,7 @@ async def step8_appearance_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_appearance.html",
-            {"step": 11, "state": state, "fields_by_key": _fbk, "social_fields_by_key": _sfbk, "values": _vals, "error": " ".join(errors)},
+            {"step": 10, "state": state, "fields_by_key": _fbk, "social_fields_by_key": _sfbk, "values": _vals, "error": " ".join(errors)},
             status_code=422,
         )
 
@@ -2457,7 +2458,7 @@ def _format_txt_to_markdown(text: str, doc_type: str = "terms") -> str:
 
 @router.get("/privacy", response_class=HTMLResponse)
 async def step_privacy_legal_get(request: Request) -> HTMLResponse:
-    """Step 12: Privacy, Legal & Analytics — render the form."""
+    """Step 11: Privacy, Legal & Analytics — render the form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if not state.google_analytics_id and not state.privacy_regions:
@@ -2470,7 +2471,7 @@ async def step_privacy_legal_get(request: Request) -> HTMLResponse:
         "privacy_regions": state.privacy_regions or "global",
     }
     return _render(request, "step_privacy_legal.html", {
-        "step": 12,
+        "step": 11,
         "state": state,
         "analytics_fields_by_key": analytics_fields_by_key,
         "values": values,
@@ -2480,7 +2481,7 @@ async def step_privacy_legal_get(request: Request) -> HTMLResponse:
 
 @router.post("/privacy", response_class=HTMLResponse)
 async def step_privacy_legal_post(request: Request) -> HTMLResponse:
-    """Save analytics and privacy/legal settings; advance to step 13 (features)."""
+    """Save analytics and privacy/legal settings; advance to step 12 (features)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -2550,7 +2551,7 @@ async def step_privacy_legal_post(request: Request) -> HTMLResponse:
             request,
             "step_privacy_legal.html",
             {
-                "step": 12,
+                "step": 11,
                 "state": state,
                 "analytics_fields_by_key": analytics_fields_by_key,
                 "values": values,
@@ -2570,7 +2571,7 @@ async def step_privacy_legal_post(request: Request) -> HTMLResponse:
 
 @router.get("/features", response_class=HTMLResponse)
 async def step_feature_settings_get(request: Request) -> HTMLResponse:
-    """Step 13: Feature Settings — render the seismic page settings form."""
+    """Step 12: Feature Settings — render the seismic page settings form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if state.earthquake_radius_km == 100.0 and state.earthquake_default_days == 7:
@@ -2582,12 +2583,12 @@ async def step_feature_settings_get(request: Request) -> HTMLResponse:
         "min_magnitude": state.earthquake_min_magnitude,
         "default_days": str(state.earthquake_default_days),
     }
-    return _render(request, "step_feature_settings.html", {"step": 13, "state": state, "fields": fields, "values": values, "error": None})
+    return _render(request, "step_feature_settings.html", {"step": 12, "state": state, "fields": fields, "values": values, "error": None})
 
 
 @router.post("/features", response_class=HTMLResponse)
 async def step_feature_settings_post(request: Request) -> HTMLResponse:
-    """Save feature settings; advance to step 14 (review)."""
+    """Save feature settings; advance to step 13 (TLS)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -2604,7 +2605,7 @@ async def step_feature_settings_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_feature_settings.html",
-            {"step": 13, "state": state, "fields": fields, "values": values, "error": " ".join(errors)},
+            {"step": 12, "state": state, "fields": fields, "values": values, "error": " ".join(errors)},
             status_code=422,
         )
     extracted = extract_field_values(form_data, fields)
@@ -2626,13 +2627,13 @@ async def step_feature_settings_post(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 14: TLS / HTTPS Configuration
+# Step 13: TLS / HTTPS Configuration
 # ---------------------------------------------------------------------------
 
 
 @router.get("/tls", response_class=HTMLResponse)
 async def step_tls_get(request: Request) -> HTMLResponse:
-    """Step 14: TLS — render the certificate mode selection form."""
+    """Step 13: TLS — render the certificate mode selection form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if not state.tls_mode:
@@ -2646,12 +2647,12 @@ async def step_tls_get(request: Request) -> HTMLResponse:
         "dns_provider": state.tls_dns_provider,
         "dns_api_token": state.tls_dns_api_token,
     }
-    return _render(request, "step_tls.html", {"step": 14, "state": state, "fields": fields, "values": values, "error": None})
+    return _render(request, "step_tls.html", {"step": 13, "state": state, "fields": fields, "values": values, "error": None})
 
 
 @router.post("/tls", response_class=HTMLResponse)
 async def step_tls_post(request: Request) -> HTMLResponse:
-    """Save TLS configuration and advance to step 15 (review)."""
+    """Save TLS configuration and advance to step 14 (review)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -2675,7 +2676,7 @@ async def step_tls_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_tls.html",
-            {"step": 14, "state": state, "fields": fields, "values": values, "error": msg},
+            {"step": 13, "state": state, "fields": fields, "values": values, "error": msg},
             status_code=422,
         )
 
@@ -2702,7 +2703,7 @@ async def step_tls_post(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 9 (display 15): Review + Apply
+# Step 9 (display 14): Review + Apply
 # ---------------------------------------------------------------------------
 
 
@@ -2715,7 +2716,7 @@ async def step9_review_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 15, "state": state, "error": None},
+        {"step": 14, "state": state, "error": None},
     )
 
 
@@ -2779,7 +2780,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request=request,
             name="wizard/step_complete.html",
             context={
-                "step": 13,
+                "step": 12,
                 "error": _("The configuration directory has not been set. Please restart the setup tool with the correct --config-dir option."),
                 "result": None,
             },
@@ -2933,7 +2934,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 15,
+                "step": 14,
                 "state": state,
                 "error": _("API not connected. Go back to step 1 and reconnect before applying."),
             },
@@ -2946,7 +2947,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 15,
+                "step": 14,
                 "state": state,
                 "error": _("Failed to apply API configuration: {detail}").format(detail=error_msg),
             },
@@ -2958,7 +2959,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 15,
+                "step": 14,
                 "state": state,
                 "error": _("Could not reach the API to apply configuration. Check that the API is running and try again."),
             },
@@ -3036,7 +3037,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 15, "state": state, "error": _perm_error},
+            {"step": 14, "state": state, "error": _perm_error},
             status_code=422,
         )
 
@@ -3155,7 +3156,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 15, "state": state, "error": local_error},
+            {"step": 14, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -3168,7 +3169,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 15, "state": state, "error": local_error},
+            {"step": 14, "state": state, "error": local_error},
             status_code=422,
         )
 
@@ -3210,7 +3211,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         request=request,
         name="wizard/step_complete.html",
         context={
-            "step": 13,
+            "step": 12,
             "error": None,
             "result": result,
             "api_restart_triggered": api_restart_triggered,
