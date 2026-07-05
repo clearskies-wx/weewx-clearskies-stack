@@ -12,8 +12,6 @@ Route summary (admin landing + domain sections):
   POST /admin/pages                   — save page visibility
   GET  /admin/branding                — appearance/branding edit form
   POST /admin/branding                — save branding.json appearance fields
-  GET  /admin/social                  — social links edit form
-  POST /admin/social                  — save branding.json social fields
   GET  /admin/analytics               — analytics & privacy edit form
   POST /admin/analytics               — save branding.json analytics/privacy fields
   GET  /admin/earthquakes             — earthquake settings edit form
