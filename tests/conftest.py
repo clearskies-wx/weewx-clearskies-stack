@@ -67,32 +67,3 @@ def authed_client(test_app, config_dir: Path):
         )
         assert resp.status_code in (302, 303), f"Login pre-condition failed: {resp.status_code}"
         yield c
-
-
-@pytest.fixture()
-def sample_weewx_conf(tmp_path: Path) -> str:
-    """Minimal weewx.conf fixture with realistic MariaDB connection parameters."""
-    conf = tmp_path / "weewx.conf"
-    conf.write_text(
-        """
-[DatabaseTypes]
-    [[archive_mysql]]
-        host = 192.168.7.20
-        user = weewx
-        password = testpass123
-        port = 3306
-
-[Databases]
-    [[archive_mysql]]
-        database_name = weewx
-
-[Station]
-    station_type = Simulator
-    location = "Fairfax, Virginia"
-    latitude = 38.8894
-    longitude = -77.0352
-    altitude = 50, foot
-""",
-        encoding="utf-8",
-    )
-    return str(conf)

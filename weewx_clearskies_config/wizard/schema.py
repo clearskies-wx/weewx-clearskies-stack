@@ -7,7 +7,7 @@ surface with a heuristic suggestion.
 The canonical field registry (CANONICAL_FIELD_GROUPS, _ALL_CANONICAL_NAMES)
 lives here so routes.py can import it without a circular dependency.
 
-Note: direct DB introspection (introspect_schema / SchemaReflector / SQLAlchemy)
+Note: the direct SQLAlchemy-based DB reflection helper that used to live here
 has been removed.  Schema data now comes from the API via ApiClient.get_schema().
 """
 
@@ -464,98 +464,3 @@ def _longest_common_prefix(a: str, b: str) -> int:
         else:
             break
     return length
-
-
-# ---------------------------------------------------------------------------
-# Direct DB introspection (not used by web wizard)
-#
-# The web wizard (routes.py) uses process_api_schema() + ApiClient.get_schema()
-# instead. introspect_schema() has no production caller since the CLI wizard
-# was removed; it is exercised only by tests. Kept in case a future
-# standalone (no-API-session) path needs it.
-# ---------------------------------------------------------------------------
-
-
-def introspect_schema(db_url: str) -> dict[str, Any]:
-    """Reflect the archive table schema and classify columns.
-
-    Uses :class:`weewx_clearskies_api.db.reflection.SchemaReflector` to
-    separate stock weewx columns (auto-mapped) from non-stock columns that
-    the operator must review.
-
-    Returns a dict with:
-      - ``stock_columns``: list of ``{db_name, canonical, auto_mapped}``
-      - ``unmapped_columns``: list of ``{db_name, suggested, confidence}``
-      - ``total_columns``: int
-      - ``stock_mapped``: int
-
-    Raises:
-        RuntimeError: archive table not found or DB connection failed.
-        sqlalchemy.exc.OperationalError: DB unreachable.
-
-    Note: This function is used by the CLI wizard only.  The web wizard
-    uses ApiClient.get_schema() + process_api_schema() instead.
-    """
-    from sqlalchemy import create_engine  # type: ignore[import-untyped]
-    from weewx_clearskies_api.db.reflection import (  # type: ignore[import-untyped]
-        STOCK_COLUMN_MAP,
-        SchemaReflector,
-    )
-
-    engine = create_engine(db_url, connect_args={"connect_timeout": 5})
-    try:
-        reflector = SchemaReflector(engine)
-        registry = reflector.reflect()
-    finally:
-        engine.dispose()
-
-    canonical_field_names = list(_ALL_CANONICAL_NAMES | set(STOCK_COLUMN_MAP.values()))
-
-    stock_columns = [
-        {
-            "db_name": info.db_name,
-            "canonical": info.canonical_name,
-            "auto_mapped": True,
-        }
-        for info in registry.stock.values()
-    ]
-
-    _CONFIDENCE_RANK = {"high": 3, "medium": 2, "low": 1, "none": 0}
-
-    # Canonical names already claimed by stock columns.
-    claimed: dict[str, tuple[int, str]] = {
-        info.canonical_name: (99, info.db_name)
-        for info in registry.stock.values()
-    }
-
-    unmapped_columns = []
-    for info in registry.unmapped.values():
-        lower_name = info.db_name.lower()
-        if any(p in lower_name for p in _DIAGNOSTIC_PATTERNS):
-            continue
-        suggested, confidence = suggest_canonical(info.db_name, canonical_field_names)
-        unmapped_columns.append(
-            {
-                "db_name": info.db_name,
-                "suggested": suggested,
-                "confidence": confidence,
-            }
-        )
-        if suggested:
-            rank = _CONFIDENCE_RANK.get(confidence, 0)
-            prev_rank, _ = claimed.get(suggested, (-1, ""))
-            if rank > prev_rank:
-                claimed[suggested] = (rank, info.db_name)
-
-    # Dedup: only the highest-confidence column keeps each suggestion.
-    for col in unmapped_columns:
-        if col["suggested"] and claimed.get(col["suggested"], (0, ""))[1] != col["db_name"]:
-            col["suggested"] = None
-            col["confidence"] = "none"
-
-    return {
-        "stock_columns": stock_columns,
-        "unmapped_columns": unmapped_columns,
-        "total_columns": len(stock_columns) + len(unmapped_columns),
-        "stock_mapped": len(stock_columns),
-    }

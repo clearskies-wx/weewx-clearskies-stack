@@ -1,9 +1,6 @@
 """Tests for weewx_clearskies_config.wizard.schema.suggest_canonical.
 
-introspect_schema() depends on weewx_clearskies_api.db.reflection which may
-not be installed in the test environment.  That function is tested separately
-via integration tests against a real DB.  suggest_canonical is a pure function
-and is fully covered here.
+suggest_canonical is a pure function and is fully covered here.
 """
 
 from __future__ import annotations
