@@ -197,7 +197,7 @@ registry.register_section(
             field_id="branding.copyright_entity",
             field_type="text",
             label="Copyright Entity",
-            help_text="Shown in the dashboard footer (e.g. your name or organisation).",
+            help_text="Shown in the dashboard footer (e.g. your name or organization).",
             validation=(ValidationRule("max_length", 100),),
             config_target="branding.json",
             config_key="copyright_entity",
@@ -206,7 +206,7 @@ registry.register_section(
             field_id="branding.accent",
             field_type="radio_swatch",
             label="Accent Color",
-            help_text="Primary highlight colour used for buttons, links, and active states across the dashboard.",
+            help_text="Primary highlight color used for buttons, links, and active states across the dashboard.",
             default="blue",
             options=(
                 FieldOption(value="blue", label="Blue"),

@@ -1,6 +1,6 @@
 # Clear Skies — Operator Manual
 
-A guide for weather station operators who want to install, configure, and maintain a Clear Skies weather dashboard. No programming experience is required.
+A guide for weather station operators who want to install, configure, and maintain a Clear Skies weather site. No programming experience is required.
 
 **Version:** 1.0 (beta)
 **Last updated:** 2026-07-03
@@ -27,7 +27,7 @@ A guide for weather station operators who want to install, configure, and mainta
 
 ## 1. Quick Start
 
-This section gets a Clear Skies dashboard running in about 15 minutes on a machine that already has weewx 5.x and Docker installed. For detailed explanations, read the full installation sections below.
+This section gets a Clear Skies weather site running in about 15 minutes on a machine that already has weewx 5.x and Docker installed. For detailed explanations, read the full installation sections below.
 
 ### Before you begin
 
@@ -66,7 +66,7 @@ You need:
 
 4. **Open the setup wizard** at `https://your-domain/wizard`. The wizard walks you through connecting to the API, choosing your database, configuring weather data providers, and customizing the appearance.
 
-5. **Verify** by visiting your domain. You should see the Clear Skies dashboard displaying your weather data.
+5. **Verify** by visiting your domain. You should see the Clear Skies weather site displaying your weather data.
 
 If something goes wrong, see [Troubleshooting](#10-troubleshooting).
 
@@ -127,15 +127,15 @@ These are the largest Python packages in the API's virtual environment:
 
 ### Raspberry Pi feasibility
 
-**Pi 4 (4 GB or 8 GB): Yes — feasible.** The API's ~600 MB idle RAM fits within a 4 GB Pi 4 alongside weewx. Build the dashboard on a more powerful machine and copy the built files to the Pi (building on the Pi itself is slow and requires swap). ARM64 Pi OS is recommended over 32-bit for better Python 3.12 support.
+**Pi 4 (4 GB or 8 GB): Yes — feasible.** The API's ~600 MB idle RAM fits within a 4 GB Pi 4 alongside weewx. Build the weather site on a more powerful machine and copy the built files to the Pi (building on the Pi itself is slow and requires swap). ARM64 Pi OS is recommended over 32-bit for better Python 3.12 support.
 
-**Pi 4 (2 GB): Marginal.** The API alone consumes ~600 MB. With weewx, the OS, and Caddy, you'll be near the limit. Redis should be disabled (use in-memory caching). Consider the two-host split: run the API on the Pi alongside weewx, and put the dashboard on a separate machine.
+**Pi 4 (2 GB): Marginal.** The API alone consumes ~600 MB. With weewx, the OS, and Caddy, you'll be near the limit. Redis should be disabled (use in-memory caching). Consider the two-host split: run the API on the Pi alongside weewx, and put the weather site on a separate machine.
 
 **Pi 3 and earlier: Not recommended.** Insufficient RAM for the API's scientific computing dependencies.
 
 ### Measurement conditions
 
-These numbers were measured on 2026-07-03 on LXD containers hosted on an AMD Ryzen Threadripper 2950X. The weewx station has been running continuously for approximately 2 years with a 5-minute archive interval. Configured providers: Aeris (forecast + AQI), NWS (alerts), USGS (earthquakes), RainViewer (radar), LibreWxR (radar + satellite), 7Timer (seeing forecast). Redis caching enabled. Your actual resource usage will vary based on your provider configuration, archive size, and system load.
+These numbers were measured on 2026-07-03 on LXD containers hosted on an AMD Ryzen Threadripper 2950X. The weewx station has been running continuously for approximately 2 years with a 5-minute archive interval. Configured providers: Vaisala Xweather (forecast + AQI), NWS (alerts), USGS (earthquakes), RainViewer (radar), LibreWxR (radar + satellite), 7Timer (seeing forecast). Redis caching enabled. Your actual resource usage will vary based on your provider configuration, archive size, and system load.
 
 ---
 
@@ -150,7 +150,7 @@ This section covers installing Clear Skies directly on Linux using pip and syste
 | weewx | 5.x | `weewx --version` |
 | Python | 3.12 or later | `python3 --version` |
 | pip | 23+ | `pip --version` |
-| Node.js | 22 LTS | `node --version` (for building the dashboard only) |
+| Node.js | 22 LTS | `node --version` (for building the weather site only) |
 | Caddy | 2.x | `caddy version` |
 
 Install Python 3.12 on older systems via the [deadsnakes PPA](https://launchpad.net/~deadsnakes/+archive/ubuntu/ppa) (Ubuntu) or from source.
@@ -186,7 +186,7 @@ This script:
 - Creates a `weewx-ro` group for read-only database access
 - Creates `/etc/weewx-clearskies/` for configuration files
 - Creates `/var/run/weewx-clearskies/` for the Unix domain socket
-- Creates `/var/www/clearskies/` for the dashboard static files
+- Creates `/var/www/clearskies/` for the weather site static files
 - Sets appropriate file permissions
 
 ### Step 3: Install the API
@@ -229,7 +229,7 @@ sudo systemctl start weewx-clearskies-config
 
 The Config UI runs on port 9876 by default.
 
-### Step 5: Build and install the Dashboard
+### Step 5: Build and install the weather site
 
 ```bash
 git clone https://github.com/inguy24/weewx-clearskies-dashboard.git
@@ -278,7 +278,7 @@ Open `https://your-domain/wizard` in a browser. The wizard guides you through:
 14. TLS configuration
 15. Reviewing and applying
 
-After the wizard completes, the API restarts with the full configuration. Wait approximately 2 minutes for the cache warmer to finish, then visit your domain to see the dashboard.
+After the wizard completes, the API restarts with the full configuration. Wait approximately 2 minutes for the cache warmer to finish, then visit your domain to see the weather site.
 
 ### Step 8: Verify
 
@@ -391,7 +391,7 @@ All configuration lives in `/etc/weewx-clearskies/` (bind-mounted into the conta
 | `api.conf` | Wizard | API configuration: database, providers, units, TLS |
 | `secrets.env` | Setup script / Wizard | API keys, database credentials, proxy secret |
 | `charts.conf` | Wizard (or migration tool) | Chart groups, charts, and series definitions |
-| `branding.json` | Wizard | Site branding: accent color, logos, theme, social links |
+| `branding.json` | Wizard | Site branding: accent color, logos, theme |
 | `webcam.json` | Wizard | Webcam settings: enabled, URLs, refresh interval |
 | `pages.json` | Admin UI | Page visibility settings |
 | `now-layout.json` | Admin UI | Now page card layout |
@@ -413,7 +413,7 @@ Clear Skies uses two weewx extensions. Neither is a Docker container — they ru
 
 ### ClearSkiesLoopRelay (required)
 
-The Loop Relay listens to every weather observation (called a "loop packet") that your station produces and forwards it through a Unix socket so the API can read it in real time. Without this extension, the dashboard cannot show live-updating data — it can only show data from the archive database, which updates every 5 minutes (or whatever your archive interval is set to).
+The Loop Relay listens to every weather observation (called a "loop packet") that your station produces and forwards it through a Unix socket so the API can read it in real time. Without this extension, the weather site cannot show live-updating data — it can only show data from the archive database, which updates every 5 minutes (or whatever your archive interval is set to).
 
 **Install:**
 
@@ -505,7 +505,7 @@ This section provides an overview of each step. For detailed field-by-field help
 
 ### Language selection
 
-Choose the language for the wizard and admin interfaces. This setting controls the wizard's own display language — it is separate from the language your visitors see on the dashboard (that is set later in the Station Identity step).
+Choose the language for the wizard and admin interfaces. This setting controls the wizard's own display language — it is separate from the language your visitors see on the weather site (that is set later in the Station Identity step).
 
 The wizard supports 13 languages: English, German, Spanish, Filipino, French, Italian, Japanese, Dutch, Portuguese (Portugal), Portuguese (Brazil), Russian, Chinese (Simplified), and Chinese (Traditional). Each language is shown in its native script so you can find yours without needing to read English.
 
@@ -550,7 +550,7 @@ Most operators can accept the defaults. Adjust mappings only if the wizard guess
 
 Set your station's name, location, timezone, altitude, and public-facing default language. The location (latitude and longitude) is used for astronomical calculations (sunrise, sunset, moon phases, planet positions), provider API calls (forecast for your area), and earthquake search radius.
 
-The station photo and "About" text appear on the dashboard's About page. These are optional but recommended — they help visitors understand where the data comes from.
+The station photo and "About" text appear on the weather site's About page. These are optional but recommended — they help visitors understand where the data comes from.
 
 ### Display units
 
@@ -566,15 +566,15 @@ You can also override individual unit groups — for example, using Celsius for 
 
 Configure where Clear Skies gets forecast, air quality, alert, earthquake, and radar data from. Each category has multiple provider options:
 
-- **Forecast:** Aeris (Xweather), NWS, Open-Meteo, OpenWeatherMap, Weather Underground
-- **Air quality (AQI):** Aeris, IQAir, OpenAQ, Open-Meteo
-- **Alerts:** NWS, Aeris, OpenWeatherMap
+- **Forecast:** Vaisala Xweather, NWS, Open-Meteo, OpenWeatherMap, Weather Underground
+- **Air quality (AQI):** Vaisala Xweather, IQAir, Open-Meteo
+- **Alerts:** NWS, Vaisala Xweather, OpenWeatherMap
 - **Earthquakes:** USGS, GeoNet, EMSC, RENASS
 - **Radar:** RainViewer, LibreWxR, OpenWeatherMap
 
 Some providers require API keys (usually free for personal use). The wizard guides you through obtaining keys and tests each one before proceeding.
 
-AQI providers fall into two categories: **observed data** providers (Aeris, IQAir) report particulate matter readings from nearby sensors, while **model-based** providers (Open-Meteo) estimate air quality from atmospheric models. Observed data enables haze detection in the sky classification engine; model-based data does not.
+AQI providers fall into two categories: **observed data** providers (Vaisala Xweather, IQAir) report particulate matter readings from nearby sensors, while **model-based** providers (Open-Meteo) estimate air quality from atmospheric models. Observed data enables haze detection in the sky classification engine; model-based data does not.
 
 ### Webcam (optional)
 
@@ -582,13 +582,11 @@ If you have a weather camera, enter the URLs for the live image and timelapse vi
 
 ### Appearance and branding
 
-Customize the visual appearance of your dashboard:
+Customize the visual appearance of your weather site:
 
 - **Accent color** — the primary color used for interactive elements, charts, and highlights
 - **Logos** — station logo and favicon
 - **Theme mode** — light, dark, or automatic (follows the visitor's system preference)
-- **Social links** — URLs for your social media profiles, displayed in the dashboard footer
-- **Custom CSS** — advanced: inject custom CSS to override any dashboard styling
 
 ### Privacy, legal, and analytics
 
@@ -603,7 +601,7 @@ Configure privacy-related settings:
 Configure optional features:
 
 - **Earthquake search radius** — how far from your station to search for earthquake data (in miles or kilometers, depending on your unit system)
-- **Display preferences** — toggle visibility of certain dashboard elements
+- **Display preferences** — toggle visibility of certain weather site elements
 
 ### TLS configuration
 
@@ -621,9 +619,9 @@ Review all your settings before applying. The wizard shows a summary of every co
 1. The wizard writes configuration files to `/etc/weewx-clearskies/`
 2. The API restarts to load the new configuration
 3. The API warms its provider caches (approximately 2 minutes)
-4. The dashboard begins displaying your weather data
+4. The weather site begins displaying your weather data
 
-After the wizard completes, you are redirected to the dashboard. Bookmark the admin page at `https://your-domain/admin` for ongoing configuration changes.
+After the wizard completes, you are redirected to the weather site. Bookmark the admin page at `https://your-domain/admin` for ongoing configuration changes.
 
 ---
 
@@ -645,19 +643,19 @@ Switch between forecast, AQI, alert, earthquake, or radar providers from the **D
 - Test the connection using the "Test" button
 - Save changes
 
-The API restarts automatically and warms the new provider's cache. The dashboard shows the new data source within about 2 minutes.
+The API restarts automatically and warms the new provider's cache. The weather site shows the new data source within about 2 minutes.
 
 ### Changing the appearance
 
-Update colors, logos, theme, custom background image, and social links from the **Appearance & Branding** section. Changes are written to `branding.json` and take effect on the next page load — visitors see the change when they refresh. A custom background image (JPG/PNG/WebP, max 5 MB) replaces the dashboard's built-in day/night scene backgrounds; remove it to return to the built-in backgrounds.
+Update colors, logos, theme, and custom background image from the **Appearance & Branding** section. Changes are written to `branding.json` and take effect on the next page load — visitors see the change when they refresh. A custom background image (JPG/PNG/WebP, max 5 MB) replaces the weather site's built-in day/night scene backgrounds; remove it to return to the built-in backgrounds.
 
 ### Managing page visibility
 
-Hide or show dashboard pages from the **Page Visibility** section. Hidden pages are removed from the navigation bar and their routes return a 404 to visitors. The Now page (home page) cannot be hidden.
+Hide or show weather site pages from the **Page Visibility** section. Hidden pages are removed from the navigation bar and their routes return a 404 to visitors. The Now page (home page) cannot be hidden.
 
 ### Editing the Now page layout
 
-The **Now Page Layout** section provides a drag-and-drop editor for arranging the cards on the home page. Each card has a "footprint" (how many columns it spans) and an optional row span. Drag cards to reorder them, change their size, and save the layout. The dashboard reads the layout on page load, so changes take effect on the visitor's next refresh.
+The **Now Page Layout** section provides a drag-and-drop editor for arranging the cards on the home page. Each card has a "footprint" (how many columns it spans) and an optional row span. Drag cards to reorder them, change their size, and save the layout. The weather site reads the layout on page load, so changes take effect on the visitor's next refresh.
 
 ### Adjusting column mapping
 
@@ -687,9 +685,9 @@ The **Geographic Features** section lets you download and manage the vector map 
 
 ## 8. Under the Hood
 
-This section explains how Clear Skies processes, enriches, and displays your weather data. Understanding these systems is not required to operate Clear Skies, but it helps you interpret what you see on the dashboard and troubleshoot unexpected behavior.
+This section explains how Clear Skies processes, enriches, and displays your weather data. Understanding these systems is not required to operate Clear Skies, but it helps you interpret what you see on the weather site and troubleshoot unexpected behavior.
 
-### Data flow: from station to dashboard
+### Data flow: from station to weather site
 
 ```
 Your weather station
@@ -700,9 +698,9 @@ Your weather station
   → Dashboard (React app in the visitor's browser, fetches data from the API)
 ```
 
-**Real-time data** flows through the Loop Relay socket. Every time your station produces a reading (typically every 2–5 seconds), the Loop Relay forwards it to the API. The API enriches the reading with derived values and pushes it to connected browsers via Server-Sent Events (SSE) — a lightweight streaming protocol that keeps the dashboard's "current conditions" area updated without refreshing the page.
+**Real-time data** flows through the Loop Relay socket. Every time your station produces a reading (typically every 2–5 seconds), the Loop Relay forwards it to the API. The API enriches the reading with derived values and pushes it to connected browsers via Server-Sent Events (SSE) — a lightweight streaming protocol that keeps the weather site's "current conditions" area updated without refreshing the page.
 
-**Historical data** (charts, records, reports) comes from the weewx archive database. The API queries the database and applies the same enrichment pipeline (unit conversion, derived values) before sending it to the dashboard.
+**Historical data** (charts, records, reports) comes from the weewx archive database. The API queries the database and applies the same enrichment pipeline (unit conversion, derived values) before sending it to the weather site.
 
 ### Unit conversion pipeline
 
@@ -713,7 +711,7 @@ Clear Skies converts every number from its stored format to the display format y
 3. **Display unit** — what your visitors see, per your configuration
 4. **Label** — the unit symbol (°F, mph, inHg, etc.), resolved from the locale file
 
-The API is the single authority for unit conversion. The dashboard never does math on weather values — it receives already-converted numbers with labels attached and displays them as-is.
+The API is the single authority for unit conversion. The weather site never does math on weather values — it receives already-converted numbers with labels attached and displays them as-is.
 
 ### Sky conditions engine
 
@@ -738,7 +736,7 @@ The thresholds are not fixed constants — they vary with solar elevation becaus
 
 ### Enrichment pipeline
 
-Before any weather data reaches the dashboard, the API's enrichment pipeline adds derived values that your station hardware cannot measure directly:
+Before any weather data reaches the weather site, the API's enrichment pipeline adds derived values that your station hardware cannot measure directly:
 
 - **Beaufort wind scale** — converts wind speed to the 0–12 Beaufort scale with descriptive labels ("Light Breeze," "Strong Gale," etc.)
 - **Comfort index** — classifies how the temperature feels based on apparent temperature and dewpoint (e.g., "Warm and Humid," "Cold and Dry")
@@ -748,7 +746,7 @@ Before any weather data reaches the dashboard, the API's enrichment pipeline add
 - **Sky classification** — the label from the sky conditions engine described above
 - **Haze detection** — two-channel detection using solar radiation deficit plus particulate matter confirmation from your AQI provider
 
-All derived values are computed by the API and sent to the dashboard as ready-to-display data. The dashboard does not carry any weather computation logic.
+All derived values are computed by the API and sent to the weather site as ready-to-display data. The weather site does not carry any weather computation logic.
 
 ### Forecast correction engine
 
@@ -773,7 +771,7 @@ Both signals must agree before "Hazy" appears in the conditions text. The PM thr
 
 Haze detection only operates when the sun is above 15° elevation. At night, the system defers to the forecast provider's current conditions report.
 
-Haze detection requires an observed-data AQI provider (Aeris or IQAir). Model-based AQI providers (Open-Meteo) do not provide the particulate matter readings needed for confirmation.
+Haze detection requires an observed-data AQI provider (Vaisala Xweather or IQAir). Model-based AQI providers (Open-Meteo) do not provide the particulate matter readings needed for confirmation.
 
 ---
 
@@ -951,9 +949,9 @@ Most settings translate directly because `charts.conf` was designed to match Bel
 
 ## 10. Troubleshooting
 
-### The dashboard loads but shows no data
+### The weather site loads but shows no data
 
-**Likely cause:** The API is not reachable from the dashboard.
+**Likely cause:** The API is not reachable from the weather site.
 
 1. Check that the API is running: `systemctl status weewx-clearskies-api` (native) or `docker compose ps` (Docker)
 2. Test the API directly: `curl -k https://localhost:8765/api/v1/status`
@@ -975,7 +973,7 @@ Common causes:
 
 ### No real-time updates (SSE not working)
 
-The dashboard's "current conditions" area should update every few seconds when you have a working station producing loop packets.
+The weather site's "current conditions" area should update every few seconds when you have a working station producing loop packets.
 
 1. Check that the Loop Relay extension is running: look for `/var/run/weewx-clearskies/loop.sock`
 2. Check the SSE endpoint directly: `curl -N https://your-domain/sse` — you should see events streaming every few seconds
@@ -995,7 +993,7 @@ The dashboard's "current conditions" area should update every few seconds when y
 3. Verify the trust token matches — the API prints it once to the log on first start. If you missed it, restart the API and check the log immediately
 4. If using a two-host setup, ensure the front-end host can reach the weewx host on port 8765 (check firewalls)
 
-### Dashboard shows stale data
+### Weather site shows stale data
 
 1. Check the API's health endpoint: `curl -k https://localhost:8081/health/ready`
 2. If the API reports "degraded," one or more providers may be unreachable. Check the API log for provider timeout errors.
@@ -1049,7 +1047,7 @@ When opening an issue:
 - Steps to reproduce the problem
 - API log output (see Troubleshooting section for how to collect this)
 - Your `api.conf` with secrets replaced by `[REDACTED]`
-- Browser console errors (for dashboard issues)
+- Browser console errors (for weather site issues)
 - Your operating system, Python version, and Docker version (if applicable)
 
 ### What not to include
@@ -1071,11 +1069,11 @@ The following are fully supported — bugs will be investigated and fixed:
 - **Installation** via the documented Docker Compose and native (pip + systemd) paths on supported platforms
 - **The setup wizard** — all steps, on all 13 supported languages
 - **The admin interface** — all configuration sections
-- **The dashboard** — all 9 built-in pages, responsive layout, dark/light themes, WCAG 2.1 AA accessibility
+- **The weather site** — all 9 built-in pages, responsive layout, dark/light themes, WCAG 2.1 AA accessibility
 - **Data providers** — all documented providers with correct API keys
 - **Charts** — the `charts.conf` configuration system, including special series types (wind rose, weather range, Hays chart) and custom SQL
 - **weewx extensions** — ClearSkiesLoopRelay and ClearSkiesTruesun
-- **Internationalization** — all 13 supported locales in the dashboard, wizard, and admin
+- **Internationalization** — all 13 supported locales in the weather site, wizard, and admin
 - **Unit conversion** — all 14 weewx unit groups with per-group override
 
 ### Acknowledged but not actively supported
@@ -1098,7 +1096,7 @@ The following are outside the project's scope:
 - **Firewall and network configuration** beyond what is needed for Clear Skies
 - **Home Assistant integration** — example configurations are provided as a starting point but are not maintained
 - **Third-party data provider issues** — if a provider's API is down, returns incorrect data, or changes its terms of service, that is between you and the provider
-- **Custom dashboard development** — modifying the React source code, adding custom pages, or building plugins
+- **Custom weather site development** — modifying the React source code, adding custom pages, or building plugins
 - **Commercial deployment consulting** — contact the developer for commercial license terms
 
 ---
@@ -1115,7 +1113,7 @@ The two weewx extensions (ClearSkiesLoopRelay and ClearSkiesTruesun) are license
 
 The PolyForm Noncommercial license plus the Additional Permitted Uses document (included as `ADDITIONAL-USES.md` in each core repository) permit the following uses at no cost:
 
-- **Personal use** — running a weather dashboard for yourself, your family, or your friends
+- **Personal use** — running a weather site for yourself, your family, or your friends
 - **Educational use** — schools, universities, research institutions
 - **Government use** — federal, state, and local government agencies, regardless of size
 - **Nonprofit use** — organizations recognized as tax-exempt under IRC 501(c)(3), (c)(4), (c)(6), (c)(7), or international equivalents
@@ -1139,7 +1137,7 @@ Contact the developer via [GitHub Issues](https://github.com/inguy24/weewx-clear
 
 ### Provider compliance
 
-Clear Skies connects to external weather data providers (Aeris/Xweather, NWS, OpenWeatherMap, IQAir, Open-Meteo, USGS, RainViewer, and others). Each provider has its own terms of service, usage limits, and licensing requirements.
+Clear Skies connects to external weather data providers (Vaisala Xweather, NWS, OpenWeatherMap, IQAir, Open-Meteo, USGS, RainViewer, and others). Each provider has its own terms of service, usage limits, and licensing requirements.
 
 **You are responsible for complying with the terms of service of every provider you configure.** A Clear Skies license (whether free or commercial) does not grant you any rights to third-party data or services. In particular:
 
@@ -1153,7 +1151,7 @@ Review each provider's terms before configuring your installation. The wizard li
 
 - `LICENSE` and `ADDITIONAL-USES.md` — English only, never translated. These are the legally binding documents.
 - `EULA` — available in all 13 supported languages. The English version is the sole legally binding document. All translated versions include a prominent disclaimer in both English and the target language stating this.
-- Dashboard Legal page — translated for visitor convenience. Non-English versions display a disclaimer banner noting that the English version is authoritative.
+- Weather site Legal page — translated for visitor convenience. Non-English versions display a disclaimer banner noting that the English version is authoritative.
 - Wizard, admin, and help content — fully translated for usability. These are interface elements, not legal instruments.
 
 The English-language documents under California governing law are always authoritative. This follows the standard practice of major software projects: provide translations for understanding, but designate a single authoritative language for legal clarity.
