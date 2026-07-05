@@ -15,7 +15,6 @@ from weewx_clearskies_config.wizard.providers import (
     ProviderInfo,
     get_provider,
     providers_by_domain,
-    recommend_providers,
     test_provider as check_provider,
 )
 
@@ -62,40 +61,6 @@ def test_get_provider_returns_provider_info_for_known_id():
 
 def test_get_provider_returns_none_for_unknown_id():
     assert get_provider("no_such_provider_xyz") is None
-
-
-# ---------------------------------------------------------------------------
-# recommend_providers
-# ---------------------------------------------------------------------------
-
-
-def test_recommend_providers_returns_nws_for_us_coordinates():
-    # Washington DC
-    recs = recommend_providers(38.8894, -77.0352)
-    assert recs["forecast"] == "nws"
-
-
-def test_recommend_providers_returns_openmeteo_for_non_us_coordinates():
-    # Berlin, Germany
-    recs = recommend_providers(52.52, 13.40)
-    assert recs["forecast"] == "openmeteo"
-
-
-def test_recommend_providers_covers_all_five_domains():
-    recs = recommend_providers(38.8894, -77.0352)
-    assert set(recs.keys()) == {"forecast", "alerts", "aqi", "earthquakes", "radar"}
-
-
-def test_recommend_providers_us_boundary_coordinates_return_nws():
-    # Near the US boundary: lat=24, lon=-130
-    recs = recommend_providers(24.0, -130.0)
-    assert recs["forecast"] == "nws"
-
-
-def test_recommend_providers_non_us_boundary_coordinates_return_openmeteo():
-    # Just outside US west boundary
-    recs = recommend_providers(38.0, -131.0)
-    assert recs["forecast"] == "openmeteo"
 
 
 # ---------------------------------------------------------------------------

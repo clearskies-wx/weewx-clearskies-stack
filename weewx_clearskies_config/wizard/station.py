@@ -4,11 +4,12 @@ The plain HTTP fallback (station_from_api) has been removed.  The web wizard
 (routes.py) now fetches station identity via the secure API channel:
 ApiClient.get_station().
 
-station_from_weewx_conf() is retained for the CLI wizard (cli_wizard.py)
-which runs without an established API session.
+station_from_weewx_conf() has no production caller since the CLI wizard was
+removed; it is exercised only by tests. Kept in case a future standalone
+(no-API-session) path needs it.
 
 lookup_timezone() is a pure coordinate-to-timezone lookup with no DB or file
-dependencies and is called from both the web wizard and CLI wizard.
+dependencies and is called from the web wizard.
 """
 
 from __future__ import annotations

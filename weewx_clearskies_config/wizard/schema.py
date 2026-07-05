@@ -467,11 +467,12 @@ def _longest_common_prefix(a: str, b: str) -> int:
 
 
 # ---------------------------------------------------------------------------
-# CLI wizard path — direct DB introspection (not used by web wizard)
+# Direct DB introspection (not used by web wizard)
 #
 # The web wizard (routes.py) uses process_api_schema() + ApiClient.get_schema()
-# instead.  introspect_schema() is retained here for the CLI wizard
-# (cli_wizard.py) which runs without an established API session.
+# instead. introspect_schema() has no production caller since the CLI wizard
+# was removed; it is exercised only by tests. Kept in case a future
+# standalone (no-API-session) path needs it.
 # ---------------------------------------------------------------------------
 
 

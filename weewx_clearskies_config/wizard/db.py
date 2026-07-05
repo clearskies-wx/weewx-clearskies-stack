@@ -6,8 +6,9 @@ bootstrap path where the API may not yet be installed.
 
 Note: the web wizard (routes.py) no longer calls these functions — it uses
 ApiClient.test_db() and ApiClient.get_db_defaults() instead (ADR-038).
-These functions are retained for use by the CLI wizard (cli_wizard.py) which
-runs without an established API session.
+These functions have no production caller since the CLI wizard was removed;
+they are exercised only by tests. Kept in case a future standalone
+(no-API-session) path needs them.
 """
 
 from __future__ import annotations

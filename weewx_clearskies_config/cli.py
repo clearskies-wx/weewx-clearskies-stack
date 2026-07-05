@@ -103,11 +103,9 @@ def _print_banner(
 @click.option("--bind", "bind_addr", default=None, metavar="ADDR")
 @click.option("--port", default=9876, show_default=True, metavar="PORT")
 @click.option("--tls", "tls_enabled", is_flag=True, default=False)
-@click.option("--cli", "cli_mode", is_flag=True, default=False)
 @click.option("--reset", "reset_config", is_flag=True, default=False)
 @click.option("--reset-admin-password", is_flag=True, default=False)
 @click.option("--show-secrets", is_flag=True, default=False)
-@click.option("--headless", is_flag=True, default=False)
 @click.option(
     "--dashboard-root",
     default="/var/www/clearskies",
@@ -115,37 +113,15 @@ def _print_banner(
     metavar="PATH",
     help="Dashboard web root (static files only — webcam.json is written to --config-dir).",
 )
-@click.option("--db-host", default=None, help="Headless: database host")
-@click.option("--db-port", default=None, type=int, help="Headless: database port")
-@click.option("--db-user", default=None, help="Headless: database user")
-@click.option("--db-password", default=None, help="Headless: database password")
-@click.option("--db-name", default=None, help="Headless: database name")
-@click.option("--forecast-provider", default=None, help="Headless: forecast provider id")
-@click.option(
-    "--topology",
-    "headless_topology",
-    default=None,
-    type=click.Choice(["same-host", "cross-host"]),
-    help="Headless: deployment topology",
-)
 def cli(
     bind_localhost: bool,
     bind_addr: str | None,
     port: int,
     tls_enabled: bool,
-    cli_mode: bool,
     reset_config: bool,
     reset_admin_password: bool,
     show_secrets: bool,
-    headless: bool,
     dashboard_root: str,
-    db_host: str | None,
-    db_port: int | None,
-    db_user: str | None,
-    db_password: str | None,
-    db_name: str | None,
-    forecast_provider: str | None,
-    headless_topology: str | None,
 ) -> None:
     if bind_localhost and bind_addr:
         click.echo("Error: --localhost and --bind are mutually exclusive.", err=True)
@@ -153,29 +129,8 @@ def cli(
 
     # --- Action-only flags (run and exit, no server) ---
 
-    if cli_mode:
-        from weewx_clearskies_config.cli_wizard import run_cli_wizard
-
-        run_cli_wizard(_config_dir())
-        sys.exit(0)
-
     if reset_config:
         click.echo("Config reset not yet implemented.")
-        sys.exit(0)
-
-    if headless:
-        from weewx_clearskies_config.cli_wizard import run_headless
-
-        run_headless(
-            config_dir=_config_dir(),
-            db_host=db_host,
-            db_port=db_port,
-            db_user=db_user,
-            db_password=db_password,
-            db_name=db_name,
-            forecast_provider=forecast_provider,
-            topology=headless_topology,
-        )
         sys.exit(0)
 
     if show_secrets:
