@@ -3,7 +3,7 @@
 A guide for weather station operators who want to install, configure, and maintain a Clear Skies weather site. No programming experience is required.
 
 **Version:** 1.0 (beta)
-**Last updated:** 2026-07-03
+**Last updated:** 2026-07-04
 
 ---
 
@@ -542,15 +542,25 @@ You generally do not need to change anything on this step unless the auto-detect
 
 ### Column mapping
 
-This step maps the columns in your weewx database to the data fields that Clear Skies uses. The wizard reads your database schema and makes its best guess at each mapping, showing a confidence level (high, medium, or low) for each one.
+This step maps the columns in your weewx database to the measurement names that Clear Skies uses. The wizard reads your database schema and makes its best guess at each mapping, showing a confidence level (high, medium, or low) for each one.
 
-Most operators can accept the defaults. Adjust mappings only if the wizard guessed incorrectly — for example, if you have a custom column name for an observation that does not match the weewx standard name.
+**If a column is not mapped, Clear Skies cannot read it** — that measurement will not appear anywhere on your weather site (no current reading, no charts, no records). The data is still safe in your weewx database; Clear Skies just does not know it exists.
+
+Most operators can accept the defaults. Adjust mappings only if the wizard guessed incorrectly. You can always map skipped columns later from the admin interface — no data is lost.
 
 ### Station identity
 
-Set your station's name, location, timezone, altitude, and public-facing default language. The location (latitude and longitude) is used for astronomical calculations (sunrise, sunset, moon phases, planet positions), provider API calls (forecast for your area), and earthquake search radius.
+Set your station's name, location, timezone, altitude, default visitor language, photo, and description.
 
-The station photo and "About" text appear on the weather site's About page. These are optional but recommended — they help visitors understand where the data comes from.
+**Pre-filled values:** If the API can read your `weewx.conf`, the location fields (latitude, longitude, altitude, timezone) are pre-filled automatically. Review them and adjust only if needed.
+
+**Important:** Clear Skies does not write changes back to `weewx.conf`. If you correct your latitude, altitude, or other values here, also update `weewx.conf` to keep them in sync.
+
+- **Latitude and longitude** — enter in decimal degrees (e.g. `40.7128` / `-74.0060`). Used for sun/moon calculations, provider geo-routing, timezone detection, and sky classification.
+- **Altitude** — elevation above sea level, used for barometric pressure calculations.
+- **Default language** — the language visitors see by default on your weather site (not the wizard language). Visitors can switch languages in their browser.
+- **Station photo** — appears on the About page. Provide **alt text** — a short description of the image (e.g. "Davis Vantage Pro2 mounted on a rooftop pole") for visually impaired visitors using screen readers.
+- **Station description** — a few sentences about your equipment, location, or history. Appears on the About page below the photo. Keep it to 2–3 sentences.
 
 ### Display units
 
@@ -560,57 +570,64 @@ Choose how weather data is displayed to visitors. Clear Skies supports the three
 - **Metric** — Celsius, km/h, mbar, mm
 - **MetricWX** — Celsius, m/s, hPa, mm
 
-You can also override individual unit groups — for example, using Celsius for temperature but mph for wind speed. The unit system controls display only; the database stores data in whatever unit system weewx uses.
+You can also override individual unit groups — for example, using Celsius for temperature but mph for wind speed. The **Distance** group also controls how earthquake depth and distance-from-station are displayed on the Seismic page. The unit system controls display only; the database stores data in whatever unit system weewx uses.
 
 ### Data providers
 
-Configure where Clear Skies gets forecast, air quality, alert, earthquake, and radar data from. Each category has multiple provider options:
+Configure where Clear Skies gets forecast, air quality, alert, earthquake, and radar data from. Each category has multiple provider options. Some require API keys (usually free for personal use); others work with no signup. The wizard guides you through key acquisition and tests each one before proceeding.
 
-- **Forecast:** Vaisala Xweather, NWS, Open-Meteo, OpenWeatherMap, Weather Underground
-- **Air quality (AQI):** Vaisala Xweather, IQAir, Open-Meteo
-- **Alerts:** NWS, Vaisala Xweather, OpenWeatherMap
-- **Earthquakes:** USGS, GeoNet, EMSC, RENASS
-- **Radar:** RainViewer, LibreWxR, OpenWeatherMap
+- **Forecast:** NWS (US only, no key needed), Open-Meteo (global, no key needed), OpenWeatherMap (global, key required), Vaisala Xweather (global, key required — free through PWSWeather Contributor Plan)
+- **Air quality (AQI):** Open-Meteo (global, no key needed, model-based), IQAir (global, key required, observed), Vaisala Xweather (global, key required, observed)
+- **Alerts:** NWS (US only, no key needed), Vaisala Xweather (global, key required), OpenWeatherMap (global, paid subscription required)
+- **Earthquakes:** USGS (global, no key needed)
+- **Radar:** RainViewer (global, no key needed), LibreWxR (global, no key needed — higher quality, self-hosting recommended)
 
-Some providers require API keys (usually free for personal use). The wizard guides you through obtaining keys and tests each one before proceeding.
-
-AQI providers fall into two categories: **observed data** providers (Vaisala Xweather, IQAir) report particulate matter readings from nearby sensors, while **model-based** providers (Open-Meteo) estimate air quality from atmospheric models. Observed data enables haze detection in the sky classification engine; model-based data does not.
+AQI providers fall into two categories: **observed data** providers (Vaisala Xweather, IQAir) report particulate matter readings from nearby government monitoring stations, while **model-based** providers (Open-Meteo) estimate air quality from satellite and atmospheric models. Observed data enables haze detection in the sky classification engine; model-based data does not.
 
 ### Webcam (optional)
 
-If you have a weather camera, enter the URLs for the live image and timelapse video, and set the refresh interval. The webcam card appears on the Now page. If you do not have a camera, skip this step — the webcam card will not appear.
+If you have a weather camera, enter the URLs for the live image and timelapse video, and set the refresh interval. Supported formats: JPEG, PNG, GIF, or WebP for still images; MP4 (H.264) for video. URLs can be relative paths on the same server (e.g. `/webcam/weather_cam.jpg`) or full URLs to external hosts (e.g. `https://cam.example.com/latest.jpg`). The webcam card appears on the Now page. If you do not have a camera, skip this step — the webcam card will not appear.
 
 ### Appearance and branding
 
 Customize the visual appearance of your weather site:
 
 - **Accent color** — the primary color used for interactive elements, charts, and highlights
-- **Logos** — station logo and favicon
-- **Theme mode** — light, dark, or automatic (follows the visitor's system preference)
+- **Logos** — upload a file or enter a path/URL. SVG is preferred (scales to any size); PNG with a transparent background also works. Recommended dimensions: wide/horizontal layout, roughly 200–400 px wide by 40–80 px tall. Maximum 500 KB. Provide separate logos for light and dark themes, or just one for both. Include alt text for each logo.
+- **Favicon** — browser tab icon. ICO or PNG, 32×32 or 64×64 px, max 100 KB.
+- **Theme mode** — light, dark, Auto (OS preference), or Auto (sunrise/sunset)
+- **Custom background** — upload a JPEG, PNG, or WebP image (max 5 MB, landscape orientation recommended) to replace the built-in day/night backgrounds.
 
 ### Privacy, legal, and analytics
 
-Configure privacy-related settings:
+Configure visitor tracking and privacy compliance:
 
-- **Privacy regions** — select which regional privacy regulations apply to your visitors (e.g., GDPR for European visitors). This controls the consent banner behavior.
-- **Google Analytics** — optionally add a GA tracking ID. The consent banner respects the visitor's choice before loading any analytics scripts.
-- **Policy overrides** — provide custom URLs for your own privacy policy and terms of use, replacing the built-in defaults.
+- **Google Analytics** — enter your Measurement ID (starts with `G-`) to enable visitor tracking. Leave blank to disable — no tracking code will load.
+- **Privacy regions** — controls the consent banner:
+  - *None / Disabled* — no consent banner. **You are responsible for complying with any applicable privacy laws.**
+  - *Global* — consent banner for all visitors (safest when in doubt)
+  - *EU (GDPR)* — banner for European visitors
+  - *US (CCPA)* — opt-out notice for California visitors
+  - *Both* — EU and US rules together
+- **Legal templates** — your weather site includes built-in Terms of Use and Privacy Policy templates in all 13 languages. **These are not legal advice — we are not lawyers.** You are responsible for verifying they are adequate for your jurisdiction. You can upload your own replacements (Markdown or plain text); uploaded documents are shown as-is and are not translated by Clear Skies.
 
 ### Feature settings
 
 Configure optional features:
 
-- **Earthquake search radius** — how far from your station to search for earthquake data (in miles or kilometers, depending on your unit system)
-- **Display preferences** — toggle visibility of certain weather site elements
+- **Earthquake radius** — how far from your station (in kilometers) to search for earthquake data. The Seismic page shows results within this radius.
+- **Minimum magnitude** — filter threshold on the **Moment Magnitude scale (Mw)**, the standard used by the USGS and other agencies worldwide. The scale is logarithmic — each whole number represents roughly 32 times more energy released.
+- **Default time range** — how many days of earthquake history to show when a visitor first opens the Seismic page.
 
 ### TLS configuration
 
-Configure how the API handles TLS (encrypted connections):
+TLS (Transport Layer Security) is what makes the padlock icon appear in your browser's address bar and the URL start with `https://`. It encrypts traffic between visitors and your server.
 
-- **Self-signed** (default) — the API generates its own certificate. Suitable for home networks or when Caddy handles public TLS.
-- **ACME (Let's Encrypt)** — automatic certificate from a trusted authority. Requires a domain name and port 80/443 access.
-- **Custom certificate** — use your own certificate files. For operators with an existing PKI or internal CA.
-- **Behind proxy** — the API uses a self-signed certificate and trusts the proxy (Caddy) to handle public TLS. This is the most common configuration.
+- **Self-signed** — you provide your own self-signed certificate. Clear Skies does not generate one. Browsers show a security warning to visitors. Use only for testing or private networks. If your self-signed cert is on a separate proxy, select Behind Proxy instead.
+- **ACME HTTP-01 (Let's Encrypt)** — automatic free certificate. Requires port 80 access from the internet and a domain name. Only use this if this server is directly internet-facing. If you run ACME on a separate tool (Nginx Proxy Manager, Traefik), select Behind Proxy.
+- **ACME DNS-01 (Let's Encrypt)** — same free certs, validated via DNS records. Use when port 80 is blocked or for wildcard certificates.
+- **Manual** — provide your own certificate and key files in PEM format. The certificate file should contain the server cert plus any intermediates (full chain). You can upload files directly through the wizard, or enter filesystem paths to files already on the server.
+- **Behind Proxy** — choose this when something else handles TLS for you (Nginx Proxy Manager, Traefik, Cloudflare, a corporate load balancer). Clear Skies accepts plain HTTP from the upstream proxy.
 
 ### Review and apply
 
@@ -633,17 +650,22 @@ Every section in the admin interface has a help button (the `?` icon) that opens
 
 ### Changing station identity
 
-Update your station's name, location, timezone, altitude, photo, or "About" text from the **Station Identity** section. Changes take effect immediately — no restart required.
+Update your station's name, location, timezone, altitude, photo, or description from the **Station Identity** section. Fields are pre-filled from the values you entered during setup. Remember that Clear Skies does not write changes back to `weewx.conf` — if you update location or altitude here, also update `weewx.conf` to keep them in sync. Changes take effect immediately — no restart required.
+
+### Changing the database connection
+
+Update database connection settings from the **Database** section. The form shows fields for the database type detected during setup (SQLite path or MySQL/MariaDB host, port, user, password). Test the connection before saving. Database changes require an API restart to take effect.
 
 ### Changing data providers
 
-Switch between forecast, AQI, alert, earthquake, or radar providers from the **Data Providers** section. When changing providers:
+Each provider category (Forecast, Alerts, AQI, Earthquakes, Radar) has its own section in the admin. To switch providers:
 
+- Select the new provider from the dropdown
 - Enter the new provider's API key (if required)
-- Test the connection using the "Test" button
+- Test the connection using the **Test** button
 - Save changes
 
-The API restarts automatically and warms the new provider's cache. The weather site shows the new data source within about 2 minutes.
+The change takes effect after saving. If you switch forecast providers while the forecast correction engine is enabled, the training data resets because bias patterns differ between providers.
 
 ### Changing the appearance
 
@@ -663,7 +685,7 @@ If your database schema changes (new columns, renamed columns), update the mappi
 
 ### Managing TLS certificates
 
-Renew or change TLS certificates from the **TLS** section. If you are using ACME (Let's Encrypt), renewal is automatic. For self-signed or custom certificates, upload new certificate files here.
+Renew or change TLS certificates from the **TLS** section. If you are using ACME (Let's Encrypt), renewal is automatic — Caddy handles it. For Manual mode, the admin form takes filesystem **paths** to your certificate and key files (unlike the wizard, which also supports direct file upload). Copy updated certificate files onto the server first (e.g. via SCP/SFTP), then enter their paths. Both files must be in PEM format.
 
 ### Sky classification calibration
 
@@ -679,7 +701,7 @@ The **Forecast Correction** section controls the machine-learning system that le
 
 ### Geographic features
 
-The **Geographic Features** section lets you download and manage the vector map overlay that appears on the satellite view. This overlay shows roads, water features, and boundaries from OpenStreetMap data. The download extracts tiles for the area around your station (based on the geographic bounds you configure) and stores them locally. Total download size depends on the area — typically 10–100 MB.
+The **Geographic Features** section lets you download and manage the vector map overlay that appears on the satellite and radar views. This overlay shows borders, coastlines, city labels, and geographic context from OpenStreetMap data in PMTiles format. Click **Update Map Data** to download — this is a one-time operation. Update periodically (every few months) for the latest map data.
 
 ---
 

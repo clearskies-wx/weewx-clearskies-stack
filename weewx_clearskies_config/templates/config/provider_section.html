@@ -12,6 +12,7 @@
    The inline "Test" button posts to /admin/config/test-provider.
    Saving the provider selection posts to /admin/config/api/<section>.
    ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
 
 {% set available_providers = domain_providers.get(section, []) %}
 {% set current_provider = values.get("provider", "") %}
@@ -72,6 +73,7 @@
       </ul>
     </nav>
     <h2>{{ _(display_name) }}</h2>
+    {{ help_trigger("/admin/help/provider_" ~ section) }}
     <p>
       {{ _("Choose a data provider for") }} <strong>{{ section }}</strong>.
       {{ _("API keys are stored in") }} <code>secrets.env</code> {{ _("(mode 0600) and are never written to the config file. Use the") }} <em>{{ _("Test") }}</em> {{ _("button to verify connectivity before saving.") }}

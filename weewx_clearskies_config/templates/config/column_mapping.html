@@ -3,6 +3,7 @@
    Maps DB column names to canonical weewx field names.
    Context: component, section, display_name, mapping, canonical_fields
    ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
 
 <style>
   .mapping-table {
@@ -63,6 +64,7 @@
       </ul>
     </nav>
     <h2>{{ _("Column Mapping") }}</h2>
+    {{ help_trigger("/admin/help/column_mapping") }}
     <p>
       {{ _("Map database column names to canonical weewx field names.") }}
       <strong>{{ _("Changes take effect on the next API request — no restart needed.") }}</strong>

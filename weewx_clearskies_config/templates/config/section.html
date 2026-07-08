@@ -7,8 +7,10 @@
      component, section, display_name, is_column_mapping,
      values, secret_fields, mapping, canonical_fields, result, error
    ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
 
 {% set _provider_sections = ("forecast", "alerts", "aqi", "earthquakes", "radar") %}
+{% set _config_help_ids = {"ui": "station", "database": "database", "server": "server"} %}
 
 {% if is_column_mapping %}
   {% include "config/column_mapping.html" %}
@@ -36,6 +38,7 @@
       </ul>
     </nav>
     <h2>{{ _(display_name) }}</h2>
+    {{ help_trigger("/admin/help/" ~ _config_help_ids.get(section, section)) }}
     <p>
       {{ _("Edit settings for the") }} <strong>{{ section }}</strong> {{ _("section of") }}
       <code>{{ component }}.conf</code>.
