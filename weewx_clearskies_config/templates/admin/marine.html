@@ -1,0 +1,377 @@
+{# -------------------------------------------------------------------------
+   Marine locations admin section (T6.2).
+   Loaded via HTMX into #admin-content. Renders two states from one template
+   so all marine admin actions can swap #admin-content with a single
+   consistent view, matching the geographic_features.html / result.html
+   pattern used by the rest of the admin app:
+
+     List view (default):
+       locations   — dict[location_id, location] normalised by
+                      _parse_marine_locations() in admin/routes.py. Each
+                      location has keys: id, name, lat, lon, activities,
+                      ndbc_station_ids, coops_station_ids, nws_marine_zone_id,
+                      nwps_wfo, surf, fishing, beach_safety.
+       error       — str|None, shown as a banner (e.g. API unreachable).
+       flash       — str|None, shown as a success banner after save/delete.
+
+     Edit/Add view (edit_mode == true):
+       edit_mode        — True
+       edit_location_id — str, empty for "add new"
+       edit_location     — dict (same shape as one `locations` value), or {}
+       edit_error        — str|None, validation error from a failed save
+
+   Context is always provided by weewx_clearskies_config/admin/routes.py —
+   see marine_get / marine_edit_form / marine_save / marine_delete.
+   ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
+<article>
+  <header>
+    <nav aria-label="{{ _('Breadcrumb') }}">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">{{ _("Admin") }}</a>
+        </li>
+        <li>{{ _("Marine Locations") }}</li>
+      </ul>
+    </nav>
+    <h2>{{ _("Marine Locations") }}</h2>
+    {{ help_trigger("/admin/help/marine") }}
+  </header>
+
+  {% if flash %}
+  <div role="status"
+       style="background:color-mix(in srgb,var(--pico-color-green-500,#22c55e) 12%,transparent);
+              border:1px solid var(--pico-color-green-500,#22c55e);
+              padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
+              margin-block:1rem;font-size:0.875rem">
+    {{ flash }}
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div role="alert"
+       style="background:var(--pico-secondary-background);
+              border-left:3px solid var(--pico-color-amber-500,#f59e0b);
+              padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
+              margin-block:1rem;font-size:0.875rem">
+    <strong>{{ _("Error.") }}</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if edit_mode %}
+  {# -------------------------------------------------------------------- #}
+  {# Add / Edit form                                                       #}
+  {# -------------------------------------------------------------------- #}
+  {% set activities = edit_location.get("activities", []) %}
+  {% set surf = edit_location.get("surf", {}) %}
+  {% set fishing = edit_location.get("fishing", {}) %}
+  {% set beach_safety = edit_location.get("beach_safety", {}) %}
+  <section aria-labelledby="marine-edit-heading">
+    <h3 id="marine-edit-heading">
+      {% if edit_location_id %}{{ _("Edit Location") }}{% else %}{{ _("Add Location") }}{% endif %}
+    </h3>
+
+    {% if edit_error %}
+    <div role="alert"
+         style="background:var(--pico-secondary-background);
+                border-left:3px solid var(--pico-del-color,#cf222e);
+                padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
+                margin-block:1rem;font-size:0.875rem">
+      {{ edit_error }}
+    </div>
+    {% endif %}
+
+    <form hx-post="/admin/marine/save"
+          hx-target="#admin-content"
+          hx-swap="innerHTML"
+          autocomplete="off">
+      <input type="hidden" name="location_id" value="{{ edit_location_id }}">
+
+      <label for="marine-name">{{ _("Location name") }}</label>
+      <input type="text" id="marine-name" name="name" required
+             value="{{ edit_location.get('name', '') }}"
+             placeholder="{{ _('e.g. Main Beach') }}">
+
+      <div class="grid">
+        <div>
+          <label for="marine-lat">{{ _("Latitude") }}</label>
+          <input type="number" step="any" min="-90" max="90" id="marine-lat" name="lat" required
+                 value="{{ edit_location.get('lat') if edit_location.get('lat') is not none else '' }}">
+        </div>
+        <div>
+          <label for="marine-lon">{{ _("Longitude") }}</label>
+          <input type="number" step="any" min="-180" max="180" id="marine-lon" name="lon" required
+                 value="{{ edit_location.get('lon') if edit_location.get('lon') is not none else '' }}">
+        </div>
+      </div>
+
+      <fieldset>
+        <legend>{{ _("Activities") }}</legend>
+        <label>
+          <input type="checkbox" name="activities" value="marine"
+                 {% if "marine" in activities %}checked{% endif %}>
+          {{ _(activity_labels.marine) }}
+        </label>
+        <label>
+          <input type="checkbox" name="activities" value="surf"
+                 class="marine-activity-toggle" data-section="surf"
+                 {% if "surf" in activities %}checked{% endif %}>
+          {{ _(activity_labels.surf) }}
+        </label>
+        <label>
+          <input type="checkbox" name="activities" value="fishing"
+                 class="marine-activity-toggle" data-section="fishing"
+                 {% if "fishing" in activities %}checked{% endif %}>
+          {{ _(activity_labels.fishing) }}
+        </label>
+        <label>
+          <input type="checkbox" name="activities" value="beach_safety"
+                 class="marine-activity-toggle" data-section="beach_safety"
+                 {% if "beach_safety" in activities %}checked{% endif %}>
+          {{ _(activity_labels.beach_safety) }}
+        </label>
+      </fieldset>
+
+      <label for="marine-ndbc">{{ _("NDBC buoy IDs (comma-separated)") }}</label>
+      <input type="text" id="marine-ndbc" name="ndbc_station_ids"
+             value="{{ edit_location.get('ndbc_station_ids', []) | join(', ') }}">
+
+      <label for="marine-coops">{{ _("CO-OPS tide station IDs (comma-separated)") }}</label>
+      <input type="text" id="marine-coops" name="coops_station_ids"
+             value="{{ edit_location.get('coops_station_ids', []) | join(', ') }}">
+
+      <label for="marine-zone">{{ _("NWS marine zone ID") }}</label>
+      <input type="text" id="marine-zone" name="nws_marine_zone_id"
+             value="{{ edit_location.get('nws_marine_zone_id', '') }}">
+      <small>{{ _("Save the location first, then use \"Test\" from the location list to discover nearby stations automatically.") }}</small>
+
+      <div class="marine-activity-section" data-section="surf"
+           style="border-inline-start:3px solid var(--pico-primary);padding-inline-start:1rem;margin-block:1rem;
+                  {% if 'surf' not in activities %}display:none{% endif %}">
+        <h4>{{ _(activity_labels.surf) }}</h4>
+
+        <label for="marine-surf-facing">{{ _("Beach facing direction (degrees)") }}</label>
+        <input type="number" min="0" max="359" id="marine-surf-facing" name="surf_beach_facing_degrees"
+               value="{{ surf.get('beach_facing_degrees') if surf.get('beach_facing_degrees') is not none else '' }}">
+
+        <label for="marine-surf-bottom">{{ _("Bottom type") }}</label>
+        <select id="marine-surf-bottom" name="surf_bottom_type">
+          <option value="">{{ _("— select —") }}</option>
+          <option value="sand" {% if surf.get("bottom_type") == "sand" %}selected{% endif %}>{{ _("Sand") }}</option>
+          <option value="rock" {% if surf.get("bottom_type") == "rock" %}selected{% endif %}>{{ _("Rock") }}</option>
+          <option value="coral_reef" {% if surf.get("bottom_type") == "coral_reef" %}selected{% endif %}>{{ _("Coral reef") }}</option>
+          <option value="mixed" {% if surf.get("bottom_type") == "mixed" %}selected{% endif %}>{{ _("Mixed") }}</option>
+        </select>
+
+        <label for="marine-surf-topo">{{ _("Topographic feature") }}</label>
+        <select id="marine-surf-topo" name="surf_topographic_feature">
+          <option value="">{{ _("— select —") }}</option>
+          <option value="point_break" {% if surf.get("topographic_feature") == "point_break" %}selected{% endif %}>{{ _("Point break") }}</option>
+          <option value="bay_break" {% if surf.get("topographic_feature") == "bay_break" %}selected{% endif %}>{{ _("Bay break") }}</option>
+          <option value="headland" {% if surf.get("topographic_feature") == "headland" %}selected{% endif %}>{{ _("Headland") }}</option>
+          <option value="straight_beach" {% if surf.get("topographic_feature") == "straight_beach" %}selected{% endif %}>{{ _("Straight beach") }}</option>
+        </select>
+
+        <fieldset>
+          <legend>{{ _("Directional exposure") }}</legend>
+          {% set exposure = surf.get("directional_exposure", []) %}
+          {% for dir in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] %}
+          <label style="display:inline-flex;align-items:center;gap:0.25rem;margin-inline-end:0.75rem">
+            <input type="checkbox" name="surf_exposure" value="{{ dir }}" {% if dir in exposure %}checked{% endif %}>
+            {{ dir }}
+          </label>
+          {% endfor %}
+        </fieldset>
+      </div>
+
+      <div class="marine-activity-section" data-section="fishing"
+           style="border-inline-start:3px solid var(--pico-primary);padding-inline-start:1rem;margin-block:1rem;
+                  {% if 'fishing' not in activities %}display:none{% endif %}">
+        <h4>{{ _(activity_labels.fishing) }}</h4>
+        <label for="marine-fishing-category">{{ _("Target category") }}</label>
+        <select id="marine-fishing-category" name="fishing_target_category">
+          <option value="">{{ _("— select —") }}</option>
+          <option value="saltwater_inshore" {% if fishing.get("target_category") == "saltwater_inshore" %}selected{% endif %}>{{ _("Saltwater inshore") }}</option>
+          <option value="bottom_fish" {% if fishing.get("target_category") == "bottom_fish" %}selected{% endif %}>{{ _("Bottom fish") }}</option>
+          <option value="freshwater_sport" {% if fishing.get("target_category") == "freshwater_sport" %}selected{% endif %}>{{ _("Freshwater sport") }}</option>
+          <option value="salmonids" {% if fishing.get("target_category") == "salmonids" %}selected{% endif %}>{{ _("Salmonids") }}</option>
+        </select>
+      </div>
+
+      <div class="marine-activity-section" data-section="beach_safety"
+           style="border-inline-start:3px solid var(--pico-primary);padding-inline-start:1rem;margin-block:1rem;
+                  {% if 'beach_safety' not in activities %}display:none{% endif %}">
+        <h4>{{ _(activity_labels.beach_safety) }}</h4>
+        {% for link in beach_safety.get("external_links", []) %}
+        <div class="grid">
+          <input type="text" name="beach_safety_link_label" placeholder="{{ _('Label') }}" value="{{ link.get('label', '') }}">
+          <input type="url" name="beach_safety_link_url" placeholder="{{ _('URL') }}" value="{{ link.get('url', '') }}">
+        </div>
+        {% endfor %}
+        <div class="grid">
+          <input type="text" name="beach_safety_link_label" placeholder="{{ _('Label') }}" value="">
+          <input type="url" name="beach_safety_link_url" placeholder="{{ _('URL') }}" value="">
+        </div>
+        <small>{{ _("Blank rows are ignored. Save and edit again to add more links.") }}</small>
+      </div>
+
+      <div role="group" style="margin-block-start:1rem">
+        <button type="submit">{{ _("Save Location") }}</button>
+        <a href="/admin/marine"
+           hx-get="/admin/marine"
+           hx-target="#admin-content"
+           hx-swap="innerHTML"
+           role="button"
+           class="outline secondary">{{ _("Cancel") }}</a>
+      </div>
+    </form>
+  </section>
+
+  <script>
+    (function () {
+      var scriptEl = document.currentScript;
+      var section = scriptEl && scriptEl.closest("article");
+      if (!section) { return; }
+      section.addEventListener("change", function (evt) {
+        var target = evt.target;
+        if (!target.classList || !target.classList.contains("marine-activity-toggle")) { return; }
+        var name = target.getAttribute("data-section");
+        var panel = section.querySelector('.marine-activity-section[data-section="' + name + '"]');
+        if (panel) { panel.style.display = target.checked ? "" : "none"; }
+      });
+    })();
+  </script>
+
+  {% else %}
+  {# -------------------------------------------------------------------- #}
+  {# Location list                                                         #}
+  {# -------------------------------------------------------------------- #}
+  <p>
+    {{ _("Marine, surf, fishing, and beach safety locations configured for this station.
+    Each location can use nearby NDBC buoys, CO-OPS tide stations, and NWS marine
+    zones for its data. Configure new stations here, or through the setup wizard's
+    Marine Locations step.") }}
+  </p>
+
+  <div role="group" style="margin-block-end:1rem">
+    <button type="button"
+            hx-post="/admin/marine/edit"
+            hx-vals='{"location_id": ""}'
+            hx-target="#admin-content"
+            hx-swap="innerHTML"
+            hx-indicator="#marine-spinner">
+      {{ _("+ Add Location") }}
+    </button>
+    <span id="marine-spinner"
+          class="htmx-indicator"
+          aria-live="polite"
+          style="font-size:0.875rem;color:var(--pico-muted-color);align-self:center">
+      {{ _("Loading…") }}
+    </span>
+  </div>
+
+  {% if not locations %}
+  <div role="status"
+       style="background:var(--pico-secondary-background);
+              border-left:3px solid var(--pico-muted-color,#9ca3af);
+              padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
+              margin-block:1rem;font-size:0.875rem">
+    <strong>{{ _("No marine locations configured.") }}</strong>
+    {{ _("Add a location above, or run the setup wizard's Marine Locations step to configure your first location.") }}
+  </div>
+  {% else %}
+  <div style="overflow-x:auto">
+  <table role="grid">
+    <thead>
+      <tr>
+        <th scope="col">{{ _("Name") }}</th>
+        <th scope="col">{{ _("Coordinates") }}</th>
+        <th scope="col">{{ _("Activities") }}</th>
+        <th scope="col">{{ _("Stations") }}</th>
+        <th scope="col">{{ _("Connectivity") }}</th>
+        <th scope="col"><span class="sr-only">{{ _("Actions") }}</span></th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for loc_id, loc in locations.items() %}
+      <tr>
+        <td>{{ loc.name }}</td>
+        <td>
+          {% if loc.lat is not none and loc.lon is not none %}
+            {{ "%.4f"|format(loc.lat) }}, {{ "%.4f"|format(loc.lon) }}
+          {% else %}
+            &mdash;
+          {% endif %}
+        </td>
+        <td>
+          <div class="page-badge-list">
+            {% for a in loc.activities %}
+            <span class="page-badge">{{ _(activity_labels.get(a, a)) }}</span>
+            {% endfor %}
+          </div>
+        </td>
+        <td style="white-space:nowrap;font-size:0.85rem">
+          {{ loc.ndbc_station_ids | length }} {{ _("NDBC") }},
+          {{ loc.coops_station_ids | length }} {{ _("CO-OPS") }}
+        </td>
+        <td>
+          <div id="marine-connectivity-{{ loc_id }}" style="margin-block-end:0.35rem"></div>
+          <div role="group">
+            <button type="button" class="outline secondary" style="font-size:0.75rem;padding:0.15rem 0.5rem"
+                    hx-post="/admin/marine/test-connectivity"
+                    hx-vals='{"location_id": "{{ loc_id }}"}'
+                    hx-target="#marine-connectivity-{{ loc_id }}"
+                    hx-swap="innerHTML">
+              {{ _("Test") }}
+            </button>
+            {% if "surf" in loc.activities %}
+            <button type="button" class="outline secondary" style="font-size:0.75rem;padding:0.15rem 0.5rem"
+                    hx-post="/admin/marine/bathymetry"
+                    hx-vals='{"location_id": "{{ loc_id }}"}'
+                    hx-target="#marine-connectivity-{{ loc_id }}"
+                    hx-swap="innerHTML">
+              {{ _("Update Bathymetry") }}
+            </button>
+            {% endif %}
+          </div>
+        </td>
+        <td>
+          <div role="group">
+            <button type="button" class="outline"
+                    hx-post="/admin/marine/edit"
+                    hx-vals='{"location_id": "{{ loc_id }}"}'
+                    hx-target="#admin-content" hx-swap="innerHTML">
+              {{ _("Edit") }}
+            </button>
+            <button type="button" class="outline secondary"
+                    hx-post="/admin/marine/delete"
+                    hx-vals='{"location_id": "{{ loc_id }}"}'
+                    hx-target="#admin-content" hx-swap="innerHTML"
+                    hx-confirm="{{ _('Delete this marine location? This cannot be undone.') }}">
+              {{ _("Delete") }}
+            </button>
+          </div>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  </div>
+  {% endif %}
+  {% endif %}
+
+  <div style="margin-block-start:1.5rem">
+    <a href="/admin"
+       hx-get="/admin"
+       hx-target="#admin-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       role="button"
+       class="outline secondary">{{ _("Back to Admin") }}</a>
+  </div>
+
+</article>

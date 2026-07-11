@@ -29,6 +29,12 @@ Route summary (admin landing + domain sections):
   POST /admin/geographic-features/update — trigger PMTiles download via API
   GET  /admin/now-layout              — card layout editor form
   POST /admin/now-layout              — save now-layout.json to config dir
+  GET  /admin/marine                  — marine locations list (T6.2)
+  POST /admin/marine/edit             — render add/edit form for one location
+  POST /admin/marine/save             — validate + save one location via /setup/apply
+  POST /admin/marine/delete           — delete one location via /setup/apply
+  POST /admin/marine/test-connectivity — HTMX: NDBC/CO-OPS/NWS zone status for a location
+  POST /admin/marine/bathymetry       — HTMX: re-run bathymetry download for a surf location
 
 Route summary (config editor — formerly config/routes.py):
   GET  /admin/config                          — config dashboard (all sections)
@@ -43,6 +49,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 from pathlib import Path
 from typing import Any, NoReturn
 
@@ -917,6 +924,13 @@ _CUSTOM_SECTIONS: list[dict] = [
         "url": "/admin/forecast-correction",
         "description": "Temperature bias correction using forecast-observation pairs and Random Forest regression.",
     },
+    {
+        "section_id": "marine",
+        "display_name": "Marine Locations",
+        "group": "advanced",
+        "url": "/admin/marine",
+        "description": "Configure marine, surf, fishing, and beach safety locations.",
+    },
 ]
 
 
@@ -1072,6 +1086,19 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
     else:
         geo_rows.append(("Status", "Not downloaded"))
     custom_landing_values["geographic-features"] = geo_rows
+
+    # Marine locations summary (T6.2)
+    marine_config = _fetch_current_config()
+    marine_rows: list[tuple[str, Any]] = []
+    if marine_config is None:
+        marine_rows.append(("Status", "API unreachable"))
+    else:
+        marine_locations = _parse_marine_locations(marine_config.get("marine") or {})
+        if marine_locations:
+            marine_rows.append(("Locations", str(len(marine_locations))))
+        else:
+            marine_rows.append(("Status", "Not configured"))
+    custom_landing_values["marine"] = marine_rows
 
     return _render(
         request,
@@ -1793,4 +1820,636 @@ async def now_layout_post(request: Request) -> HTMLResponse:
         success=success,
         error=error,
         status_code=500 if error else 200,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Phase 6 T6.2 — Marine locations admin section
+#
+# NOTE on data source: GET /setup/current-config's "marine" field was added
+# to weewx-clearskies-api specifically to support this admin section
+# (coordinator-owned change, 2026-07-10 — see CurrentConfigResponse.marine
+# in weewx_clearskies_api/endpoints/setup.py). It returns the [marine]
+# section of api.conf "as-is" (raw ConfigObj mirror), so values below are
+# defensively type-coerced rather than trusted as already-typed JSON.
+#
+# NOTE on write path: POST /setup/apply is not a partial-patch endpoint —
+# `database`, `station`, `column_mapping`, and `column_units` are always
+# rewritten from whatever is sent (non-Optional/defaulted fields), while
+# `providers`/`branding`/`social`/`earthquakes`/`units`/`openaq_api_key` are
+# left untouched when omitted (Optional, None-means-skip). To edit one
+# marine location without clobbering unrelated config, _build_marine_apply_
+# payload() rebuilds the always-rewritten fields from the just-fetched
+# current-config response and omits every skip-if-absent field.
+# ---------------------------------------------------------------------------
+
+# Mirrors the validation vocabulary from wizard/routes.py's marine step
+# (T6.1). Duplicated (not imported) so admin/routes.py stays decoupled from
+# the wizard router module's own FastAPI router/global state.
+_MARINE_VALID_ACTIVITIES: frozenset[str] = frozenset({"marine", "surf", "fishing", "beach_safety"})
+_MARINE_VALID_BOTTOM_TYPES: frozenset[str] = frozenset({"sand", "rock", "coral_reef", "mixed"})
+_MARINE_VALID_TOPO_FEATURES: frozenset[str] = frozenset(
+    {"point_break", "bay_break", "headland", "straight_beach"}
+)
+_MARINE_VALID_EXPOSURE: frozenset[str] = frozenset({"N", "NE", "E", "SE", "S", "SW", "W", "NW"})
+_MARINE_VALID_TARGET_CATEGORIES: frozenset[str] = frozenset(
+    {"saltwater_inshore", "bottom_fish", "freshwater_sport", "salmonids"}
+)
+# Mirrors the API's _MARINE_LOCATION_ID_PATTERN (lowercase slug, 1-64 chars).
+_MARINE_LOCATION_ID_RE = re.compile(r"^[a-z0-9](?:[a-z0-9_-]{0,62}[a-z0-9])?$")
+
+_MARINE_ACTIVITY_LABELS: dict[str, str] = {
+    "marine": "Marine / Boating",
+    "surf": "Surf",
+    "fishing": "Fishing",
+    "beach_safety": "Beach Safety",
+}
+
+
+def _marine_to_float(value: Any) -> float | None:
+    """Best-effort float coercion for ConfigObj-sourced scalar values."""
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _marine_to_str_list(value: Any) -> list[str]:
+    """Normalise a ConfigObj-sourced value to a ``list[str]``.
+
+    ConfigObj returns a single string for one value, or a Python list for
+    comma-separated values — GET /setup/current-config passes the [marine]
+    section through as-is, so both forms occur depending on how many values
+    a given key holds.
+    """
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(v).strip() for v in value if str(v).strip()]
+    text = str(value).strip()
+    return [text] if text else []
+
+
+def _marine_exposure_list(value: Any) -> list[str]:
+    """Normalise ``directional_exposure`` to a validated ``list[str]``.
+
+    Tolerates a ``dict[str, bool]`` (the API apply schema's shape) as well
+    as a ConfigObj list/string, since the on-disk representation is not
+    fully pinned down yet (see MarineSurfSpotApplyConfig's docstring in the
+    API repo for the T6.3 divergence note).
+    """
+    if isinstance(value, dict):
+        directions = [k for k, v in value.items() if v]
+    else:
+        directions = _marine_to_str_list(value)
+    return [d for d in directions if d in _MARINE_VALID_EXPOSURE]
+
+
+def _fetch_current_config() -> dict[str, Any] | None:
+    """Fetch the full current configuration from the API.
+
+    Returns None if the API is unreachable or not configured. Shared by the
+    marine admin routes both for reading configured locations and for
+    rebuilding a safe /setup/apply payload (see module note above).
+    """
+    client = _get_api_client()
+    if client is None:
+        return None
+    try:
+        return client.get_current_config()
+    except Exception:  # noqa: BLE001
+        logger.warning("Could not fetch current config from API for marine admin", exc_info=True)
+        return None
+
+
+def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Normalise the raw ``[marine][[locations]]`` ConfigObj dict for template use.
+
+    Returns a dict keyed by location id; each value has keys: id, name, lat,
+    lon, activities, ndbc_station_ids, coops_station_ids, nws_marine_zone_id,
+    nwps_wfo, surf, fishing, beach_safety (the latter three are ``{}`` when
+    the corresponding activity is not selected for that location).
+    """
+    raw_locations = marine_cfg.get("locations") if isinstance(marine_cfg, dict) else None
+    if not isinstance(raw_locations, dict):
+        return {}
+
+    result: dict[str, dict[str, Any]] = {}
+    for loc_id, raw in raw_locations.items():
+        if not isinstance(raw, dict):
+            continue
+        activities = [
+            a for a in _marine_to_str_list(raw.get("activities")) if a in _MARINE_VALID_ACTIVITIES
+        ]
+        surf_raw = raw.get("surf") if isinstance(raw.get("surf"), dict) else {}
+        fishing_raw = raw.get("fishing") if isinstance(raw.get("fishing"), dict) else {}
+        beach_raw = raw.get("beach_safety") if isinstance(raw.get("beach_safety"), dict) else {}
+
+        external_links: list[dict[str, str]] = []
+        links_raw = beach_raw.get("external_links") if isinstance(beach_raw, dict) else None
+        if isinstance(links_raw, dict):
+            # ConfigObj nested-subsection form: {"0": {"label": .., "url": ..}, ...}
+            for link in links_raw.values():
+                if isinstance(link, dict) and link.get("url"):
+                    external_links.append(
+                        {"label": str(link.get("label", "")), "url": str(link["url"])}
+                    )
+        elif isinstance(links_raw, list):
+            for link in links_raw:
+                if isinstance(link, dict) and link.get("url"):
+                    external_links.append(
+                        {"label": str(link.get("label", "")), "url": str(link["url"])}
+                    )
+
+        result[str(loc_id)] = {
+            "id": str(loc_id),
+            "name": str(raw.get("name", "")) or str(loc_id),
+            "lat": _marine_to_float(raw.get("lat")),
+            "lon": _marine_to_float(raw.get("lon")),
+            "activities": activities,
+            "ndbc_station_ids": _marine_to_str_list(raw.get("ndbc_station_ids")),
+            "coops_station_ids": _marine_to_str_list(raw.get("coops_station_ids")),
+            "nws_marine_zone_id": str(raw.get("nws_marine_zone_id", "") or ""),
+            "nwps_wfo": str(raw.get("nwps_wfo", "") or ""),
+            "surf": {
+                "beach_facing_degrees": _marine_to_float(surf_raw.get("beach_facing_degrees")),
+                "bottom_type": str(surf_raw.get("bottom_type", "") or ""),
+                "topographic_feature": str(surf_raw.get("topographic_feature", "") or ""),
+                "directional_exposure": _marine_exposure_list(surf_raw.get("directional_exposure")),
+            } if "surf" in activities else {},
+            "fishing": {
+                "target_category": str(fishing_raw.get("target_category", "") or ""),
+            } if "fishing" in activities else {},
+            "beach_safety": {
+                "external_links": external_links,
+            } if "beach_safety" in activities else {},
+        }
+    return result
+
+
+def _slugify_marine_location_name(name: str, existing_ids: set[str]) -> str:
+    """Derive a unique, API-valid location id slug from an operator-entered name.
+
+    Mirrors the API's ``_MARINE_LOCATION_ID_PATTERN`` (lowercase slug, 1-64
+    chars, letters/digits/hyphen/underscore) and disambiguates against
+    *existing_ids* by appending ``-2``, ``-3``, etc.
+    """
+    base = re.sub(r"[^a-z0-9_-]+", "-", name.strip().lower()).strip("-_")[:60]
+    if not base or not _MARINE_LOCATION_ID_RE.match(base):
+        base = "location"
+    if base not in existing_ids:
+        return base
+    n = 2
+    while f"{base}-{n}" in existing_ids:
+        n += 1
+    return f"{base}-{n}"
+
+
+def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, str | None]:
+    """Parse and validate one marine location edit-form submission.
+
+    Returns ``(location_dict, None)`` on success, or ``(partial_dict_or_None,
+    error_message)`` on failure. Mirrors the required-field rules the API's
+    MarineLocationApplyConfig / MarineSurfSpotApplyConfig /
+    MarineFishingSpotApplyConfig enforce, so the admin UI fails fast with a
+    friendly message rather than surfacing a raw 422 from /setup/apply.
+    """
+    name = str(form.get("name", "")).strip()
+    if not name:
+        return None, _("Location name is required.")
+
+    lat = _marine_to_float(form.get("lat"))
+    lon = _marine_to_float(form.get("lon"))
+    if lat is None or not (-90 <= lat <= 90):
+        return None, _("Latitude must be a number between -90 and 90.")
+    if lon is None or not (-180 <= lon <= 180):
+        return None, _("Longitude must be a number between -180 and 180.")
+
+    activities = [a for a in form.getlist("activities") if a in _MARINE_VALID_ACTIVITIES]
+    if not activities:
+        return None, _("Select at least one activity.")
+
+    location: dict[str, Any] = {
+        "name": name,
+        "lat": lat,
+        "lon": lon,
+        "activities": activities,
+        "ndbc_station_ids": [
+            s.strip() for s in str(form.get("ndbc_station_ids", "")).split(",") if s.strip()
+        ],
+        "coops_station_ids": [
+            s.strip() for s in str(form.get("coops_station_ids", "")).split(",") if s.strip()
+        ],
+        "nws_marine_zone_id": str(form.get("nws_marine_zone_id", "")).strip(),
+        "nwps_wfo": "",
+        "surf": {},
+        "fishing": {},
+        "beach_safety": {},
+    }
+
+    if "surf" in activities:
+        facing = _marine_to_float(form.get("surf_beach_facing_degrees"))
+        bottom_type = str(form.get("surf_bottom_type", "")).strip()
+        topo = str(form.get("surf_topographic_feature", "")).strip()
+        if facing is None or not (0 <= facing < 360):
+            return location, _("Surf: beach facing direction (0-359 degrees) is required.")
+        if bottom_type not in _MARINE_VALID_BOTTOM_TYPES:
+            return location, _("Surf: a valid bottom type is required.")
+        if topo not in _MARINE_VALID_TOPO_FEATURES:
+            return location, _("Surf: a valid topographic feature is required.")
+        location["surf"] = {
+            "beach_facing_degrees": facing,
+            "bottom_type": bottom_type,
+            "topographic_feature": topo,
+            "directional_exposure": [
+                d for d in form.getlist("surf_exposure") if d in _MARINE_VALID_EXPOSURE
+            ],
+        }
+
+    if "fishing" in activities:
+        target_category = str(form.get("fishing_target_category", "")).strip()
+        if target_category not in _MARINE_VALID_TARGET_CATEGORIES:
+            return location, _("Fishing: a valid target category is required.")
+        location["fishing"] = {"target_category": target_category}
+
+    if "beach_safety" in activities:
+        labels = form.getlist("beach_safety_link_label")
+        urls = form.getlist("beach_safety_link_url")
+        location["beach_safety"] = {
+            "external_links": [
+                {"label": label.strip(), "url": url.strip()}
+                for label, url in zip(labels, urls)
+                if url.strip()
+            ]
+        }
+
+    return location, None
+
+
+def _build_marine_apply_payload(
+    config: dict[str, Any], locations: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Build a minimal, safe /setup/apply payload that updates only marine locations.
+
+    See the module-level "NOTE on write path" comment above for why
+    database/station/column_mapping/column_units must always be re-sent
+    faithfully from *config* while every other optional section is omitted.
+    """
+    database = config.get("database") or {}
+    station = config.get("station") or {}
+
+    payload: dict[str, Any] = {
+        "database": {
+            "kind": database.get("kind", "mysql"),
+            "host": database.get("host", ""),
+            "port": database.get("port", 3306),
+            "user": database.get("user", ""),
+            "password": database.get("password", ""),
+            "name": database.get("name", ""),
+            "path": database.get("path", ""),
+        },
+        "station": {
+            "name": station.get("name"),
+            "latitude": station.get("latitude"),
+            "longitude": station.get("longitude"),
+            "altitude_meters": station.get("altitude_meters"),
+            "timezone": station.get("timezone"),
+            "default_locale": station.get("default_locale"),
+        },
+        "column_mapping": config.get("column_mapping") or {},
+        "column_units": config.get("column_units") or {},
+    }
+
+    location_list: list[dict[str, Any]] = []
+    for loc_id, loc in locations.items():
+        activities = loc.get("activities", [])
+        entry: dict[str, Any] = {
+            "id": loc_id,
+            "name": loc["name"],
+            "lat": loc["lat"],
+            "lon": loc["lon"],
+            "activities": activities,
+        }
+        if loc.get("ndbc_station_ids"):
+            entry["ndbc_station_ids"] = loc["ndbc_station_ids"]
+        if loc.get("coops_station_ids"):
+            entry["coops_station_ids"] = loc["coops_station_ids"]
+        if loc.get("nws_marine_zone_id"):
+            entry["nws_marine_zone_id"] = loc["nws_marine_zone_id"]
+        if "surf" in activities and loc.get("surf"):
+            s = loc["surf"]
+            entry["surf"] = {
+                "beach_facing_degrees": s["beach_facing_degrees"],
+                "bottom_type": s["bottom_type"],
+                "topographic_feature": s["topographic_feature"],
+            }
+            if s.get("directional_exposure"):
+                entry["surf"]["directional_exposure"] = {d: True for d in s["directional_exposure"]}
+        if "fishing" in activities and loc.get("fishing", {}).get("target_category"):
+            entry["fishing"] = {"target_category": loc["fishing"]["target_category"]}
+        if "beach_safety" in activities:
+            links = loc.get("beach_safety", {}).get("external_links") or []
+            if links:
+                entry["beach_safety"] = {
+                    "external_links": [
+                        {"label": link.get("label", ""), "url": link["url"]}
+                        for link in links if link.get("url")
+                    ]
+                }
+        location_list.append(entry)
+
+    payload["marine"] = {"locations": location_list}
+    return payload
+
+
+def _marine_esc(v: object) -> str:
+    return str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+
+
+def _restart_api_after_apply(client: Any) -> None:
+    """Trigger POST /setup/restart so the API reloads api.conf.
+
+    /setup/apply only writes files to disk — it does not itself reload the
+    running API process. The wizard's re-run apply flow always follows apply()
+    with a restart() call (see wizard/routes.py wizard_apply, "Step 3: Trigger
+    service restarts"); this mirrors that for the admin marine save/delete
+    routes. Best-effort: a failed restart request is logged but does not turn
+    an already-successful apply() into a reported error, since the config
+    change is safely on disk either way — see ApiClient.restart()'s docstring
+    (a dropped connection while the API exits is expected, not a failure).
+    """
+    try:
+        client.restart()
+    except Exception:  # noqa: BLE001
+        logger.warning("_restart_api_after_apply: restart request failed", exc_info=True)
+
+
+@router.get("/marine", response_class=HTMLResponse)
+async def marine_get(request: Request) -> HTMLResponse:
+    """Render the marine locations admin section — location list."""
+    _require_session(request)
+    config = _fetch_current_config()
+    error: str | None = None
+    locations: dict[str, dict[str, Any]] = {}
+    if config is None:
+        error = _("Cannot connect to the API — check that the API is running and configured.")
+    else:
+        locations = _parse_marine_locations(config.get("marine") or {})
+    return _render(request, "marine.html", {
+        "locations": locations,
+        "activity_labels": _MARINE_ACTIVITY_LABELS,
+        "error": error,
+        "flash": None,
+    })
+
+
+@router.post("/marine/edit", response_class=HTMLResponse)
+async def marine_edit_form(request: Request) -> HTMLResponse:
+    """Render the add/edit form for one marine location (HTMX fragment).
+
+    ``location_id`` empty means "add a new location"; otherwise the form is
+    pre-populated from the matching entry in the current-config response.
+    """
+    _require_session(request)
+    form = await request.form()
+    location_id = str(form.get("location_id", "")).strip()
+
+    config = _fetch_current_config()
+    locations: dict[str, dict[str, Any]] = {}
+    edit_location: dict[str, Any] = {}
+    error: str | None = None
+    if config is None:
+        error = _("Cannot connect to the API — check that the API is running and configured.")
+    else:
+        locations = _parse_marine_locations(config.get("marine") or {})
+        if location_id:
+            edit_location = locations.get(location_id, {})
+
+    return _render(request, "marine.html", {
+        "locations": locations,
+        "activity_labels": _MARINE_ACTIVITY_LABELS,
+        "edit_mode": True,
+        "edit_location_id": location_id,
+        "edit_location": edit_location,
+        "edit_error": None,
+        "error": error,
+        "flash": None,
+    })
+
+
+@router.post("/marine/save", response_class=HTMLResponse)
+async def marine_save(request: Request) -> HTMLResponse:
+    """Validate and save one marine location (add or edit), then re-render the list.
+
+    Persists by rebuilding a full-but-minimal /setup/apply payload (see
+    _build_marine_apply_payload) so unrelated config sections (providers,
+    branding, database credentials, etc.) are left untouched.
+    """
+    _require_session(request)
+    form = await request.form()
+    location_id = str(form.get("location_id", "")).strip()
+
+    config = _fetch_current_config()
+    if config is None:
+        return _render(request, "marine.html", {
+            "locations": {},
+            "activity_labels": _MARINE_ACTIVITY_LABELS,
+            "error": _("Cannot connect to the API — check that the API is running and configured."),
+            "flash": None,
+        }, status_code=500)
+
+    locations = _parse_marine_locations(config.get("marine") or {})
+
+    parsed, validation_error = _validate_marine_location_form(form)
+    if validation_error:
+        return _render(request, "marine.html", {
+            "locations": locations,
+            "activity_labels": _MARINE_ACTIVITY_LABELS,
+            "edit_mode": True,
+            "edit_location_id": location_id,
+            "edit_location": parsed or {},
+            "edit_error": validation_error,
+            "error": None,
+            "flash": None,
+        }, status_code=422)
+
+    assert parsed is not None
+    if location_id:
+        if location_id not in locations:
+            return _render(request, "marine.html", {
+                "locations": locations,
+                "activity_labels": _MARINE_ACTIVITY_LABELS,
+                "error": _("Location not found. It may have been deleted in another session."),
+                "flash": None,
+            }, status_code=404)
+        loc_id = location_id
+    else:
+        loc_id = _slugify_marine_location_name(parsed["name"], set(locations.keys()))
+
+    locations[loc_id] = parsed
+
+    client = _get_api_client()
+    error = None
+    flash = None
+    if client is None:
+        error = _("Cannot connect to the API — check that the API is running and configured.")
+    else:
+        try:
+            client.apply(_build_marine_apply_payload(config, locations))
+            _restart_api_after_apply(client)
+            flash = _("Location saved. The API is restarting to apply the change.")
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("marine_save: apply failed", exc_info=True)
+            error = _("Save failed: {detail}").format(detail=exc)
+
+    return _render(request, "marine.html", {
+        "locations": locations,
+        "activity_labels": _MARINE_ACTIVITY_LABELS,
+        "error": error,
+        "flash": flash,
+    }, status_code=500 if error else 200)
+
+
+@router.post("/marine/delete", response_class=HTMLResponse)
+async def marine_delete(request: Request) -> HTMLResponse:
+    """Delete a marine location and persist via /setup/apply."""
+    _require_session(request)
+    form = await request.form()
+    location_id = str(form.get("location_id", "")).strip()
+
+    config = _fetch_current_config()
+    if config is None:
+        return _render(request, "marine.html", {
+            "locations": {},
+            "activity_labels": _MARINE_ACTIVITY_LABELS,
+            "error": _("Cannot connect to the API — check that the API is running and configured."),
+            "flash": None,
+        }, status_code=500)
+
+    locations = _parse_marine_locations(config.get("marine") or {})
+    error: str | None = None
+    flash: str | None = None
+
+    if location_id not in locations:
+        error = _("Location not found. It may have already been deleted.")
+    else:
+        locations.pop(location_id, None)
+        client = _get_api_client()
+        if client is None:
+            error = _("Cannot connect to the API — check that the API is running and configured.")
+        else:
+            try:
+                client.apply(_build_marine_apply_payload(config, locations))
+                _restart_api_after_apply(client)
+                flash = _("Location deleted. The API is restarting to apply the change.")
+            except Exception as exc:  # noqa: BLE001
+                logger.warning("marine_delete: apply failed", exc_info=True)
+                error = _("Delete failed: {detail}").format(detail=exc)
+
+    return _render(request, "marine.html", {
+        "locations": locations,
+        "activity_labels": _MARINE_ACTIVITY_LABELS,
+        "error": error,
+        "flash": flash,
+    }, status_code=500 if error else 200)
+
+
+@router.post("/marine/test-connectivity", response_class=HTMLResponse)
+async def marine_test_connectivity(request: Request) -> HTMLResponse:
+    """Test connectivity to a marine location's configured data sources.
+
+    Checks NDBC/CO-OPS station reachability via a fresh call to the same
+    discovery lookup the wizard uses (GET /setup/marine/discover-stations
+    from the location's stored coordinates). There is no dedicated
+    "re-verify this exact station" endpoint on the API today, so this is a
+    best-effort proxy: stations found nearby is treated as reachable; none
+    found (or an API error) is treated as unreachable. The NWS marine zone
+    indicator reflects whether a zone id is stored for the location — there
+    is currently no endpoint to verify live zone-forecast availability, so
+    this checks configuration presence rather than live reachability.
+    Returns a small hand-built HTML fragment (green/amber status dots),
+    swapped into the triggering row only — not a full section reload.
+    """
+    _require_session(request)
+    form = await request.form()
+    location_id = str(form.get("location_id", "")).strip()
+
+    config = _fetch_current_config()
+    if config is None:
+        return HTMLResponse(
+            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("API unreachable"))}</span>'
+        )
+    location = _parse_marine_locations(config.get("marine") or {}).get(location_id)
+    if location is None or location.get("lat") is None or location.get("lon") is None:
+        return HTMLResponse(
+            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("Location not found"))}</span>'
+        )
+
+    client = _get_api_client()
+    ndbc_ok = coops_ok = False
+    if client is not None:
+        try:
+            result = client.discover_marine_stations(location["lat"], location["lon"], radius_miles=50)
+            ndbc_ok = bool(result.get("ndbc_stations"))
+            coops_ok = bool(result.get("coops_stations"))
+        except Exception:  # noqa: BLE001
+            logger.warning("marine_test_connectivity: discovery call failed", exc_info=True)
+
+    nws_ok = bool(location.get("nws_marine_zone_id"))
+
+    def _dot(ok: bool, label: str) -> str:
+        color = "var(--pico-color-green-500,#22c55e)" if ok else "var(--pico-color-amber-500,#f59e0b)"
+        return (
+            '<span style="display:inline-flex;align-items:center;gap:0.3rem;'
+            f'margin-inline-end:0.6rem;font-size:0.8rem">'
+            f'<span aria-hidden="true" style="display:inline-block;width:0.6rem;height:0.6rem;'
+            f'border-radius:50%;background:{color}"></span>{_marine_esc(label)}</span>'
+        )
+
+    html = _dot(ndbc_ok, _("NDBC")) + _dot(coops_ok, _("CO-OPS")) + _dot(nws_ok, _("NWS zone"))
+    return HTMLResponse(html)
+
+
+@router.post("/marine/bathymetry", response_class=HTMLResponse)
+async def marine_bathymetry_rerun(request: Request) -> HTMLResponse:
+    """Re-run the bathymetry download for a surf-enabled marine location."""
+    _require_session(request)
+    form = await request.form()
+    location_id = str(form.get("location_id", "")).strip()
+
+    config = _fetch_current_config()
+    if config is None:
+        return HTMLResponse(
+            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("API unreachable"))}</span>'
+        )
+    location = _parse_marine_locations(config.get("marine") or {}).get(location_id)
+    if location is None or location.get("lat") is None or location.get("lon") is None:
+        return HTMLResponse(
+            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("Location not found"))}</span>'
+        )
+
+    facing = (location.get("surf") or {}).get("beach_facing_degrees")
+    if facing is None:
+        return HTMLResponse(
+            f'<span style="color:var(--pico-del-color);font-size:0.8rem">'
+            f'{_marine_esc(_("This location has no surf beach-facing direction configured."))}</span>'
+        )
+
+    client = _get_api_client()
+    if client is None:
+        return HTMLResponse(
+            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("API unreachable"))}</span>'
+        )
+    try:
+        result = client.get_marine_bathymetry(location["lat"], location["lon"], facing)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("marine_bathymetry_rerun: API error", exc_info=True)
+        return HTMLResponse(
+            '<span style="color:var(--pico-del-color);font-size:0.8rem">'
+            f'{_marine_esc(_("Bathymetry download failed: {detail}").format(detail=exc))}</span>'
+        )
+    points = len(result.get("profile") or [])
+    return HTMLResponse(
+        '<span style="color:var(--pico-ins-color,#16a34a);font-size:0.8rem">'
+        f'{_marine_esc(_("Bathymetry updated ({count} depth points).").format(count=points))}</span>'
     )
