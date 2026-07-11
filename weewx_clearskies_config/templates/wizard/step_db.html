@@ -2,7 +2,7 @@
 {% set db_kind = db_kind if db_kind is defined else state.db_kind %}
 <article>
   <header>
-    <h2>{{ _("Step 4 of 14 — Database Connection") }}</h2>
+    <h2>{{ _("Step 4 of 15 — Database Connection") }}</h2>
     {{ help_trigger("/wizard/help/step_db") }}
     {% if db_kind == "sqlite" %}
     <p>{{ _("Enter the path to your weewx SQLite database file.
