@@ -1,0 +1,41 @@
+{# HTMX fragment returned by POST /wizard/marine/discover-stations.
+   Swapped into the triggering button's "next .discover-results" sibling
+   (see step_marine.html render_location_card()). On success, also writes
+   the discovered station IDs into that same card's hidden inputs via the
+   inline <script> below so they are included when the main marine form is
+   submitted — see marine_discover_stations() in routes.py for the API call. #}
+{% if error %}
+<div class="alert-error" role="alert">{{ error }}</div>
+{% else %}
+<div class="alert-success" role="status">
+  {% if result.get("ndbc_station_ids") %}
+  <p>{{ _("NDBC buoy(s):") }} {{ result["ndbc_station_ids"] | join(", ") }}</p>
+  {% endif %}
+  {% if result.get("coops_station_ids") %}
+  <p>{{ _("CO-OPS tide station(s):") }} {{ result["coops_station_ids"] | join(", ") }}</p>
+  {% endif %}
+  {% if result.get("nws_marine_zone_id") %}
+  <p>{{ _("NWS marine zone:") }} {{ result["nws_marine_zone_id"] }}</p>
+  {% endif %}
+  {% if result.get("nwps_wfo") %}
+  <p>{{ _("NWS forecast office:") }} {{ result["nwps_wfo"] }}</p>
+  {% endif %}
+  {% if not (result.get("ndbc_station_ids") or result.get("coops_station_ids")) %}
+  <p>{{ _("No nearby marine stations were found within the search radius.") }}</p>
+  {% endif %}
+</div>
+<script>
+  (function () {
+    var card = document.currentScript.closest(".marine-location-card");
+    if (!card) return;
+    var setHidden = function (cls, value) {
+      var el = card.querySelector("." + cls);
+      if (el) el.value = value;
+    };
+    setHidden("hidden-ndbc-ids", {{ (result.get("ndbc_station_ids", []) | join(",")) | tojson }});
+    setHidden("hidden-coops-ids", {{ (result.get("coops_station_ids", []) | join(",")) | tojson }});
+    setHidden("hidden-marine-zone", {{ (result.get("nws_marine_zone_id", "") or "") | tojson }});
+    setHidden("hidden-nwps-wfo", {{ (result.get("nwps_wfo", "") or "") | tojson }});
+  })();
+</script>
+{% endif %}

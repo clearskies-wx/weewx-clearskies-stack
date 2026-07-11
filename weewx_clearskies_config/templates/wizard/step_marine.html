@@ -1,0 +1,464 @@
+{% from "macros/help_panel.html" import help_trigger %}
+
+{# -------------------------------------------------------------------------
+   render_location_card(idx, loc) — shared markup for a marine location card.
+
+   Called once per existing location (idx = a real numeric string, loc = the
+   saved location dict) and once inside the <template> block below (idx =
+   the literal placeholder "__IDX__", loc = {}) so JS-cloned cards and
+   server-rendered cards are guaranteed to stay in sync.
+   ------------------------------------------------------------------------- #}
+{% macro render_location_card(idx, loc) %}
+{% set activities = loc.get("activities", []) %}
+{% set surf = loc.get("surf", {}) %}
+{% set fishing = loc.get("fishing", {}) %}
+{% set beach_safety = loc.get("beach_safety", {}) %}
+{% set exposure = surf.get("directional_exposure", []) %}
+<fieldset class="marine-location-card" data-idx="{{ idx }}">
+  <div class="marine-location-card-header">
+    <legend>{{ _("Location") }}</legend>
+    <button type="button" class="remove-location-btn" aria-label="{{ _('Remove this location') }}">&times; {{ _("Remove") }}</button>
+  </div>
+
+  <label for="loc_{{ idx }}_name">{{ _("Location name") }}</label>
+  <input type="text" id="loc_{{ idx }}_name" name="loc_{{ idx }}_name"
+         value="{{ loc.get('name', '') }}" placeholder="{{ _('e.g. Main Beach') }}">
+
+  <div class="grid">
+    <div>
+      <label for="loc_{{ idx }}_lat">{{ _("Latitude") }}</label>
+      <input type="number" step="any" id="loc_{{ idx }}_lat" name="loc_{{ idx }}_lat"
+             class="marine-loc-lat"
+             value="{{ loc.get('lat', state.latitude) if loc.get('lat', state.latitude) is not none else '' }}">
+    </div>
+    <div>
+      <label for="loc_{{ idx }}_lon">{{ _("Longitude") }}</label>
+      <input type="number" step="any" id="loc_{{ idx }}_lon" name="loc_{{ idx }}_lon"
+             class="marine-loc-lon"
+             value="{{ loc.get('lon', state.longitude) if loc.get('lon', state.longitude) is not none else '' }}">
+    </div>
+  </div>
+
+  <p class="weather-source-info"><small></small></p>
+
+  <fieldset>
+    <legend>{{ _("Activities") }}</legend>
+    <label>
+      <input type="checkbox" name="loc_{{ idx }}_activities" value="marine"
+             class="activity-toggle" data-section="marine"
+             {% if "marine" in activities %}checked{% endif %}>
+      {{ _("Marine / Boating") }}
+    </label>
+    <label>
+      <input type="checkbox" name="loc_{{ idx }}_activities" value="surf"
+             class="activity-toggle" data-section="surf"
+             {% if "surf" in activities %}checked{% endif %}>
+      {{ _("Surf") }}
+    </label>
+    <label>
+      <input type="checkbox" name="loc_{{ idx }}_activities" value="fishing"
+             class="activity-toggle" data-section="fishing"
+             {% if "fishing" in activities %}checked{% endif %}>
+      {{ _("Fishing") }}
+    </label>
+    <label>
+      <input type="checkbox" name="loc_{{ idx }}_activities" value="beach_safety"
+             class="activity-toggle" data-section="beach_safety"
+             {% if "beach_safety" in activities %}checked{% endif %}>
+      {{ _("Beach Safety") }}
+    </label>
+  </fieldset>
+
+  <button type="button" class="discover-stations-btn secondary"
+          hx-post="/wizard/marine/discover-stations"
+          hx-include="closest .marine-location-card"
+          hx-target="next .discover-results"
+          hx-swap="innerHTML"
+          hx-indicator="#wizard-spinner">
+    {{ _("Discover Nearby Stations") }}
+  </button>
+  <div class="discover-results">
+    {% if loc.get("ndbc_station_ids") or loc.get("coops_station_ids") or loc.get("nws_marine_zone_id") %}
+    <div class="alert-success" role="status">
+      {% if loc.get("ndbc_station_ids") %}<p>{{ _("NDBC buoy(s):") }} {{ loc["ndbc_station_ids"] | join(", ") }}</p>{% endif %}
+      {% if loc.get("coops_station_ids") %}<p>{{ _("CO-OPS tide station(s):") }} {{ loc["coops_station_ids"] | join(", ") }}</p>{% endif %}
+      {% if loc.get("nws_marine_zone_id") %}<p>{{ _("NWS marine zone:") }} {{ loc["nws_marine_zone_id"] }}</p>{% endif %}
+      {% if loc.get("nwps_wfo") %}<p>{{ _("NWS forecast office:") }} {{ loc["nwps_wfo"] }}</p>{% endif %}
+    </div>
+    {% endif %}
+  </div>
+  {# Hidden fields carry discovered station IDs forward into the main form
+     submission. Populated either from a prior save (values above) or live
+     by the inline <script> in marine_station_results.html after a
+     "Discover Nearby Stations" call. #}
+  <input type="hidden" name="loc_{{ idx }}_ndbc_station_ids" class="hidden-ndbc-ids" value="{{ loc.get('ndbc_station_ids', []) | join(',') }}">
+  <input type="hidden" name="loc_{{ idx }}_coops_station_ids" class="hidden-coops-ids" value="{{ loc.get('coops_station_ids', []) | join(',') }}">
+  <input type="hidden" name="loc_{{ idx }}_nws_marine_zone_id" class="hidden-marine-zone" value="{{ loc.get('nws_marine_zone_id', '') }}">
+  <input type="hidden" name="loc_{{ idx }}_nwps_wfo" class="hidden-nwps-wfo" value="{{ loc.get('nwps_wfo', '') }}">
+
+  {# ---- Surf ---- #}
+  <div class="activity-section" data-section="surf" {% if "surf" not in activities %}style="display: none;"{% endif %}>
+    <h4>{{ _("Surf") }}</h4>
+
+    <label for="loc_{{ idx }}_surf_beach_facing_degrees">{{ _("Beach facing direction (degrees)") }}</label>
+    <input type="number" min="0" max="360" id="loc_{{ idx }}_surf_beach_facing_degrees"
+           name="loc_{{ idx }}_surf_beach_facing_degrees" value="{{ surf.get('beach_facing_degrees', '') }}">
+
+    <label for="loc_{{ idx }}_surf_bottom_type">{{ _("Bottom type") }}</label>
+    <select id="loc_{{ idx }}_surf_bottom_type" name="loc_{{ idx }}_surf_bottom_type">
+      <option value="">{{ _("— select —") }}</option>
+      <option value="sand" {% if surf.get("bottom_type") == "sand" %}selected{% endif %}>{{ _("Sand") }}</option>
+      <option value="rock" {% if surf.get("bottom_type") == "rock" %}selected{% endif %}>{{ _("Rock") }}</option>
+      <option value="coral_reef" {% if surf.get("bottom_type") == "coral_reef" %}selected{% endif %}>{{ _("Coral reef") }}</option>
+      <option value="mixed" {% if surf.get("bottom_type") == "mixed" %}selected{% endif %}>{{ _("Mixed") }}</option>
+    </select>
+
+    <label for="loc_{{ idx }}_surf_topographic_feature">{{ _("Topographic feature") }}</label>
+    <select id="loc_{{ idx }}_surf_topographic_feature" name="loc_{{ idx }}_surf_topographic_feature">
+      <option value="">{{ _("— select —") }}</option>
+      <option value="point_break" {% if surf.get("topographic_feature") == "point_break" %}selected{% endif %}>{{ _("Point break") }}</option>
+      <option value="bay_break" {% if surf.get("topographic_feature") == "bay_break" %}selected{% endif %}>{{ _("Bay break") }}</option>
+      <option value="headland" {% if surf.get("topographic_feature") == "headland" %}selected{% endif %}>{{ _("Headland") }}</option>
+      <option value="straight_beach" {% if surf.get("topographic_feature") == "straight_beach" %}selected{% endif %}>{{ _("Straight beach") }}</option>
+    </select>
+
+    <fieldset>
+      <legend>{{ _("Directional exposure") }}</legend>
+      {% for dir in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] %}
+      <label class="compass-check">
+        <input type="checkbox" name="loc_{{ idx }}_surf_exposure" value="{{ dir }}" {% if dir in exposure %}checked{% endif %}>
+        {{ dir }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <button type="button" class="bathymetry-btn secondary"
+            hx-post="/wizard/marine/bathymetry"
+            hx-include="closest .marine-location-card"
+            hx-target="next .bathymetry-results"
+            hx-swap="innerHTML"
+            hx-indicator="#wizard-spinner">
+      {{ _("Download Bathymetry") }}
+    </button>
+    <div class="bathymetry-results"></div>
+  </div>
+
+  {# ---- Fishing ---- #}
+  <div class="activity-section" data-section="fishing" {% if "fishing" not in activities %}style="display: none;"{% endif %}>
+    <h4>{{ _("Fishing") }}</h4>
+
+    <label for="loc_{{ idx }}_fishing_target_category">{{ _("Target category") }}</label>
+    <select id="loc_{{ idx }}_fishing_target_category" name="loc_{{ idx }}_fishing_target_category">
+      <option value="">{{ _("— select —") }}</option>
+      <option value="saltwater_inshore" {% if fishing.get("target_category") == "saltwater_inshore" %}selected{% endif %}>{{ _("Saltwater inshore") }}</option>
+      <option value="bottom_fish" {% if fishing.get("target_category") == "bottom_fish" %}selected{% endif %}>{{ _("Bottom fish") }}</option>
+      <option value="freshwater_sport" {% if fishing.get("target_category") == "freshwater_sport" %}selected{% endif %}>{{ _("Freshwater sport") }}</option>
+      <option value="salmonids" {% if fishing.get("target_category") == "salmonids" %}selected{% endif %}>{{ _("Salmonids") }}</option>
+    </select>
+
+    <label for="loc_{{ idx }}_fishing_species">{{ _("Target species (one per line)") }}</label>
+    <textarea id="loc_{{ idx }}_fishing_species" name="loc_{{ idx }}_fishing_species" rows="4">{{ fishing.get("species", []) | join("\n") }}</textarea>
+  </div>
+
+  {# ---- Beach Safety ---- #}
+  <div class="activity-section" data-section="beach_safety" {% if "beach_safety" not in activities %}style="display: none;"{% endif %}>
+    <h4>{{ _("Beach Safety") }}</h4>
+    <div class="beach-safety-links">
+      {% for link in beach_safety.get("external_links", []) %}
+      <div class="beach-safety-link-row">
+        <input type="text" name="loc_{{ idx }}_beach_safety_link_label" placeholder="{{ _('Label') }}" value="{{ link.get('label', '') }}">
+        <input type="url" name="loc_{{ idx }}_beach_safety_link_url" placeholder="{{ _('URL') }}" value="{{ link.get('url', '') }}">
+        <button type="button" class="remove-link-btn" aria-label="{{ _('Remove this link') }}">&times;</button>
+      </div>
+      {% endfor %}
+    </div>
+    <button type="button" class="add-link-btn secondary">{{ _("+ Add Link") }}</button>
+  </div>
+</fieldset>
+{% endmacro %}
+
+<article>
+  <header>
+    <h2>{{ _("Step 13 of 15 — Marine Locations") }}</h2>
+    {{ help_trigger("/wizard/help/step_marine") }}
+    <p>{{ _("Configure marine, surf, fishing, and beach safety data for coastal or lakeside locations near your station.") }}</p>
+  </header>
+
+  {% if error %}
+  <div class="alert-error" role="alert">{{ error }}</div>
+  {% endif %}
+
+  <style>
+    .marine-location-card {
+      border: 1px solid var(--pico-muted-border-color);
+      border-radius: 0.5rem;
+      padding: 1rem;
+      margin-block-end: 1.5rem;
+    }
+    .marine-location-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+    .marine-location-card-header legend { font-weight: 700; }
+    .remove-location-btn,
+    .remove-link-btn {
+      background: none;
+      border: 1px solid var(--pico-del-color, #cf222e);
+      color: var(--pico-del-color, #cf222e);
+      padding: 0.2rem 0.6rem;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      font-size: 0.8rem;
+    }
+    .remove-link-btn { margin-inline-start: 0.5rem; }
+    .weather-source-info { font-style: italic; color: var(--pico-muted-color); }
+    .compass-check { display: inline-flex; align-items: center; gap: 0.25rem; margin-inline-end: 0.75rem; }
+    .beach-safety-link-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-block-end: 0.5rem;
+    }
+    .beach-safety-link-row input[type="text"],
+    .beach-safety-link-row input[type="url"] { margin-bottom: 0; }
+    .activity-section {
+      border-inline-start: 3px solid var(--pico-primary);
+      padding-inline-start: 1rem;
+      margin-block: 1rem;
+    }
+  </style>
+
+  <form id="marine-form"
+        hx-post="/wizard/marine"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML show:window:top"
+        hx-indicator="#wizard-spinner"
+        autocomplete="off"
+        data-station-lat="{{ state.latitude if state.latitude is not none else '' }}"
+        data-station-lon="{{ state.longitude if state.longitude is not none else '' }}">
+
+    <label>
+      <input type="checkbox" id="marine_enabled" name="marine_enabled" role="switch" value="1"
+             {% if state.marine_enabled %}checked{% endif %}>
+      {{ _("Enable marine features for this station") }}
+    </label>
+    <small>{{ _("Adds marine, surf, fishing, and/or beach safety data for one or more locations near your station.") }}</small>
+
+    <div id="marine-config-section" {% if not state.marine_enabled %}style="display: none;"{% endif %}>
+
+      <div id="marine-locations">
+        {% for loc_id, loc in state.marine_locations.items() %}
+        {{ render_location_card(loop.index0, loc) }}
+        {% endfor %}
+      </div>
+
+      <button type="button" id="add-location-btn" class="secondary">{{ _("+ Add Location") }}</button>
+
+      <h3>{{ _("Refresh Intervals") }}</h3>
+      <div class="grid">
+        <div>
+          <label for="marine_forecast_ttl_hours">{{ _("Forecast refresh interval") }}</label>
+          <select id="marine_forecast_ttl_hours" name="marine_forecast_ttl_hours">
+            <option value="1" {% if state.marine_forecast_ttl_hours == 1 %}selected{% endif %}>{{ _("Every hour") }}</option>
+            <option value="3" {% if state.marine_forecast_ttl_hours == 3 %}selected{% endif %}>{{ _("Every 3 hours") }}</option>
+            <option value="6" {% if state.marine_forecast_ttl_hours == 6 %}selected{% endif %}>{{ _("Every 6 hours") }}</option>
+          </select>
+        </div>
+        <div>
+          <label for="marine_observation_ttl_minutes">{{ _("Observation refresh interval") }}</label>
+          <select id="marine_observation_ttl_minutes" name="marine_observation_ttl_minutes">
+            <option value="15" {% if state.marine_observation_ttl_minutes == 15 %}selected{% endif %}>{{ _("Every 15 minutes") }}</option>
+            <option value="30" {% if state.marine_observation_ttl_minutes == 30 %}selected{% endif %}>{{ _("Every 30 minutes") }}</option>
+            <option value="60" {% if state.marine_observation_ttl_minutes == 60 %}selected{% endif %}>{{ _("Every 60 minutes") }}</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <div role="group">
+      <button type="button"
+              hx-get="/wizard/features"
+              hx-target="#wizard-content"
+              hx-swap="innerHTML show:window:top"
+              hx-indicator="#wizard-spinner">
+        &#8592; {{ _("Previous: Feature Settings") }}
+      </button>
+      <button type="submit">{{ _("Next: TLS") }} &#8594;</button>
+    </div>
+  </form>
+</article>
+
+{# Hidden template for a blank location card, cloned by JS when the operator
+   clicks "+ Add Location". "__IDX__" is replaced with a running counter that
+   starts after any server-rendered (pre-existing) cards. #}
+<template id="marine-location-template">
+{{ render_location_card("__IDX__", {}) }}
+</template>
+
+<script>
+(function () {
+  var i18n = {
+    label: {{ _("Label") | tojson }},
+    url: {{ _("URL") | tojson }},
+    removeLink: {{ _("Remove this link") | tojson }},
+    distanceKnown: {{ _("Your station is approximately {km} km from this location.") | tojson }},
+    stationDataUsed: {{ _("Station weather data will be used (no additional API calls).") | tojson }},
+    forecastProviderUsed: {{ _("Weather data will be fetched from your forecast provider.") | tojson }},
+    enterCoordinates: {{ _("Enter coordinates to see which data source will be used.") | tojson }}
+  };
+
+  var form = document.getElementById("marine-form");
+  var enabledToggle = document.getElementById("marine_enabled");
+  var configSection = document.getElementById("marine-config-section");
+  var locationsContainer = document.getElementById("marine-locations");
+  var addLocationBtn = document.getElementById("add-location-btn");
+  var templateEl = document.getElementById("marine-location-template");
+
+  var nextIdx = locationsContainer ? locationsContainer.querySelectorAll(".marine-location-card").length : 0;
+
+  if (enabledToggle && configSection) {
+    enabledToggle.addEventListener("change", function () {
+      configSection.style.display = enabledToggle.checked ? "" : "none";
+    });
+  }
+
+  function haversineKm(lat1, lon1, lat2, lon2) {
+    var toRad = function (d) { return (d * Math.PI) / 180; };
+    var R = 6371; // km
+    var dLat = toRad(lat2 - lat1);
+    var dLon = toRad(lon2 - lon1);
+    var a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  }
+
+  function updateWeatherSourceInfo(card) {
+    if (!form) return;
+    var stationLat = parseFloat(form.getAttribute("data-station-lat"));
+    var stationLon = parseFloat(form.getAttribute("data-station-lon"));
+    var latInput = card.querySelector(".marine-loc-lat");
+    var lonInput = card.querySelector(".marine-loc-lon");
+    var infoEl = card.querySelector(".weather-source-info small");
+    if (!infoEl || !latInput || !lonInput) return;
+
+    var lat = parseFloat(latInput.value);
+    var lon = parseFloat(lonInput.value);
+
+    if (isNaN(lat) || isNaN(lon) || isNaN(stationLat) || isNaN(stationLon)) {
+      infoEl.textContent = i18n.enterCoordinates;
+      return;
+    }
+
+    var km = haversineKm(stationLat, stationLon, lat, lon);
+    var kmRounded = Math.round(km * 10) / 10;
+    var text = i18n.distanceKnown.replace("{km}", kmRounded) + " ";
+    text += km < 2.5 ? i18n.stationDataUsed : i18n.forecastProviderUsed;
+    infoEl.textContent = text;
+  }
+
+  function initCard(card) {
+    updateWeatherSourceInfo(card);
+  }
+
+  function cloneLocationCard() {
+    if (!templateEl || !locationsContainer) return;
+    var html = templateEl.innerHTML.split("__IDX__").join(String(nextIdx));
+    var wrapper = document.createElement("div");
+    wrapper.innerHTML = html.trim();
+    var card = wrapper.firstElementChild;
+    locationsContainer.appendChild(card);
+    nextIdx += 1;
+    if (window.htmx) { window.htmx.process(card); }
+    initCard(card);
+  }
+
+  if (addLocationBtn) {
+    addLocationBtn.addEventListener("click", cloneLocationCard);
+  }
+
+  // Event delegation for controls inside both server-rendered and
+  // JS-cloned location cards.
+  if (locationsContainer) {
+    locationsContainer.addEventListener("change", function (evt) {
+      var target = evt.target;
+      if (target.classList.contains("activity-toggle")) {
+        var card = target.closest(".marine-location-card");
+        var section = target.getAttribute("data-section");
+        var panel = card ? card.querySelector('.activity-section[data-section="' + section + '"]') : null;
+        if (panel) {
+          panel.style.display = target.checked ? "" : "none";
+        }
+        return;
+      }
+      if (target.classList.contains("marine-loc-lat") || target.classList.contains("marine-loc-lon")) {
+        var latLonCard = target.closest(".marine-location-card");
+        if (latLonCard) { updateWeatherSourceInfo(latLonCard); }
+      }
+    });
+
+    locationsContainer.addEventListener("input", function (evt) {
+      var target = evt.target;
+      if (target.classList.contains("marine-loc-lat") || target.classList.contains("marine-loc-lon")) {
+        var card = target.closest(".marine-location-card");
+        if (card) { updateWeatherSourceInfo(card); }
+      }
+    });
+
+    locationsContainer.addEventListener("click", function (evt) {
+      var removeLocBtn = evt.target.closest(".remove-location-btn");
+      if (removeLocBtn) {
+        var card = removeLocBtn.closest(".marine-location-card");
+        if (card) { card.remove(); }
+        return;
+      }
+
+      var addLinkBtn = evt.target.closest(".add-link-btn");
+      if (addLinkBtn) {
+        var section = addLinkBtn.closest('.activity-section[data-section="beach_safety"]');
+        var card2 = addLinkBtn.closest(".marine-location-card");
+        var idx = card2 ? card2.getAttribute("data-idx") : "";
+        var linksContainer = section ? section.querySelector(".beach-safety-links") : null;
+        if (linksContainer) {
+          var row = document.createElement("div");
+          row.className = "beach-safety-link-row";
+          var labelInput = document.createElement("input");
+          labelInput.type = "text";
+          labelInput.name = "loc_" + idx + "_beach_safety_link_label";
+          labelInput.placeholder = i18n.label;
+          var urlInput = document.createElement("input");
+          urlInput.type = "url";
+          urlInput.name = "loc_" + idx + "_beach_safety_link_url";
+          urlInput.placeholder = i18n.url;
+          var removeBtn = document.createElement("button");
+          removeBtn.type = "button";
+          removeBtn.className = "remove-link-btn";
+          removeBtn.setAttribute("aria-label", i18n.removeLink);
+          removeBtn.innerHTML = "&times;";
+          row.appendChild(labelInput);
+          row.appendChild(urlInput);
+          row.appendChild(removeBtn);
+          linksContainer.appendChild(row);
+        }
+        return;
+      }
+
+      var removeLinkBtn = evt.target.closest(".remove-link-btn");
+      if (removeLinkBtn) {
+        var linkRow = removeLinkBtn.closest(".beach-safety-link-row");
+        if (linkRow) { linkRow.remove(); }
+      }
+    });
+
+    // Initialize weather-source-info text for server-rendered cards.
+    locationsContainer.querySelectorAll(".marine-location-card").forEach(initCard);
+  }
+})();
+</script>
+
+{# OOB: update the progress bar to reflect the current step. #}
+{% set oob = true %}
+{% include "wizard/_progress_bar.html" %}
