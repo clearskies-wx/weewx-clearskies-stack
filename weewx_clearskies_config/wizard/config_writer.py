@@ -432,13 +432,53 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
     if not state.marine_enabled or not state.marine_locations:
         return {}
 
-    return {
-        "locations": state.marine_locations,
-        "weather": {
-            "forecast_ttl_hours": state.marine_forecast_ttl_hours,
-            "observation_ttl_minutes": state.marine_observation_ttl_minutes,
-        },
-    }
+    all_directions = ("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+    locations: list[dict[str, Any]] = []
+    for loc_id, loc_data in state.marine_locations.items():
+        entry: dict[str, Any] = {
+            "id": loc_id,
+            "name": loc_data.get("name", ""),
+            "lat": loc_data.get("lat", 0.0),
+            "lon": loc_data.get("lon", 0.0),
+            "activities": loc_data.get("activities", []),
+        }
+        for key in ("ndbc_station_ids", "coops_station_ids", "nws_marine_zone_id", "nwps_wfo"):
+            if loc_data.get(key):
+                entry[key] = loc_data[key]
+
+        surf = loc_data.get("surf")
+        if isinstance(surf, dict) and surf:
+            surf_out: dict[str, Any] = {}
+            for k in ("beach_facing_degrees", "bottom_type", "topographic_feature"):
+                if surf.get(k) is not None:
+                    surf_out[k] = surf[k]
+            exposure = surf.get("directional_exposure")
+            if isinstance(exposure, list):
+                surf_out["directional_exposure"] = {d: d in exposure for d in all_directions}
+            elif isinstance(exposure, dict):
+                surf_out["directional_exposure"] = exposure
+            if surf.get("bathymetric_profile"):
+                surf_out["bathymetric_profile"] = surf["bathymetric_profile"]
+            if surf.get("structures"):
+                surf_out["structures"] = surf["structures"]
+            entry["surf"] = surf_out
+
+        fishing = loc_data.get("fishing")
+        if isinstance(fishing, dict) and fishing:
+            fishing_out: dict[str, Any] = {}
+            if fishing.get("target_category"):
+                fishing_out["target_category"] = fishing["target_category"]
+            if fishing.get("biogeographic_region"):
+                fishing_out["biogeographic_region"] = fishing["biogeographic_region"]
+            entry["fishing"] = fishing_out
+
+        beach_safety = loc_data.get("beach_safety")
+        if isinstance(beach_safety, dict) and beach_safety.get("external_links"):
+            entry["beach_safety"] = {"external_links": beach_safety["external_links"]}
+
+        locations.append(entry)
+
+    return {"locations": locations}
 
 
 def write_caddy_env(state: WizardState, config_dir: Path) -> Path | None:
