@@ -1,4 +1,4 @@
-"""FastAPI router for the 14-step setup wizard.
+"""FastAPI router for the 15-step setup wizard.
 
 All endpoints require an authenticated session (session cookie set by the
 login flow in app.py).  The wizard uses HTMX: forms post via hx-post, and
@@ -33,10 +33,14 @@ Route summary:
   GET  /wizard/privacy          — step 11 fragment (privacy, legal & analytics)
   POST /wizard/privacy          — save privacy/legal settings, return step 12 fragment (features)
   GET  /wizard/features         — step 12 fragment (feature settings: seismic page)
-  POST /wizard/features         — save feature settings, return step 13 fragment (TLS)
-  GET  /wizard/tls              — step 13 fragment (TLS / HTTPS configuration)
-  POST /wizard/tls              — save TLS config, return step 14 fragment (review)
-  GET  /wizard/step/9           — step 14 fragment (review summary)
+  POST /wizard/features         — save feature settings, return step 13 fragment (marine)
+  GET  /wizard/marine           — step 13 fragment (marine location configuration)
+  POST /wizard/marine           — save marine config, return step 14 fragment (TLS)
+  POST /wizard/marine/discover-stations — HTMX: discover nearby NDBC/CO-OPS stations + NWS marine zone
+  POST /wizard/marine/bathymetry        — HTMX: download/derive bathymetry for a surf location
+  GET  /wizard/tls              — step 14 fragment (TLS / HTTPS configuration)
+  POST /wizard/tls              — save TLS config, return step 15 fragment (review)
+  GET  /wizard/step/9           — step 15 fragment (review summary)
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -68,7 +72,12 @@ from weewx_clearskies_config.i18n import (
     translate_md,
 )
 from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
-from weewx_clearskies_config.wizard.config_writer import apply_wizard, build_skin_conf_payload, write_branding_json
+from weewx_clearskies_config.wizard.config_writer import (
+    apply_wizard,
+    build_marine_payload,
+    build_skin_conf_payload,
+    write_branding_json,
+)
 from weewx_clearskies_config.wizard.known_apis import load_known_apis, verify_or_pin_fingerprint
 from weewx_clearskies_config.wizard.providers import (
     get_provider,
@@ -2154,6 +2163,11 @@ async def step6_post(request: Request) -> HTMLResponse:
     submitted_bounds = str(form.get("librewxr_bounds", "")).strip()
     state.librewxr_bounds = submitted_bounds
 
+    # Marine alert radius (T6.4) — miles from the station within which NWS
+    # marine zones are discovered for the alerts provider. 0 disables it.
+    marine_radius = _parse_int(str(form.get("marine_alert_radius_miles", "0")), default=0)
+    state.marine_alert_radius_miles = max(0, min(100, marine_radius))
+
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -2643,7 +2657,7 @@ async def step_feature_settings_get(request: Request) -> HTMLResponse:
 
 @router.post("/features", response_class=HTMLResponse)
 async def step_feature_settings_post(request: Request) -> HTMLResponse:
-    """Save feature settings; advance to step 13 (TLS)."""
+    """Save feature settings; advance to step 13 (marine)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -2678,11 +2692,285 @@ async def step_feature_settings_post(request: Request) -> HTMLResponse:
     except (ValueError, TypeError):
         state.earthquake_default_days = 7
     save_wizard_state(session_id, state)
-    return await step_tls_get(request)
+    return await step_marine_get(request)
 
 
 # ---------------------------------------------------------------------------
-# Step 13: TLS / HTTPS Configuration
+# Step 13: Marine Location Configuration (T6.1)
+# ---------------------------------------------------------------------------
+
+_MARINE_VALID_ACTIVITIES = frozenset({"marine", "surf", "fishing", "beach_safety"})
+_MARINE_VALID_BOTTOM_TYPES = frozenset({"sand", "rock", "coral_reef", "mixed"})
+_MARINE_VALID_TOPO_FEATURES = frozenset({"point_break", "bay_break", "headland", "straight_beach"})
+_MARINE_VALID_EXPOSURE = frozenset({"N", "NE", "E", "SE", "S", "SW", "W", "NW"})
+_MARINE_VALID_TARGET_CATEGORIES = frozenset(
+    {"saltwater_inshore", "bottom_fish", "freshwater_sport", "salmonids"}
+)
+_MARINE_LOC_INDEX_RE = re.compile(r"^loc_(\d+)_name$")
+_MARINE_LAT_KEY_RE = re.compile(r"^loc_\d+_lat$")
+_MARINE_LON_KEY_RE = re.compile(r"^loc_\d+_lon$")
+_MARINE_FACING_KEY_RE = re.compile(r"^loc_\d+_surf_beach_facing_degrees$")
+
+
+def _slugify_location_name(name: str, existing: Any = ()) -> str:
+    """Generate a URL/JSON-key-safe slug from an operator-entered location name.
+
+    Lowercases, collapses non-alphanumeric runs to a single hyphen, and
+    strips leading/trailing hyphens.  Falls back to "location" if the name
+    has no alphanumeric characters.  Appends "-2", "-3", ... on collision
+    with a slug already present in *existing*.
+    """
+    base = re.sub(r"[^a-z0-9]+", "-", name.strip().lower()).strip("-") or "location"
+    existing_set = set(existing)
+    slug = base
+    n = 2
+    while slug in existing_set:
+        slug = f"{base}-{n}"
+        n += 1
+    return slug
+
+
+@router.get("/marine", response_class=HTMLResponse)
+async def step_marine_get(request: Request) -> HTMLResponse:
+    """Step 13: Marine Locations — render marine feature configuration."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    return _render(
+        request,
+        "step_marine.html",
+        {"step": 13, "state": state, "error": None},
+    )
+
+
+@router.post("/marine", response_class=HTMLResponse)
+async def step_marine_post(request: Request) -> HTMLResponse:
+    """Save marine location configuration and advance to step 14 (TLS)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    marine_enabled = str(form.get("marine_enabled", "")).strip() == "1"
+    state.marine_enabled = marine_enabled
+
+    if not marine_enabled:
+        state.marine_locations = {}
+        save_wizard_state(session_id, state)
+        return await step_tls_get(request)
+
+    # Discover which location indexes were submitted (one per repeatable card).
+    indices: list[str] = sorted(
+        {m.group(1) for key in form.keys() if (m := _MARINE_LOC_INDEX_RE.match(key))},
+        key=int,
+    )
+
+    new_locations: dict[str, dict[str, Any]] = {}
+    errors: list[str] = []
+
+    for idx in indices:
+        name = str(form.get(f"loc_{idx}_name", "")).strip()
+        if not name:
+            continue  # Blank/incomplete row — skip silently (e.g. added then not filled in).
+
+        lat = _to_float(form.get(f"loc_{idx}_lat"))
+        lon = _to_float(form.get(f"loc_{idx}_lon"))
+        if lat is None or lon is None:
+            errors.append(_('Location "{name}" is missing latitude/longitude.').format(name=name))
+            continue
+
+        activities = [
+            v for v in form.getlist(f"loc_{idx}_activities") if v in _MARINE_VALID_ACTIVITIES
+        ]
+
+        loc: dict[str, Any] = {
+            "name": name,
+            "lat": lat,
+            "lon": lon,
+            "activities": activities,
+        }
+
+        # Discovered station IDs are carried forward via hidden fields populated
+        # by the "Discover Nearby Stations" HTMX call (see marine_station_results.html).
+        ndbc_ids = str(form.get(f"loc_{idx}_ndbc_station_ids", "")).strip()
+        if ndbc_ids:
+            loc["ndbc_station_ids"] = [s.strip() for s in ndbc_ids.split(",") if s.strip()]
+        coops_ids = str(form.get(f"loc_{idx}_coops_station_ids", "")).strip()
+        if coops_ids:
+            loc["coops_station_ids"] = [s.strip() for s in coops_ids.split(",") if s.strip()]
+        marine_zone = str(form.get(f"loc_{idx}_nws_marine_zone_id", "")).strip()
+        if marine_zone:
+            loc["nws_marine_zone_id"] = marine_zone
+        wfo = str(form.get(f"loc_{idx}_nwps_wfo", "")).strip()
+        if wfo:
+            loc["nwps_wfo"] = wfo
+
+        if "surf" in activities:
+            facing = _to_float(form.get(f"loc_{idx}_surf_beach_facing_degrees"))
+            bottom_type = str(form.get(f"loc_{idx}_surf_bottom_type", "")).strip()
+            topo = str(form.get(f"loc_{idx}_surf_topographic_feature", "")).strip()
+            exposure = [
+                v for v in form.getlist(f"loc_{idx}_surf_exposure") if v in _MARINE_VALID_EXPOSURE
+            ]
+            surf_cfg: dict[str, Any] = {}
+            if facing is not None:
+                surf_cfg["beach_facing_degrees"] = facing
+            if bottom_type in _MARINE_VALID_BOTTOM_TYPES:
+                surf_cfg["bottom_type"] = bottom_type
+            if topo in _MARINE_VALID_TOPO_FEATURES:
+                surf_cfg["topographic_feature"] = topo
+            if exposure:
+                surf_cfg["directional_exposure"] = exposure
+            loc["surf"] = surf_cfg
+
+        if "fishing" in activities:
+            target_category = str(form.get(f"loc_{idx}_fishing_target_category", "")).strip()
+            species_raw = str(form.get(f"loc_{idx}_fishing_species", "")).strip()
+            fishing_cfg: dict[str, Any] = {}
+            if target_category in _MARINE_VALID_TARGET_CATEGORIES:
+                fishing_cfg["target_category"] = target_category
+            if species_raw:
+                fishing_cfg["species"] = [s.strip() for s in species_raw.splitlines() if s.strip()]
+            loc["fishing"] = fishing_cfg
+
+        if "beach_safety" in activities:
+            labels = form.getlist(f"loc_{idx}_beach_safety_link_label")
+            urls = form.getlist(f"loc_{idx}_beach_safety_link_url")
+            links = [
+                {"label": str(lbl).strip(), "url": str(u).strip()}
+                for lbl, u in zip(labels, urls)
+                if str(lbl).strip() and str(u).strip()
+            ]
+            loc["beach_safety"] = {"external_links": links}
+
+        slug = _slugify_location_name(name, existing=new_locations.keys())
+        new_locations[slug] = loc
+
+    if errors:
+        return _render(
+            request,
+            "step_marine.html",
+            {"step": 13, "state": state, "error": " ".join(errors)},
+            status_code=422,
+        )
+
+    state.marine_locations = new_locations
+
+    ttl_hours = _parse_int(str(form.get("marine_forecast_ttl_hours", "3")), default=3)
+    state.marine_forecast_ttl_hours = ttl_hours if ttl_hours in (1, 3, 6) else 3
+
+    ttl_minutes = _parse_int(str(form.get("marine_observation_ttl_minutes", "30")), default=30)
+    state.marine_observation_ttl_minutes = ttl_minutes if ttl_minutes in (15, 30, 60) else 30
+
+    save_wizard_state(session_id, state)
+    return await step_tls_get(request)
+
+
+@router.post("/marine/discover-stations", response_class=HTMLResponse)
+async def marine_discover_stations(request: Request) -> HTMLResponse:
+    """HTMX: discover nearby NDBC/CO-OPS stations + NWS marine zone/WFO for one location card.
+
+    Scoped to a single location card via hx-include="closest .marine-location-card"
+    on the template's button, so exactly one loc_<idx>_lat/lon pair is present in
+    the submitted form regardless of how many location cards exist — the index
+    itself does not need to be known here.
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    form = await request.form()
+
+    lat_val = next((v for k, v in form.items() if _MARINE_LAT_KEY_RE.match(k)), None)
+    lon_val = next((v for k, v in form.items() if _MARINE_LON_KEY_RE.match(k)), None)
+    lat = _to_float(lat_val)
+    lon = _to_float(lon_val)
+    if lat is None or lon is None:
+        return _render(
+            request,
+            "marine_station_results.html",
+            {"error": _("Enter latitude and longitude before discovering stations."), "result": None},
+        )
+
+    try:
+        client = _get_api_client(state)
+        result = client.discover_marine_stations(lat, lon, radius_miles=50)
+    except ValueError:
+        return _render(
+            request,
+            "marine_station_results.html",
+            {"error": _("API not connected. Go back to step 1 and reconnect."), "result": None},
+        )
+    except ApiClientError as exc:
+        return _render(
+            request,
+            "marine_station_results.html",
+            {"error": _api_error_message(exc), "result": None},
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning("marine_discover_stations: network error", exc_info=True)
+        return _render(
+            request,
+            "marine_station_results.html",
+            {"error": _("Could not reach the API to discover marine stations."), "result": None},
+        )
+
+    return _render(request, "marine_station_results.html", {"error": None, "result": result})
+
+
+@router.post("/marine/bathymetry", response_class=HTMLResponse)
+async def marine_bathymetry(request: Request) -> HTMLResponse:
+    """HTMX: download/derive bathymetry data for one surf-enabled location card.
+
+    Scoped to a single location card the same way as marine_discover_stations()
+    above (hx-include="closest .marine-location-card").
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    form = await request.form()
+
+    lat_val = next((v for k, v in form.items() if _MARINE_LAT_KEY_RE.match(k)), None)
+    lon_val = next((v for k, v in form.items() if _MARINE_LON_KEY_RE.match(k)), None)
+    facing_val = next((v for k, v in form.items() if _MARINE_FACING_KEY_RE.match(k)), None)
+    lat = _to_float(lat_val)
+    lon = _to_float(lon_val)
+    facing = _to_float(facing_val)
+    if lat is None or lon is None or facing is None:
+        return _render(
+            request,
+            "marine_bathymetry_result.html",
+            {
+                "error": _(
+                    "Enter latitude, longitude, and beach facing direction before downloading bathymetry."
+                ),
+                "result": None,
+            },
+        )
+
+    try:
+        client = _get_api_client(state)
+        result = client.get_marine_bathymetry(lat, lon, facing)
+    except ValueError:
+        return _render(
+            request,
+            "marine_bathymetry_result.html",
+            {"error": _("API not connected. Go back to step 1 and reconnect."), "result": None},
+        )
+    except ApiClientError as exc:
+        return _render(
+            request,
+            "marine_bathymetry_result.html",
+            {"error": _api_error_message(exc), "result": None},
+        )
+    except Exception:  # noqa: BLE001
+        logger.warning("marine_bathymetry: network error", exc_info=True)
+        return _render(
+            request,
+            "marine_bathymetry_result.html",
+            {"error": _("Could not reach the API to download bathymetry data."), "result": None},
+        )
+
+    return _render(request, "marine_bathymetry_result.html", {"error": None, "result": result})
+
+
+# ---------------------------------------------------------------------------
+# Step 14: TLS / HTTPS Configuration
 # ---------------------------------------------------------------------------
 
 # Allowed file types for TLS certificate/key uploads (Manual mode).
@@ -2766,7 +3054,7 @@ async def _handle_tls_upload(form: Any, field_name: str) -> tuple[str | None, st
 
 @router.get("/tls", response_class=HTMLResponse)
 async def step_tls_get(request: Request) -> HTMLResponse:
-    """Step 13: TLS — render the certificate mode selection form."""
+    """Step 14: TLS — render the certificate mode selection form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if not state.tls_mode:
@@ -2782,12 +3070,12 @@ async def step_tls_get(request: Request) -> HTMLResponse:
         "cert_path": state.tls_cert_path,
         "key_path": state.tls_key_path,
     }
-    return _render(request, "step_tls.html", {"step": 13, "state": state, "fields": fields, "values": values, "error": None})
+    return _render(request, "step_tls.html", {"step": 14, "state": state, "fields": fields, "values": values, "error": None})
 
 
 @router.post("/tls", response_class=HTMLResponse)
 async def step_tls_post(request: Request) -> HTMLResponse:
-    """Save TLS configuration and advance to step 14 (review)."""
+    """Save TLS configuration and advance to step 15 (review)."""
     session_id = _require_session(request)
     form = await request.form()
     state = get_wizard_state(session_id)
@@ -2854,7 +3142,7 @@ async def step_tls_post(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_tls.html",
-            {"step": 13, "state": state, "fields": fields, "values": values, "error": msg},
+            {"step": 14, "state": state, "fields": fields, "values": values, "error": msg},
             status_code=422,
         )
 
@@ -2890,7 +3178,7 @@ async def step_tls_post(request: Request) -> HTMLResponse:
 
 
 # ---------------------------------------------------------------------------
-# Step 9 (display 14): Review + Apply
+# Step 9 (display 15): Review + Apply
 # ---------------------------------------------------------------------------
 
 
@@ -2903,7 +3191,7 @@ async def step9_review_get(request: Request) -> HTMLResponse:
     return _render(
         request,
         "step_review.html",
-        {"step": 14, "state": state, "error": None},
+        {"step": 15, "state": state, "error": None},
     )
 
 
@@ -3038,6 +3326,13 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             provider_entry["librewxr_endpoint"] = state.librewxr_endpoint
             if state.librewxr_bounds:
                 provider_entry["librewxr_bounds"] = state.librewxr_bounds
+        # Marine alert radius (T6.4) — attached to the alerts provider entry so
+        # the API can discover nearby NWS marine zones for alert display.
+        # Only sent when an alerts provider is actually selected (this loop
+        # only runs for domains present in state.providers) and the radius
+        # is non-zero (0 means "disabled" — omit rather than send a no-op).
+        if domain == "alerts" and state.marine_alert_radius_miles > 0:
+            provider_entry["marine_alert_radius_miles"] = state.marine_alert_radius_miles
         api_providers[domain] = provider_entry
 
     api_payload: dict[str, Any] = {
@@ -3087,6 +3382,12 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "default_days": state.earthquake_default_days,
     }
 
+    # Marine locations (T6.1) — omitted entirely when marine features are
+    # disabled or no locations were configured (see build_marine_payload()).
+    marine_payload = build_marine_payload(state)
+    if marine_payload:
+        api_payload["marine"] = marine_payload
+
     # Unit configuration — sent to the API so it writes to api.conf [units].
     # This is the single unit authority (T2A.5, ADR-042).
     if state.units is not None:
@@ -3119,7 +3420,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 14,
+                "step": 15,
                 "state": state,
                 "error": _("API not connected. Go back to step 1 and reconnect before applying."),
             },
@@ -3132,7 +3433,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 14,
+                "step": 15,
                 "state": state,
                 "error": _("Failed to apply API configuration: {detail}").format(detail=error_msg),
             },
@@ -3144,7 +3445,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             request,
             "step_review.html",
             {
-                "step": 14,
+                "step": 15,
                 "state": state,
                 "error": _("Could not reach the API to apply configuration. Check that the API is running and try again."),
             },
@@ -3222,7 +3523,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 14, "state": state, "error": _perm_error},
+            {"step": 15, "state": state, "error": _perm_error},
             status_code=422,
         )
 
@@ -3341,7 +3642,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 14, "state": state, "error": local_error},
+            {"step": 15, "state": state, "error": local_error},
             status_code=422,
         )
     except Exception:  # noqa: BLE001
@@ -3354,7 +3655,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         return _render(
             request,
             "step_review.html",
-            {"step": 14, "state": state, "error": local_error},
+            {"step": 15, "state": state, "error": local_error},
             status_code=422,
         )
 
