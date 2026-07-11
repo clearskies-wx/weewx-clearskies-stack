@@ -603,7 +603,10 @@ def _domain_for_provider(provider_id: str, providers: dict[str, str]) -> str | N
 
 def _state_from_dict(raw: dict[str, Any]) -> WizardState:
     """Construct a WizardState from a plain dict, validating types."""
-    _INT_FIELDS = {"db_port", "api_bind_port", "webcam_refresh_interval", "earthquake_default_days"}
+    _INT_FIELDS = {
+        "db_port", "api_bind_port", "webcam_refresh_interval", "earthquake_default_days",
+        "marine_forecast_ttl_hours", "marine_observation_ttl_minutes", "marine_alert_radius_miles",
+    }
     _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters", "earthquake_radius_km", "earthquake_min_magnitude"}
     _BOOL_FIELDS = {"schema_skipped", "webcam_enabled", "tls_cert_uploaded", "tls_key_uploaded"}
 

@@ -313,6 +313,67 @@ class ApiClient:
         result: dict[str, Any] = response.json()
         return result
 
+    def discover_marine_stations(
+        self,
+        lat: float,
+        lon: float,
+        radius_miles: float = 50,
+    ) -> dict[str, Any]:
+        """GET /setup/marine/discover-stations — find nearby marine data sources.
+
+        Used by the marine wizard step (T6.1) to look up NDBC buoys, CO-OPS
+        tide stations, the NWS marine zone, and the NWPS forecast office
+        (WFO) nearest a marine location the operator is configuring.
+
+        Args:
+            lat: Location latitude, decimal degrees.
+            lon: Location longitude, decimal degrees.
+            radius_miles: Search radius in statute miles.
+
+        Returns:
+            Dict with keys such as "ndbc_station_ids", "coops_station_ids",
+            "nws_marine_zone_id", "nwps_wfo" (exact shape defined by the API).
+        """
+        _log.info("Discovering marine stations near %s,%s via API", lat, lon)
+        response = self._request(
+            "GET",
+            "/setup/marine/discover-stations",
+            params={"lat": str(lat), "lon": str(lon), "radius_miles": str(radius_miles)},
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        result: dict[str, Any] = response.json()
+        return result
+
+    def get_marine_bathymetry(
+        self,
+        lat: float,
+        lon: float,
+        beach_facing_degrees: float,
+    ) -> dict[str, Any]:
+        """POST /setup/marine/bathymetry — fetch/derive bathymetry for a surf location.
+
+        Used by the marine wizard step (T6.1) when the operator clicks
+        "Download Bathymetry" for a surf-enabled location.
+
+        Args:
+            lat: Location latitude, decimal degrees.
+            lon: Location longitude, decimal degrees.
+            beach_facing_degrees: Compass direction (0-360) the beach faces.
+
+        Returns:
+            API response dict describing the downloaded/derived bathymetry
+            data (exact shape defined by the API).
+        """
+        _log.info("Requesting marine bathymetry for %s,%s via API", lat, lon)
+        response = self._request(
+            "POST",
+            "/setup/marine/bathymetry",
+            json={"lat": lat, "lon": lon, "beach_facing_degrees": beach_facing_degrees},
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        result: dict[str, Any] = response.json()
+        return result
+
     def health(self) -> bool:
         """GET /health — lightweight liveness check.
 

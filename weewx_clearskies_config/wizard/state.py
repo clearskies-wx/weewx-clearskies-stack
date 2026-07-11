@@ -213,6 +213,32 @@ class WizardState:
     tls_cert_uploaded: bool = False
     tls_key_uploaded: bool = False
 
+    # Marine features (T6.1) — per-location boating/surf/fishing/beach-safety
+    # configuration, configured on the marine wizard step (step 13).
+    marine_enabled: bool = False
+    # Key = location slug (derived from the operator-entered name), value =
+    # location config dict. Shape:
+    #   {"name": str, "lat": float, "lon": float, "activities": [str, ...],
+    #    "ndbc_station_ids": [str, ...], "coops_station_ids": [str, ...],
+    #    "nws_marine_zone_id": str, "nwps_wfo": str,
+    #    "surf": {"beach_facing_degrees": float, "bottom_type": str,
+    #             "topographic_feature": str, "directional_exposure": [str, ...]},
+    #    "fishing": {"target_category": str, "species": [str, ...]},
+    #    "beach_safety": {"external_links": [{"label": str, "url": str}, ...]}}
+    # "surf"/"fishing"/"beach_safety" keys are present only when that
+    # activity was selected for the location.
+    marine_locations: dict[str, dict[str, Any]] = field(default_factory=dict)
+    # Global refresh intervals applied to all marine locations. Hours: 1|3|6.
+    marine_forecast_ttl_hours: int = 3
+    # Minutes: 15|30|60.
+    marine_observation_ttl_minutes: int = 30
+
+    # Marine alert radius (T6.4) — miles from the station within which NWS
+    # marine zones are discovered for the alerts provider. 0 disables marine
+    # alert zone discovery. Sent to the API under providers.alerts when an
+    # alerts provider is selected.
+    marine_alert_radius_miles: int = 0
+
     # Registry-keyed values for wizard steps that delegate field rendering
     # to the config registry macros.  Key = registry config_key (e.g. "enabled",
     # "image_url"), value = current value.  Populated by step GET handlers and

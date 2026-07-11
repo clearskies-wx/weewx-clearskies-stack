@@ -410,6 +410,37 @@ def build_skin_conf_payload(state: WizardState) -> dict[str, Any]:
     return payload
 
 
+def build_marine_payload(state: WizardState) -> dict[str, Any]:
+    """Build the "marine" payload for POST /setup/apply (T6.1).
+
+    Mirrors build_skin_conf_payload(): a pure function from WizardState to
+    the dict shape the API's ApplyRequest expects, added to api_payload by
+    the caller (wizard_apply in routes.py) before calling client.apply().
+
+    Args:
+        state: The current WizardState, populated by the marine wizard step
+               (state.marine_enabled, state.marine_locations,
+               state.marine_forecast_ttl_hours, state.marine_observation_ttl_minutes).
+
+    Returns:
+        Dict suitable for the "marine" key in the POST /setup/apply payload.
+        Returns an empty dict when marine features are disabled or no
+        locations were configured — the caller omits the "marine" key
+        entirely in that case rather than sending an empty/meaningless
+        section (the API's ApplyRequest schema uses extra="forbid").
+    """
+    if not state.marine_enabled or not state.marine_locations:
+        return {}
+
+    return {
+        "locations": state.marine_locations,
+        "weather": {
+            "forecast_ttl_hours": state.marine_forecast_ttl_hours,
+            "observation_ttl_minutes": state.marine_observation_ttl_minutes,
+        },
+    }
+
+
 def write_caddy_env(state: WizardState, config_dir: Path) -> Path | None:
     """Write caddy.env so the reverse proxy knows where to route API traffic.
 
