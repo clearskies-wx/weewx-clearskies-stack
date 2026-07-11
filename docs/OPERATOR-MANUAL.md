@@ -703,6 +703,15 @@ The **Forecast Correction** section controls the machine-learning system that le
 
 The **Geographic Features** section lets you download and manage the vector map overlay that appears on the satellite and radar views. This overlay shows borders, coastlines, city labels, and geographic context from OpenStreetMap data in PMTiles format. Click **Update Map Data** to download — this is a one-time operation. Update periodically (every few months) for the latest map data.
 
+### Marine locations
+
+The **Marine Locations** section manages marine, surf, fishing, and beach safety locations after initial setup — the ongoing counterpart to the setup wizard's Marine Locations step. Each location has a name, coordinates, one or more activities (Marine/Boating, Surf, Fishing, Beach Safety), and activity-specific fields (surf beach-facing direction/bottom type/topographic feature, fishing target category, beach safety links).
+
+- **Add / Edit** opens a form with the same fields as the wizard step. Saving re-applies the full marine configuration and restarts the API so the change takes effect within a few seconds.
+- **Delete** removes a location after confirmation.
+- **Test** checks whether NDBC buoys and CO-OPS tide stations are reachable near the location's coordinates, and whether an NWS marine zone id is stored. This is a best-effort connectivity check, not a live verification that a specific station is currently transmitting data.
+- **Update Bathymetry** (surf locations only) re-downloads the seafloor depth profile used for wave forecasting — useful after correcting a beach's facing direction.
+
 ---
 
 ## 8. Under the Hood
