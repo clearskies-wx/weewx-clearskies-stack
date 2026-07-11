@@ -4190,6 +4190,64 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
         if isinstance(api_col_mapping, dict) and api_col_mapping:
             state.column_mapping = {str(v): str(k) for k, v in api_col_mapping.items() if v}
 
+    # --- Marine alert radius (ADR-089) ---
+    # Restore marine_alert_radius_miles from the alerts provider config so the
+    # wizard's alerts step pre-populates the marine radius field on re-run.
+    alerts_pd = api_providers.get("alerts", {}) if isinstance(api_providers, dict) else {}
+    if isinstance(alerts_pd, dict) and state.marine_alert_radius_miles == 0:
+        raw_radius = alerts_pd.get("marine_alert_radius_miles")
+        if raw_radius is not None:
+            try:
+                state.marine_alert_radius_miles = int(raw_radius)
+            except (ValueError, TypeError):
+                pass
+
+    # --- Marine locations (T6.1/T6.3) ---
+    # Restore marine_enabled + marine_locations from the API's [marine] config
+    # so the wizard's marine step pre-populates on re-run.
+    api_marine = config.get("marine")
+    if isinstance(api_marine, dict) and not state.marine_locations:
+        locations_raw = api_marine.get("locations", {})
+        if isinstance(locations_raw, dict) and locations_raw:
+            state.marine_enabled = True
+            restored: dict[str, dict[str, Any]] = {}
+            for loc_id, loc_data in locations_raw.items():
+                if not isinstance(loc_data, dict):
+                    continue
+                entry: dict[str, Any] = {
+                    "name": str(loc_data.get("name", loc_id)),
+                    "lat": float(loc_data.get("lat", 0)),
+                    "lon": float(loc_data.get("lon", 0)),
+                    "activities": list(loc_data.get("activities", [])),
+                }
+                ndbc = loc_data.get("ndbc_station_ids")
+                if isinstance(ndbc, list):
+                    entry["ndbc_station_ids"] = [str(s) for s in ndbc]
+                elif isinstance(ndbc, str):
+                    entry["ndbc_station_ids"] = [s.strip() for s in ndbc.split(",") if s.strip()]
+                coops = loc_data.get("coops_station_ids")
+                if isinstance(coops, list):
+                    entry["coops_station_ids"] = [str(s) for s in coops]
+                elif isinstance(coops, str):
+                    entry["coops_station_ids"] = [s.strip() for s in coops.split(",") if s.strip()]
+                if loc_data.get("nws_marine_zone_id"):
+                    entry["nws_marine_zone_id"] = str(loc_data["nws_marine_zone_id"])
+                if loc_data.get("nwps_wfo"):
+                    entry["nwps_wfo"] = str(loc_data["nwps_wfo"])
+                if loc_data.get("nwps_cg_grid"):
+                    entry["nwps_cg_grid"] = str(loc_data["nwps_cg_grid"])
+                surf = loc_data.get("surf")
+                if isinstance(surf, dict):
+                    entry["surf"] = dict(surf)
+                fishing = loc_data.get("fishing")
+                if isinstance(fishing, dict):
+                    entry["fishing"] = dict(fishing)
+                beach_safety = loc_data.get("beach_safety")
+                if isinstance(beach_safety, dict):
+                    entry["beach_safety"] = dict(beach_safety)
+                restored[str(loc_id)] = entry
+            state.marine_locations = restored
+
     # --- Units (T2B-A.3) ---
     # Restore state.units from api.conf [units] so the unit step is pre-filled
     # on wizard re-run.  Only populate if state has no units set yet.
