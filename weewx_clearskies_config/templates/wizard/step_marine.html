@@ -292,41 +292,41 @@ if (typeof L === "undefined") {
     .wizard-location-map {
       border: 1px solid var(--pico-muted-border-color);
     }
-    /* Prevent Pico CSS from overriding Leaflet control styling */
-    .wizard-location-map .leaflet-control-zoom a {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 30px;
-      height: 30px;
-      padding: 0;
-      margin: 0;
-      font-size: 18px;
-      font-weight: bold;
-      line-height: 30px;
-      color: #333;
-      background: #fff;
-      border: none;
-      border-bottom: 1px solid #ccc;
-      text-decoration: none;
-      cursor: pointer;
-      box-shadow: none;
+    /* Reset Pico CSS overrides on all Leaflet elements inside the map */
+    .wizard-location-map * {
+      box-sizing: content-box;
     }
-    .wizard-location-map .leaflet-control-zoom a:hover {
-      background: #f4f4f4;
-      color: #333;
-    }
-    .wizard-location-map .leaflet-control-zoom a:last-child {
-      border-bottom: none;
+    .wizard-location-map a,
+    .wizard-location-map a[role="button"] {
+      all: revert;
+      cursor: pointer !important;
     }
     .wizard-location-map .leaflet-control-zoom {
-      border: 2px solid rgba(0, 0, 0, 0.2);
-      border-radius: 4px;
-      overflow: hidden;
+      border: 2px solid rgba(0, 0, 0, 0.2) !important;
+      border-radius: 4px !important;
+      box-shadow: none !important;
     }
-    .wizard-location-map a {
-      color: #333;
-      text-decoration: none;
+    .wizard-location-map .leaflet-control-zoom a {
+      display: block !important;
+      width: 30px !important;
+      height: 30px !important;
+      line-height: 30px !important;
+      text-align: center !important;
+      font-size: 18px !important;
+      font-weight: bold !important;
+      color: #333 !important;
+      background: #fff !important;
+      text-decoration: none !important;
+      border: none !important;
+      border-bottom: 1px solid #ccc !important;
+      padding: 0 !important;
+      margin: 0 !important;
+    }
+    .wizard-location-map .leaflet-control-zoom a:hover {
+      background: #f4f4f4 !important;
+    }
+    .wizard-location-map .leaflet-control-zoom a:last-child {
+      border-bottom: none !important;
     }
     .wizard-location-map .leaflet-control-attribution {
       font-size: 0.65rem;
