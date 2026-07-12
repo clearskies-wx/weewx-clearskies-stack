@@ -49,6 +49,28 @@ UNIT_OPTIONS: dict[str, list[tuple[str, str]]] = {
         ("mile", "mi — Miles"),
         ("km", "km — Kilometers"),
     ],
+    "group_wave_height": [
+        ("foot", "ft — Feet"),
+        ("meter", "m — Meters"),
+    ],
+    "group_wave_period": [
+        ("second", "s — Seconds"),
+    ],
+    "group_water_level": [
+        ("foot", "ft — Feet"),
+        ("meter", "m — Meters"),
+    ],
+    "group_ocean_speed": [
+        ("knot", "kn — Knots"),
+        ("meter_per_second", "m/s — Meters per second"),
+        ("mile_per_hour", "mph — Miles per hour"),
+        ("km_per_hour", "km/h — Kilometers per hour"),
+    ],
+    "group_visibility": [
+        ("nautical_mile", "nmi — Nautical miles"),
+        ("mile", "mi — Statute miles"),
+        ("km", "km — Kilometers"),
+    ],
 }
 
 # Human-readable display name for each group (shown as the row label).
@@ -60,6 +82,11 @@ UNIT_GROUP_LABELS: dict[str, str] = {
     "group_rainrate": "Precipitation Rate",
     "group_altitude": "Altitude",
     "group_distance": "Distance",
+    "group_wave_height": "Wave Height",
+    "group_wave_period": "Wave Period",
+    "group_water_level": "Water Level",
+    "group_ocean_speed": "Ocean Current Speed",
+    "group_visibility": "Visibility",
 }
 
 # ---------------------------------------------------------------------------
@@ -75,6 +102,11 @@ UNIT_PRESETS: dict[str, dict[str, str]] = {
         "group_rainrate": "inch_per_hour",
         "group_altitude": "foot",
         "group_distance": "mile",
+        "group_wave_height": "foot",
+        "group_wave_period": "second",
+        "group_water_level": "foot",
+        "group_ocean_speed": "knot",
+        "group_visibility": "nautical_mile",
     },
     "metric": {
         "group_temperature": "degree_C",
@@ -84,6 +116,11 @@ UNIT_PRESETS: dict[str, dict[str, str]] = {
         "group_rainrate": "cm_per_hour",
         "group_altitude": "meter",
         "group_distance": "km",
+        "group_wave_height": "meter",
+        "group_wave_period": "second",
+        "group_water_level": "meter",
+        "group_ocean_speed": "knot",
+        "group_visibility": "nautical_mile",
     },
     "metricwx": {
         "group_temperature": "degree_C",
@@ -93,6 +130,11 @@ UNIT_PRESETS: dict[str, dict[str, str]] = {
         "group_rainrate": "mm_per_hour",
         "group_altitude": "meter",
         "group_distance": "km",
+        "group_wave_height": "meter",
+        "group_wave_period": "second",
+        "group_water_level": "meter",
+        "group_ocean_speed": "knot",
+        "group_visibility": "nautical_mile",
     },
 }
 

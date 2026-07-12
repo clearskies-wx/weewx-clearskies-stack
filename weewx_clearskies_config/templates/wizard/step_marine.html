@@ -102,28 +102,35 @@
 
     <label for="loc_{{ idx }}_surf_beach_facing_degrees">{{ _("Beach facing direction (degrees)") }}</label>
     <input type="number" min="0" max="360" id="loc_{{ idx }}_surf_beach_facing_degrees"
-           name="loc_{{ idx }}_surf_beach_facing_degrees" value="{{ surf.get('beach_facing_degrees', '') }}">
+           name="loc_{{ idx }}_surf_beach_facing_degrees" value="{{ surf.get('beach_facing_degrees', '') }}"
+           aria-describedby="loc_{{ idx }}_bearing_help">
+    <small id="loc_{{ idx }}_bearing_help">{{ _("Compass direction the beach faces toward the ocean, in degrees. A beach facing south = 180°.") }}</small>
 
     <label for="loc_{{ idx }}_surf_bottom_type">{{ _("Bottom type") }}</label>
-    <select id="loc_{{ idx }}_surf_bottom_type" name="loc_{{ idx }}_surf_bottom_type">
+    <select id="loc_{{ idx }}_surf_bottom_type" name="loc_{{ idx }}_surf_bottom_type"
+            aria-describedby="loc_{{ idx }}_bottom_help">
       <option value="">{{ _("— select —") }}</option>
       <option value="sand" {% if surf.get("bottom_type") == "sand" %}selected{% endif %}>{{ _("Sand") }}</option>
       <option value="rock" {% if surf.get("bottom_type") == "rock" %}selected{% endif %}>{{ _("Rock") }}</option>
       <option value="coral_reef" {% if surf.get("bottom_type") == "coral_reef" %}selected{% endif %}>{{ _("Coral reef") }}</option>
       <option value="mixed" {% if surf.get("bottom_type") == "mixed" %}selected{% endif %}>{{ _("Mixed") }}</option>
     </select>
+    <small id="loc_{{ idx }}_bottom_help">{{ _("Seabed composition at the surf break. Affects wave breaking behavior.") }}</small>
 
     <label for="loc_{{ idx }}_surf_topographic_feature">{{ _("Topographic feature") }}</label>
-    <select id="loc_{{ idx }}_surf_topographic_feature" name="loc_{{ idx }}_surf_topographic_feature">
+    <select id="loc_{{ idx }}_surf_topographic_feature" name="loc_{{ idx }}_surf_topographic_feature"
+            aria-describedby="loc_{{ idx }}_topo_help">
       <option value="">{{ _("— select —") }}</option>
       <option value="point_break" {% if surf.get("topographic_feature") == "point_break" %}selected{% endif %}>{{ _("Point break") }}</option>
       <option value="bay_break" {% if surf.get("topographic_feature") == "bay_break" %}selected{% endif %}>{{ _("Bay break") }}</option>
       <option value="headland" {% if surf.get("topographic_feature") == "headland" %}selected{% endif %}>{{ _("Headland") }}</option>
       <option value="straight_beach" {% if surf.get("topographic_feature") == "straight_beach" %}selected{% endif %}>{{ _("Straight beach") }}</option>
     </select>
+    <small id="loc_{{ idx }}_topo_help">{{ _("Coastal landform shape. Point breaks focus wave energy; bays shelter it.") }}</small>
 
-    <fieldset>
+    <fieldset aria-describedby="loc_{{ idx }}_exposure_help">
       <legend>{{ _("Directional exposure") }}</legend>
+      <small id="loc_{{ idx }}_exposure_help">{{ _("Select which compass directions have open ocean exposure at this spot. A south-facing beach with headlands to the east and west would have S, SE, SW exposed and N, NE, NW, E, W blocked. Swells from blocked directions cannot reach this spot and are excluded from the surf forecast.") }}</small>
       {% for dir in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] %}
       <label class="compass-check">
         <input type="checkbox" name="loc_{{ idx }}_surf_exposure" value="{{ dir }}" {% if dir in exposure %}checked{% endif %}>
