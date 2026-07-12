@@ -293,6 +293,37 @@ if (typeof L === "undefined") {
       border: 1px solid var(--pico-muted-border-color);
     }
     /* Prevent Pico CSS from overriding Leaflet control styling */
+    .wizard-location-map .leaflet-control-zoom a {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 30px;
+      height: 30px;
+      padding: 0;
+      margin: 0;
+      font-size: 18px;
+      font-weight: bold;
+      line-height: 30px;
+      color: #333;
+      background: #fff;
+      border: none;
+      border-bottom: 1px solid #ccc;
+      text-decoration: none;
+      cursor: pointer;
+      box-shadow: none;
+    }
+    .wizard-location-map .leaflet-control-zoom a:hover {
+      background: #f4f4f4;
+      color: #333;
+    }
+    .wizard-location-map .leaflet-control-zoom a:last-child {
+      border-bottom: none;
+    }
+    .wizard-location-map .leaflet-control-zoom {
+      border: 2px solid rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
     .wizard-location-map a {
       color: #333;
       text-decoration: none;
@@ -392,9 +423,22 @@ if (typeof L === "undefined") {
 
   var nextIdx = locationsContainer ? locationsContainer.querySelectorAll(".marine-location-card").length : 0;
 
+  function invalidateAllMaps() {
+    if (typeof L === "undefined" || !locationsContainer) return;
+    var mapDivs = locationsContainer.querySelectorAll(".wizard-location-map");
+    for (var i = 0; i < mapDivs.length; i++) {
+      if (mapDivs[i]._csMap) {
+        mapDivs[i]._csMap.invalidateSize();
+      }
+    }
+  }
+
   if (enabledToggle && configSection) {
     enabledToggle.addEventListener("change", function () {
       configSection.style.display = enabledToggle.checked ? "" : "none";
+      if (enabledToggle.checked) {
+        setTimeout(invalidateAllMaps, 200);
+      }
     });
   }
 
