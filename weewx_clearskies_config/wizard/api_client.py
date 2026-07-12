@@ -344,6 +344,22 @@ class ApiClient:
         result: dict[str, Any] = response.json()
         return result
 
+    def discover_structures(
+        self,
+        lat: float,
+        lon: float,
+        radius_m: int = 2000,
+    ) -> dict[str, Any]:
+        """GET /setup/marine/discover-structures — find nearby coastal structures via OSM."""
+        _log.info("Discovering structures near %s,%s via API", lat, lon)
+        response = self._request(
+            "GET",
+            "/setup/marine/discover-structures",
+            params={"lat": str(lat), "lon": str(lon), "radius_m": str(radius_m)},
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        return response.json()
+
     def get_marine_bathymetry(
         self,
         lat: float,

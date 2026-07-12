@@ -166,6 +166,75 @@ if (typeof L === "undefined") {
       {{ _("Download Bathymetry") }}
     </button>
     <div class="bathymetry-results"></div>
+
+    <h5>{{ _("Coastal Structures") }}</h5>
+    <small>{{ _("Structures like jetties, breakwaters, and piers affect wave height at your spot. Use auto-discovery to find them, or add manually.") }}</small>
+
+    <button type="button" class="discover-structures-btn outline"
+            hx-post="/wizard/marine/discover-structures"
+            hx-include="closest .marine-location-card"
+            hx-target="next .structure-discover-results"
+            hx-swap="innerHTML"
+            hx-indicator="#wizard-spinner"
+            style="margin-block: 0.75rem;">
+      {{ _("Discover Nearby Structures") }}
+    </button>
+    <div class="structure-discover-results"></div>
+
+    <div class="structure-cards">
+      {% for struct in surf.get("structures", []) %}
+      {% set si = loop.index0 %}
+      <fieldset class="structure-card" data-structure-idx="{{ si }}">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <legend>{{ _("Structure") }} {{ si + 1 }}</legend>
+          <button type="button" class="remove-structure-btn" aria-label="{{ _('Remove this structure') }}" style="font-size:0.8rem; padding:0.2rem 0.5rem; cursor:pointer;">&times;</button>
+        </div>
+        <div class="grid">
+          <div>
+            <label>{{ _("Type") }}
+              <select name="loc_{{ idx }}_structure_{{ si }}_type" class="struct-type">
+                <option value="jetty" {% if struct.get("type") == "jetty" %}selected{% endif %}>{{ _("Jetty") }}</option>
+                <option value="pier" {% if struct.get("type") == "pier" %}selected{% endif %}>{{ _("Pier") }}</option>
+                <option value="breakwater" {% if struct.get("type") == "breakwater" %}selected{% endif %}>{{ _("Breakwater") }}</option>
+                <option value="seawall" {% if struct.get("type") == "seawall" %}selected{% endif %}>{{ _("Seawall") }}</option>
+                <option value="groin" {% if struct.get("type") == "groin" %}selected{% endif %}>{{ _("Groin") }}</option>
+              </select>
+            </label>
+          </div>
+          <div>
+            <label>{{ _("Material") }}
+              <select name="loc_{{ idx }}_structure_{{ si }}_material" class="struct-material">
+                <option value="impermeable" {% if struct.get("material") == "impermeable" %}selected{% endif %}>{{ _("Impermeable (solid concrete/stone)") }}</option>
+                <option value="semi_permeable" {% if struct.get("material") == "semi_permeable" %}selected{% endif %}>{{ _("Semi-permeable (rock rubble/riprap)") }}</option>
+                <option value="permeable" {% if struct.get("material") == "permeable" %}selected{% endif %}>{{ _("Permeable (open pilings)") }}</option>
+              </select>
+            </label>
+          </div>
+        </div>
+        <div class="grid">
+          <div>
+            <label>{{ _("Length (m)") }}
+              <input type="number" step="0.1" min="1" name="loc_{{ idx }}_structure_{{ si }}_length_m" class="struct-length" value="{{ struct.get('length_m', '') }}">
+            </label>
+          </div>
+          <div>
+            <label>{{ _("Bearing (°)") }}
+              <input type="number" step="0.1" min="0" max="360" name="loc_{{ idx }}_structure_{{ si }}_bearing_degrees" class="struct-bearing" value="{{ struct.get('bearing_degrees', '') }}">
+            </label>
+          </div>
+          <div>
+            <label>{{ _("Distance from spot (m)") }}
+              <input type="number" step="0.1" min="1" name="loc_{{ idx }}_structure_{{ si }}_distance_m" class="struct-distance" value="{{ struct.get('distance_m', '') }}">
+            </label>
+          </div>
+        </div>
+      </fieldset>
+      {% endfor %}
+    </div>
+
+    <button type="button" class="add-structure-btn outline" style="margin-block-start: 0.5rem;">
+      {{ _("+ Add Structure Manually") }}
+    </button>
   </div>
 
   {# ---- Fishing ---- #}
@@ -713,6 +782,42 @@ if (typeof L === "undefined") {
       if (removeLinkBtn) {
         var linkRow = removeLinkBtn.closest(".beach-safety-link-row");
         if (linkRow) { linkRow.remove(); }
+        return;
+      }
+
+      var addStructBtn = evt.target.closest(".add-structure-btn");
+      if (addStructBtn) {
+        var sCard = addStructBtn.closest(".marine-location-card");
+        var sIdx = sCard ? sCard.getAttribute("data-idx") : "0";
+        var container = sCard ? sCard.querySelector(".structure-cards") : null;
+        if (!container) return;
+        var existingCards = container.querySelectorAll(".structure-card");
+        var si = existingCards.length;
+        var fs = document.createElement("fieldset");
+        fs.className = "structure-card";
+        fs.setAttribute("data-structure-idx", si);
+        fs.innerHTML =
+          '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+          '<legend>Structure ' + (si + 1) + '</legend>' +
+          '<button type="button" class="remove-structure-btn" aria-label="Remove" style="font-size:0.8rem;padding:0.2rem 0.5rem;cursor:pointer;">&times;</button></div>' +
+          '<div class="grid"><div><label>Type<select name="loc_' + sIdx + '_structure_' + si + '_type" class="struct-type">' +
+          '<option value="jetty">Jetty</option><option value="pier">Pier</option><option value="breakwater" selected>Breakwater</option>' +
+          '<option value="seawall">Seawall</option><option value="groin">Groin</option></select></label></div>' +
+          '<div><label>Material<select name="loc_' + sIdx + '_structure_' + si + '_material" class="struct-material">' +
+          '<option value="impermeable">Impermeable</option><option value="semi_permeable" selected>Semi-permeable</option>' +
+          '<option value="permeable">Permeable</option></select></label></div></div>' +
+          '<div class="grid"><div><label>Length (m)<input type="number" step="0.1" min="1" name="loc_' + sIdx + '_structure_' + si + '_length_m" class="struct-length"></label></div>' +
+          '<div><label>Bearing (°)<input type="number" step="0.1" min="0" max="360" name="loc_' + sIdx + '_structure_' + si + '_bearing_degrees" class="struct-bearing"></label></div>' +
+          '<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_' + sIdx + '_structure_' + si + '_distance_m" class="struct-distance"></label></div></div>';
+        container.appendChild(fs);
+        return;
+      }
+
+      var removeStructBtn = evt.target.closest(".remove-structure-btn");
+      if (removeStructBtn) {
+        var structCard = removeStructBtn.closest(".structure-card");
+        if (structCard) { structCard.remove(); }
+        return;
       }
     });
 

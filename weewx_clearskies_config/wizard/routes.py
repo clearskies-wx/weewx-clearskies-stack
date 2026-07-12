@@ -2822,6 +2822,29 @@ async def step_marine_post(request: Request) -> HTMLResponse:
                 surf_cfg["topographic_feature"] = topo
             if exposure:
                 surf_cfg["directional_exposure"] = exposure
+
+            structures: list[dict[str, Any]] = []
+            si = 0
+            while True:
+                s_type = str(form.get(f"loc_{idx}_structure_{si}_type", "")).strip()
+                if not s_type:
+                    break
+                s_material = str(form.get(f"loc_{idx}_structure_{si}_material", "")).strip()
+                s_length = _to_float(form.get(f"loc_{idx}_structure_{si}_length_m"))
+                s_bearing = _to_float(form.get(f"loc_{idx}_structure_{si}_bearing_degrees"))
+                s_distance = _to_float(form.get(f"loc_{idx}_structure_{si}_distance_m"))
+                if s_type and s_material and s_length and s_bearing is not None and s_distance:
+                    structures.append({
+                        "type": s_type,
+                        "material": s_material,
+                        "length_m": s_length,
+                        "bearing_degrees": s_bearing,
+                        "distance_m": s_distance,
+                    })
+                si += 1
+            if structures:
+                surf_cfg["structures"] = structures
+
             loc["surf"] = surf_cfg
 
         if "fishing" in activities:
@@ -2920,6 +2943,103 @@ async def marine_discover_stations(request: Request) -> HTMLResponse:
         )
 
     return _render(request, "marine_station_results.html", {"error": None, "result": result})
+
+
+@router.post("/marine/discover-structures", response_class=HTMLResponse)
+async def marine_discover_structures(request: Request) -> HTMLResponse:
+    """HTMX: discover nearby coastal structures via OSM Overpass for one location card."""
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    form = await request.form()
+
+    lat_val = next((v for k, v in form.items() if _MARINE_LAT_KEY_RE.match(k)), None)
+    lon_val = next((v for k, v in form.items() if _MARINE_LON_KEY_RE.match(k)), None)
+    idx_val = next((k for k in form.keys() if _MARINE_LAT_KEY_RE.match(k)), None)
+    card_idx = idx_val.split("_")[1] if idx_val else "0"
+    lat = _to_float(lat_val)
+    lon = _to_float(lon_val)
+    if lat is None or lon is None:
+        return HTMLResponse(
+            content='<div class="alert-error" role="alert">Enter coordinates before discovering structures.</div>',
+            status_code=200,
+        )
+
+    try:
+        client = _get_api_client(state)
+        result = client.discover_structures(lat, lon, radius_m=2000)
+    except Exception:  # noqa: BLE001
+        logger.warning("marine_discover_structures: error", exc_info=True)
+        return HTMLResponse(
+            content='<div class="alert-error" role="alert">Could not discover structures. Check API connection.</div>',
+            status_code=200,
+        )
+
+    structures = result.get("structures", [])
+    if not structures:
+        return HTMLResponse(
+            content='<div class="alert-info" role="status">No structures found within 2 km. Use "Add Structure Manually" if you know of structures nearby.</div>',
+            status_code=200,
+        )
+
+    html_parts = ['<div class="alert-success" role="status">',
+                  f'<p><strong>Found {len(structures)} structure(s)</strong> — check the ones that affect waves at your spot:</p>']
+    for i, s in enumerate(structures):
+        name = s.get("name") or f'{s.get("type", "structure").title()} ({s.get("distance_m", 0):.0f}m away)'
+        mat = s.get("material") or ""
+        mat_label = {"impermeable": "Impermeable", "semi_permeable": "Semi-permeable", "permeable": "Permeable"}.get(mat, "Unknown material")
+        mat_note = f' — {mat_label}' if mat else ' — material not tagged, you will need to select'
+        html_parts.append(
+            f'<label style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;">'
+            f'<input type="checkbox" class="discovered-structure-check" '
+            f'data-idx="{card_idx}" '
+            f'data-type="{s.get("type", "breakwater")}" '
+            f'data-material="{mat or "semi_permeable"}" '
+            f'data-length="{s.get("length_m", 0):.1f}" '
+            f'data-bearing="{s.get("bearing_degrees", 0):.1f}" '
+            f'data-distance="{s.get("distance_m", 0):.1f}"> '
+            f'{name}{mat_note}</label>'
+        )
+    html_parts.append('</div>')
+    html_parts.append('<script>')
+    html_parts.append('document.querySelectorAll(".discovered-structure-check").forEach(function(cb) {')
+    html_parts.append('  cb.addEventListener("change", function() {')
+    html_parts.append('    var card = this.closest(".marine-location-card");')
+    html_parts.append('    var container = card ? card.querySelector(".structure-cards") : null;')
+    html_parts.append('    if (!container) return;')
+    html_parts.append('    if (this.checked) {')
+    html_parts.append('      var si = container.querySelectorAll(".structure-card").length;')
+    html_parts.append('      var idx = this.getAttribute("data-idx");')
+    html_parts.append('      var fs = document.createElement("fieldset");')
+    html_parts.append('      fs.className = "structure-card";')
+    html_parts.append('      fs.setAttribute("data-structure-idx", si);')
+    html_parts.append('      fs.setAttribute("data-discovered-cb", this.value || si);')
+    html_parts.append('      fs.innerHTML = \'<div style="display:flex;justify-content:space-between;align-items:center;">\'')
+    html_parts.append('        + \'<legend>Structure \' + (si+1) + \' (discovered)</legend>\'')
+    html_parts.append('        + \'<button type="button" class="remove-structure-btn" style="font-size:0.8rem;padding:0.2rem 0.5rem;cursor:pointer;">&times;</button></div>\'')
+    html_parts.append('        + \'<div class="grid"><div><label>Type<select name="loc_\' + idx + \'_structure_\' + si + \'_type" class="struct-type">\'')
+    html_parts.append('        + \'<option value="jetty"\' + (this.dataset.type==="jetty"?" selected":"") + \'>Jetty</option>\'')
+    html_parts.append('        + \'<option value="pier"\' + (this.dataset.type==="pier"?" selected":"") + \'>Pier</option>\'')
+    html_parts.append('        + \'<option value="breakwater"\' + (this.dataset.type==="breakwater"?" selected":"") + \'>Breakwater</option>\'')
+    html_parts.append('        + \'<option value="seawall"\' + (this.dataset.type==="seawall"?" selected":"") + \'>Seawall</option>\'')
+    html_parts.append('        + \'<option value="groin"\' + (this.dataset.type==="groin"?" selected":"") + \'>Groin</option>\'')
+    html_parts.append('        + \'</select></label></div><div><label>Material<select name="loc_\' + idx + \'_structure_\' + si + \'_material" class="struct-material">\'')
+    html_parts.append('        + \'<option value="impermeable"\' + (this.dataset.material==="impermeable"?" selected":"") + \'>Impermeable</option>\'')
+    html_parts.append('        + \'<option value="semi_permeable"\' + (this.dataset.material==="semi_permeable"?" selected":"") + \'>Semi-permeable</option>\'')
+    html_parts.append('        + \'<option value="permeable"\' + (this.dataset.material==="permeable"?" selected":"") + \'>Permeable</option>\'')
+    html_parts.append('        + \'</select></label></div></div>\'')
+    html_parts.append('        + \'<div class="grid"><div><label>Length (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_length_m" value="\' + this.dataset.length + \'"></label></div>\'')
+    html_parts.append('        + \'<div><label>Bearing (°)<input type="number" step="0.1" min="0" max="360" name="loc_\' + idx + \'_structure_\' + si + \'_bearing_degrees" value="\' + this.dataset.bearing + \'"></label></div>\'')
+    html_parts.append('        + \'<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_distance_m" value="\' + this.dataset.distance + \'"></label></div></div>\';')
+    html_parts.append('      container.appendChild(fs);')
+    html_parts.append('    } else {')
+    html_parts.append('      var cards = container.querySelectorAll(".structure-card");')
+    html_parts.append('      if (cards.length > 0) cards[cards.length - 1].remove();')
+    html_parts.append('    }')
+    html_parts.append('  });')
+    html_parts.append('});')
+    html_parts.append('</script>')
+
+    return HTMLResponse(content="\n".join(html_parts), status_code=200)
 
 
 @router.post("/marine/bathymetry", response_class=HTMLResponse)
