@@ -1925,26 +1925,20 @@ async def step6_get(request: Request) -> HTMLResponse:
 
 @router.get("/step/6/key-fields/{domain}/{provider_id}", response_class=HTMLResponse)
 async def step6_key_fields(request: Request, domain: str, provider_id: str) -> HTMLResponse:
-    """Return inline key input fields for a provider that requires credentials.
-
-    For the alerts domain, always appends the marine alert radius fragment
-    (T2.3) so it stays visible regardless of which alerts provider is selected.
-    """
+    """Return inline key input fields for a provider that requires credentials."""
     session_id = _require_session(request)
     info = get_provider(provider_id)
+    if not info or not info.auth_fields:
+        assert _templates is not None
+        return HTMLResponse(content="", status_code=200)
+
     state = get_wizard_state(session_id)
 
-    parts: list[str] = []
-
-    if info and info.auth_fields:
-        resp = _render(request, "step_provider_key_fields.html", {"provider": info, "state": state})
-        parts.append(resp.body.decode())
-
-    if domain == "alerts":
-        resp = _render(request, "step_alerts_marine_radius.html", {"state": state})
-        parts.append(resp.body.decode())
-
-    return HTMLResponse(content="".join(parts), status_code=200)
+    return _render(
+        request,
+        "step_provider_key_fields.html",
+        {"provider": info, "state": state},
+    )
 
 
 # ---------------------------------------------------------------------------
