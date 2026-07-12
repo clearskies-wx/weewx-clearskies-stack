@@ -97,25 +97,7 @@
         {% endfor %}
       </div>
 
-      {# Marine alert radius (T6.4) — only when alerts is the current domain.
-         Independent of which alerts provider is selected: it controls NWS
-         marine zone discovery, not the alerts provider itself. #}
-      {% if domain == "alerts" %}
-      <div id="marine-alert-radius">
-        <h4>{{ _("Marine Alert Radius") }}</h4>
-        <p style="font-size: 0.875rem">{{ _("For coastal stations, set a radius to discover nearby NWS marine zones. Marine alerts (Small Craft Advisories, Gale Warnings) from discovered zones will appear in the dashboard alert banner.") }}</p>
-        <label for="marine-alert-radius-input">
-          {{ _("Radius (miles)") }}
-          <input type="number"
-                 id="marine-alert-radius-input"
-                 name="marine_alert_radius_miles"
-                 value="{{ state.marine_alert_radius_miles }}"
-                 min="0" max="100" step="1"
-                 aria-describedby="marine-alert-radius-help">
-        </label>
-        <small id="marine-alert-radius-help">{{ _("Set to 0 to disable. Default suggestion: 25 miles for stations within 50 miles of the coast.") }}</small>
-      </div>
-      {% endif %}
+
 
       {# AQI regional config — swapped by HTMX when an AQI provider is selected.
          Pre-rendered on page load for the currently-selected AQI provider. #}

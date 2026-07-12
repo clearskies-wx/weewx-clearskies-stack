@@ -2165,11 +2165,6 @@ async def step6_post(request: Request) -> HTMLResponse:
     submitted_bounds = str(form.get("librewxr_bounds", "")).strip()
     state.librewxr_bounds = submitted_bounds
 
-    # Marine alert radius (T6.4) — miles from the station within which NWS
-    # marine zones are discovered for the alerts provider. 0 disables it.
-    marine_radius = _parse_int(str(form.get("marine_alert_radius_miles", "0")), default=0)
-    state.marine_alert_radius_miles = max(0, min(100, marine_radius))
-
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -2693,6 +2688,10 @@ async def step_feature_settings_post(request: Request) -> HTMLResponse:
         state.earthquake_default_days = days_val if days_val in (1, 7, 14, 30) else 7
     except (ValueError, TypeError):
         state.earthquake_default_days = 7
+
+    marine_radius = _parse_int(str(form_data.get("marine_alert_radius_miles", "0")), default=0)
+    state.marine_alert_radius_miles = max(0, min(100, marine_radius))
+
     save_wizard_state(session_id, state)
     return await step_marine_get(request)
 

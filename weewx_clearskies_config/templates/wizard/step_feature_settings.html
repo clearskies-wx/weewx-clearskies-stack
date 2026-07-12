@@ -21,6 +21,19 @@
     <h3>{{ _("Seismic Page") }}</h3>
     {{ render_section_fields(fields, values, "wizard") }}
 
+    <h3>{{ _("Marine Alerts") }}</h3>
+    <p><small>{{ _("If your station is near the coast, set a radius to discover nearby NWS marine zones. Marine alerts (Small Craft Advisories, Gale Warnings, Hurricane Warnings) from those zones will appear in your main alerts banner — even if you have not enabled marine activity pages. This is a safety feature for any coastal operator, not a marine page setting.") }}</small></p>
+    <label for="marine-alert-radius-input">
+      {{ _("Marine alert radius (miles)") }}
+      <input type="number"
+             id="marine-alert-radius-input"
+             name="marine_alert_radius_miles"
+             value="{{ state.marine_alert_radius_miles }}"
+             min="0" max="100" step="1"
+             aria-describedby="marine-alert-radius-help">
+    </label>
+    <small id="marine-alert-radius-help">{{ _("Set to 0 to disable. Suggested: 25 miles for stations within 50 miles of the coast.") }}</small>
+
     <div role="group">
       <button type="button"
               hx-get="/wizard/privacy"
