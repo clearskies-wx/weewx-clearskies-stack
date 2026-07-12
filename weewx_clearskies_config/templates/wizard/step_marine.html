@@ -1,5 +1,21 @@
 {% from "macros/help_panel.html" import help_trigger %}
 
+{# Leaflet 1.9.4 — CDN with guard so re-swaps via HTMX don't duplicate.
+   Production deployments with no internet should self-host these files
+   under static/lib/leaflet/ and update the paths below. #}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+      crossorigin="">
+<script>
+if (typeof L === "undefined") {
+  var s = document.createElement("script");
+  s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+  s.integrity = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
+  s.crossOrigin = "";
+  document.head.appendChild(s);
+}
+</script>
+
 {# -------------------------------------------------------------------------
    render_location_card(idx, loc) — shared markup for a marine location card.
 
@@ -38,6 +54,8 @@
              value="{{ loc.get('lon', state.longitude) if loc.get('lon', state.longitude) is not none else '' }}">
     </div>
   </div>
+
+  <div id="loc_{{ idx }}_map" class="wizard-location-map" style="height: 300px; width: 100%; margin: 0.5rem 0; border-radius: 4px; z-index: 0;"></div>
 
   <p class="weather-source-info"><small></small></p>
 
@@ -235,6 +253,17 @@
       padding-inline-start: 1rem;
       margin-block: 1rem;
     }
+    .wizard-location-map {
+      border: 1px solid var(--pico-muted-border-color);
+    }
+    /* Prevent Pico CSS from overriding Leaflet control styling */
+    .wizard-location-map a {
+      color: #333;
+      text-decoration: none;
+    }
+    .wizard-location-map .leaflet-control-attribution {
+      font-size: 0.65rem;
+    }
   </style>
 
   <form id="marine-form"
@@ -367,8 +396,86 @@
     infoEl.textContent = text;
   }
 
+  function initLocationMap(card) {
+    if (typeof L === "undefined") {
+      // Leaflet not yet loaded — retry once it is
+      var retryTimer = setInterval(function () {
+        if (typeof L !== "undefined") {
+          clearInterval(retryTimer);
+          initLocationMap(card);
+        }
+      }, 100);
+      return;
+    }
+    var idx = card.getAttribute("data-idx");
+    var mapDiv = document.getElementById("loc_" + idx + "_map");
+    if (!mapDiv || mapDiv._leaflet_id) return; // already initialized
+
+    var latInput = card.querySelector(".marine-loc-lat");
+    var lonInput = card.querySelector(".marine-loc-lon");
+
+    var defaultLat = parseFloat(latInput ? latInput.value : "") || 38;
+    var defaultLon = parseFloat(lonInput ? lonInput.value : "") || -97;
+    var hasCoords = latInput && latInput.value && lonInput && lonInput.value;
+    var defaultZoom = hasCoords ? 12 : 4;
+
+    var map = L.map(mapDiv).setView([defaultLat, defaultLon], defaultZoom);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution: "© OpenStreetMap contributors",
+      maxZoom: 19
+    }).addTo(map);
+
+    var marker = null;
+
+    function setMarker(latlng) {
+      if (marker) {
+        marker.setLatLng(latlng);
+      } else {
+        marker = L.marker(latlng, { draggable: true }).addTo(map);
+        marker.on("dragend", function (ev) {
+          var pos = ev.target.getLatLng();
+          if (latInput) latInput.value = pos.lat.toFixed(4);
+          if (lonInput) lonInput.value = pos.lng.toFixed(4);
+          // Trigger change event so weather-source-info updates
+          if (latInput) latInput.dispatchEvent(new Event("change", { bubbles: true }));
+        });
+      }
+    }
+
+    if (hasCoords) {
+      setMarker([defaultLat, defaultLon]);
+    }
+
+    map.on("click", function (e) {
+      var lat = e.latlng.lat;
+      var lng = e.latlng.lng;
+      if (latInput) latInput.value = lat.toFixed(4);
+      if (lonInput) lonInput.value = lng.toFixed(4);
+      setMarker(e.latlng);
+      // Trigger change so weather-source-info & form state update
+      if (latInput) latInput.dispatchEvent(new Event("change", { bubbles: true }));
+    });
+
+    // Sync map when lat/lon inputs are edited manually
+    [latInput, lonInput].forEach(function (input) {
+      if (!input) return;
+      input.addEventListener("change", function () {
+        var lat = parseFloat(latInput.value);
+        var lon = parseFloat(lonInput.value);
+        if (!isNaN(lat) && !isNaN(lon)) {
+          map.setView([lat, lon], 12);
+          setMarker([lat, lon]);
+        }
+      });
+    });
+
+    // Store map reference on the div for potential later access
+    mapDiv._csMap = map;
+  }
+
   function initCard(card) {
     updateWeatherSourceInfo(card);
+    initLocationMap(card);
   }
 
   function cloneLocationCard() {
