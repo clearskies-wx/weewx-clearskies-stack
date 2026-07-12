@@ -230,7 +230,7 @@ if (typeof L === "undefined") {
       </div>
       {% endfor %}
     </div>
-    <button type="button" class="add-link-btn secondary">{{ _("+ Add Link") }}</button>
+    <button type="button" class="add-link-btn outline">{{ _("+ Add Link") }}</button>
   </div>
 </fieldset>
 {% endmacro %}
@@ -326,7 +326,9 @@ if (typeof L === "undefined") {
         {% endfor %}
       </div>
 
-      <button type="button" id="add-location-btn" class="secondary">{{ _("+ Add Location") }}</button>
+      <div style="margin-block: 1.5rem;">
+        <button type="button" id="add-location-btn" class="outline">{{ _("+ Add Location") }}</button>
+      </div>
 
       <h3>{{ _("Refresh Intervals") }}</h3>
       <div class="grid">
