@@ -351,6 +351,47 @@ if (typeof L === "undefined") {
       border: none !important;
       box-shadow: none !important;
     }
+    /* Layer control — Pico overrides label, input[type=radio], span */
+    .wizard-location-map .leaflet-control-layers {
+      background: #fff !important;
+      border: 2px solid rgba(0, 0, 0, 0.2) !important;
+      border-radius: 4px !important;
+      padding: 0 !important;
+      box-shadow: none !important;
+    }
+    .wizard-location-map .leaflet-control-layers-expanded {
+      padding: 6px 10px 6px 6px !important;
+    }
+    .wizard-location-map .leaflet-control-layers label {
+      display: flex !important;
+      align-items: center !important;
+      gap: 4px !important;
+      margin: 0 !important;
+      padding: 2px 0 !important;
+      font-size: 13px !important;
+      color: #333 !important;
+      cursor: pointer !important;
+      background: none !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    .wizard-location-map .leaflet-control-layers input[type="radio"] {
+      width: 14px !important;
+      height: 14px !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      vertical-align: middle !important;
+      accent-color: #2563eb !important;
+    }
+    .wizard-location-map .leaflet-control-layers span {
+      font-size: 13px !important;
+      color: #333 !important;
+    }
+    .wizard-location-map .leaflet-control-layers-toggle {
+      width: 36px !important;
+      height: 36px !important;
+      background-size: 26px 26px !important;
+    }
   </style>
 
   <form id="marine-form"
@@ -522,10 +563,16 @@ if (typeof L === "undefined") {
     var defaultZoom = hasCoords ? 12 : 4;
 
     var map = L.map(mapDiv).setView([defaultLat, defaultLon], defaultZoom);
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    var streetLayer = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
       attribution: "© OpenStreetMap contributors",
       maxZoom: 19
-    }).addTo(map);
+    });
+    var satelliteLayer = L.tileLayer("https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+      attribution: "Tiles © Esri",
+      maxZoom: 19
+    });
+    streetLayer.addTo(map);
+    L.control.layers({"Street": streetLayer, "Satellite": satelliteLayer}).addTo(map);
 
     var marker = null;
 
