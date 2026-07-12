@@ -186,6 +186,47 @@
           </label>
           {% endfor %}
         </fieldset>
+
+        <h5>{{ _("Coastal Structures") }}</h5>
+        <div id="admin-structure-cards">
+          {% for struct in surf.get("structures", []) %}
+          {% set si = loop.index0 %}
+          <fieldset class="admin-structure-card" style="margin-block:0.5rem;padding:0.75rem;border:1px solid var(--pico-muted-border-color);border-radius:4px;">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+              <strong>{{ _("Structure") }} {{ si + 1 }}</strong>
+              <button type="button" class="admin-remove-structure-btn" style="font-size:0.8rem;padding:0.2rem 0.5rem;cursor:pointer;background:none;border:1px solid var(--pico-del-color,#cf222e);color:var(--pico-del-color,#cf222e);border-radius:0.25rem;">&times;</button>
+            </div>
+            <div class="grid" style="margin-block-start:0.5rem;">
+              <div>
+                <label>{{ _("Type") }}
+                  <select name="structure_{{ si }}_type">
+                    <option value="jetty" {% if struct.get("type")=="jetty" %}selected{% endif %}>{{ _("Jetty") }}</option>
+                    <option value="pier" {% if struct.get("type")=="pier" %}selected{% endif %}>{{ _("Pier") }}</option>
+                    <option value="breakwater" {% if struct.get("type")=="breakwater" %}selected{% endif %}>{{ _("Breakwater") }}</option>
+                    <option value="seawall" {% if struct.get("type")=="seawall" %}selected{% endif %}>{{ _("Seawall") }}</option>
+                    <option value="groin" {% if struct.get("type")=="groin" %}selected{% endif %}>{{ _("Groin") }}</option>
+                  </select>
+                </label>
+              </div>
+              <div>
+                <label>{{ _("Material") }}
+                  <select name="structure_{{ si }}_material">
+                    <option value="impermeable" {% if struct.get("material")=="impermeable" %}selected{% endif %}>{{ _("Impermeable") }}</option>
+                    <option value="semi_permeable" {% if struct.get("material")=="semi_permeable" %}selected{% endif %}>{{ _("Semi-permeable") }}</option>
+                    <option value="permeable" {% if struct.get("material")=="permeable" %}selected{% endif %}>{{ _("Permeable") }}</option>
+                  </select>
+                </label>
+              </div>
+            </div>
+            <div class="grid">
+              <div><label>{{ _("Length (m)") }}<input type="number" step="0.1" min="1" name="structure_{{ si }}_length_m" value="{{ struct.get('length_m','') }}"></label></div>
+              <div><label>{{ _("Bearing (°)") }}<input type="number" step="0.1" min="0" max="360" name="structure_{{ si }}_bearing_degrees" value="{{ struct.get('bearing_degrees','') }}"></label></div>
+              <div><label>{{ _("Distance (m)") }}<input type="number" step="0.1" min="1" name="structure_{{ si }}_distance_m" value="{{ struct.get('distance_m','') }}"></label></div>
+            </div>
+          </fieldset>
+          {% endfor %}
+        </div>
+        <button type="button" id="admin-add-structure-btn" class="outline" style="margin-block:0.5rem;">{{ _("+ Add Structure") }}</button>
       </div>
 
       <div class="marine-activity-section" data-section="fishing"
@@ -243,6 +284,39 @@
         var panel = section.querySelector('.marine-activity-section[data-section="' + name + '"]');
         if (panel) { panel.style.display = target.checked ? "" : "none"; }
       });
+      section.addEventListener("click", function (evt) {
+        var removeBtn = evt.target.closest(".admin-remove-structure-btn");
+        if (removeBtn) {
+          var card = removeBtn.closest(".admin-structure-card");
+          if (card) card.remove();
+          return;
+        }
+      });
+      var addStructBtn = section.querySelector("#admin-add-structure-btn");
+      if (addStructBtn) {
+        addStructBtn.addEventListener("click", function () {
+          var container = section.querySelector("#admin-structure-cards");
+          if (!container) return;
+          var si = container.querySelectorAll(".admin-structure-card").length;
+          var fs = document.createElement("fieldset");
+          fs.className = "admin-structure-card";
+          fs.style.cssText = "margin-block:0.5rem;padding:0.75rem;border:1px solid var(--pico-muted-border-color);border-radius:4px;";
+          fs.innerHTML =
+            '<div style="display:flex;justify-content:space-between;align-items:center;">' +
+            '<strong>Structure ' + (si+1) + '</strong>' +
+            '<button type="button" class="admin-remove-structure-btn" style="font-size:0.8rem;padding:0.2rem 0.5rem;cursor:pointer;background:none;border:1px solid var(--pico-del-color,#cf222e);color:var(--pico-del-color,#cf222e);border-radius:0.25rem;">&times;</button></div>' +
+            '<div class="grid" style="margin-block-start:0.5rem;"><div><label>Type<select name="structure_' + si + '_type">' +
+            '<option value="jetty">Jetty</option><option value="pier">Pier</option><option value="breakwater" selected>Breakwater</option>' +
+            '<option value="seawall">Seawall</option><option value="groin">Groin</option></select></label></div>' +
+            '<div><label>Material<select name="structure_' + si + '_material">' +
+            '<option value="impermeable">Impermeable</option><option value="semi_permeable" selected>Semi-permeable</option>' +
+            '<option value="permeable">Permeable</option></select></label></div></div>' +
+            '<div class="grid"><div><label>Length (m)<input type="number" step="0.1" min="1" name="structure_' + si + '_length_m"></label></div>' +
+            '<div><label>Bearing (°)<input type="number" step="0.1" min="0" max="360" name="structure_' + si + '_bearing_degrees"></label></div>' +
+            '<div><label>Distance (m)<input type="number" step="0.1" min="1" name="structure_' + si + '_distance_m"></label></div></div>';
+          container.appendChild(fs);
+        });
+      }
     })();
   </script>
 

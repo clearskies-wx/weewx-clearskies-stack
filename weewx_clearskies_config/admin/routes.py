@@ -2057,7 +2057,24 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
             return location, _("Surf: a valid bottom type is required.")
         if topo not in _MARINE_VALID_TOPO_FEATURES:
             return location, _("Surf: a valid topographic feature is required.")
-        location["surf"] = {
+        structures: list[dict] = []
+        si = 0
+        while True:
+            s_type = str(form.get(f"structure_{si}_type", "")).strip()
+            if not s_type:
+                break
+            s_material = str(form.get(f"structure_{si}_material", "")).strip()
+            s_length = _marine_to_float(form.get(f"structure_{si}_length_m"))
+            s_bearing = _marine_to_float(form.get(f"structure_{si}_bearing_degrees"))
+            s_distance = _marine_to_float(form.get(f"structure_{si}_distance_m"))
+            if s_type and s_material and s_length and s_bearing is not None and s_distance:
+                structures.append({
+                    "type": s_type, "material": s_material,
+                    "length_m": s_length, "bearing_degrees": s_bearing, "distance_m": s_distance,
+                })
+            si += 1
+
+        surf_cfg: dict = {
             "beach_facing_degrees": facing,
             "bottom_type": bottom_type,
             "topographic_feature": topo,
@@ -2065,6 +2082,9 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
                 d for d in form.getlist("surf_exposure") if d in _MARINE_VALID_EXPOSURE
             ],
         }
+        if structures:
+            surf_cfg["structures"] = structures
+        location["surf"] = surf_cfg
 
     if "fishing" in activities:
         target_category = str(form.get("fishing_target_category", "")).strip()
@@ -2145,6 +2165,8 @@ def _build_marine_apply_payload(
             }
             if s.get("directional_exposure"):
                 entry["surf"]["directional_exposure"] = {d: True for d in s["directional_exposure"]}
+            if s.get("structures"):
+                entry["surf"]["structures"] = s["structures"]
         if "fishing" in activities and loc.get("fishing", {}).get("target_category"):
             entry["fishing"] = {"target_category": loc["fishing"]["target_category"]}
         if "beach_safety" in activities:
