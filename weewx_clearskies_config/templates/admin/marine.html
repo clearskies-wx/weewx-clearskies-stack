@@ -233,14 +233,16 @@
            style="border-inline-start:3px solid var(--pico-primary);padding-inline-start:1rem;margin-block:1rem;
                   {% if 'fishing' not in activities %}display:none{% endif %}">
         <h4>{{ _(activity_labels.fishing) }}</h4>
-        <label for="marine-fishing-category">{{ _("Target category") }}</label>
-        <select id="marine-fishing-category" name="fishing_target_category">
-          <option value="">{{ _("— select —") }}</option>
-          <option value="saltwater_inshore" {% if fishing.get("target_category") == "saltwater_inshore" %}selected{% endif %}>{{ _("Saltwater inshore") }}</option>
-          <option value="bottom_fish" {% if fishing.get("target_category") == "bottom_fish" %}selected{% endif %}>{{ _("Bottom fish") }}</option>
-          <option value="freshwater_sport" {% if fishing.get("target_category") == "freshwater_sport" %}selected{% endif %}>{{ _("Freshwater sport") }}</option>
-          <option value="salmonids" {% if fishing.get("target_category") == "salmonids" %}selected{% endif %}>{{ _("Salmonids") }}</option>
-        </select>
+        {% set admin_cats = fishing.get("target_categories", [fishing.get("target_category", "")] if fishing.get("target_category") else []) %}
+        <fieldset>
+          <legend>{{ _("Target categories") }}</legend>
+          {% for cat, label in [("saltwater_inshore", _("Saltwater inshore")), ("bottom_fish", _("Bottom fish")), ("freshwater_sport", _("Freshwater sport")), ("salmonids", _("Salmonids"))] %}
+          <label style="display:inline-flex;align-items:center;gap:0.25rem;margin-inline-end:1rem;">
+            <input type="checkbox" name="fishing_target_categories" value="{{ cat }}" {% if cat in admin_cats %}checked{% endif %}>
+            {{ label }}
+          </label>
+          {% endfor %}
+        </fieldset>
       </div>
 
       <div class="marine-activity-section" data-section="beach_safety"

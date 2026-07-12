@@ -1978,7 +1978,7 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
                 "directional_exposure": _marine_exposure_list(surf_raw.get("directional_exposure")),
             } if "surf" in activities else {},
             "fishing": {
-                "target_category": str(fishing_raw.get("target_category", "") or ""),
+                "target_categories": fishing_raw.get("target_categories") or ([fishing_raw["target_category"]] if fishing_raw.get("target_category") else []),
             } if "fishing" in activities else {},
             "beach_safety": {
                 "external_links": external_links,
@@ -2087,10 +2087,17 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
         location["surf"] = surf_cfg
 
     if "fishing" in activities:
-        target_category = str(form.get("fishing_target_category", "")).strip()
-        if target_category not in _MARINE_VALID_TARGET_CATEGORIES:
-            return location, _("Fishing: a valid target category is required.")
-        location["fishing"] = {"target_category": target_category}
+        target_categories = [
+            c.strip() for c in form.getlist("fishing_target_categories")
+            if c.strip() in _MARINE_VALID_TARGET_CATEGORIES
+        ]
+        if not target_categories:
+            old_single = str(form.get("fishing_target_category", "")).strip()
+            if old_single in _MARINE_VALID_TARGET_CATEGORIES:
+                target_categories = [old_single]
+        if not target_categories:
+            return location, _("Fishing: at least one target category is required.")
+        location["fishing"] = {"target_categories": target_categories}
 
     if "beach_safety" in activities:
         labels = form.getlist("beach_safety_link_label")
@@ -2167,8 +2174,10 @@ def _build_marine_apply_payload(
                 entry["surf"]["directional_exposure"] = {d: True for d in s["directional_exposure"]}
             if s.get("structures"):
                 entry["surf"]["structures"] = s["structures"]
-        if "fishing" in activities and loc.get("fishing", {}).get("target_category"):
-            entry["fishing"] = {"target_category": loc["fishing"]["target_category"]}
+        if "fishing" in activities and loc.get("fishing"):
+            cats = loc["fishing"].get("target_categories") or ([loc["fishing"]["target_category"]] if loc["fishing"].get("target_category") else [])
+            if cats:
+                entry["fishing"] = {"target_categories": cats}
         if "beach_safety" in activities:
             links = loc.get("beach_safety", {}).get("external_links") or []
             if links:

@@ -466,8 +466,10 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
         fishing = loc_data.get("fishing")
         if isinstance(fishing, dict) and fishing:
             fishing_out: dict[str, Any] = {}
-            if fishing.get("target_category"):
-                fishing_out["target_category"] = fishing["target_category"]
+            if fishing.get("target_categories"):
+                fishing_out["target_categories"] = fishing["target_categories"]
+            elif fishing.get("target_category"):
+                fishing_out["target_categories"] = [fishing["target_category"]]
             if fishing.get("biogeographic_region"):
                 fishing_out["biogeographic_region"] = fishing["biogeographic_region"]
             entry["fishing"] = fishing_out

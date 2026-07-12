@@ -241,24 +241,64 @@ if (typeof L === "undefined") {
   <div class="activity-section" data-section="fishing" {% if "fishing" not in activities %}style="display: none;"{% endif %}>
     <h4>{{ _("Fishing") }}</h4>
 
-    <label for="loc_{{ idx }}_fishing_target_category">{{ _("Target category") }}</label>
-    <select id="loc_{{ idx }}_fishing_target_category" name="loc_{{ idx }}_fishing_target_category"
-            hx-get="/wizard/marine/species"
-            hx-trigger="change"
-            hx-include="closest .marine-location-card"
-            hx-target="#loc_{{ idx }}_species_checkboxes"
-            hx-swap="innerHTML"
-            hx-indicator="#wizard-spinner">
-      <option value="">{{ _("— select —") }}</option>
-      <option value="saltwater_inshore" {% if fishing.get("target_category") == "saltwater_inshore" %}selected{% endif %}>{{ _("Saltwater inshore") }}</option>
-      <option value="bottom_fish" {% if fishing.get("target_category") == "bottom_fish" %}selected{% endif %}>{{ _("Bottom fish") }}</option>
-      <option value="freshwater_sport" {% if fishing.get("target_category") == "freshwater_sport" %}selected{% endif %}>{{ _("Freshwater sport") }}</option>
-      <option value="salmonids" {% if fishing.get("target_category") == "salmonids" %}selected{% endif %}>{{ _("Salmonids") }}</option>
-    </select>
+    {% set target_cats = fishing.get("target_categories", fishing.get("target_category", "")) %}
+    {% if target_cats is string %}{% set target_cats = [target_cats] if target_cats else [] %}{% endif %}
+    <fieldset>
+      <legend>{{ _("Target categories") }}</legend>
+      <small>{{ _("Select one or more categories. Species from all checked categories will be available below.") }}</small>
+      <label style="display:inline-flex;align-items:center;gap:0.25rem;margin-inline-end:1rem;">
+        <input type="checkbox" name="loc_{{ idx }}_fishing_target_categories" value="saltwater_inshore"
+               class="fishing-category-check"
+               {% if "saltwater_inshore" in target_cats %}checked{% endif %}
+               hx-get="/wizard/marine/species"
+               hx-trigger="change"
+               hx-include="closest .marine-location-card"
+               hx-target="#loc_{{ idx }}_species_checkboxes"
+               hx-swap="innerHTML"
+               hx-indicator="#wizard-spinner">
+        {{ _("Saltwater inshore") }}
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:0.25rem;margin-inline-end:1rem;">
+        <input type="checkbox" name="loc_{{ idx }}_fishing_target_categories" value="bottom_fish"
+               class="fishing-category-check"
+               {% if "bottom_fish" in target_cats %}checked{% endif %}
+               hx-get="/wizard/marine/species"
+               hx-trigger="change"
+               hx-include="closest .marine-location-card"
+               hx-target="#loc_{{ idx }}_species_checkboxes"
+               hx-swap="innerHTML"
+               hx-indicator="#wizard-spinner">
+        {{ _("Bottom fish") }}
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:0.25rem;margin-inline-end:1rem;">
+        <input type="checkbox" name="loc_{{ idx }}_fishing_target_categories" value="freshwater_sport"
+               class="fishing-category-check"
+               {% if "freshwater_sport" in target_cats %}checked{% endif %}
+               hx-get="/wizard/marine/species"
+               hx-trigger="change"
+               hx-include="closest .marine-location-card"
+               hx-target="#loc_{{ idx }}_species_checkboxes"
+               hx-swap="innerHTML"
+               hx-indicator="#wizard-spinner">
+        {{ _("Freshwater sport") }}
+      </label>
+      <label style="display:inline-flex;align-items:center;gap:0.25rem;margin-inline-end:1rem;">
+        <input type="checkbox" name="loc_{{ idx }}_fishing_target_categories" value="salmonids"
+               class="fishing-category-check"
+               {% if "salmonids" in target_cats %}checked{% endif %}
+               hx-get="/wizard/marine/species"
+               hx-trigger="change"
+               hx-include="closest .marine-location-card"
+               hx-target="#loc_{{ idx }}_species_checkboxes"
+               hx-swap="innerHTML"
+               hx-indicator="#wizard-spinner">
+        {{ _("Salmonids") }}
+      </label>
+    </fieldset>
 
     <fieldset aria-describedby="loc_{{ idx }}_species_help">
       <legend>{{ _("Target species") }}</legend>
-      <small id="loc_{{ idx }}_species_help">{{ _("Loaded automatically from your coordinates and target category. All species are selected by default — uncheck any you don't want scored.") }}</small>
+      <small id="loc_{{ idx }}_species_help">{{ _("Loaded automatically from your coordinates and selected categories. All species are checked by default — uncheck any you don't want scored.") }}</small>
       {# hx-trigger="load" fires once this container is (re)inserted into the
          DOM — on the initial server render of an existing card, and again
          when window.htmx.process() runs on a JS-cloned "+ Add Location"

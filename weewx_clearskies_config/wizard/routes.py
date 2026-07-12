@@ -2711,7 +2711,7 @@ _MARINE_LOC_INDEX_RE = re.compile(r"^loc_(\d+)_name$")
 _MARINE_LAT_KEY_RE = re.compile(r"^loc_\d+_lat$")
 _MARINE_LON_KEY_RE = re.compile(r"^loc_\d+_lon$")
 _MARINE_FACING_KEY_RE = re.compile(r"^loc_\d+_surf_beach_facing_degrees$")
-_MARINE_TARGET_CATEGORY_KEY_RE = re.compile(r"^loc_(\d+)_fishing_target_category$")
+_MARINE_TARGET_CATEGORY_KEY_RE = re.compile(r"^loc_(\d+)_fishing_target_categor(?:y|ies)$")
 _MARINE_SPECIES_PREV_KEY_RE = re.compile(r"^loc_\d+_fishing_species_prev$")
 
 
@@ -2848,16 +2848,20 @@ async def step_marine_post(request: Request) -> HTMLResponse:
             loc["surf"] = surf_cfg
 
         if "fishing" in activities:
-            target_category = str(form.get(f"loc_{idx}_fishing_target_category", "")).strip()
-            # Checkbox list (T2.5) — HTMX-loaded species checklist, all checked by
-            # default; replaces the earlier one-species-per-line textarea. getlist()
-            # collects every checked box's value; unchecked boxes submit nothing.
+            target_categories = [
+                c.strip() for c in form.getlist(f"loc_{idx}_fishing_target_categories")
+                if c.strip() in _MARINE_VALID_TARGET_CATEGORIES
+            ]
+            if not target_categories:
+                old_single = str(form.get(f"loc_{idx}_fishing_target_category", "")).strip()
+                if old_single in _MARINE_VALID_TARGET_CATEGORIES:
+                    target_categories = [old_single]
             species_checked = [
                 s.strip() for s in form.getlist(f"loc_{idx}_fishing_species") if s.strip()
             ]
             fishing_cfg: dict[str, Any] = {}
-            if target_category in _MARINE_VALID_TARGET_CATEGORIES:
-                fishing_cfg["target_category"] = target_category
+            if target_categories:
+                fishing_cfg["target_categories"] = target_categories
             if species_checked:
                 fishing_cfg["species"] = species_checked
             loc["fishing"] = fishing_cfg
@@ -3118,13 +3122,14 @@ async def marine_species(request: Request) -> HTMLResponse:
     params = request.query_params
 
     idx = "0"
-    category = ""
-    for key, value in params.items():
+    categories: list[str] = []
+    for key, value in params.multi_items():
         m = _MARINE_TARGET_CATEGORY_KEY_RE.match(key)
         if m:
             idx = m.group(1)
-            category = value.strip()
-            break
+            val = value.strip()
+            if val in _MARINE_VALID_TARGET_CATEGORIES and val not in categories:
+                categories.append(val)
 
     lat_val = next((v for k, v in params.items() if _MARINE_LAT_KEY_RE.match(k)), None)
     lon_val = next((v for k, v in params.items() if _MARINE_LON_KEY_RE.match(k)), None)
@@ -3138,13 +3143,14 @@ async def marine_species(request: Request) -> HTMLResponse:
 
     ctx: dict[str, Any] = {"error": None, "prompt": None, "result": None, "idx": idx, "prev_species": prev_species}
 
-    if lat is None or lon is None or category not in _MARINE_VALID_TARGET_CATEGORIES:
-        ctx["prompt"] = _("Enter coordinates and select a target category to load available species.")
+    if lat is None or lon is None or not categories:
+        ctx["prompt"] = _("Enter coordinates and select at least one target category to load available species.")
         return _render(request, "marine_species_result.html", ctx)
 
+    category_param = ",".join(categories)
     try:
         client = _get_api_client(state)
-        result = client.get_marine_species(lat, lon, category)
+        result = client.get_marine_species(lat, lon, category_param)
     except ValueError:
         ctx["error"] = _("API not connected. Go back to step 1 and reconnect.")
         return _render(request, "marine_species_result.html", ctx)
