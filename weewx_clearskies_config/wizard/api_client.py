@@ -374,6 +374,37 @@ class ApiClient:
         result: dict[str, Any] = response.json()
         return result
 
+    def get_marine_species(
+        self,
+        lat: float,
+        lon: float,
+        category: str,
+    ) -> dict[str, Any]:
+        """GET /setup/marine/species — species checklist for a coordinate + fishing category.
+
+        Used by the marine wizard step (T2.5) to populate the fishing
+        section's species checkboxes once the operator has entered
+        coordinates and picked a target category.
+
+        Args:
+            lat: Location latitude, decimal degrees.
+            lon: Location longitude, decimal degrees.
+            category: Target fishing category (e.g. "saltwater_inshore").
+
+        Returns:
+            Dict with keys "region" (biogeographic region slug) and
+            "species" (list[str], exact shape defined by the API).
+        """
+        _log.info("Fetching marine species for %s,%s (%s) via API", lat, lon, category)
+        response = self._request(
+            "GET",
+            "/setup/marine/species",
+            params={"lat": str(lat), "lon": str(lon), "category": category},
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        result: dict[str, Any] = response.json()
+        return result
+
     def health(self) -> bool:
         """GET /health — lightweight liveness check.
 

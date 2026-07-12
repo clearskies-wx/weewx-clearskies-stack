@@ -173,7 +173,13 @@ if (typeof L === "undefined") {
     <h4>{{ _("Fishing") }}</h4>
 
     <label for="loc_{{ idx }}_fishing_target_category">{{ _("Target category") }}</label>
-    <select id="loc_{{ idx }}_fishing_target_category" name="loc_{{ idx }}_fishing_target_category">
+    <select id="loc_{{ idx }}_fishing_target_category" name="loc_{{ idx }}_fishing_target_category"
+            hx-get="/wizard/marine/species"
+            hx-trigger="change"
+            hx-include="closest .marine-location-card"
+            hx-target="#loc_{{ idx }}_species_checkboxes"
+            hx-swap="innerHTML"
+            hx-indicator="#wizard-spinner">
       <option value="">{{ _("— select —") }}</option>
       <option value="saltwater_inshore" {% if fishing.get("target_category") == "saltwater_inshore" %}selected{% endif %}>{{ _("Saltwater inshore") }}</option>
       <option value="bottom_fish" {% if fishing.get("target_category") == "bottom_fish" %}selected{% endif %}>{{ _("Bottom fish") }}</option>
@@ -181,8 +187,33 @@ if (typeof L === "undefined") {
       <option value="salmonids" {% if fishing.get("target_category") == "salmonids" %}selected{% endif %}>{{ _("Salmonids") }}</option>
     </select>
 
-    <label for="loc_{{ idx }}_fishing_species">{{ _("Target species (one per line)") }}</label>
-    <textarea id="loc_{{ idx }}_fishing_species" name="loc_{{ idx }}_fishing_species" rows="4">{{ fishing.get("species", []) | join("\n") }}</textarea>
+    <fieldset aria-describedby="loc_{{ idx }}_species_help">
+      <legend>{{ _("Target species") }}</legend>
+      <small id="loc_{{ idx }}_species_help">{{ _("Loaded automatically from your coordinates and target category. All species are selected by default — uncheck any you don't want scored.") }}</small>
+      {# hx-trigger="load" fires once this container is (re)inserted into the
+         DOM — on the initial server render of an existing card, and again
+         when window.htmx.process() runs on a JS-cloned "+ Add Location"
+         card (see the inline <script> below). #}
+      <div class="fishing-species-checkboxes"
+           id="loc_{{ idx }}_species_checkboxes"
+           hx-get="/wizard/marine/species"
+           hx-trigger="load"
+           hx-include="closest .marine-location-card"
+           hx-target="this"
+           hx-swap="innerHTML"
+           hx-indicator="#wizard-spinner">
+        {% for sp in fishing.get("species", []) %}
+        <label class="species-check">
+          <input type="checkbox" name="loc_{{ idx }}_fishing_species" value="{{ sp }}" checked>
+          {{ sp }}
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+    {# Carries the previously-saved species list forward so the HTMX-loaded
+       checklist can pre-check just those (instead of "all checked") when a
+       category reload happens on an already-configured location. #}
+    <input type="hidden" name="loc_{{ idx }}_fishing_species_prev" class="hidden-fishing-species-prev" value="{{ fishing.get('species', []) | join(',') }}">
   </div>
 
   {# ---- Beach Safety ---- #}
@@ -240,6 +271,9 @@ if (typeof L === "undefined") {
     .remove-link-btn { margin-inline-start: 0.5rem; }
     .weather-source-info { font-style: italic; color: var(--pico-muted-color); }
     .compass-check { display: inline-flex; align-items: center; gap: 0.25rem; margin-inline-end: 0.75rem; }
+    .species-check { display: inline-flex; align-items: center; gap: 0.25rem; margin-inline-end: 0.75rem; margin-block-end: 0.35rem; text-transform: capitalize; }
+    .fishing-species-checkboxes { margin-block-start: 0.5rem; }
+    .marine-species-hint { color: var(--pico-muted-color); }
     .beach-safety-link-row {
       display: flex;
       align-items: center;

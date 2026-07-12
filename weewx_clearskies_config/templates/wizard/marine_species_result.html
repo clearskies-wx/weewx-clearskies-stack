@@ -1,0 +1,31 @@
+{# HTMX fragment returned by GET /wizard/marine/species (T2.5).
+   Swapped into the triggering location card's own "#loc_<idx>_species_checkboxes"
+   container (see step_marine.html render_location_card(), fishing section) — this
+   fires on that container's own hx-trigger="load" and again whenever the
+   target-category <select> changes.
+
+   Context: error (str|None) — reachability/API failure.
+            prompt (str|None) — benign "not enough info yet" message (no coordinates
+              or no category chosen); not an error.
+            result (dict|None) — {"region": str, "species": list[str]} from the API.
+            idx (str) — location card index, so checkbox names line up with the
+              enclosing marine-form fields (loc_<idx>_fishing_species).
+            prev_species (set[str]|None) — species already saved for this location
+              (from a prior save/re-run); when present, only species in this set are
+              pre-checked. When None (never saved before), every species is checked
+              by default. #}
+{% if error %}
+<div class="alert-error" role="alert">{{ error }}</div>
+{% elif prompt %}
+<p class="marine-species-hint"><small>{{ prompt }}</small></p>
+{% elif not result or not result.get("species") %}
+<p class="marine-species-hint"><small>{{ _("No species data available for this location yet.") }}</small></p>
+{% else %}
+{% for sp in result["species"] %}
+<label class="species-check">
+  <input type="checkbox" name="loc_{{ idx }}_fishing_species" value="{{ sp }}"
+         {% if not prev_species or sp in prev_species %}checked{% endif %}>
+  {{ sp }}
+</label>
+{% endfor %}
+{% endif %}

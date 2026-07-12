@@ -38,6 +38,8 @@ Route summary:
   POST /wizard/marine           — save marine config, return step 14 fragment (TLS)
   POST /wizard/marine/discover-stations — HTMX: discover nearby NDBC/CO-OPS stations + NWS marine zone
   POST /wizard/marine/bathymetry        — HTMX: download/derive bathymetry for a surf location
+  GET  /wizard/marine/species           — HTMX: load the species checklist for a fishing location's
+                                           target category (T2.5)
   GET  /wizard/tls              — step 14 fragment (TLS / HTTPS configuration)
   POST /wizard/tls              — save TLS config, return step 15 fragment (review)
   GET  /wizard/step/9           — step 15 fragment (review summary)
@@ -2710,6 +2712,8 @@ _MARINE_LOC_INDEX_RE = re.compile(r"^loc_(\d+)_name$")
 _MARINE_LAT_KEY_RE = re.compile(r"^loc_\d+_lat$")
 _MARINE_LON_KEY_RE = re.compile(r"^loc_\d+_lon$")
 _MARINE_FACING_KEY_RE = re.compile(r"^loc_\d+_surf_beach_facing_degrees$")
+_MARINE_TARGET_CATEGORY_KEY_RE = re.compile(r"^loc_(\d+)_fishing_target_category$")
+_MARINE_SPECIES_PREV_KEY_RE = re.compile(r"^loc_\d+_fishing_species_prev$")
 
 
 def _slugify_location_name(name: str, existing: Any = ()) -> str:
@@ -2823,12 +2827,17 @@ async def step_marine_post(request: Request) -> HTMLResponse:
 
         if "fishing" in activities:
             target_category = str(form.get(f"loc_{idx}_fishing_target_category", "")).strip()
-            species_raw = str(form.get(f"loc_{idx}_fishing_species", "")).strip()
+            # Checkbox list (T2.5) — HTMX-loaded species checklist, all checked by
+            # default; replaces the earlier one-species-per-line textarea. getlist()
+            # collects every checked box's value; unchecked boxes submit nothing.
+            species_checked = [
+                s.strip() for s in form.getlist(f"loc_{idx}_fishing_species") if s.strip()
+            ]
             fishing_cfg: dict[str, Any] = {}
             if target_category in _MARINE_VALID_TARGET_CATEGORIES:
                 fishing_cfg["target_category"] = target_category
-            if species_raw:
-                fishing_cfg["species"] = [s.strip() for s in species_raw.splitlines() if s.strip()]
+            if species_checked:
+                fishing_cfg["species"] = species_checked
             loc["fishing"] = fishing_cfg
 
         if "beach_safety" in activities:
@@ -2967,6 +2976,69 @@ async def marine_bathymetry(request: Request) -> HTMLResponse:
         )
 
     return _render(request, "marine_bathymetry_result.html", {"error": None, "result": result})
+
+
+@router.get("/marine/species", response_class=HTMLResponse)
+async def marine_species(request: Request) -> HTMLResponse:
+    """HTMX: load the species checklist for one location card's fishing section (T2.5).
+
+    Fires on the species container's own hx-trigger="load" (initial card render,
+    including JS-cloned cards — see step_marine.html) and again whenever the
+    target-category <select> changes. Scoped to a single location card via
+    hx-include="closest .marine-location-card", same pattern as
+    marine_discover_stations()/marine_bathymetry() above — but this route is a
+    GET, so htmx serializes the included card fields as query params rather
+    than a form body.
+
+    Missing/incomplete inputs (no coordinates yet, no category chosen) are not
+    treated as errors — a brand-new location card legitimately has neither on
+    first render. Only a reachability/API failure renders as an error.
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    params = request.query_params
+
+    idx = "0"
+    category = ""
+    for key, value in params.items():
+        m = _MARINE_TARGET_CATEGORY_KEY_RE.match(key)
+        if m:
+            idx = m.group(1)
+            category = value.strip()
+            break
+
+    lat_val = next((v for k, v in params.items() if _MARINE_LAT_KEY_RE.match(k)), None)
+    lon_val = next((v for k, v in params.items() if _MARINE_LON_KEY_RE.match(k)), None)
+    lat = _to_float(lat_val)
+    lon = _to_float(lon_val)
+
+    prev_raw = next(
+        (v for k, v in params.items() if _MARINE_SPECIES_PREV_KEY_RE.match(k)), ""
+    ).strip()
+    prev_species = {s.strip() for s in prev_raw.split(",") if s.strip()} or None
+
+    ctx: dict[str, Any] = {"error": None, "prompt": None, "result": None, "idx": idx, "prev_species": prev_species}
+
+    if lat is None or lon is None or category not in _MARINE_VALID_TARGET_CATEGORIES:
+        ctx["prompt"] = _("Enter coordinates and select a target category to load available species.")
+        return _render(request, "marine_species_result.html", ctx)
+
+    try:
+        client = _get_api_client(state)
+        result = client.get_marine_species(lat, lon, category)
+    except ValueError:
+        ctx["error"] = _("API not connected. Go back to step 1 and reconnect.")
+        return _render(request, "marine_species_result.html", ctx)
+    except ApiClientError as exc:
+        ctx["error"] = _api_error_message(exc)
+        return _render(request, "marine_species_result.html", ctx)
+    except Exception:  # noqa: BLE001
+        logger.warning("marine_species: network error", exc_info=True)
+        ctx["error"] = _("Could not reach the API to load species data.")
+        return _render(request, "marine_species_result.html", ctx)
+
+    ctx["result"] = result
+    return _render(request, "marine_species_result.html", ctx)
 
 
 # ---------------------------------------------------------------------------
