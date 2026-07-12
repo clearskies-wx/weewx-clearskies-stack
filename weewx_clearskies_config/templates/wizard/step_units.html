@@ -29,9 +29,9 @@
         <button type="button" onclick="applyPreset('metricwx')">{{ _("Metric (WX)") }}</button>
       </div>
       <small>
-        <strong>{{ _("US") }}</strong> &mdash; {{ _("Fahrenheit, mph, inHg, inches.") }}
-        <strong>{{ _("Metric") }}</strong> &mdash; {{ _("Celsius, km/h, mbar, centimetres.") }}
-        <strong>{{ _("Metric (WX)") }}</strong> &mdash; {{ _("Celsius, m/s, mbar, millimetres (meteorological standard).") }}
+        <strong>{{ _("US") }}</strong> &mdash; {{ _("Fahrenheit, mph, inHg, inches. Marine: feet, knots, nautical miles.") }}
+        <strong>{{ _("Metric") }}</strong> &mdash; {{ _("Celsius, km/h, mbar, centimetres. Marine: meters, knots, nautical miles.") }}
+        <strong>{{ _("Metric (WX)") }}</strong> &mdash; {{ _("Celsius, m/s, mbar, millimetres. Marine: meters, knots, nautical miles.") }}
       </small>
     </fieldset>
 
@@ -47,7 +47,7 @@
         {% for group, options in unit_options.items() %}
         <tr>
           <td>
-            <label for="{{ group }}">{{ unit_group_labels[group] }}</label>
+            <label for="{{ group }}">{{ _(unit_group_labels[group]) }}</label>
             {% if errors and errors.get(group) %}
             <span class="error-text" role="alert">{{ errors[group] }}</span>
             {% endif %}
@@ -57,7 +57,7 @@
                     name="{{ group }}"
                     data-unit-group="{{ group }}"
                     {% if errors and errors.get(group) %}class="input-error"{% endif %}
-                    aria-label="{{ _('Unit for') }} {{ unit_group_labels[group] }}"
+                    aria-label="{{ _('Unit for') }} {{ _(unit_group_labels[group]) }}"
                     aria-describedby="help_{{ group }}">
               {% for unit_val, unit_label in options %}
               <option value="{{ unit_val }}"
@@ -112,7 +112,12 @@
       "group_rain": "inch",
       "group_rainrate": "inch_per_hour",
       "group_altitude": "foot",
-      "group_distance": "mile"
+      "group_distance": "mile",
+      "group_wave_height": "foot",
+      "group_wave_period": "second",
+      "group_water_level": "foot",
+      "group_ocean_speed": "knot",
+      "group_visibility": "nautical_mile"
     },
     "metric": {
       "group_temperature": "degree_C",
@@ -121,7 +126,12 @@
       "group_rain": "cm",
       "group_rainrate": "cm_per_hour",
       "group_altitude": "meter",
-      "group_distance": "km"
+      "group_distance": "km",
+      "group_wave_height": "meter",
+      "group_wave_period": "second",
+      "group_water_level": "meter",
+      "group_ocean_speed": "knot",
+      "group_visibility": "nautical_mile"
     },
     "metricwx": {
       "group_temperature": "degree_C",
@@ -130,7 +140,12 @@
       "group_rain": "mm",
       "group_rainrate": "mm_per_hour",
       "group_altitude": "meter",
-      "group_distance": "km"
+      "group_distance": "km",
+      "group_wave_height": "meter",
+      "group_wave_period": "second",
+      "group_water_level": "meter",
+      "group_ocean_speed": "knot",
+      "group_visibility": "nautical_mile"
     }
   };
 
