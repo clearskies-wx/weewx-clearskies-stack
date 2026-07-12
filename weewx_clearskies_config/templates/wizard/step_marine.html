@@ -221,9 +221,11 @@ if (typeof L === "undefined") {
     <h4>{{ _("Beach Safety") }}</h4>
     <div class="beach-safety-links">
       {% for link in beach_safety.get("external_links", []) %}
+      {% set link_label = link.get('label', '') if link is mapping else link %}
+      {% set link_url = link.get('url', '') if link is mapping else '' %}
       <div class="beach-safety-link-row">
-        <input type="text" name="loc_{{ idx }}_beach_safety_link_label" placeholder="{{ _('Label') }}" value="{{ link.get('label', '') }}">
-        <input type="url" name="loc_{{ idx }}_beach_safety_link_url" placeholder="{{ _('URL') }}" value="{{ link.get('url', '') }}">
+        <input type="text" name="loc_{{ idx }}_beach_safety_link_label" placeholder="{{ _('Label') }}" value="{{ link_label }}">
+        <input type="url" name="loc_{{ idx }}_beach_safety_link_url" placeholder="{{ _('URL') }}" value="{{ link_url }}">
         <button type="button" class="remove-link-btn" aria-label="{{ _('Remove this link') }}">&times;</button>
       </div>
       {% endfor %}
