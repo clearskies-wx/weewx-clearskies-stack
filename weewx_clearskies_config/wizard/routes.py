@@ -3019,8 +3019,7 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
             mat_html = f'{mat_display}'
         else:
             mat_html = '<span style="color:var(--pico-del-color);">&#9888; Needs input</span>'
-        # Bearing depends on arbitrary OSM way node order — always flag for review.
-        bearing_html = f'{bearing:.0f}° <span style="color:var(--pico-del-color);">&#9888; Verify</span>'
+        bearing_html = f'{bearing:.0f}°'
         html_parts.append(
             f'<label style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;'
             f'border:1px solid var(--pico-muted-border-color);border-radius:0.375rem;cursor:pointer;">'
@@ -3044,8 +3043,7 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
             f'<small style="color:var(--pico-muted-color);">Material: {mat_html}</small>'
             f'</div>'
             f'<small style="color:var(--pico-muted-color);font-style:italic;margin-top:0.25rem;display:block;">'
-            f'Length and distance from OpenStreetMap geometry. '
-            f'Bearing depends on how the structure was drawn in OSM — verify direction.'
+            f'Length, bearing, and distance computed from OpenStreetMap geometry.'
             f'</small></div></label>'
         )
     html_parts.append('</div>')
@@ -3080,7 +3078,7 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
     html_parts.append('        + \'<option value="permeable"\' + (matVal==="permeable"?" selected":"") + \'>Permeable</option>\'')
     html_parts.append('        + \'</select></label></div></div>\'')
     html_parts.append('        + \'<div class="grid"><div><label>Length (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_length_m" value="\' + this.dataset.length + \'"></label></div>\'')
-    html_parts.append('        + \'<div><label>Bearing (&deg;) &#9888;<input type="number" step="0.1" min="0" max="360" name="loc_\' + idx + \'_structure_\' + si + \'_bearing_degrees" value="\' + this.dataset.bearing + \'" style="border-color:var(--pico-del-color);"></label></div>\'')
+    html_parts.append('        + \'<div><label>Bearing (&deg;)<input type="number" step="0.1" min="0" max="360" name="loc_\' + idx + \'_structure_\' + si + \'_bearing_degrees" value="\' + this.dataset.bearing + \'"></label></div>\'')
     html_parts.append('        + \'<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_distance_m" value="\' + this.dataset.distance + \'"></label></div></div>\';')
     html_parts.append('      container.appendChild(fs);')
     html_parts.append('    } else {')
