@@ -28,6 +28,12 @@ _DB_TEST_TIMEOUT = 30.0
 # Extended timeout for bathymetry download — the API makes 75+ sequential
 # NCEI requests at 2 req/s, so a full download takes 45-90+ seconds.
 _BATHYMETRY_TIMEOUT = 180.0
+# Extended timeout for /setup/apply — the API may perform per-location NWS
+# WFO (Weather Forecast Office) resolution and other one-time setup work that
+# can take well over the default timeout. Public (no leading underscore) so
+# routes.py can reference the same value when composing the apply-timeout
+# error message shown to the operator.
+APPLY_TIMEOUT_SECONDS = 120.0
 
 
 class ApiClientError(Exception):
@@ -311,7 +317,7 @@ class ApiClient:
             "POST",
             "/setup/apply",
             json=config,
-            timeout=_DEFAULT_TIMEOUT,
+            timeout=APPLY_TIMEOUT_SECONDS,
         )
         result: dict[str, Any] = response.json()
         return result

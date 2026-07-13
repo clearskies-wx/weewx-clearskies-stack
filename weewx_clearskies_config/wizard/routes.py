@@ -59,6 +59,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -73,7 +74,11 @@ from weewx_clearskies_config.i18n import (
     translate,
     translate_md,
 )
-from weewx_clearskies_config.wizard.api_client import ApiClient, ApiClientError
+from weewx_clearskies_config.wizard.api_client import (
+    APPLY_TIMEOUT_SECONDS,
+    ApiClient,
+    ApiClientError,
+)
 from weewx_clearskies_config.wizard.config_writer import (
     apply_wizard,
     build_marine_payload,
@@ -3670,19 +3675,58 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             status_code=422,
         )
     except ApiClientError as exc:
-        error_msg = _api_error_message(exc)
         logger.error("wizard_apply: API apply call failed (%s): %s", exc.status_code, exc.detail)
+        # 401/410/503 get the same friendly framing used by every other wizard
+        # step (see _api_error_message); 422 and 5xx get apply-specific
+        # messages so the operator sees *what* failed (validation vs. server
+        # error) rather than a generic "API returned an error" string.
+        if exc.status_code == 422:
+            error_msg = _("Configuration validation failed: {detail}").format(detail=exc.detail)
+        elif exc.status_code >= 500:
+            error_msg = _("API error: {detail}").format(detail=exc.detail)
+        elif exc.status_code in (401, 410, 503):
+            error_msg = _api_error_message(exc)
+        else:
+            error_msg = _("API rejected the configuration (HTTP {status_code}): {detail}").format(
+                status_code=exc.status_code, detail=exc.detail
+            )
         return _render(
             request,
             "step_review.html",
             {
                 "step": 15,
                 "state": state,
-                "error": _("Failed to apply API configuration: {detail}").format(detail=error_msg),
+                "error": error_msg,
             },
             status_code=422,
         )
-    except Exception:  # noqa: BLE001
+    except httpx.ConnectError:
+        logger.error("wizard_apply: connection refused calling API apply")
+        return _render(
+            request,
+            "step_review.html",
+            {
+                "step": 15,
+                "state": state,
+                "error": _("The API is not running. Start weewx-clearskies-api and try again."),
+            },
+            status_code=422,
+        )
+    except httpx.TimeoutException:
+        logger.error("wizard_apply: API apply call timed out after %ss", APPLY_TIMEOUT_SECONDS)
+        return _render(
+            request,
+            "step_review.html",
+            {
+                "step": 15,
+                "state": state,
+                "error": _(
+                    "The API took too long to respond (>{timeout:.0f}s). Check API logs for errors."
+                ).format(timeout=APPLY_TIMEOUT_SECONDS),
+            },
+            status_code=422,
+        )
+    except Exception as exc:  # noqa: BLE001
         logger.exception("wizard_apply: unexpected error calling API apply")
         return _render(
             request,
@@ -3690,7 +3734,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             {
                 "step": 15,
                 "state": state,
-                "error": _("Could not reach the API to apply configuration. Check that the API is running and try again."),
+                "error": _("Could not connect to the API: {error}").format(error=exc),
             },
             status_code=422,
         )
