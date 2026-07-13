@@ -243,6 +243,21 @@
           </label>
           {% endfor %}
         </fieldset>
+
+        {% set admin_species = fishing.get("species", []) %}
+        <fieldset>
+          <legend>{{ _("Target species") }}</legend>
+          {% if admin_species %}
+          {% for sp in admin_species %}
+          <label style="display:inline-flex;align-items:center;gap:0.25rem;margin-inline-end:1rem;text-transform:capitalize;">
+            <input type="checkbox" name="fishing_species" value="{{ sp }}" checked>
+            {{ sp }}
+          </label>
+          {% endfor %}
+          {% else %}
+          <small>{{ _("No species configured yet. Save the location with categories selected, then re-run the wizard's Marine step to discover species for this area.") }}</small>
+          {% endif %}
+        </fieldset>
       </div>
 
       <div class="marine-activity-section" data-section="beach_safety"

@@ -1979,6 +1979,7 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
             } if "surf" in activities else {},
             "fishing": {
                 "target_categories": fishing_raw.get("target_categories") or ([fishing_raw["target_category"]] if fishing_raw.get("target_category") else []),
+                "species": _marine_to_str_list(fishing_raw.get("species")),
             } if "fishing" in activities else {},
             "beach_safety": {
                 "external_links": external_links,
@@ -2097,7 +2098,8 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
                 target_categories = [old_single]
         if not target_categories:
             return location, _("Fishing: at least one target category is required.")
-        location["fishing"] = {"target_categories": target_categories}
+        species = [s.strip() for s in form.getlist("fishing_species") if s.strip()]
+        location["fishing"] = {"target_categories": target_categories, "species": species}
 
     if "beach_safety" in activities:
         labels = form.getlist("beach_safety_link_label")
@@ -2177,7 +2179,11 @@ def _build_marine_apply_payload(
         if "fishing" in activities and loc.get("fishing"):
             cats = loc["fishing"].get("target_categories") or ([loc["fishing"]["target_category"]] if loc["fishing"].get("target_category") else [])
             if cats:
-                entry["fishing"] = {"target_categories": cats}
+                fishing_payload: dict[str, Any] = {"target_categories": cats}
+                species = loc["fishing"].get("species")
+                if species:
+                    fishing_payload["species"] = species
+                entry["fishing"] = fishing_payload
         if "beach_safety" in activities:
             links = loc.get("beach_safety", {}).get("external_links") or []
             if links:
