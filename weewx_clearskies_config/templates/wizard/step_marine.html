@@ -90,12 +90,17 @@ if (typeof L === "undefined") {
   <button type="button" class="discover-stations-btn secondary"
           hx-post="/wizard/marine/discover-stations"
           hx-include="closest .marine-location-card"
-          hx-target="next .discover-results"
+          hx-target="next .discover-stations-results"
           hx-swap="innerHTML"
-          hx-indicator="#wizard-spinner">
+          hx-disabled-elt="this"
+          hx-indicator="next .discover-stations-indicator">
     {{ _("Discover Nearby Stations") }}
   </button>
-  <div class="discover-results">
+  <div class="discover-stations-indicator" style="display:none; align-items:center; gap:0.5rem; padding:0.5rem 0; color:var(--pico-muted-color); font-size:0.875rem;">
+    <span class="spinner-ring" aria-hidden="true"></span>
+    <span>{{ _("Searching for nearby buoys, tide stations, and marine zones…") }}</span>
+  </div>
+  <div class="discover-stations-results discover-results">
     {% if loc.get("ndbc_station_ids") or loc.get("coops_station_ids") or loc.get("nws_marine_zone_id") %}
     <div class="alert-success" role="status">
       {% if loc.get("ndbc_station_ids") %}<p>{{ _("NDBC buoy(s):") }} {{ loc["ndbc_station_ids"] | join(", ") }}</p>{% endif %}
@@ -180,10 +185,15 @@ if (typeof L === "undefined") {
             hx-include="closest .marine-location-card"
             hx-target="next .structure-discover-results"
             hx-swap="innerHTML"
-            hx-indicator="#wizard-spinner"
+            hx-disabled-elt="this"
+            hx-indicator="next .discover-structures-indicator"
             style="margin-block: 0.75rem;">
       {{ _("Discover Nearby Structures") }}
     </button>
+    <div class="discover-structures-indicator" style="display:none; align-items:center; gap:0.5rem; padding:0.5rem 0; color:var(--pico-muted-color); font-size:0.875rem;">
+      <span class="spinner-ring" aria-hidden="true"></span>
+      <span>{{ _("Searching OpenStreetMap for nearby coastal structures…") }}</span>
+    </div>
     <div class="structure-discover-results"></div>
 
     <div class="structure-cards">

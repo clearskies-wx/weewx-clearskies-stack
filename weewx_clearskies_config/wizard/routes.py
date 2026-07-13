@@ -2985,23 +2985,57 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
             status_code=200,
         )
 
-    html_parts = ['<div class="alert-success" role="status">',
-                  f'<p><strong>Found {len(structures)} structure(s)</strong> — check the ones that affect waves at your spot:</p>']
+    count = len(structures)
+    label = "structure" if count == 1 else "structures"
+    html_parts = [
+        '<div class="alert-success" role="status">',
+        f'<p><strong>Found {count} {label}</strong> within 2 km. '
+        'Check the ones that affect waves at your spot:</p>',
+        '</div>',
+        '<div class="discovered-structures-list" style="display:flex;flex-direction:column;gap:0.5rem;margin:0.5rem 0;">',
+    ]
+    type_labels = {
+        "breakwater": "Breakwater",
+        "pier": "Pier",
+        "groin": "Groin",
+        "seawall": "Seawall",
+        "jetty": "Jetty",
+    }
+    mat_labels = {
+        "impermeable": "Impermeable",
+        "semi_permeable": "Semi-permeable",
+        "permeable": "Permeable",
+    }
     for i, s in enumerate(structures):
-        name = s.get("name") or f'{s.get("type", "structure").title()} ({s.get("distance_m", 0):.0f}m away)'
+        stype = s.get("type", "breakwater")
+        name = s.get("name") or type_labels.get(stype, stype.title())
+        dist = s.get("distance_m", 0)
+        length = s.get("length_m", 0)
         mat = s.get("material") or ""
-        mat_label = {"impermeable": "Impermeable", "semi_permeable": "Semi-permeable", "permeable": "Permeable"}.get(mat, "Unknown material")
-        mat_note = f' — {mat_label}' if mat else ' — material not tagged, you will need to select'
+        mat_display = mat_labels.get(mat, "")
+        if mat_display:
+            mat_html = f'<span style="color:var(--pico-ins-color);">{mat_display}</span>'
+        else:
+            mat_html = '<span style="color:var(--pico-del-color);">Not tagged — select after checking</span>'
         html_parts.append(
-            f'<label style="display:flex;align-items:center;gap:0.5rem;margin:0.3rem 0;">'
+            f'<label style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;'
+            f'border:1px solid var(--pico-muted-border-color);border-radius:0.375rem;cursor:pointer;">'
             f'<input type="checkbox" class="discovered-structure-check" '
+            f'style="margin-top:0.25rem;flex-shrink:0;" '
             f'data-idx="{card_idx}" '
-            f'data-type="{s.get("type", "breakwater")}" '
+            f'data-type="{stype}" '
             f'data-material="{mat or "semi_permeable"}" '
-            f'data-length="{s.get("length_m", 0):.1f}" '
+            f'data-length="{length:.1f}" '
             f'data-bearing="{s.get("bearing_degrees", 0):.1f}" '
-            f'data-distance="{s.get("distance_m", 0):.1f}"> '
-            f'{name}{mat_note}</label>'
+            f'data-distance="{dist:.1f}">'
+            f'<div style="flex:1;line-height:1.4;">'
+            f'<strong>{name}</strong>'
+            f'<br><small style="color:var(--pico-muted-color);">'
+            f'Type: {type_labels.get(stype, stype.title())} · '
+            f'Distance: {dist:.0f} m · '
+            f'Length: {length:.0f} m · '
+            f'Material: {mat_html}'
+            f'</small></div></label>'
         )
     html_parts.append('</div>')
     html_parts.append('<script>')
