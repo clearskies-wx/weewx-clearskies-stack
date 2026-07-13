@@ -3011,12 +3011,16 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
         name = s.get("name") or type_labels.get(stype, stype.title())
         dist = s.get("distance_m", 0)
         length = s.get("length_m", 0)
+        bearing = s.get("bearing_degrees", 0)
         mat = s.get("material") or ""
+        mat_source = s.get("material_source", "operator")
         mat_display = mat_labels.get(mat, "")
-        if mat_display:
-            mat_html = f'<span style="color:var(--pico-ins-color);">{mat_display}</span>'
+        if mat_display and mat_source == "osm":
+            mat_html = f'{mat_display}'
         else:
-            mat_html = '<span style="color:var(--pico-del-color);">Not tagged — select after checking</span>'
+            mat_html = '<span style="color:var(--pico-del-color);">&#9888; Needs input</span>'
+        # Bearing depends on arbitrary OSM way node order — always flag for review.
+        bearing_html = f'{bearing:.0f}° <span style="color:var(--pico-del-color);">&#9888; Verify</span>'
         html_parts.append(
             f'<label style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;'
             f'border:1px solid var(--pico-muted-border-color);border-radius:0.375rem;cursor:pointer;">'
@@ -3024,17 +3028,24 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
             f'style="margin-top:0.25rem;flex-shrink:0;" '
             f'data-idx="{card_idx}" '
             f'data-type="{stype}" '
-            f'data-material="{mat or "semi_permeable"}" '
+            f'data-material="{mat}" '
+            f'data-material-source="{mat_source}" '
             f'data-length="{length:.1f}" '
-            f'data-bearing="{s.get("bearing_degrees", 0):.1f}" '
+            f'data-bearing="{bearing:.1f}" '
             f'data-distance="{dist:.1f}">'
             f'<div style="flex:1;line-height:1.4;">'
             f'<strong>{name}</strong>'
-            f'<br><small style="color:var(--pico-muted-color);">'
-            f'Type: {type_labels.get(stype, stype.title())} · '
-            f'Distance: {dist:.0f} m · '
-            f'Length: {length:.0f} m · '
-            f'Material: {mat_html}'
+            f'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));'
+            f'gap:0.25rem 1rem;margin-top:0.25rem;">'
+            f'<small style="color:var(--pico-muted-color);">Type: {type_labels.get(stype, stype.title())}</small>'
+            f'<small style="color:var(--pico-muted-color);">Distance: {dist:.0f} m</small>'
+            f'<small style="color:var(--pico-muted-color);">Length: {length:.0f} m</small>'
+            f'<small style="color:var(--pico-muted-color);">Bearing: {bearing_html}</small>'
+            f'<small style="color:var(--pico-muted-color);">Material: {mat_html}</small>'
+            f'</div>'
+            f'<small style="color:var(--pico-muted-color);font-style:italic;margin-top:0.25rem;display:block;">'
+            f'Length and distance from OpenStreetMap geometry. '
+            f'Bearing depends on how the structure was drawn in OSM — verify direction.'
             f'</small></div></label>'
         )
     html_parts.append('</div>')
@@ -3051,6 +3062,9 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
     html_parts.append('      fs.className = "structure-card";')
     html_parts.append('      fs.setAttribute("data-structure-idx", si);')
     html_parts.append('      fs.setAttribute("data-discovered-cb", this.value || si);')
+    html_parts.append('      var matSrc = this.dataset.materialSource;')
+    html_parts.append('      var matWarn = (matSrc !== "osm") ? " &#9888;" : "";')
+    html_parts.append('      var matVal = this.dataset.material || "semi_permeable";')
     html_parts.append('      fs.innerHTML = \'<div style="display:flex;justify-content:space-between;align-items:center;">\'')
     html_parts.append('        + \'<legend>Structure \' + (si+1) + \' (discovered)</legend>\'')
     html_parts.append('        + \'<button type="button" class="remove-structure-btn" style="font-size:0.8rem;padding:0.2rem 0.5rem;cursor:pointer;">&times;</button></div>\'')
@@ -3060,13 +3074,13 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
     html_parts.append('        + \'<option value="breakwater"\' + (this.dataset.type==="breakwater"?" selected":"") + \'>Breakwater</option>\'')
     html_parts.append('        + \'<option value="seawall"\' + (this.dataset.type==="seawall"?" selected":"") + \'>Seawall</option>\'')
     html_parts.append('        + \'<option value="groin"\' + (this.dataset.type==="groin"?" selected":"") + \'>Groin</option>\'')
-    html_parts.append('        + \'</select></label></div><div><label>Material<select name="loc_\' + idx + \'_structure_\' + si + \'_material" class="struct-material">\'')
-    html_parts.append('        + \'<option value="impermeable"\' + (this.dataset.material==="impermeable"?" selected":"") + \'>Impermeable</option>\'')
-    html_parts.append('        + \'<option value="semi_permeable"\' + (this.dataset.material==="semi_permeable"?" selected":"") + \'>Semi-permeable</option>\'')
-    html_parts.append('        + \'<option value="permeable"\' + (this.dataset.material==="permeable"?" selected":"") + \'>Permeable</option>\'')
+    html_parts.append('        + \'</select></label></div><div><label>Material\' + matWarn + \'<select name="loc_\' + idx + \'_structure_\' + si + \'_material" class="struct-material"\' + (matSrc !== "osm" ? \' style="border-color:var(--pico-del-color);"\' : \'\') + \'>\'')
+    html_parts.append('        + \'<option value="impermeable"\' + (matVal==="impermeable"?" selected":"") + \'>Impermeable</option>\'')
+    html_parts.append('        + \'<option value="semi_permeable"\' + (matVal==="semi_permeable"?" selected":"") + \'>Semi-permeable</option>\'')
+    html_parts.append('        + \'<option value="permeable"\' + (matVal==="permeable"?" selected":"") + \'>Permeable</option>\'')
     html_parts.append('        + \'</select></label></div></div>\'')
     html_parts.append('        + \'<div class="grid"><div><label>Length (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_length_m" value="\' + this.dataset.length + \'"></label></div>\'')
-    html_parts.append('        + \'<div><label>Bearing (°)<input type="number" step="0.1" min="0" max="360" name="loc_\' + idx + \'_structure_\' + si + \'_bearing_degrees" value="\' + this.dataset.bearing + \'"></label></div>\'')
+    html_parts.append('        + \'<div><label>Bearing (&deg;) &#9888;<input type="number" step="0.1" min="0" max="360" name="loc_\' + idx + \'_structure_\' + si + \'_bearing_degrees" value="\' + this.dataset.bearing + \'" style="border-color:var(--pico-del-color);"></label></div>\'')
     html_parts.append('        + \'<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_distance_m" value="\' + this.dataset.distance + \'"></label></div></div>\';')
     html_parts.append('      container.appendChild(fs);')
     html_parts.append('    } else {')
