@@ -88,6 +88,7 @@
     <form hx-post="/admin/marine/save"
           hx-target="#admin-content"
           hx-swap="innerHTML"
+          hx-encoding="multipart/form-data"
           autocomplete="off">
       <input type="hidden" name="location_id" value="{{ edit_location_id }}">
 
@@ -108,6 +109,11 @@
                  value="{{ edit_location.get('lon') if edit_location.get('lon') is not none else '' }}">
         </div>
       </div>
+
+      <label for="marine-photo">{{ _("Location photo") }}</label>
+      <input type="file" id="marine-photo" name="photo"
+             accept=".webp,image/webp">
+      <small>{{ _("Optional. WebP format, max 200 KB, landscape orientation. Shown on location cards and detail pages.") }}</small>
 
       <fieldset>
         <legend>{{ _("Activities") }}</legend>

@@ -85,6 +85,11 @@ if (typeof L === "undefined") {
 
   <p class="weather-source-info"><small></small></p>
 
+  <label for="loc_{{ idx }}_photo">{{ _("Location photo") }}</label>
+  <input type="file" id="loc_{{ idx }}_photo" name="loc_{{ idx }}_photo"
+         accept=".webp,image/webp">
+  <small>{{ _("Optional. WebP format, max 200 KB, landscape orientation. Shown on location cards and detail pages.") }}</small>
+
   <fieldset>
     <legend>{{ _("Activities") }}</legend>
     <label>
@@ -622,6 +627,7 @@ if (typeof L === "undefined") {
         hx-target="#wizard-content"
         hx-swap="innerHTML show:window:top"
         hx-indicator="#wizard-spinner"
+        hx-encoding="multipart/form-data"
         autocomplete="off"
         data-station-lat="{{ state.latitude if state.latitude is not none else '' }}"
         data-station-lon="{{ state.longitude if state.longitude is not none else '' }}">

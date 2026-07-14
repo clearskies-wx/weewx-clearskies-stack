@@ -2325,6 +2325,29 @@ async def marine_save(request: Request) -> HTMLResponse:
 
     locations[loc_id] = parsed
 
+    # Photo upload — save to /etc/weewx-clearskies/marine-photos/{loc_id}.webp
+    photo_upload = form.get("photo")
+    if photo_upload and hasattr(photo_upload, "filename") and photo_upload.filename:
+        suffix = Path(str(photo_upload.filename)).suffix.lower()
+        if suffix == ".webp":
+            photo_data: bytes = await photo_upload.read()
+            if len(photo_data) <= 200 * 1024:
+                photos_dir = Path("/etc/weewx-clearskies/marine-photos")
+                photos_dir.mkdir(parents=True, exist_ok=True)
+                (photos_dir / f"{loc_id}.webp").write_bytes(photo_data)
+                logger.info("Saved marine photo for %s (%d bytes)", loc_id, len(photo_data))
+            else:
+                return _render(request, "marine.html", {
+                    "locations": locations,
+                    "activity_labels": _MARINE_ACTIVITY_LABELS,
+                    "edit_mode": True,
+                    "edit_location_id": loc_id,
+                    "edit_location": parsed,
+                    "edit_error": _("Photo exceeds 200 KB limit ({size} KB).").format(size=len(photo_data) // 1024),
+                    "error": None,
+                    "flash": None,
+                }, status_code=422)
+
     client = _get_api_client()
     error = None
     flash = None
