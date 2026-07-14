@@ -2470,51 +2470,6 @@ async def marine_test_connectivity(request: Request) -> HTMLResponse:
     return HTMLResponse(html)
 
 
-@router.post("/marine/bathymetry", response_class=HTMLResponse)
-async def marine_bathymetry_rerun(request: Request) -> HTMLResponse:
-    """Re-run the bathymetry download for a surf-enabled marine location."""
-    _require_session(request)
-    form = await request.form()
-    location_id = str(form.get("location_id", "")).strip()
-
-    config = _fetch_current_config()
-    if config is None:
-        return HTMLResponse(
-            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("API unreachable"))}</span>'
-        )
-    location = _parse_marine_locations(config.get("marine") or {}).get(location_id)
-    if location is None or location.get("lat") is None or location.get("lon") is None:
-        return HTMLResponse(
-            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("Location not found"))}</span>'
-        )
-
-    facing = (location.get("surf") or {}).get("beach_facing_degrees")
-    if facing is None:
-        return HTMLResponse(
-            f'<span style="color:var(--pico-del-color);font-size:0.8rem">'
-            f'{_marine_esc(_("This location has no surf beach-facing direction configured."))}</span>'
-        )
-
-    client = _get_api_client()
-    if client is None:
-        return HTMLResponse(
-            f'<span style="color:var(--pico-del-color);font-size:0.8rem">{_marine_esc(_("API unreachable"))}</span>'
-        )
-    try:
-        result = client.get_marine_bathymetry(location["lat"], location["lon"], facing)
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("marine_bathymetry_rerun: API error", exc_info=True)
-        return HTMLResponse(
-            '<span style="color:var(--pico-del-color);font-size:0.8rem">'
-            f'{_marine_esc(_("Bathymetry download failed: {detail}").format(detail=exc))}</span>'
-        )
-    points = len(result.get("profile") or [])
-    return HTMLResponse(
-        '<span style="color:var(--pico-ins-color,#16a34a);font-size:0.8rem">'
-        f'{_marine_esc(_("Bathymetry updated ({count} depth points).").format(count=points))}</span>'
-    )
-
-
 
 @router.post("/marine/coverage", response_class=HTMLResponse)
 async def marine_coverage_refresh(request: Request) -> HTMLResponse:

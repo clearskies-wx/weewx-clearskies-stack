@@ -3238,60 +3238,6 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
     return HTMLResponse(content="\n".join(html_parts), status_code=200)
 
 
-@router.post("/marine/bathymetry", response_class=HTMLResponse)
-async def marine_bathymetry(request: Request) -> HTMLResponse:
-    """HTMX: download/derive bathymetry data for one surf-enabled location card.
-
-    Scoped to a single location card the same way as marine_discover_stations()
-    above (hx-include="closest .marine-location-card").
-    """
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-    form = await request.form()
-
-    lat_val = next((v for k, v in form.items() if _MARINE_LAT_KEY_RE.match(k)), None)
-    lon_val = next((v for k, v in form.items() if _MARINE_LON_KEY_RE.match(k)), None)
-    facing_val = next((v for k, v in form.items() if _MARINE_FACING_KEY_RE.match(k)), None)
-    lat = _to_float(lat_val)
-    lon = _to_float(lon_val)
-    facing = _to_float(facing_val)
-    if lat is None or lon is None or facing is None:
-        return _render(
-            request,
-            "marine_bathymetry_result.html",
-            {
-                "error": _(
-                    "Enter latitude, longitude, and beach facing direction before downloading bathymetry."
-                ),
-                "result": None,
-            },
-        )
-
-    try:
-        client = _get_api_client(state)
-        result = client.get_marine_bathymetry(lat, lon, facing)
-    except ValueError:
-        return _render(
-            request,
-            "marine_bathymetry_result.html",
-            {"error": _("API not connected. Go back to step 1 and reconnect."), "result": None},
-        )
-    except ApiClientError as exc:
-        return _render(
-            request,
-            "marine_bathymetry_result.html",
-            {"error": _api_error_message(exc), "result": None},
-        )
-    except Exception:  # noqa: BLE001
-        logger.warning("marine_bathymetry: network error", exc_info=True)
-        return _render(
-            request,
-            "marine_bathymetry_result.html",
-            {"error": _("Could not reach the API to download bathymetry data."), "result": None},
-        )
-
-    return _render(request, "marine_bathymetry_result.html", {"error": None, "result": result})
-
 
 @router.get("/marine/species", response_class=HTMLResponse)
 async def marine_species(request: Request) -> HTMLResponse:

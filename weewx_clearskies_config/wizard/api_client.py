@@ -25,9 +25,6 @@ _log = logging.getLogger(__name__)
 _DEFAULT_TIMEOUT = 10.0
 # Extended timeout for db-test — the remote DB probe may be slow.
 _DB_TEST_TIMEOUT = 30.0
-# Extended timeout for bathymetry download — the API makes 75+ sequential
-# NCEI requests at 2 req/s, so a full download takes 45-90+ seconds.
-_BATHYMETRY_TIMEOUT = 180.0
 # Extended timeout for /setup/apply — the API may perform per-location NWS
 # WFO (Weather Forecast Office) resolution and other one-time setup work that
 # can take well over the default timeout. Public (no leading underscore) so
@@ -384,35 +381,6 @@ class ApiClient:
         )
         return response.json()
 
-    def get_marine_bathymetry(
-        self,
-        lat: float,
-        lon: float,
-        beach_facing_degrees: float,
-    ) -> dict[str, Any]:
-        """POST /setup/marine/bathymetry — fetch/derive bathymetry for a surf location.
-
-        Used by the marine wizard step (T6.1) when the operator clicks
-        "Download Bathymetry" for a surf-enabled location.
-
-        Args:
-            lat: Location latitude, decimal degrees.
-            lon: Location longitude, decimal degrees.
-            beach_facing_degrees: Compass direction (0-360) the beach faces.
-
-        Returns:
-            API response dict describing the downloaded/derived bathymetry
-            data (exact shape defined by the API).
-        """
-        _log.info("Requesting marine bathymetry for %s,%s via API", lat, lon)
-        response = self._request(
-            "POST",
-            "/setup/marine/bathymetry",
-            json={"lat": lat, "lon": lon, "beach_facing_degrees": beach_facing_degrees},
-            timeout=_BATHYMETRY_TIMEOUT,
-        )
-        result: dict[str, Any] = response.json()
-        return result
 
     def get_marine_species(
         self,
