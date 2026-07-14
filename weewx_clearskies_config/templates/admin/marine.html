@@ -410,8 +410,8 @@
         <th scope="col">{{ _("Name") }}</th>
         <th scope="col">{{ _("Coordinates") }}</th>
         <th scope="col">{{ _("Activities") }}</th>
-        <th scope="col">{{ _("Stations") }}</th>
-        <th scope="col">{{ _("Connectivity") }}</th>
+        <th scope="col">{{ _("Data Sources") }}</th>
+        <th scope="col">{{ _("Status") }}</th>
         <th scope="col"><span class="sr-only">{{ _("Actions") }}</span></th>
       </tr>
     </thead>
@@ -427,39 +427,43 @@
           {% endif %}
         </td>
         <td>
-          <div class="page-badge-list">
+          <div style="display:flex;gap:4px;align-items:center">
             {% for a in loc.activities %}
-            <span class="page-badge">{{ _(activity_labels.get(a, a)) }}</span>
+              {% if a == "marine" %}
+              <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" role="img" aria-labelledby="marine-icon-marine-{{ loc_id }}"><title id="marine-icon-marine-{{ loc_id }}">{{ _("Boating") }}</title><path d="M247.21,172.53A8,8,0,0,0,240,168H144V144h72a8,8,0,0,0,5.92-13.38L144,44.91V8a8,8,0,0,0-14.21-5l-104,128A8,8,0,0,0,32,144h96v24H16a8,8,0,0,0-6.25,13l29.6,37a15.93,15.93,0,0,0,12.49,6H204.16a15.93,15.93,0,0,0,12.49-6l29.6-37A8,8,0,0,0,247.21,172.53ZM197.92,128H144V68.69ZM48.81,128,128,30.53V128Zm155.35,80H51.84l-19.2-24H223.36Z"/></svg>
+              {% elif a == "surf" %}
+              <svg width="18" height="18" viewBox="0 -960 960 960" fill="currentColor" role="img" aria-labelledby="marine-icon-surf-{{ loc_id }}"><title id="marine-icon-surf-{{ loc_id }}">{{ _("Surfing") }}</title><path d="M80-40v-80h40q32 0 62-10t58-30q28 20 58 29.5t62 9.5q32 0 62.5-9.5T480-160q28 20 58 29.5t62 9.5q32 0 62.5-9.5T720-160q27 20 57.5 30t62.5 10h40v80h-40q-31 0-61-7.5T720-70q-29 15-59 22.5T600-40q-31 0-61-7.5T480-70q-29 15-59 22.5T360-40q-31 0-61-7.5T240-70q-29 15-59 22.5T120-40H80Zm260-760 222 41q14 2 27 11t22 25l35 62q26 45 72 73t102 28v80q-78 0-142-39T577-621l-90 61 153 120v154q16 11 31 23t29 23q-21 18-46 29t-54 11q-36 0-67-17t-53-43q-22 26-53 43t-67 17q-10 0-19.5-1.5T322-206q-86-59-144-119t-58-104q0-31 24-41t50-10q29 0 67 8.5t81 24.5l-21-124q-4-20 4.5-39.5T352-642l86-58q-3 0-14.5-2.5t-25.5-5-25.5-5Q361-715 358-715l-113 77-45-66 140-96Zm72 284 18 106q27 13 67 34.5t63 35.5v-60L412-516Zm268-224q-33 0-56.5-23.5T600-820q0-33 23.5-56.5T680-900q33 0 56.5 23.5T760-820q0 33-23.5 56.5T680-740Z"/></svg>
+              {% elif a == "fishing" %}
+              <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" role="img" aria-labelledby="marine-icon-fishing-{{ loc_id }}"><title id="marine-icon-fishing-{{ loc_id }}">{{ _("Fishing") }}</title><path d="M168,76a12,12,0,1,1-12-12A12,12,0,0,1,168,76Zm42,79.08c-15.08,20.84-37.53,34.88-66.7,41.74-20.08,4.72-43.54,6-70.12,3.93q2.4,17.82,6.72,37.54a8,8,0,0,1-6.1,9.52,7.81,7.81,0,0,1-1.72.19,8,8,0,0,1-7.81-6.29q-4.89-22.36-7.41-42.62-20.22-2.51-42.58-7.41a8,8,0,0,1,3.43-15.63q19.7,4.32,37.5,6.73c-2.09-26.56-.78-50,3.93-70.06C66,83.55,80.05,61.1,100.88,46,115,35.76,140.15,23.64,179.27,24c21.19.21,40.83,4.33,43.81,6.08a8,8,0,0,1,2.83,2.83c1.75,3,5.87,22.59,6.08,43.78C232.21,98.31,228.57,129.44,210,155.08Zm-23.76,2.8A112.07,112.07,0,0,1,98.12,69.74C75.64,94,66.7,132.47,71.36,184.6,123.51,189.28,162,180.35,186.25,157.88ZM212.44,43.56a175.75,175.75,0,0,0-39.22-3.51c-24.34.64-44.71,6.49-60.76,17.39a96,96,0,0,0,86.09,86.1c10.91-16,16.76-36.42,17.4-60.76A175.82,175.82,0,0,0,212.44,43.56Z"/></svg>
+              {% elif a == "beach_safety" %}
+              <svg width="18" height="18" viewBox="0 0 256 256" fill="currentColor" role="img" aria-labelledby="marine-icon-beach-safety-{{ loc_id }}"><title id="marine-icon-beach-safety-{{ loc_id }}">{{ _("Beach Safety") }}</title><path d="M176,104a32,32,0,1,0-32-32A32,32,0,0,0,176,104Zm0-48a16,16,0,1,1-16,16A16,16,0,0,1,176,56Zm46.16,129.24a8,8,0,0,1-1,11.26c-17.36,14.39-32.86,19.5-47,19.5-18.58,0-34.82-8.82-49.93-17-25.35-13.76-47.24-25.65-79.07.74a8,8,0,1,1-10.22-12.31c40.17-33.29,70.32-16.93,96.93-2.49,25.35,13.77,47.24,25.65,79.07-.74A8,8,0,0,1,222.16,185.24ZM34.89,147.42a8,8,0,1,0,10.22,12.31c31.83-26.38,53.72-14.5,79.07-.74,15.11,8.2,31.35,17,49.93,17,14.14,0,29.64-5.11,47-19.5a8,8,0,1,0-10.22-12.31,75.79,75.79,0,0,1-19.28,12.06l-53.84-53.82A103.34,103.34,0,0,0,64.24,72H40a8,8,0,0,0,0,16H64.24a87.66,87.66,0,0,1,41.88,10.56L76.49,128.17C63.82,129.35,50.07,134.84,34.89,147.42Zm91.57-33.67,46.13,46.12c-14-.43-26.88-7.39-40.77-14.93-10.75-5.84-22.09-12-34.42-15.05l22.26-22.26A87.14,87.14,0,0,1,126.46,113.75Z"/></svg>
+              {% endif %}
             {% endfor %}
           </div>
         </td>
         <td style="white-space:nowrap;font-size:0.85rem">
           {{ loc.ndbc_station_ids | length }} {{ _("NDBC") }},
           {{ loc.coops_station_ids | length }} {{ _("CO-OPS") }}
+          {% if loc.nws_marine_zone_id %}
+          <br><span style="color:var(--pico-muted-color)">{{ _("NWS") }}: {{ loc.nws_marine_zone_id }}</span>
+          {% else %}
+          <br><span style="color:var(--pico-color-amber-500,#f59e0b)">{{ _("NWS: not configured") }}</span>
+          {% endif %}
         </td>
         <td>
           <div id="marine-connectivity-{{ loc_id }}" style="margin-block-end:0.35rem"></div>
-          <div role="group">
-            <button type="button" class="outline secondary" style="font-size:0.75rem;padding:0.15rem 0.5rem"
+          <div style="display:flex;gap:0.5rem">
+            <button type="button" class="outline secondary"
                     hx-post="/admin/marine/test-connectivity"
                     hx-vals='{"location_id": "{{ loc_id }}"}'
                     hx-target="#marine-connectivity-{{ loc_id }}"
                     hx-swap="innerHTML">
-              {{ _("Test") }}
+              {{ _("Check Sources") }}
             </button>
-            {% if "surf" in loc.activities %}
-            <button type="button" class="outline secondary" style="font-size:0.75rem;padding:0.15rem 0.5rem"
-                    hx-post="/admin/marine/bathymetry"
-                    hx-vals='{"location_id": "{{ loc_id }}"}'
-                    hx-target="#marine-connectivity-{{ loc_id }}"
-                    hx-swap="innerHTML">
-              {{ _("Update Bathymetry") }}
-            </button>
-            {% endif %}
           </div>
         </td>
         <td>
-          <div role="group">
+          <div style="display:flex;gap:0.5rem">
             <button type="button" class="outline"
                     hx-post="/admin/marine/edit"
                     hx-vals='{"location_id": "{{ loc_id }}"}'

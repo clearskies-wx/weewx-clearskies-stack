@@ -193,21 +193,6 @@ if (typeof L === "undefined") {
       {% endfor %}
     </fieldset>
 
-    <button type="button" class="bathymetry-btn secondary"
-            hx-post="/wizard/marine/bathymetry"
-            hx-include="closest .marine-location-card"
-            hx-target="next .bathymetry-results"
-            hx-swap="innerHTML"
-            hx-disabled-elt="this"
-            hx-indicator="next .bathymetry-indicator">
-      {{ _("Download Bathymetry") }}
-    </button>
-    <div class="bathymetry-indicator" style="display:none; align-items:center; gap:0.5rem; padding:0.5rem 0; color:var(--pico-muted-color); font-size:0.875rem;">
-      <span class="spinner-ring" aria-hidden="true"></span>
-      <span>{{ _("Downloading bathymetric data — this may take up to 2 minutes…") }}</span>
-    </div>
-    <div class="bathymetry-results"></div>
-
     <h5>{{ _("Coastal Structures") }}</h5>
     <small>{{ _("Structures like jetties, breakwaters, and piers affect wave height at your spot. Use auto-discovery to find them, or add manually.") }}</small>
 
