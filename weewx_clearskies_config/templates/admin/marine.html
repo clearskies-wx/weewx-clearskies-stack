@@ -149,6 +149,28 @@
              value="{{ edit_location.get('nws_marine_zone_id', '') }}">
       <small>{{ _("Save the location first, then use \"Test\" from the location list to discover nearby stations automatically.") }}</small>
 
+      {# --- Data Coverage Panel (T3.6) --- #}
+      <details open style="margin-block:1rem;border:1px solid var(--pico-muted-border-color);border-radius:var(--pico-border-radius);padding:0.75rem">
+        <summary style="font-weight:600;font-size:0.9rem;cursor:pointer">{{ _("Data Coverage") }}</summary>
+        <div id="admin-coverage-panel" style="margin-block-start:0.5rem">
+          {% if edit_location.get("lat") is not none and edit_location.get("lon") is not none %}
+          <div style="font-size:0.85rem;color:var(--pico-muted-color)">{{ _("Click Refresh to check data source availability at this location.") }}</div>
+          {% else %}
+          <div style="font-size:0.85rem;color:var(--pico-muted-color)">{{ _("Enter coordinates to see data coverage.") }}</div>
+          {% endif %}
+        </div>
+        <button type="button"
+                style="margin-block-start:0.5rem;font-size:0.8rem;padding:0.3rem 0.75rem"
+                hx-post="/admin/marine/coverage"
+                hx-target="#admin-coverage-panel"
+                hx-swap="innerHTML"
+                hx-include="#marine-lat,#marine-lon"
+                hx-indicator="this"
+                {% if edit_location.get("lat") is none %}disabled{% endif %}>
+          {{ _("Refresh Coverage") }}
+        </button>
+      </details>
+
       <div class="marine-activity-section" data-section="surf"
            style="border-inline-start:3px solid var(--pico-primary);padding-inline-start:1rem;margin-block:1rem;
                   {% if 'surf' not in activities %}display:none{% endif %}">

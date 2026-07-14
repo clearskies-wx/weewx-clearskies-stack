@@ -75,6 +75,14 @@ if (typeof L === "undefined") {
 
   <div id="loc_{{ idx }}_map" class="wizard-location-map" style="height: 300px; width: 100%; margin: 0.5rem 0; border-radius: 4px; z-index: 0;"></div>
 
+  {# Data Coverage Panel (T3.6) #}
+  <details class="marine-coverage-panel" style="margin:0.5rem 0;border:1px solid var(--pico-muted-border-color);border-radius:var(--pico-border-radius);padding:0.75rem;font-size:0.85rem">
+    <summary style="font-weight:600;cursor:pointer">{{ _("Data Coverage") }}</summary>
+    <div id="loc_{{ idx }}_coverage" style="margin-block-start:0.5rem">
+      <span style="color:var(--pico-muted-color)">{{ _("Enter coordinates to check data source availability.") }}</span>
+    </div>
+  </details>
+
   <p class="weather-source-info"><small></small></p>
 
   <fieldset>
@@ -795,7 +803,31 @@ if (typeof L === "undefined") {
     infoEl.textContent = text;
   }
 
-  function initLocationMap(card) {
+  // Coverage panel HTMX trigger (T3.6)
+    var _coverageTimers = {};
+    function fetchCoverage(idx) {
+      var latEl = document.getElementById("loc_" + idx + "_lat");
+      var lonEl = document.getElementById("loc_" + idx + "_lon");
+      var target = document.getElementById("loc_" + idx + "_coverage");
+      if (!latEl || !lonEl || !target) return;
+      var lat = parseFloat(latEl.value);
+      var lon = parseFloat(lonEl.value);
+      if (isNaN(lat) || isNaN(lon) || lat < -90 || lat > 90 || lon < -180 || lon > 180) return;
+      target.innerHTML = '<span style="color:var(--pico-muted-color)">Checking coverage\u2026</span>';
+      var formData = new FormData();
+      formData.append("loc_0_lat", lat.toString());
+      formData.append("loc_0_lon", lon.toString());
+      fetch("/wizard/marine/coverage", { method: "POST", body: formData })
+        .then(function(r) { return r.text(); })
+        .then(function(html) { target.innerHTML = html; })
+        .catch(function() { target.innerHTML = '<span style="color:var(--pico-del-color)">Coverage check failed.</span>'; });
+    }
+    function debounceCoverage(idx) {
+      clearTimeout(_coverageTimers[idx]);
+      _coverageTimers[idx] = setTimeout(function() { fetchCoverage(idx); }, 1200);
+    }
+
+    function initLocationMap(card) {
     if (typeof L === "undefined") {
       // Leaflet not yet loaded — retry once it is
       var retryTimer = setInterval(function () {
@@ -1086,6 +1118,16 @@ if (typeof L === "undefined") {
   }
 })();
 </script>
+<script>
+  // Wire coverage panel updates to lat/lon input changes (T3.6)
+  document.addEventListener("input", function(e) {
+    if (!e.target.classList.contains("marine-loc-lat") && !e.target.classList.contains("marine-loc-lon")) return;
+    var card = e.target.closest(".marine-location-card");
+    if (!card) return;
+    debounceCoverage(card.dataset.idx);
+  });
+</script>
+
 
 {# OOB: update the progress bar to reflect the current step. #}
 {% set oob = true %}

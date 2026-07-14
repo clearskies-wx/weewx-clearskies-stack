@@ -353,6 +353,21 @@ class ApiClient:
         result: dict[str, Any] = response.json()
         return result
 
+    def get_marine_coverage(
+        self,
+        lat: float,
+        lon: float,
+    ) -> dict[str, Any]:
+        """GET /setup/marine/coverage — data source coverage for a coordinate (T3.6)."""
+        _log.info("Fetching marine coverage for %s,%s via API", lat, lon)
+        response = self._request(
+            "GET",
+            "/setup/marine/coverage",
+            params={"lat": str(lat), "lon": str(lon)},
+            timeout=_DEFAULT_TIMEOUT,
+        )
+        return response.json()
+
     def discover_structures(
         self,
         lat: float,

@@ -2490,3 +2490,156 @@ async def marine_bathymetry_rerun(request: Request) -> HTMLResponse:
         '<span style="color:var(--pico-ins-color,#16a34a);font-size:0.8rem">'
         f'{_marine_esc(_("Bathymetry updated ({count} depth points).").format(count=points))}</span>'
     )
+
+
+
+@router.post("/marine/coverage", response_class=HTMLResponse)
+async def marine_coverage_refresh(request: Request) -> HTMLResponse:
+    """Refresh the data coverage panel for a marine location (T3.6)."""
+    _require_session(request)
+    form = await request.form()
+    lat_str = str(form.get("lat", "")).strip()
+    lon_str = str(form.get("lon", "")).strip()
+
+    if not lat_str or not lon_str:
+        return HTMLResponse(
+            '<div style="font-size:0.85rem;color:var(--pico-muted-color)">'
+            + _marine_esc(_("Enter coordinates to see data coverage."))
+            + "</div>"
+        )
+
+    try:
+        lat = float(lat_str)
+        lon = float(lon_str)
+    except ValueError:
+        return HTMLResponse(
+            '<div style="font-size:0.85rem;color:var(--pico-del-color)">'
+            + _marine_esc(_("Invalid coordinates."))
+            + "</div>"
+        )
+
+    client = _get_api_client()
+    if client is None:
+        return HTMLResponse(
+            '<div style="font-size:0.85rem;color:var(--pico-del-color)">'
+            + _marine_esc(_("API unreachable."))
+            + "</div>"
+        )
+
+    try:
+        cov = client.get_marine_coverage(lat, lon)
+    except Exception as exc:
+        logger.warning("marine_coverage_refresh: API error", exc_info=True)
+        return HTMLResponse(
+            '<div style="font-size:0.85rem;color:var(--pico-del-color)">'
+            + _marine_esc(_("Coverage check failed: {detail}").format(detail=exc))
+            + "</div>"
+        )
+
+    return HTMLResponse(_render_coverage_html(cov))
+
+
+def _render_coverage_html(cov: dict) -> str:
+    """Render the coverage panel as an HTML fragment for HTMX swap."""
+
+    def _check(ok: bool, label: str, detail: str = "") -> str:
+        icon = "&#x2705;" if ok else "&#x274C;"
+        detail_span = (
+            f' <span style="color:var(--pico-muted-color)">({_marine_esc(detail)})</span>'
+            if detail else ""
+        )
+        return (
+            f'<div style="display:flex;align-items:center;gap:0.4rem;padding:0.2rem 0">'
+            f'<span aria-hidden="true">{icon}</span>'
+            f'<span>{_marine_esc(label)}{detail_span}</span></div>'
+        )
+
+    ofs_model = cov.get("ofs_model")
+    ofs_fallback = cov.get("ofs_fallback")
+    tier = cov.get("coverage_tier", "unavailable")
+    available = cov.get("available_data", [])
+    ndbc = cov.get("nearest_ndbc_buoy")
+    coops = cov.get("nearest_coops_station")
+    nws_zone = cov.get("nws_marine_zone")
+    nwps_wfo = cov.get("nwps_wfo")
+    on_prem = cov.get("on_premises_sensor", "not_configured")
+
+    tier_labels = {
+        "ofs": _("Full coverage (OFS coastal model)"),
+        "regional_erddap": _("Regional coverage (ERDDAP)"),
+        "rtofs": _("Global coverage (RTOFS)"),
+        "mur_sst": _("Surface temperature only (MUR SST)"),
+        "unavailable": _("No ocean data coverage"),
+    }
+
+    html_parts = []
+
+    tier_label = tier_labels.get(tier, tier)
+    tier_color = (
+        "var(--pico-ins-color,#16a34a)"
+        if tier in ("ofs", "regional_erddap")
+        else "var(--pico-color-amber-500,#f59e0b)"
+    )
+    html_parts.append(
+        f'<div style="font-weight:600;font-size:0.9rem;margin-bottom:0.5rem;color:{tier_color}">'
+        f'{_marine_esc(str(tier_label))}</div>'
+    )
+
+    if ofs_model:
+        res = cov.get("ofs_model_resolution_deg")
+        res_str = f"~{res}°" if res else ""
+        html_parts.append(_check(True, _("OFS model: {model}").format(model=ofs_model), res_str))
+        if ofs_fallback:
+            html_parts.append(_check(True, _("Fallback: {model}").format(model=ofs_fallback)))
+    else:
+        html_parts.append(_check(False, _("No OFS coastal model coverage")))
+
+    cap_labels = {
+        "surface_temp": _("Surface temperature"),
+        "water_column": _("Water column profiles"),
+        "currents": _("Ocean currents"),
+        "salinity": _("Salinity"),
+        "modeled_water_levels": _("Modeled water levels"),
+        "forecast": _("Ocean forecast"),
+    }
+    for cap in ["surface_temp", "water_column", "currents", "salinity", "modeled_water_levels", "forecast"]:
+        html_parts.append(_check(cap in available, str(cap_labels.get(cap, cap))))
+
+    html_parts.append('<hr style="margin:0.5rem 0">')
+
+    if ndbc:
+        html_parts.append(_check(
+            True,
+            _("NDBC buoy: {id}").format(id=ndbc["station_id"]),
+            _("{dist} mi").format(dist=ndbc["distance_miles"]),
+        ))
+    else:
+        html_parts.append(_check(False, _("No NDBC buoy within range")))
+
+    if coops:
+        html_parts.append(_check(
+            True,
+            _("CO-OPS station: {id}").format(id=coops["station_id"]),
+            _("{dist} mi").format(dist=coops["distance_miles"]),
+        ))
+    else:
+        html_parts.append(_check(False, _("No CO-OPS station within range")))
+
+    html_parts.append(_check(bool(nws_zone), _("NWS marine zone: {zone}").format(zone=nws_zone or "—")))
+    html_parts.append(_check(bool(nwps_wfo), _("NWPS WFO: {wfo}").format(wfo=nwps_wfo or "—")))
+
+    prem_labels = {
+        "within_threshold": _("Weather station nearby"),
+        "too_far": _("Weather station too far"),
+        "not_configured": _("Not configured"),
+    }
+    html_parts.append(_check(on_prem == "within_threshold", str(prem_labels.get(on_prem, on_prem))))
+
+    return (
+        '<div style="background:var(--pico-card-background-color);'
+        'border:1px solid var(--pico-muted-border-color);'
+        'border-radius:var(--pico-border-radius);padding:0.75rem;'
+        'font-size:0.85rem">'
+        + "".join(html_parts)
+        + "</div>"
+    )
