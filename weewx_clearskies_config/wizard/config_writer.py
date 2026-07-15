@@ -442,7 +442,7 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
             "lon": loc_data.get("lon", 0.0),
             "activities": loc_data.get("activities", []),
         }
-        for key in ("ndbc_station_ids", "coops_station_ids", "nws_marine_zone_id", "nwps_wfo"):
+        for key in ("ndbc_station_ids", "coops_station_ids", "nws_marine_zone_id"):
             if loc_data.get(key):
                 entry[key] = loc_data[key]
 
