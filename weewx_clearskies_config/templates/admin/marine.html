@@ -89,6 +89,8 @@
           hx-target="#admin-content"
           hx-swap="innerHTML"
           hx-encoding="multipart/form-data"
+          hx-disabled-elt="find button[type='submit']"
+          hx-indicator="#marine-save-indicator"
           autocomplete="off">
       <input type="hidden" name="location_id" value="{{ edit_location_id }}">
 
@@ -112,8 +114,8 @@
 
       <label for="marine-photo">{{ _("Location photo") }}</label>
       <input type="file" id="marine-photo" name="photo"
-             accept=".webp,image/webp">
-      <small>{{ _("Optional. WebP format, max 200 KB, landscape orientation. Shown on location cards and detail pages.") }}</small>
+             accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
+      <small>{{ _("Optional. JPG, PNG, or WebP, max 200 KB, landscape orientation. Shown on location cards and detail pages.") }}</small>
 
       <fieldset>
         <legend>{{ _("Activities") }}</legend>
@@ -305,7 +307,7 @@
         <small>{{ _("Blank rows are ignored. Save and edit again to add more links.") }}</small>
       </div>
 
-      <div role="group" style="margin-block-start:1rem">
+      <div role="group" style="margin-block-start:1rem;display:flex;align-items:center;gap:0.75rem">
         <button type="submit">{{ _("Save Location") }}</button>
         <a href="/admin/marine"
            hx-get="/admin/marine"
@@ -313,6 +315,12 @@
            hx-swap="innerHTML"
            role="button"
            class="outline secondary">{{ _("Cancel") }}</a>
+        <span id="marine-save-indicator"
+              class="htmx-indicator"
+              aria-live="polite"
+              style="font-size:0.875rem;color:var(--pico-muted-color)">
+          {{ _("Saving…") }}
+        </span>
       </div>
     </form>
   </section>

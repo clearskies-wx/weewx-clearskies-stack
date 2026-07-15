@@ -2884,16 +2884,18 @@ async def step_marine_post(request: Request) -> HTMLResponse:
 
         slug = _slugify_location_name(name, existing=new_locations.keys())
 
-        # Photo upload — save to /etc/weewx-clearskies/marine-photos/{slug}.webp
+        # Photo upload — save to /etc/weewx-clearskies/marine-photos/{slug}.{ext}
         photo_upload = form.get(f"loc_{idx}_photo")
         if photo_upload and hasattr(photo_upload, "filename") and photo_upload.filename:
             suffix = Path(str(photo_upload.filename)).suffix.lower()
-            if suffix == ".webp":
+            if suffix in {".jpg", ".jpeg", ".png", ".webp"}:
                 photo_data: bytes = await photo_upload.read()
                 if len(photo_data) <= 200 * 1024:
                     photos_dir = Path("/etc/weewx-clearskies/marine-photos")
                     photos_dir.mkdir(parents=True, exist_ok=True)
-                    (photos_dir / f"{slug}.webp").write_bytes(photo_data)
+                    for old in photos_dir.glob(f"{slug}.*"):
+                        old.unlink(missing_ok=True)
+                    (photos_dir / f"{slug}{suffix}").write_bytes(photo_data)
                     logger.info("Saved marine photo for %s (%d bytes)", slug, len(photo_data))
                 else:
                     errors.append(

@@ -2325,16 +2325,18 @@ async def marine_save(request: Request) -> HTMLResponse:
 
     locations[loc_id] = parsed
 
-    # Photo upload — save to /etc/weewx-clearskies/marine-photos/{loc_id}.webp
+    # Photo upload — save to /etc/weewx-clearskies/marine-photos/{loc_id}.{ext}
     photo_upload = form.get("photo")
     if photo_upload and hasattr(photo_upload, "filename") and photo_upload.filename:
         suffix = Path(str(photo_upload.filename)).suffix.lower()
-        if suffix == ".webp":
+        if suffix in {".jpg", ".jpeg", ".png", ".webp"}:
             photo_data: bytes = await photo_upload.read()
             if len(photo_data) <= 200 * 1024:
                 photos_dir = Path("/etc/weewx-clearskies/marine-photos")
                 photos_dir.mkdir(parents=True, exist_ok=True)
-                (photos_dir / f"{loc_id}.webp").write_bytes(photo_data)
+                for old in photos_dir.glob(f"{loc_id}.*"):
+                    old.unlink(missing_ok=True)
+                (photos_dir / f"{loc_id}{suffix}").write_bytes(photo_data)
                 logger.info("Saved marine photo for %s (%d bytes)", loc_id, len(photo_data))
             else:
                 return _render(request, "marine.html", {
