@@ -144,9 +144,9 @@
                hx-push-url="true">
               <span class="section-name">{{ _(s.display_name) }}</span>
               {# Show a one-line value summary next to the section name #}
-              {% if s.values %}
+              {% if s["values"] %}
               {% set summary_items = [] %}
-              {% for k, v in s.values.items() %}
+              {% for k, v in s["values"].items() %}
               {% if loop.index <= 2 and k not in ("password", "api_key", "client_secret") %}
               {% set _ = summary_items.append(v | string) %}
               {% endif %}
@@ -225,9 +225,9 @@
               </a>
             </h4>
           </header>
-          {% if s.values %}
+          {% if s["values"] %}
           <dl>
-            {% for key, val in s.values.items() %}
+            {% for key, val in s["values"].items() %}
             {% if key not in ("password", "api_key", "client_secret") %}
             <dt>{{ key }}</dt>
             <dd>{{ val }}</dd>
