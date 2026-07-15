@@ -49,6 +49,7 @@ from __future__ import annotations
 
 import json
 import logging
+import os
 import re
 from pathlib import Path
 from typing import Any, NoReturn
@@ -2075,6 +2076,11 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
         "surf": {},
         "fishing": {},
         "beach_safety": {},
+        # Local-only — never sent to the API (see _read_marine_photos_sidecar).
+        # photo_url carries forward via the template's hidden field; a fresh
+        # upload in marine_save's Phase 3 overrides it.
+        "photo_url": str(form.get("photo_url", "")).strip(),
+        "photo_attribution": str(form.get("photo_attribution", "")).strip(),
     }
 
     if "surf" in activities:
@@ -2232,6 +2238,78 @@ def _marine_esc(v: object) -> str:
     return str(v).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
 
 
+def _marine_photos_sidecar_path(config_dir: Path) -> Path:
+    return config_dir / "marine-photos.json"
+
+
+def _read_marine_photos_sidecar(config_dir: Path) -> dict[str, dict[str, dict[str, str]]]:
+    """Read marine-photos.json: local-only photo_url/photo_attribution per location id.
+
+    This data is never sent to the API — the API's marine location contract
+    always returns ``photoUrl: null`` and the dashboard constructs photo URLs
+    directly from the location id (see API-MANUAL "THE API IS NOT A FILE
+    SERVER"; photos are served by Caddy from
+    /etc/weewx-clearskies/marine-photos/, not by the API). The admin
+    ``locations`` dict is rebuilt from the API's config on every request
+    (see marine_get / marine_edit_form / marine_save), so this sidecar is the
+    only durable home for photo metadata. Mirrors the branding.json /
+    webcam.json local-file pattern. Kept as a local copy of the identical
+    wizard/routes.py helper rather than a shared import so each router module
+    has no import-time dependency on the other (see the `_()` helper above
+    for the same rationale).
+
+    Returns ``{"locations": {}}`` if the file is missing or unreadable.
+    """
+    path = _marine_photos_sidecar_path(config_dir)
+    if not path.exists():
+        return {"locations": {}}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not read marine-photos.json: %s", exc)
+        return {"locations": {}}
+    if not isinstance(data, dict) or not isinstance(data.get("locations"), dict):
+        return {"locations": {}}
+    return data
+
+
+def _write_marine_photos_sidecar(config_dir: Path, locations: dict[str, dict[str, str]]) -> None:
+    """Write marine-photos.json. Atomic write, local-only — never applied to the API."""
+    config_dir.mkdir(parents=True, exist_ok=True)
+    path = _marine_photos_sidecar_path(config_dir)
+    tmp = path.with_suffix(".json.tmp")
+    try:
+        tmp.write_text(json.dumps({"locations": locations}, indent=2), encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError as exc:
+        logger.warning("Could not write marine-photos.json: %s", exc)
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _apply_marine_photo_sidecar(
+    locations: dict[str, dict[str, Any]], config_dir: Path | None
+) -> None:
+    """Overlay locally-persisted photo_url/photo_attribution onto a locations dict.
+
+    ``locations`` is normally freshly parsed from the API's config response
+    each request and never carries photo fields on its own.
+    """
+    if config_dir is None or not locations:
+        return
+    sidecar_locations = _read_marine_photos_sidecar(config_dir).get("locations", {})
+    for loc_id, loc in locations.items():
+        meta = sidecar_locations.get(loc_id)
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("photo_url") and not loc.get("photo_url"):
+            loc["photo_url"] = meta["photo_url"]
+        if meta.get("photo_attribution") and not loc.get("photo_attribution"):
+            loc["photo_attribution"] = meta["photo_attribution"]
+
+
 def _restart_api_after_apply(client: Any) -> None:
     """Trigger POST /setup/restart so the API reloads api.conf.
 
@@ -2269,6 +2347,7 @@ async def marine_get(request: Request) -> HTMLResponse:
         error = _("Cannot connect to the API — check that the API is running and configured.")
     else:
         locations = _parse_marine_locations(config.get("marine") or {})
+        _apply_marine_photo_sidecar(locations, _config_dir)
     return _render(request, "marine.html", {
         "locations": locations,
         "activity_labels": _MARINE_ACTIVITY_LABELS,
@@ -2296,6 +2375,7 @@ async def marine_edit_form(request: Request) -> HTMLResponse:
         error = _("Cannot connect to the API — check that the API is running and configured.")
     else:
         locations = _parse_marine_locations(config.get("marine") or {})
+        _apply_marine_photo_sidecar(locations, _config_dir)
         if location_id:
             edit_location = locations.get(location_id, {})
 
@@ -2362,6 +2442,7 @@ async def marine_save(request: Request) -> HTMLResponse:
                     old.unlink(missing_ok=True)
                 (photos_dir / f"{loc_id}{suffix}").write_bytes(photo_data)
                 logger.info("Saved marine photo for %s (%d bytes)", loc_id, len(photo_data))
+                parsed["photo_url"] = f"/marine-photos/{loc_id}{suffix}"
             else:
                 return _render(request, "marine.html", {
                     "locations": {},
@@ -2374,6 +2455,25 @@ async def marine_save(request: Request) -> HTMLResponse:
                     "flash": None,
                 }, status_code=422)
 
+    # Photo metadata is local-only — never sent to the API (see
+    # _read_marine_photos_sidecar). Persisted here, decoupled from Phase 4,
+    # so it is not gated on API reachability — same rationale as the photo
+    # file itself (see docstring above). Keyed by the same loc_id the photo
+    # file was just saved under.
+    if _config_dir is not None:
+        sidecar_locations = _read_marine_photos_sidecar(_config_dir).get("locations", {})
+        photo_entry = {
+            k: v for k, v in (
+                ("photo_url", parsed.get("photo_url", "")),
+                ("photo_attribution", parsed.get("photo_attribution", "")),
+            ) if v
+        }
+        if photo_entry:
+            sidecar_locations[loc_id] = photo_entry
+        else:
+            sidecar_locations.pop(loc_id, None)
+        _write_marine_photos_sidecar(_config_dir, sidecar_locations)
+
     # ---- Phase 4: fetch config and apply to API ----
     config = _fetch_current_config()
     if config is None:
@@ -2385,6 +2485,7 @@ async def marine_save(request: Request) -> HTMLResponse:
         }, status_code=500)
 
     locations = _parse_marine_locations(config.get("marine") or {})
+    _apply_marine_photo_sidecar(locations, _config_dir)
 
     if location_id:
         if location_id not in locations:
@@ -2568,6 +2669,67 @@ async def marine_coverage_refresh(request: Request) -> HTMLResponse:
     return HTMLResponse(_render_coverage_html(cov))
 
 
+def _coverage_populate_script(cov: dict) -> str:
+    """Build an inline <script> that writes coverage-discovered station IDs
+    into the edit form's visible fields (T3.4).
+
+    /admin/marine/coverage (unlike the wizard's dedicated discover-stations
+    endpoint) only returns the single *nearest* station of each type, so this
+    merges rather than overwrites: NDBC/CO-OPS IDs are appended to the
+    comma-separated field only if not already present (preserves any
+    manually-entered extra stations); the NWS zone field is filled only if
+    currently empty (won't clobber an operator's existing choice). Mirrors
+    the inline-script pattern in templates/wizard/marine_station_results.html
+    that writes discovered IDs into the wizard's hidden fields, adapted here
+    for admin's single page-unique field IDs (marine-ndbc/marine-coops/
+    marine-zone) via getElementById instead of closest(".marine-location-card").
+    HTMX evaluates <script> tags in swapped fragments, so this runs
+    automatically once the coverage panel is swapped in.
+    """
+    ndbc = cov.get("nearest_ndbc_buoy") or {}
+    coops = cov.get("nearest_coops_station") or {}
+    ndbc_id = ndbc.get("station_id") or ""
+    coops_id = coops.get("station_id") or ""
+    zone_id = cov.get("nws_marine_zone") or ""
+    if not (ndbc_id or coops_id or zone_id):
+        return ""
+    added_label = _("Added to location:")
+    return (
+        '<div id="marine-coverage-populate-note" role="status" aria-live="polite" '
+        'style="font-size:0.8rem;margin-block-start:0.4rem;color:var(--pico-ins-color,#16a34a)"></div>'
+        "<script>(function(){"
+        "function addToField(id,value){"
+        "if(!value)return null;"
+        "var input=document.getElementById(id);"
+        "if(!input)return null;"
+        "var existing=input.value.split(',').map(function(s){return s.trim();}).filter(Boolean);"
+        "if(existing.indexOf(value)!==-1)return null;"
+        "existing.push(value);"
+        "input.value=existing.join(', ');"
+        "return value;"
+        "}"
+        "function setIfEmpty(id,value){"
+        "if(!value)return null;"
+        "var input=document.getElementById(id);"
+        "if(!input||input.value.trim())return null;"
+        "input.value=value;"
+        "return value;"
+        "}"
+        "var messages=[];"
+        f"var ndbcAdded=addToField('marine-ndbc',{json.dumps(ndbc_id)});"
+        "if(ndbcAdded)messages.push('NDBC '+ndbcAdded);"
+        f"var coopsAdded=addToField('marine-coops',{json.dumps(coops_id)});"
+        "if(coopsAdded)messages.push('CO-OPS '+coopsAdded);"
+        f"var zoneAdded=setIfEmpty('marine-zone',{json.dumps(zone_id)});"
+        "if(zoneAdded)messages.push('NWS '+zoneAdded);"
+        "var note=document.getElementById('marine-coverage-populate-note');"
+        "if(note&&messages.length){"
+        f"note.textContent={json.dumps(added_label)}+' '+messages.join(', ')+'.';"
+        "}"
+        "})();</script>"
+    )
+
+
 def _render_coverage_html(cov: dict) -> str:
     """Render the coverage panel as an HTML fragment for HTMX swap."""
 
@@ -2671,4 +2833,5 @@ def _render_coverage_html(cov: dict) -> str:
         'font-size:0.85rem">'
         + "".join(html_parts)
         + "</div>"
+        + _coverage_populate_script(cov)
     )

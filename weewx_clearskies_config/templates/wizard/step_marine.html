@@ -86,9 +86,26 @@ if (typeof L === "undefined") {
   <p class="weather-source-info"><small></small></p>
 
   <label for="loc_{{ idx }}_photo">{{ _("Location photo") }}</label>
+  {% if loc.get('photo_url') %}
+  <div class="marine-loc-photo-preview">
+    <img src="{{ loc.photo_url }}"
+         alt="{{ loc.photo_attribution or loc.get('name', _('Location photo')) }}"
+         style="max-width: 200px; max-height: 150px;">
+  </div>
+  {% endif %}
   <input type="file" id="loc_{{ idx }}_photo" name="loc_{{ idx }}_photo"
          accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp">
   <small>{{ _("Optional. JPG, PNG, or WebP, max 200 KB, landscape orientation. Shown on location cards and detail pages.") }}</small>
+  {# Carries the already-saved photo URL forward across re-submits (e.g. a
+     validation error on another card) so uploading a new photo isn't
+     required just to keep an existing one — see wizard/routes.py
+     step_marine_post. Never sent to the API. #}
+  <input type="hidden" name="loc_{{ idx }}_photo_url" value="{{ loc.get('photo_url', '') }}">
+
+  <label for="loc_{{ idx }}_photo_attribution">{{ _("Photo attribution (optional)") }}</label>
+  <input type="text" id="loc_{{ idx }}_photo_attribution" name="loc_{{ idx }}_photo_attribution"
+         value="{{ loc.get('photo_attribution', '') }}"
+         placeholder="{{ _('e.g. Photo courtesy of Jane Doe') }}">
 
   <fieldset>
     <legend>{{ _("Activities") }}</legend>

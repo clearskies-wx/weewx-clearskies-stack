@@ -2721,6 +2721,74 @@ _MARINE_TARGET_CATEGORY_KEY_RE = re.compile(r"^loc_(\d+)_fishing_target_categor(
 _MARINE_SPECIES_PREV_KEY_RE = re.compile(r"^loc_\d+_fishing_species_prev$")
 
 
+def _marine_photos_sidecar_path(config_dir: Path) -> Path:
+    return config_dir / "marine-photos.json"
+
+
+def _read_marine_photos_sidecar(config_dir: Path) -> dict[str, dict[str, dict[str, str]]]:
+    """Read marine-photos.json: local-only photo_url/photo_attribution per location slug.
+
+    This data is never sent to the API — the API's marine location contract
+    always returns ``photoUrl: null`` and the dashboard constructs photo URLs
+    directly from the location id (see API-MANUAL "THE API IS NOT A FILE
+    SERVER"; photos are served by Caddy from
+    /etc/weewx-clearskies/marine-photos/, not by the API). Because
+    state.marine_locations is otherwise reconstructed from the API's config
+    on every wizard re-run (see the "Marine locations" restore block in
+    wizard_apply's caller), this sidecar is the only durable home for photo
+    metadata. Mirrors the branding.json / webcam.json local-file pattern.
+
+    Returns ``{"locations": {}}`` if the file is missing or unreadable.
+    """
+    path = _marine_photos_sidecar_path(config_dir)
+    if not path.exists():
+        return {"locations": {}}
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        logger.warning("Could not read marine-photos.json: %s", exc)
+        return {"locations": {}}
+    if not isinstance(data, dict) or not isinstance(data.get("locations"), dict):
+        return {"locations": {}}
+    return data
+
+
+def _write_marine_photos_sidecar(config_dir: Path, locations: dict[str, dict[str, str]]) -> None:
+    """Write marine-photos.json. Atomic write, local-only — never applied to the API."""
+    config_dir.mkdir(parents=True, exist_ok=True)
+    path = _marine_photos_sidecar_path(config_dir)
+    tmp = path.with_suffix(".json.tmp")
+    try:
+        tmp.write_text(json.dumps({"locations": locations}, indent=2), encoding="utf-8")
+        os.replace(tmp, path)
+    except OSError as exc:
+        logger.warning("Could not write marine-photos.json: %s", exc)
+        try:
+            tmp.unlink(missing_ok=True)
+        except OSError:
+            pass
+
+
+def _apply_marine_photo_sidecar(state: WizardState, config_dir: Path | None) -> None:
+    """Overlay locally-persisted photo_url/photo_attribution onto state.marine_locations.
+
+    Called before rendering step_marine.html — the location dicts in
+    ``state.marine_locations`` come from the API (or from this same request's
+    form submission) and never carry photo fields on their own.
+    """
+    if config_dir is None or not state.marine_locations:
+        return
+    sidecar_locations = _read_marine_photos_sidecar(config_dir).get("locations", {})
+    for slug, loc in state.marine_locations.items():
+        meta = sidecar_locations.get(slug)
+        if not isinstance(meta, dict):
+            continue
+        if meta.get("photo_url") and not loc.get("photo_url"):
+            loc["photo_url"] = meta["photo_url"]
+        if meta.get("photo_attribution") and not loc.get("photo_attribution"):
+            loc["photo_attribution"] = meta["photo_attribution"]
+
+
 def _slugify_location_name(name: str, existing: Any = ()) -> str:
     """Generate a URL/JSON-key-safe slug from an operator-entered location name.
 
@@ -2744,6 +2812,7 @@ async def step_marine_get(request: Request) -> HTMLResponse:
     """Step 13: Marine Locations — render marine feature configuration."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    _apply_marine_photo_sidecar(state, _config_dir)
     return _render(
         request,
         "step_marine.html",
@@ -2884,6 +2953,14 @@ async def step_marine_post(request: Request) -> HTMLResponse:
 
         slug = _slugify_location_name(name, existing=new_locations.keys())
 
+        # Photo metadata (local-only — never sent to the API; see
+        # _read_marine_photos_sidecar). Start from whatever the hidden
+        # loc_{idx}_photo_url field carried forward from the previous render
+        # of this form (e.g. re-submit after a validation error on another
+        # card); a fresh upload below overrides it.
+        photo_url = str(form.get(f"loc_{idx}_photo_url", "")).strip()
+        photo_attribution = str(form.get(f"loc_{idx}_photo_attribution", "")).strip()
+
         # Photo upload — save to /etc/weewx-clearskies/marine-photos/{slug}.{ext}
         photo_upload = form.get(f"loc_{idx}_photo")
         if photo_upload and hasattr(photo_upload, "filename") and photo_upload.filename:
@@ -2897,14 +2974,21 @@ async def step_marine_post(request: Request) -> HTMLResponse:
                         old.unlink(missing_ok=True)
                     (photos_dir / f"{slug}{suffix}").write_bytes(photo_data)
                     logger.info("Saved marine photo for %s (%d bytes)", slug, len(photo_data))
+                    photo_url = f"/marine-photos/{slug}{suffix}"
                 else:
                     errors.append(
                         _('Photo for "{name}" exceeds 200 KB limit.').format(name=name)
                     )
 
+        if photo_url:
+            loc["photo_url"] = photo_url
+        if photo_attribution:
+            loc["photo_attribution"] = photo_attribution
+
         new_locations[slug] = loc
 
     if errors:
+        _apply_marine_photo_sidecar(state, _config_dir)
         return _render(
             request,
             "step_marine.html",
@@ -2913,6 +2997,22 @@ async def step_marine_post(request: Request) -> HTMLResponse:
         )
 
     state.marine_locations = new_locations
+
+    # Persist photo_url/photo_attribution to the local-only sidecar (never
+    # sent to the API — see _read_marine_photos_sidecar). Rebuilt from
+    # scratch each save so locations removed from the form are pruned here too.
+    if _config_dir is not None:
+        photo_sidecar = {
+            slug: {
+                k: v for k, v in (
+                    ("photo_url", loc_data.get("photo_url", "")),
+                    ("photo_attribution", loc_data.get("photo_attribution", "")),
+                ) if v
+            }
+            for slug, loc_data in new_locations.items()
+            if loc_data.get("photo_url") or loc_data.get("photo_attribution")
+        }
+        _write_marine_photos_sidecar(_config_dir, photo_sidecar)
 
     ttl_hours = _parse_int(str(form.get("marine_forecast_ttl_hours", "3")), default=3)
     state.marine_forecast_ttl_hours = ttl_hours if ttl_hours in (1, 3, 6) else 3
