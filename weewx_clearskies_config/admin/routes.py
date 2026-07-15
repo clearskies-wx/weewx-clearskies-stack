@@ -1893,17 +1893,26 @@ def _marine_to_str_list(value: Any) -> list[str]:
 def _marine_exposure_list(value: Any) -> list[str]:
     """Normalise ``directional_exposure`` to a validated ``list[str]``.
 
-    Tolerates a ``dict[str, bool]`` (the API apply schema's shape) as well
-    as a ConfigObj list/string, since the on-disk representation is not
-    fully pinned down yet (see MarineSurfSpotApplyConfig's docstring in the
-    API repo for the T6.3 divergence note).
+    Tolerates three on-disk formats:
+    - ``dict[str, bool]`` (the API apply schema's shape, e.g. ``{"N": True}``)
+    - ConfigObj colon-format list (e.g. ``["N:true", "SE:true"]``) — written
+      by ``_build_marine_conf_section`` in the API's setup.py
+    - Bare direction list (e.g. ``["N", "SE"]``)
     """
     if isinstance(value, dict):
         directions = [
             k for k, v in value.items() if v is True or str(v).lower() == "true"
         ]
     else:
-        directions = _marine_to_str_list(value)
+        raw = _marine_to_str_list(value)
+        directions = []
+        for entry in raw:
+            if ":" in entry:
+                dir_part, bool_part = entry.split(":", 1)
+                if bool_part.strip().lower() == "true":
+                    directions.append(dir_part.strip())
+            else:
+                directions.append(entry.strip())
     return [d for d in directions if d in _MARINE_VALID_EXPOSURE]
 
 
