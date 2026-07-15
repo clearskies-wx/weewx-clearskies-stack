@@ -51,20 +51,12 @@
     <h3 id="geo-status-heading">{{ _("Current Status") }}</h3>
 
     {% if error %}
-      <div role="alert"
-           style="background:var(--pico-secondary-background);
-                  border-left:3px solid var(--pico-color-amber-500,#f59e0b);
-                  padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
-                  margin-block:1rem;font-size:0.875rem">
+      <div role="alert" class="admin-alert admin-alert-warning">
         <strong>{{ _("Status unavailable.") }}</strong>
         {{ error }}
       </div>
     {% elif status is none %}
-      <div role="alert"
-           style="background:var(--pico-secondary-background);
-                  border-left:3px solid var(--pico-color-amber-500,#f59e0b);
-                  padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
-                  margin-block:1rem;font-size:0.875rem">
+      <div role="alert" class="admin-alert admin-alert-warning">
         <strong>{{ _("Status unavailable.") }}</strong>
         {{ _("The API is unreachable or not yet configured. Start the API service and
         reload this page to view geographic features status.") }}

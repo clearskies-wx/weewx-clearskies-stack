@@ -2241,8 +2241,16 @@ def _restart_api_after_apply(client: Any) -> None:
 
 @router.get("/marine", response_class=HTMLResponse)
 async def marine_get(request: Request) -> HTMLResponse:
-    """Render the marine locations admin section — location list."""
+    """Render the marine locations admin section — location list.
+
+    Non-HTMX requests (direct URL navigation, page refresh) redirect to the
+    admin landing page — the marine template is a fragment designed to load
+    inside the landing page's ``#admin-content`` div.
+    """
     _require_session(request)
+    if not request.headers.get("HX-Request"):
+        from starlette.responses import RedirectResponse
+        return RedirectResponse(url="/admin/config#marine", status_code=303)
     config = _fetch_current_config()
     error: str | None = None
     locations: dict[str, dict[str, Any]] = {}
@@ -2296,6 +2304,10 @@ async def marine_edit_form(request: Request) -> HTMLResponse:
 async def marine_save(request: Request) -> HTMLResponse:
     """Validate and save one marine location (add or edit), then re-render the list.
 
+    Photo upload is processed first — it is a local file operation on the
+    front-end host and must not be gated on the API being reachable.  The API
+    apply call happens afterward; if it fails the photo is still saved.
+
     Persists by rebuilding a full-but-minimal /setup/apply payload (see
     _build_marine_apply_payload) so unrelated config sections (providers,
     branding, database credentials, etc.) are left untouched.
@@ -2304,21 +2316,11 @@ async def marine_save(request: Request) -> HTMLResponse:
     form = await request.form()
     location_id = str(form.get("location_id", "")).strip()
 
-    config = _fetch_current_config()
-    if config is None:
-        return _render(request, "marine.html", {
-            "locations": {},
-            "activity_labels": _MARINE_ACTIVITY_LABELS,
-            "error": _("Cannot connect to the API — check that the API is running and configured."),
-            "flash": None,
-        }, status_code=500)
-
-    locations = _parse_marine_locations(config.get("marine") or {})
-
+    # ---- Phase 1: validate form (no API needed) ----
     parsed, validation_error = _validate_marine_location_form(form)
     if validation_error:
         return _render(request, "marine.html", {
-            "locations": locations,
+            "locations": {},
             "activity_labels": _MARINE_ACTIVITY_LABELS,
             "edit_mode": True,
             "edit_location_id": location_id,
@@ -2329,21 +2331,14 @@ async def marine_save(request: Request) -> HTMLResponse:
         }, status_code=422)
 
     assert parsed is not None
+
+    # ---- Phase 2: determine loc_id (no API needed for edits) ----
     if location_id:
-        if location_id not in locations:
-            return _render(request, "marine.html", {
-                "locations": locations,
-                "activity_labels": _MARINE_ACTIVITY_LABELS,
-                "error": _("Location not found. It may have been deleted in another session."),
-                "flash": None,
-            }, status_code=404)
         loc_id = location_id
     else:
-        loc_id = _slugify_marine_location_name(parsed["name"], set(locations.keys()))
+        loc_id = _slugify_marine_location_name(parsed["name"], set())
 
-    locations[loc_id] = parsed
-
-    # Photo upload — save to /etc/weewx-clearskies/marine-photos/{loc_id}.{ext}
+    # ---- Phase 3: save photo to disk (no API needed) ----
     photo_upload = form.get("photo")
     if photo_upload and hasattr(photo_upload, "filename") and photo_upload.filename:
         suffix = Path(str(photo_upload.filename)).suffix.lower()
@@ -2358,7 +2353,7 @@ async def marine_save(request: Request) -> HTMLResponse:
                 logger.info("Saved marine photo for %s (%d bytes)", loc_id, len(photo_data))
             else:
                 return _render(request, "marine.html", {
-                    "locations": locations,
+                    "locations": {},
                     "activity_labels": _MARINE_ACTIVITY_LABELS,
                     "edit_mode": True,
                     "edit_location_id": loc_id,
@@ -2368,11 +2363,36 @@ async def marine_save(request: Request) -> HTMLResponse:
                     "flash": None,
                 }, status_code=422)
 
+    # ---- Phase 4: fetch config and apply to API ----
+    config = _fetch_current_config()
+    if config is None:
+        return _render(request, "marine.html", {
+            "locations": {},
+            "activity_labels": _MARINE_ACTIVITY_LABELS,
+            "error": _("Photo saved. Cannot connect to the API to update location config — check that the API is running."),
+            "flash": None,
+        }, status_code=500)
+
+    locations = _parse_marine_locations(config.get("marine") or {})
+
+    if location_id:
+        if location_id not in locations:
+            return _render(request, "marine.html", {
+                "locations": locations,
+                "activity_labels": _MARINE_ACTIVITY_LABELS,
+                "error": _("Location not found. It may have been deleted in another session."),
+                "flash": None,
+            }, status_code=404)
+    else:
+        loc_id = _slugify_marine_location_name(parsed["name"], set(locations.keys()))
+
+    locations[loc_id] = parsed
+
     client = _get_api_client()
     error = None
     flash = None
     if client is None:
-        error = _("Cannot connect to the API — check that the API is running and configured.")
+        error = _("Photo saved. Cannot connect to the API to update location config.")
     else:
         try:
             client.apply(_build_marine_apply_payload(config, locations))

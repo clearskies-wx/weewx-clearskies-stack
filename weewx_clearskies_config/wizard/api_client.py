@@ -21,8 +21,9 @@ import httpx
 
 _log = logging.getLogger(__name__)
 
-# Default timeout for most API calls (seconds).
-_DEFAULT_TIMEOUT = 10.0
+# Default timeout for most API calls (seconds).  Raised from 10 to 20 to
+# accommodate intermittent TLS handshake delays between containers.
+_DEFAULT_TIMEOUT = 20.0
 # Extended timeout for db-test — the remote DB probe may be slow.
 _DB_TEST_TIMEOUT = 30.0
 # Extended timeout for /setup/apply — the API may perform per-location NWS

@@ -24,6 +24,16 @@
    see marine_get / marine_edit_form / marine_save / marine_delete.
    ------------------------------------------------------------------------- #}
 {% from "macros/help_panel.html" import help_trigger %}
+<style>
+.admin-alert{padding:.75rem 1rem;border-radius:var(--pico-border-radius,.25rem);margin-block:1rem;font-size:.875rem}
+.admin-alert-error{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
+.admin-alert-warning{background:#fffbeb;border:1px solid #fcd34d;color:#92400e}
+.admin-alert-success{background:#f0fdf4;border:1px solid #86efac;color:#166534}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}:root:not([data-theme="light"]) .admin-alert-warning{background:#3a2a0a;border-color:#854d0e;color:#fcd34d}:root:not([data-theme="light"]) .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}}
+[data-theme="dark"] .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}
+[data-theme="dark"] .admin-alert-warning{background:#3a2a0a;border-color:#854d0e;color:#fcd34d}
+[data-theme="dark"] .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}
+</style>
 <article>
   <header>
     <nav aria-label="{{ _('Breadcrumb') }}">
@@ -43,21 +53,13 @@
   </header>
 
   {% if flash %}
-  <div role="status"
-       style="background:color-mix(in srgb,var(--pico-color-green-500,#22c55e) 12%,transparent);
-              border:1px solid var(--pico-color-green-500,#22c55e);
-              padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
-              margin-block:1rem;font-size:0.875rem">
+  <div role="status" class="admin-alert admin-alert-success">
     {{ flash }}
   </div>
   {% endif %}
 
   {% if error %}
-  <div role="alert"
-       style="background:var(--pico-secondary-background);
-              border-left:3px solid var(--pico-color-amber-500,#f59e0b);
-              padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
-              margin-block:1rem;font-size:0.875rem">
+  <div role="alert" class="admin-alert admin-alert-error">
     <strong>{{ _("Error.") }}</strong> {{ error }}
   </div>
   {% endif %}
@@ -76,11 +78,7 @@
     </h3>
 
     {% if edit_error %}
-    <div role="alert"
-         style="background:var(--pico-secondary-background);
-                border-left:3px solid var(--pico-del-color,#cf222e);
-                padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
-                margin-block:1rem;font-size:0.875rem">
+    <div role="alert" class="admin-alert admin-alert-error">
       {{ edit_error }}
     </div>
     {% endif %}
@@ -402,11 +400,7 @@
   </div>
 
   {% if not locations %}
-  <div role="status"
-       style="background:var(--pico-secondary-background);
-              border-left:3px solid var(--pico-muted-color,#9ca3af);
-              padding:0.75rem 1rem;border-radius:var(--pico-border-radius);
-              margin-block:1rem;font-size:0.875rem">
+  <div role="status" class="admin-alert admin-alert-warning">
     <strong>{{ _("No marine locations configured.") }}</strong>
     {{ _("Add a location above, or run the setup wizard's Marine Locations step to configure your first location.") }}
   </div>
