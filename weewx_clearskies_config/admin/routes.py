@@ -1905,6 +1905,23 @@ def _marine_exposure_list(value: Any) -> list[str]:
     return [d for d in directions if d in _MARINE_VALID_EXPOSURE]
 
 
+def _marine_structures_list(value: Any) -> list[dict[str, Any]]:
+    """Normalise ``structures`` from ConfigObj dict-of-dicts to a list."""
+    if not isinstance(value, dict):
+        return list(value) if isinstance(value, list) else []
+    result: list[dict[str, Any]] = []
+    for struct in value.values():
+        if isinstance(struct, dict):
+            result.append({
+                "type": str(struct.get("type", "")),
+                "material": str(struct.get("material", "")),
+                "length_m": _marine_to_float(struct.get("length_m")),
+                "bearing_degrees": _marine_to_float(struct.get("bearing_degrees")),
+                "distance_m": _marine_to_float(struct.get("distance_m")),
+            })
+    return result
+
+
 def _fetch_current_config() -> dict[str, Any] | None:
     """Fetch the full current configuration from the API.
 
@@ -1976,6 +1993,7 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
                 "bottom_type": str(surf_raw.get("bottom_type", "") or ""),
                 "topographic_feature": str(surf_raw.get("topographic_feature", "") or ""),
                 "directional_exposure": _marine_exposure_list(surf_raw.get("directional_exposure")),
+                "structures": _marine_structures_list(surf_raw.get("structures")),
             } if "surf" in activities else {},
             "fishing": {
                 "target_categories": fishing_raw.get("target_categories") or ([fishing_raw["target_category"]] if fishing_raw.get("target_category") else []),
