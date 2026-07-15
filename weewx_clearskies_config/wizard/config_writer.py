@@ -454,7 +454,7 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
                     surf_out[k] = surf[k]
             exposure = surf.get("directional_exposure")
             if isinstance(exposure, list):
-                surf_out["directional_exposure"] = {d: d in exposure for d in all_directions}
+                surf_out["directional_exposure"] = {d: True for d in exposure}
             elif isinstance(exposure, dict):
                 surf_out["directional_exposure"] = exposure
             if surf.get("bathymetric_profile"):
@@ -472,6 +472,8 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
                 fishing_out["target_categories"] = [fishing["target_category"]]
             if fishing.get("biogeographic_region"):
                 fishing_out["biogeographic_region"] = fishing["biogeographic_region"]
+            if fishing.get("species"):
+                fishing_out["species"] = fishing["species"]
             entry["fishing"] = fishing_out
 
         beach_safety = loc_data.get("beach_safety")

@@ -1899,7 +1899,9 @@ def _marine_exposure_list(value: Any) -> list[str]:
     API repo for the T6.3 divergence note).
     """
     if isinstance(value, dict):
-        directions = [k for k, v in value.items() if v]
+        directions = [
+            k for k, v in value.items() if v is True or str(v).lower() == "true"
+        ]
     else:
         directions = _marine_to_str_list(value)
     return [d for d in directions if d in _MARINE_VALID_EXPOSURE]
