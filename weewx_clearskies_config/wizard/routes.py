@@ -37,7 +37,6 @@ Route summary:
   GET  /wizard/marine           — step 13 fragment (marine location configuration)
   POST /wizard/marine           — save marine config, return step 14 fragment (TLS)
   POST /wizard/marine/discover-stations — HTMX: discover nearby NDBC/CO-OPS stations + NWS marine zone
-  POST /wizard/marine/bathymetry        — HTMX: download/derive bathymetry for a surf location
   GET  /wizard/marine/species           — HTMX: load the species checklist for a fishing location's
                                            target category (T2.5)
   GET  /wizard/tls              — step 14 fragment (TLS / HTTPS configuration)
@@ -3349,7 +3348,7 @@ async def marine_species(request: Request) -> HTMLResponse:
     including JS-cloned cards — see step_marine.html) and again whenever the
     target-category <select> changes. Scoped to a single location card via
     hx-include="closest .marine-location-card", same pattern as
-    marine_discover_stations()/marine_bathymetry() above — but this route is a
+    marine_discover_stations() above — but this route is a
     GET, so htmx serializes the included card fields as query params rather
     than a form body.
 

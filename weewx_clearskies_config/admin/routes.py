@@ -34,7 +34,6 @@ Route summary (admin landing + domain sections):
   POST /admin/marine/save             — validate + save one location via /setup/apply
   POST /admin/marine/delete           — delete one location via /setup/apply
   POST /admin/marine/test-connectivity — HTMX: NDBC/CO-OPS/NWS zone status for a location
-  POST /admin/marine/bathymetry       — HTMX: re-run bathymetry download for a surf location
 
 Route summary (config editor — formerly config/routes.py):
   GET  /admin/config                          — config dashboard (all sections)
