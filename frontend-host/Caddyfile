@@ -83,6 +83,11 @@
         file_server
     }
 
+    handle /marine-photos.json {
+        root * /etc/weewx-clearskies
+        file_server
+    }
+
     handle /marine-photos/* {
         root * /etc/weewx-clearskies
         file_server
