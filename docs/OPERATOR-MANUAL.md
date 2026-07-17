@@ -566,7 +566,7 @@ SWAN uses a two-level nested grid — a coarse outer grid for continental shelf 
 
 The outer grid domain is derived from the HRRR bounding box (the full marine location extent). The inner nest domain is derived from the surf spot coordinates. Lower inner nest resolution values are more accurate but increase memory and compute time. 200 m is recommended for most setups. Total memory for both grids: ≤300 MB.
 
-**OpenMP thread count:** Number of CPU cores SWAN may use. `0` uses all available cores. Limit this on shared hosts to leave capacity for other processes.
+**OpenMP thread count:** Number of CPU cores SWAN may use. **Recommended: 2–4 cores.** SWAN's parallel efficiency drops sharply beyond 6 cores and can actually slow down on small grids (Rautenbach et al. 2021, *Geosci. Model Dev.* 14, 4241–4247). More cores does not mean faster — the peak time-saving ratio is at ~6 cores, and for the small grids TruShore uses (~5,000–15,000 points), 2–4 is optimal. `0` uses all available cores (not recommended — wastes CPU on thread synchronization). On shared hosts running weewx, MariaDB, and the API alongside SWAN, set to 2 to leave capacity for other processes.
 
 **Per-spot surf settings** (one set per configured surf location):
 
@@ -595,7 +595,7 @@ Open `https://your-domain/admin` and navigate to **SWAN+TruShore**.
 **Configuration form** lets you update:
 
 - **Deployment mode** — switch between Bundled and Separated. When switching to Separated, enter the service URL and use **Test connectivity** before saving.
-- **OpenMP thread count** — adjust CPU parallelism for SWAN.
+- **OpenMP thread count** — adjust CPU parallelism for SWAN. 2–4 cores recommended; beyond 6 cores, returns diminish sharply and can slow down on small grids.
 - **Outer grid resolution** — coarser values (4–5 km) reduce run time; finer values (1–2 km) improve shelf wave propagation accuracy. Changes take effect on the next SWAN run.
 - **Inner nest resolution** — coarser values (400–500 m) reduce run time; finer values (50–100 m) increase nearshore accuracy at higher compute cost. Changes take effect on the next SWAN run.
 - **Per-spot surf settings** — update breaker formula and surf height display per surf location. Changes take effect on the next SWAN run.
