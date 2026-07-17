@@ -3,7 +3,7 @@
 A guide for weather station operators who want to install, configure, and maintain a Clear Skies weather site. No programming experience is required.
 
 **Version:** 1.0 (beta)
-**Last updated:** 2026-07-04
+**Last updated:** 2026-07-17
 
 ---
 
@@ -275,8 +275,9 @@ Open `https://your-domain/wizard` in a browser. The wizard guides you through:
 11. Customizing appearance (colors, logos, theme)
 12. Privacy, legal, and analytics settings
 13. Feature settings
-14. TLS configuration
-15. Reviewing and applying
+14. SWAN+TruShore nearshore wave model (conditional — surf locations only, when SWAN is installed)
+15. TLS configuration
+16. Reviewing and applying
 
 After the wizard completes, the API restarts with the full configuration. Wait approximately 2 minutes for the cache warmer to finish, then visit your domain to see the weather site.
 
