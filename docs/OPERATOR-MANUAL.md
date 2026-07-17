@@ -409,7 +409,7 @@ Configuration files on the host are preserved across image updates. Read the rel
 
 ## 5. Installation — weewx Extensions
 
-Clear Skies uses two weewx extensions. Neither is a Docker container — they run inside the weewx process itself, installed via weewx's built-in extension manager.
+This section covers two weewx extensions and the optional SWAN+TruShore nearshore wave model. The weewx extensions run inside the weewx process itself, installed via weewx's built-in extension manager — neither requires Docker. SWAN+TruShore is a separate optional pip extra for the API.
 
 ### ClearSkiesLoopRelay (required)
 
@@ -494,6 +494,143 @@ sudo journalctl -u weewx -n 100 | grep -i truesun
 ```
 
 You should see messages like `clearskies_truesun: CAMS AOD fetch successful`. To confirm the model is working, compare `maxSolarRad` values at sunrise — the TrueSun model should show values above 10 W/m² at 6:00 AM, while the built-in Ryan-Stolzenbach model typically shows about 1.4 W/m² at the same time.
+
+### SWAN+TruShore Nearshore Model (optional)
+
+SWAN+TruShore is the Clear Skies nearshore wave model. It runs SWAN (Simulating WAves Nearshore, a Fortran spectral wave model from Delft University of Technology) as a subprocess inside the API, driven by HRRR forecast winds on a fixed hourly schedule, to produce 72-hour surf forecasts with nearshore physics. When the `[nearshore]` pip extra is installed and the SWAN binary is available, SWAN+TruShore becomes the sole source for surf forecasts at configured surf spot locations. It replaces the former dependence on NOAA's Nearshore Wave Prediction System (NWPS).
+
+#### Prerequisites
+
+| Requirement | Notes |
+|-------------|-------|
+| SWAN binary | Fortran executable — not a Python package. Install via package manager or compile from source. |
+| gfortran | Required to build SWAN from source. Not needed if installing via `apt`. |
+| OpenMP | Parallel execution. Bundled with gfortran on most distributions. |
+| `weewx-clearskies-api[nearshore]` | Pip extra that adds the HRRR wind provider and SWAN runner. |
+
+**Install on Debian / Ubuntu:**
+
+```bash
+sudo apt-get install -y swan gfortran
+sudo -u clearskies /opt/clearskies-api/bin/pip install --pre weewx-clearskies-api[nearshore]
+```
+
+**Build from source (any Linux):**
+
+```bash
+sudo bash scripts/install_swan.sh   # download and compile SWAN
+sudo -u clearskies /opt/clearskies-api/bin/pip install --pre weewx-clearskies-api[nearshore]
+```
+
+Verify the binary is on PATH after installing:
+
+```bash
+swan --version
+```
+
+Restart the API to load the `[nearshore]` extra:
+
+```bash
+sudo systemctl restart weewx-clearskies-api
+```
+
+**Docker:** The SWAN-enabled image variant includes the `[nearshore]` extra and the SWAN binary. Pull the latest image:
+
+```bash
+docker compose pull && docker compose up -d
+```
+
+#### Wizard Setup
+
+The SWAN+TruShore wizard step appears when marine is enabled, at least one configured location has surf activity, and the SWAN binary is found on PATH. If SWAN is not installed, the step shows install instructions and a **Skip** button — surf forecasting will be unavailable until SWAN is installed and the API is restarted.
+
+When SWAN is available, the step collects:
+
+**Deployment mode:**
+
+| Mode | Description |
+|------|-------------|
+| Bundled (default) | SWAN runs as a subprocess on this host inside the API process. No additional service needed. Suitable for most operators. |
+| Separated service | SWAN runs on a remote host running `weewx-clearskies-trushore`. Enter the service URL (e.g. `https://trushore.example.com:8766`). The wizard tests connectivity before allowing you to proceed. Use this when you want SWAN on a dedicated or more powerful machine. |
+
+**SWAN computational grid:**
+
+| Field | Default | Range |
+|-------|---------|-------|
+| Bounding box (N/S/E/W) | Auto-computed from marine location coordinates ± 0.2° | ±90° lat, ±180° lon |
+| Grid resolution | 200 m | 50–1000 m |
+
+Lower grid resolution values are more accurate but slower to compute. 200 m is recommended for most setups.
+
+**OpenMP thread count:** Number of CPU cores SWAN may use. `0` uses all available cores. Limit this on shared hosts to leave capacity for other processes.
+
+**Per-spot surf settings** (one set per configured surf location):
+
+| Setting | Options | Default | Notes |
+|---------|---------|---------|-------|
+| Breaker formula | Komar-Gaughan / Caldwell | Komar-Gaughan | Komar-Gaughan is general-purpose for most coastlines. Caldwell is tuned for steep volcanic island coasts (Hawaii, Indonesia, Tahiti) and auto-falls to Komar-Gaughan when wave period is under 10 s. |
+| Surf height display | Face height / Hawaiian | Face height | Face height measures trough-to-crest of the breaking wave face (US mainland / Europe standard). Hawaiian / back-of-wave is roughly half the face height (Hawaii / Australia convention). The API always returns both values; this setting controls which the surf card shows as the primary height. |
+
+#### Admin Maintenance
+
+Open `https://your-domain/admin` and navigate to **SWAN+TruShore**.
+
+**SWAN status panel** shows:
+
+| Field | Description |
+|-------|-------------|
+| Binary | Available or Not found, with version and path when found |
+| CPU cores | OpenMP-available cores on this host |
+| Last run | Timestamp of the most recent completed SWAN run, or "Never run" |
+| Grid resolution | Current SWAN grid resolution in metres |
+
+**Run SWAN Now** triggers an immediate run outside the regular hourly schedule. Use this after changing grid settings to verify the configuration before the next automatic cycle.
+
+**Configuration form** lets you update:
+
+- **Deployment mode** — switch between Bundled and Separated. When switching to Separated, enter the service URL and use **Test connectivity** before saving.
+- **OpenMP thread count** — adjust CPU parallelism for SWAN.
+- **Grid resolution** — coarser values (400–500 m) reduce run time; finer values (50–100 m) increase accuracy at higher compute cost. Changes take effect on the next SWAN run.
+- **Per-spot surf settings** — update breaker formula and surf height display per surf location. Changes take effect on the next SWAN run.
+
+#### Troubleshooting
+
+**SWAN binary not found**
+
+If the `[nearshore]` extra is installed but `swan` is not on PATH, the API logs a CRITICAL message at startup and surf forecast fields in API responses return null.
+
+```bash
+which swan          # check whether swan is on PATH
+swan --version      # confirm it runs
+
+# Install on Debian / Ubuntu:
+sudo apt-get install -y swan gfortran
+
+# Build from source:
+sudo bash scripts/install_swan.sh
+
+sudo systemctl restart weewx-clearskies-api
+```
+
+**SWAN runs taking more than 15 minutes**
+
+Increase the grid resolution in the admin interface (**SWAN+TruShore** → **Grid resolution**). A 200 m grid reduces run time to 2–5 minutes on most hardware. Only reduce below 200 m if your domain is small and your hardware supports the finer resolution.
+
+**HRRR wind data unavailable**
+
+If NOMADS returns an error or the current HRRR cycle has not yet posted, the SWAN runner skips that hourly cycle and retries on the next. Surf forecasts continue to serve from the most recent successful run. Check for errors:
+
+```bash
+journalctl -u weewx-clearskies-api | grep -i "hrrr\|trushore"
+```
+
+**Separated service unreachable**
+
+When Separated mode is configured and the remote TruShore service becomes unreachable, the API logs an ERROR and serves the last successful SWAN+TruShore cache. No manual intervention is required — the API resumes fetching fresh data within 60 seconds of the service recovering.
+
+```bash
+journalctl -u weewx-clearskies-api | grep -i "trushore"
+```
 
 ---
 
@@ -619,6 +756,10 @@ Configure optional features:
 - **Minimum magnitude** — filter threshold on the **Moment Magnitude scale (Mw)**, the standard used by the USGS and other agencies worldwide. The scale is logarithmic — each whole number represents roughly 32 times more energy released.
 - **Default time range** — how many days of earthquake history to show when a visitor first opens the Seismic page.
 
+### SWAN+TruShore (conditional)
+
+This step appears when marine is enabled with at least one surf location configured and the SWAN binary is found on PATH. It collects the deployment mode (Bundled or Separated service), the SWAN computational grid bounding box and resolution, the OpenMP thread count, and per-spot surf settings (breaker formula and surf height display convention). If SWAN is not installed, the wizard shows install instructions and a **Skip** button — you can proceed without surf forecasting and add SWAN later. See [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions) for full SWAN installation details.
+
 ### TLS configuration
 
 TLS (Transport Layer Security) is what makes the padlock icon appear in your browser's address bar and the URL start with `https://`. It encrypts traffic between visitors and your server.
@@ -711,6 +852,10 @@ The **Marine Locations** section manages marine, surf, fishing, and beach safety
 - **Delete** removes a location after confirmation.
 - **Test** checks whether NDBC buoys and CO-OPS tide stations are reachable near the location's coordinates, and whether an NWS marine zone id is stored. This is a best-effort connectivity check, not a live verification that a specific station is currently transmitting data.
 - **Update Bathymetry** (surf locations only) re-downloads the seafloor depth profile used for wave forecasting — useful after correcting a beach's facing direction.
+
+### Managing SWAN+TruShore
+
+The **SWAN+TruShore** section shows current SWAN model status (binary availability, version, last run time, and grid resolution), lets you switch between Bundled and Separated deployment modes, trigger a manual SWAN run, adjust OpenMP thread count and grid resolution, and update per-spot surf settings (breaker formula and surf height display preference). Changes to deployment mode or per-spot settings take effect on the next SWAN run. For installation details and background on the Bundled versus Separated modes, see [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions).
 
 ---
 
