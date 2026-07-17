@@ -2830,3 +2830,312 @@ def _render_coverage_html(cov: dict) -> str:
         + "</div>"
         + _coverage_populate_script(cov)
     )
+
+
+# ---------------------------------------------------------------------------
+# SWAN+TruShore admin section (T4.5)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/trushore", response_class=HTMLResponse)
+async def trushore_get(request: Request) -> HTMLResponse:
+    """Render the SWAN+TruShore admin section.
+
+    Non-HTMX requests (direct URL navigation) redirect to the admin landing
+    page — the trushore template is a fragment designed to load inside
+    #admin-content.
+
+    Reads:
+    - GET /setup/marine/swan-check for SWAN availability and status.
+    - GET /setup/current-config for current trushore + marine location config.
+    """
+    _require_session(request)
+    if not request.headers.get("HX-Request"):
+        from starlette.responses import RedirectResponse as _RR
+        return _RR(url="/admin/config#trushore", status_code=303)
+
+    client = _get_api_client()
+    error: str | None = None
+
+    # SWAN availability check
+    swan_info: dict[str, Any] = {
+        "available": False,
+        "version": None,
+        "path": None,
+        "cpu_cores": None,
+    }
+    if client is not None:
+        try:
+            swan_info = client._request("GET", "/setup/marine/swan-check").json()
+        except Exception:  # noqa: BLE001
+            logger.warning("trushore_get: swan-check failed", exc_info=True)
+            error = _("Could not reach the API — check that the API is running and configured.")
+
+    # Current configuration
+    config = _fetch_current_config()
+    trushore_cfg: dict[str, Any] = {}
+    surf_locations: dict[str, dict[str, Any]] = {}
+    if config is not None:
+        trushore_cfg = config.get("trushore") or {}
+        marine_cfg = config.get("marine") or {}
+        all_locations = _parse_marine_locations(marine_cfg)
+        surf_locations = {
+            slug: loc
+            for slug, loc in all_locations.items()
+            if "surf" in loc.get("activities", [])
+        }
+
+    return _render(request, "trushore.html", {
+        "swan_info": swan_info,
+        "trushore_cfg": trushore_cfg,
+        "surf_locations": surf_locations,
+        "error": error,
+        "flash": None,
+    })
+
+
+@router.post("/trushore/save", response_class=HTMLResponse)
+async def trushore_save(request: Request) -> HTMLResponse:
+    """Save SWAN+TruShore configuration via /setup/apply.
+
+    Updates deployment mode, service_url, omp_num_threads,
+    swan_grid_resolution_m, and per-spot surf settings (breaker_formula,
+    surf_height_display) for all surf locations.
+    """
+    _require_session(request)
+    form = await request.form()
+
+    client = _get_api_client()
+    if client is None:
+        return _render(request, "trushore.html", {
+            "swan_info": {"available": False},
+            "trushore_cfg": {},
+            "surf_locations": {},
+            "error": _("Cannot connect to the API — check that the API is running and configured."),
+            "flash": None,
+        })
+
+    # Read current config so we can merge changes into a full apply payload.
+    config = _fetch_current_config()
+    if config is None:
+        return _render(request, "trushore.html", {
+            "swan_info": {"available": False},
+            "trushore_cfg": {},
+            "surf_locations": {},
+            "error": _("Cannot connect to the API — check that the API is running and configured."),
+            "flash": None,
+        })
+
+    # Build trushore config from form
+    deployment_mode = str(form.get("trushore_deployment_mode", "bundled")).strip()
+    if deployment_mode not in ("bundled", "separated"):
+        deployment_mode = "bundled"
+
+    service_url = str(form.get("trushore_service_url", "")).strip()
+    if deployment_mode == "separated" and not service_url:
+        swan_info: dict[str, Any] = {}
+        try:
+            swan_info = client._request("GET", "/setup/marine/swan-check").json()
+        except Exception:  # noqa: BLE001
+            pass
+        marine_cfg = config.get("marine") or {}
+        all_locations = _parse_marine_locations(marine_cfg)
+        surf_locations = {
+            slug: loc for slug, loc in all_locations.items()
+            if "surf" in loc.get("activities", [])
+        }
+        return _render(request, "trushore.html", {
+            "swan_info": swan_info,
+            "trushore_cfg": config.get("trushore") or {},
+            "surf_locations": surf_locations,
+            "error": _("Service URL is required for separated mode."),
+            "flash": None,
+        }, status_code=422)
+
+    omp_threads_raw = str(form.get("trushore_omp_num_threads", "0")).strip()
+    try:
+        omp_threads = max(0, int(omp_threads_raw))
+    except ValueError:
+        omp_threads = 0
+
+    resolution_raw = str(form.get("trushore_swan_grid_resolution_m", "200")).strip()
+    try:
+        resolution = int(resolution_raw)
+        if not (50 <= resolution <= 1000):
+            resolution = 200
+    except ValueError:
+        resolution = 200
+
+    trushore_payload: dict[str, Any] = {
+        "omp_num_threads": omp_threads,
+        "swan_grid_resolution_m": resolution,
+        "service_url": service_url if deployment_mode == "separated" else None,
+    }
+
+    # Build per-spot surf settings updates.
+    # We update breaker_formula and surf_height_display within each surf
+    # location's surf sub-dict, then reconstruct the full marine locations
+    # payload so /setup/apply gets a consistent picture.
+    marine_cfg = config.get("marine") or {}
+    all_locations = _parse_marine_locations(marine_cfg)
+    updated_locations: list[dict[str, Any]] = []
+    for loc_id, loc in all_locations.items():
+        entry: dict[str, Any] = {
+            "id": loc_id,
+            "name": loc.get("name", ""),
+            "lat": loc.get("lat", 0.0),
+            "lon": loc.get("lon", 0.0),
+            "activities": loc.get("activities", []),
+        }
+        for key in ("ndbc_station_ids", "coops_station_ids", "nws_marine_zone_id"):
+            if loc.get(key):
+                entry[key] = loc[key]
+        if loc.get("surf"):
+            surf_out = dict(loc["surf"])
+            if "surf" in loc.get("activities", []):
+                bf = str(form.get(f"surf_{loc_id}_breaker_formula", "")).strip()
+                if bf in ("komar_gaughan", "caldwell"):
+                    surf_out["breaker_formula"] = bf
+                shd = str(form.get(f"surf_{loc_id}_surf_height_display", "")).strip()
+                if shd in ("face", "hawaiian"):
+                    surf_out["surf_height_display"] = shd
+                # Convert directional_exposure list to dict for API
+                exposure = surf_out.get("directional_exposure")
+                if isinstance(exposure, list):
+                    surf_out["directional_exposure"] = {d: True for d in exposure}
+            entry["surf"] = surf_out
+        if loc.get("fishing"):
+            entry["fishing"] = loc["fishing"]
+        if loc.get("beach_safety"):
+            entry["beach_safety"] = loc["beach_safety"]
+        updated_locations.append(entry)
+
+    apply_payload: dict[str, Any] = {
+        "trushore": trushore_payload,
+        "marine": {"locations": updated_locations} if updated_locations else {},
+    }
+
+    try:
+        client.apply(apply_payload)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("trushore_save: apply failed", exc_info=True)
+        swan_info_r: dict[str, Any] = {}
+        try:
+            swan_info_r = client._request("GET", "/setup/marine/swan-check").json()
+        except Exception:  # noqa: BLE001
+            pass
+        surf_locations = {
+            slug: loc for slug, loc in all_locations.items()
+            if "surf" in loc.get("activities", [])
+        }
+        return _render(request, "trushore.html", {
+            "swan_info": swan_info_r,
+            "trushore_cfg": config.get("trushore") or {},
+            "surf_locations": surf_locations,
+            "error": _("API error: {detail}").format(detail=str(exc)),
+            "flash": None,
+        }, status_code=422)
+
+    # Re-fetch to show updated state
+    updated_config = _fetch_current_config()
+    updated_trushore = (updated_config or {}).get("trushore") or {}
+    swan_info_after: dict[str, Any] = {}
+    try:
+        swan_info_after = client._request("GET", "/setup/marine/swan-check").json()
+    except Exception:  # noqa: BLE001
+        pass
+
+    updated_marine = (updated_config or {}).get("marine") or {}
+    updated_all = _parse_marine_locations(updated_marine)
+    updated_surf_locs = {
+        slug: loc for slug, loc in updated_all.items()
+        if "surf" in loc.get("activities", [])
+    }
+
+    return _render(request, "trushore.html", {
+        "swan_info": swan_info_after,
+        "trushore_cfg": updated_trushore,
+        "surf_locations": updated_surf_locs,
+        "error": None,
+        "flash": _("SWAN+TruShore settings saved."),
+    })
+
+
+@router.post("/trushore/trigger-run", response_class=HTMLResponse)
+async def trushore_trigger_run(request: Request) -> HTMLResponse:
+    """HTMX: trigger a manual SWAN run via the API."""
+    _require_session(request)
+    client = _get_api_client()
+    if client is None:
+        return HTMLResponse(
+            '<span class="error-text">'
+            + _marine_esc(_("API unreachable."))
+            + "</span>"
+        )
+    try:
+        # POST to the TruShore trigger endpoint on the API.
+        # The API routes this to the bundled runner or remote service as
+        # appropriate for the configured deployment mode.
+        client._request("POST", "/setup/marine/trushore-trigger")
+        return HTMLResponse(
+            '<span class="success-text">'
+            + _marine_esc(_("SWAN run triggered. Results will appear after the run completes."))
+            + "</span>"
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("trushore_trigger_run: API error", exc_info=True)
+        return HTMLResponse(
+            '<span class="error-text">'
+            + _marine_esc(_("SWAN run failed: {detail}").format(detail=str(exc)))
+            + "</span>"
+        )
+
+
+@router.post("/trushore/test-service", response_class=HTMLResponse)
+async def trushore_test_service(request: Request) -> HTMLResponse:
+    """HTMX: test connectivity to a separated TruShore service URL."""
+    _require_session(request)
+    form = await request.form()
+    service_url = str(form.get("trushore_service_url", "")).strip()
+
+    if not service_url:
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Enter a service URL before testing."))
+            + "</span>"
+        )
+
+    client = _get_api_client()
+    if client is None:
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("API unreachable."))
+            + "</span>"
+        )
+
+    try:
+        resp = client._request(
+            "GET",
+            "/setup/marine/trushore-check",
+            params={"service_url": service_url},
+        )
+        data = resp.json()
+        if data.get("reachable"):
+            return HTMLResponse(
+                '<span class="success-text">'
+                + html_escape(_("Service is reachable."))
+                + "</span>"
+            )
+        detail = data.get("error", _("Unknown error"))
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Service test failed: {error}").format(error=detail))
+            + "</span>"
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("trushore_test_service: error", exc_info=True)
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Could not reach the API: {detail}").format(detail=str(exc)))
+            + "</span>"
+        )

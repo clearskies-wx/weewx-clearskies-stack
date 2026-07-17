@@ -1,0 +1,271 @@
+{% from "macros/help_panel.html" import help_trigger %}
+{# -------------------------------------------------------------------------
+   Step 14: SWAN+TruShore Nearshore Model
+   Shown only when marine is enabled, at least one location has surf activity,
+   and the SWAN binary is available (checked by GET /setup/marine/swan-check).
+   If SWAN is not available, the marine POST skips this step and goes to TLS.
+   ------------------------------------------------------------------------- #}
+
+<article>
+  <header>
+    <h2>{{ _("SWAN+TruShore Nearshore Model") }}</h2>
+    {{ help_trigger("/wizard/help/step_trushore") }}
+  </header>
+
+  {% if error %}
+  <div role="alert" class="alert-error">
+    <strong>{{ _("Error.") }}</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {% if not swan_info.available %}
+  {# -------------------------------------------------------------------- #}
+  {# SWAN binary not found — show install instructions and a Skip button   #}
+  {# -------------------------------------------------------------------- #}
+  <div role="alert" class="alert-warning" style="margin-block:1rem;padding:1rem;border:1px solid var(--pico-del-color, #fca5a5);border-radius:var(--pico-border-radius);background:var(--pico-del-background-color, #fef2f2)">
+    <strong>{{ _("SWAN binary not found.") }}</strong>
+    <p>{{ _("The SWAN spectral wave model is not installed on this host. Surf forecasts will fall back to WaveWatch III offshore data without nearshore refinement.") }}</p>
+    <p>{{ _("To enable nearshore wave modeling, install SWAN and the clearskies[nearshore] Python extra, then restart the setup wizard.") }}</p>
+    <details style="margin-block-start:0.75rem">
+      <summary style="cursor:pointer;font-weight:600">{{ _("Install instructions") }}</summary>
+      <pre style="font-size:0.8rem;overflow-x:auto;white-space:pre-wrap;margin-block-start:0.5rem"><code># Debian / Ubuntu
+sudo apt-get install -y swan gfortran
+pip install clearskies[nearshore]
+
+# From source (any Linux)
+git clone https://github.com/SWANTEAM/SWAN.git
+cd SWAN
+make config
+make
+sudo cp swan /usr/local/bin/swan
+pip install clearskies[nearshore]</code></pre>
+    </details>
+  </div>
+
+  <nav style="display:flex;justify-content:space-between;margin-block-start:1.5rem">
+    <a href="/wizard/marine"
+       hx-get="/wizard/marine"
+       hx-target="#wizard-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       role="button" class="secondary">{{ _("Back") }}</a>
+    <a href="/wizard/tls"
+       hx-get="/wizard/tls"
+       hx-target="#wizard-content"
+       hx-swap="innerHTML"
+       hx-push-url="true"
+       role="button">{{ _("Skip — continue without SWAN") }}</a>
+  </nav>
+
+  {% else %}
+  {# -------------------------------------------------------------------- #}
+  {# SWAN available — show the configuration form                          #}
+  {# -------------------------------------------------------------------- #}
+
+  {# SWAN version badge #}
+  {% if swan_info.version %}
+  <p class="pico-color-green-400" style="font-size:0.875rem;margin-block-end:1rem">
+    &#x2705; {{ _("SWAN {version} found at {path}").format(version=swan_info.version, path=swan_info.path or "PATH") }}
+    {% if swan_info.cpu_cores %}
+      &nbsp;&middot;&nbsp; {{ _("{n} CPU cores available").format(n=swan_info.cpu_cores) }}
+    {% endif %}
+  </p>
+  {% endif %}
+
+  <form hx-post="/wizard/trushore"
+        hx-target="#wizard-content"
+        hx-swap="innerHTML"
+        hx-push-url="true"
+        hx-disabled-elt="find button[type='submit']"
+        hx-indicator="#trushore-save-indicator"
+        autocomplete="off">
+
+    {# ---------------------------------------------------------------- #}
+    {# Deployment mode                                                   #}
+    {# ---------------------------------------------------------------- #}
+    <fieldset>
+      <legend>{{ _("Deployment mode") }}</legend>
+      <label>
+        <input type="radio" name="trushore_deployment_mode" value="bundled"
+               {% if state.trushore_deployment_mode != "separated" %}checked{% endif %}
+               onchange="document.getElementById('trushore-service-url-row').style.display='none'">
+        <strong>{{ _("Bundled (default)") }}</strong>
+        &nbsp;<small>{{ _("SWAN runs as a subprocess on this host. No additional service needed.") }}</small>
+      </label>
+      <label>
+        <input type="radio" name="trushore_deployment_mode" value="separated"
+               {% if state.trushore_deployment_mode == "separated" %}checked{% endif %}
+               onchange="document.getElementById('trushore-service-url-row').style.display=''">
+        <strong>{{ _("Separated service") }}</strong>
+        &nbsp;<small>{{ _("SWAN runs on a separate host. Enter its URL below.") }}</small>
+      </label>
+    </fieldset>
+
+    {# Service URL (shown only in separated mode) #}
+    <div id="trushore-service-url-row"
+         {% if state.trushore_deployment_mode != "separated" %}style="display:none"{% endif %}>
+      <label for="trushore-service-url">{{ _("Service URL") }}</label>
+      <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap">
+        <input type="url" id="trushore-service-url" name="trushore_service_url"
+               value="{{ state.trushore_service_url }}"
+               placeholder="https://trushore.example.com"
+               aria-describedby="trushore-service-url-help"
+               style="flex:1;min-width:0">
+        <button type="button" class="secondary outline"
+                style="white-space:nowrap;flex-shrink:0"
+                hx-post="/wizard/trushore/test-service"
+                hx-include="#trushore-service-url"
+                hx-target="#trushore-test-result"
+                hx-swap="innerHTML"
+                hx-disabled-elt="this">
+          {{ _("Test connectivity") }}
+        </button>
+      </div>
+      <small id="trushore-service-url-help">
+        {{ _("URL of the remote SWAN+TruShore service, including scheme and port (e.g. https://trushore.example.com:8766). The service must expose a /health endpoint.") }}
+      </small>
+      <div id="trushore-test-result" style="margin-block-start:0.25rem;font-size:0.875rem"></div>
+    </div>
+
+    {# ---------------------------------------------------------------- #}
+    {# SWAN grid settings                                                #}
+    {# ---------------------------------------------------------------- #}
+    <h3>{{ _("SWAN computational grid") }}</h3>
+    <p><small>{{ _("The bounding box and resolution define the geographic area SWAN models. Default values are derived from your marine location coordinates plus a 0.2° margin.") }}</small></p>
+
+    {# Compute default bbox from marine locations #}
+    {% set lats = [] %}
+    {% set lons = [] %}
+    {% for slug, loc in state.marine_locations.items() %}
+      {% if loc.lat is not none %}{% do lats.append(loc.lat) %}{% endif %}
+      {% if loc.lon is not none %}{% do lons.append(loc.lon) %}{% endif %}
+    {% endfor %}
+    {% if lats and lons %}
+      {% set default_south = (lats | min) - 0.2 %}
+      {% set default_north = (lats | max) + 0.2 %}
+      {% set default_west  = (lons | min) - 0.2 %}
+      {% set default_east  = (lons | max) + 0.2 %}
+    {% else %}
+      {% set default_south = "" %}
+      {% set default_north = "" %}
+      {% set default_west  = "" %}
+      {% set default_east  = "" %}
+    {% endif %}
+
+    <div class="grid">
+      <div>
+        <label for="trushore-grid-south">{{ _("South boundary (°lat)") }}</label>
+        <input type="number" step="0.01" id="trushore-grid-south" name="trushore_grid_south"
+               value="{{ default_south }}" placeholder="-90 to 90">
+      </div>
+      <div>
+        <label for="trushore-grid-north">{{ _("North boundary (°lat)") }}</label>
+        <input type="number" step="0.01" id="trushore-grid-north" name="trushore_grid_north"
+               value="{{ default_north }}" placeholder="-90 to 90">
+      </div>
+      <div>
+        <label for="trushore-grid-west">{{ _("West boundary (°lon)") }}</label>
+        <input type="number" step="0.01" id="trushore-grid-west" name="trushore_grid_west"
+               value="{{ default_west }}" placeholder="-180 to 180">
+      </div>
+      <div>
+        <label for="trushore-grid-east">{{ _("East boundary (°lon)") }}</label>
+        <input type="number" step="0.01" id="trushore-grid-east" name="trushore_grid_east"
+               value="{{ default_east }}" placeholder="-180 to 180">
+      </div>
+    </div>
+
+    <label for="trushore-resolution">{{ _("Grid resolution (m)") }}</label>
+    <input type="number" step="50" min="50" max="1000" id="trushore-resolution"
+           name="trushore_swan_grid_resolution_m"
+           value="{{ state.trushore_swan_grid_resolution_m }}"
+           aria-describedby="trushore-resolution-help">
+    <small id="trushore-resolution-help">
+      {{ _("Spatial resolution of the SWAN grid in metres (50–1000). Lower values are more accurate but slower to compute. 200 m is recommended for most setups.") }}
+    </small>
+
+    {# ---------------------------------------------------------------- #}
+    {# OMP threads                                                       #}
+    {# ---------------------------------------------------------------- #}
+    <label for="trushore-omp-threads">{{ _("OpenMP thread count") }}</label>
+    <input type="number" step="1" min="0" id="trushore-omp-threads"
+           name="trushore_omp_num_threads"
+           value="{{ state.trushore_omp_num_threads }}"
+           aria-describedby="trushore-omp-help">
+    <small id="trushore-omp-help">
+      {{ _("Number of CPU threads SWAN may use (0 = use all available cores). Limit this on shared hosts to avoid monopolizing CPU resources.") }}
+      {% if swan_info.cpu_cores %}
+        {{ _("This host has {n} cores.").format(n=swan_info.cpu_cores) }}
+      {% endif %}
+    </small>
+
+    {# ---------------------------------------------------------------- #}
+    {# Per-spot surf model settings                                      #}
+    {# ---------------------------------------------------------------- #}
+    {% if surf_locations %}
+    <h3>{{ _("Per-spot surf model settings") }}</h3>
+    <p><small>{{ _("These settings apply per surf location and control how SWAN+TruShore calculates breaking wave heights and the measurement convention shown on your weather site.") }}</small></p>
+
+    {% for slug, loc in surf_locations.items() %}
+    {% set surf = loc.get("surf", {}) %}
+    <fieldset style="padding:0.75rem 1rem;margin-block:0.75rem;border:1px solid var(--pico-muted-border-color);border-radius:var(--pico-border-radius)">
+      <legend><strong>{{ loc.get("name", slug) }}</strong></legend>
+
+      <label for="surf-{{ slug }}-breaker">{{ _("Breaker formula") }}</label>
+      <select id="surf-{{ slug }}-breaker" name="surf_{{ slug }}_breaker_formula"
+              aria-describedby="surf-{{ slug }}-breaker-help">
+        <option value="komar_gaughan" {% if surf.get("breaker_formula", "komar_gaughan") == "komar_gaughan" %}selected{% endif %}>
+          {{ _("Komar-Gaughan (general purpose)") }}
+        </option>
+        <option value="caldwell" {% if surf.get("breaker_formula") == "caldwell" %}selected{% endif %}>
+          {{ _("Caldwell (volcanic island coasts)") }}
+        </option>
+      </select>
+      <small id="surf-{{ slug }}-breaker-help">
+        {{ _("Komar-Gaughan is a general-purpose formula suitable for most coastlines. Caldwell is empirically tuned for steep volcanic island coasts (Hawaii, Indonesia, Tahiti) and automatically falls back to Komar-Gaughan for short-period swell (under 10 s).") }}
+      </small>
+
+      <label for="surf-{{ slug }}-display" style="margin-block-start:0.75rem">{{ _("Surf height display") }}</label>
+      <select id="surf-{{ slug }}-display" name="surf_{{ slug }}_surf_height_display"
+              aria-describedby="surf-{{ slug }}-display-help">
+        <option value="face" {% if surf.get("surf_height_display", "face") == "face" %}selected{% endif %}>
+          {{ _("Face height (US mainland / Europe)") }}
+        </option>
+        <option value="hawaiian" {% if surf.get("surf_height_display") == "hawaiian" %}selected{% endif %}>
+          {{ _("Hawaiian / back-of-wave (Hawaii / Australia)") }}
+        </option>
+      </select>
+      <small id="surf-{{ slug }}-display-help">
+        {{ _("Face height measures trough-to-crest of the breaking wave face (the standard on the US mainland and in Europe). Hawaiian / back-of-wave measures from the back of the wave — roughly half the face height — the convention used in Hawaii and Australia.") }}
+      </small>
+    </fieldset>
+    {% endfor %}
+    {% endif %}
+
+    {# ---------------------------------------------------------------- #}
+    {# Navigation                                                        #}
+    {# ---------------------------------------------------------------- #}
+    <div id="trushore-save-indicator" style="display:none;align-items:center;gap:0.5rem;padding:0.5rem 0;color:var(--pico-muted-color);font-size:0.875rem">
+      <span class="spinner-ring" aria-hidden="true"></span>
+      <span>{{ _("Saving…") }}</span>
+    </div>
+
+    <nav style="display:flex;justify-content:space-between;margin-block-start:1.5rem">
+      <a href="/wizard/marine"
+         hx-get="/wizard/marine"
+         hx-target="#wizard-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button" class="secondary">{{ _("Back") }}</a>
+      <button type="submit">{{ _("Next — TLS / HTTPS") }}</button>
+    </nav>
+
+  </form>
+  {% endif %}
+
+</article>
+
+<style>
+.error-text { color: var(--pico-del-color, #dc2626); }
+.success-text { color: var(--pico-ins-color, #16a34a); }
+</style>
