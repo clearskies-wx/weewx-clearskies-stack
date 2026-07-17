@@ -239,6 +239,22 @@ class WizardState:
     # alerts provider is selected.
     marine_alert_radius_miles: int = 0
 
+    # SWAN+TruShore nearshore model configuration (T4.4).
+    # Shown only when the [nearshore] pip extra is detected (swan-check passes).
+    # trushore_deployment_mode: "bundled" (SWAN runs as a subprocess inside
+    #   the API, no service_url needed) or "separated" (operator provides a
+    #   service_url for a remote SWAN+TruShore instance).
+    trushore_deployment_mode: str = "bundled"
+    # For "separated" mode: URL of the remote SWAN+TruShore service.
+    trushore_service_url: str = ""
+    # OpenMP thread count for the SWAN subprocess. 0 = use all CPU cores;
+    # positive values limit SWAN to that many threads (useful on multi-tenant
+    # hosts where SWAN should not monopolize all cores).
+    trushore_omp_num_threads: int = 0
+    # SWAN computational grid resolution in metres (50–1000). Lower = finer
+    # resolution = more accurate but slower. 200 m is the recommended default.
+    trushore_swan_grid_resolution_m: int = 200
+
     # Registry-keyed values for wizard steps that delegate field rendering
     # to the config registry macros.  Key = registry config_key (e.g. "enabled",
     # "image_url"), value = current value.  Populated by step GET handlers and

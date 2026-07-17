@@ -449,7 +449,13 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
         surf = loc_data.get("surf")
         if isinstance(surf, dict) and surf:
             surf_out: dict[str, Any] = {}
-            for k in ("beach_facing_degrees", "bottom_type", "topographic_feature"):
+            for k in (
+                "beach_facing_degrees",
+                "bottom_type",
+                "topographic_feature",
+                "breaker_formula",
+                "surf_height_display",
+            ):
                 if surf.get(k) is not None:
                     surf_out[k] = surf[k]
             exposure = surf.get("directional_exposure")
@@ -483,6 +489,40 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
         locations.append(entry)
 
     return {"locations": locations}
+
+
+def build_trushore_payload(state: WizardState) -> dict[str, Any]:
+    """Build the ``trushore`` payload for POST /setup/apply (T4.4).
+
+    Mirrors ``build_marine_payload()``: a pure function from WizardState to
+    the dict shape the API's ApplyRequest ``trushore`` field expects.
+
+    Two deployment modes:
+    - **Bundled** (default): ``service_url`` is ``None`` — SWAN runs as a
+      subprocess inside the API process.
+    - **Separated**: ``service_url`` points to a remote SWAN+TruShore instance.
+
+    Args:
+        state: The current WizardState, populated by the trushore wizard step
+               (trushore_deployment_mode, trushore_service_url,
+               trushore_omp_num_threads, trushore_swan_grid_resolution_m).
+
+    Returns:
+        Dict suitable for the ``"trushore"`` key in the POST /setup/apply
+        payload.  The caller adds it to api_payload unconditionally when the
+        trushore step was completed — the API accepts an empty/null service_url
+        to mean "bundled mode."
+    """
+    payload: dict[str, Any] = {
+        "omp_num_threads": state.trushore_omp_num_threads,
+        "swan_grid_resolution_m": state.trushore_swan_grid_resolution_m,
+    }
+    if state.trushore_deployment_mode == "separated" and state.trushore_service_url:
+        payload["service_url"] = state.trushore_service_url
+    else:
+        # Explicit None signals bundled mode to the API.
+        payload["service_url"] = None
+    return payload
 
 
 def write_caddy_env(state: WizardState, config_dir: Path) -> Path | None:

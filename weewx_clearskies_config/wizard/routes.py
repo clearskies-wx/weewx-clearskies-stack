@@ -35,12 +35,15 @@ Route summary:
   GET  /wizard/features         — step 12 fragment (feature settings: seismic page)
   POST /wizard/features         — save feature settings, return step 13 fragment (marine)
   GET  /wizard/marine           — step 13 fragment (marine location configuration)
-  POST /wizard/marine           — save marine config, return step 14 fragment (TLS)
+  POST /wizard/marine           — save marine config, return step 14 fragment (TruShore or TLS)
   POST /wizard/marine/discover-stations — HTMX: discover nearby NDBC/CO-OPS stations + NWS marine zone
   GET  /wizard/marine/species           — HTMX: load the species checklist for a fishing location's
                                            target category (T2.5)
-  GET  /wizard/tls              — step 14 fragment (TLS / HTTPS configuration)
-  POST /wizard/tls              — save TLS config, return step 15 fragment (review)
+  GET  /wizard/trushore         — step 14 fragment (SWAN+TruShore nearshore model setup)
+  POST /wizard/trushore         — save TruShore config, return step 15 fragment (TLS)
+  POST /wizard/trushore/test-service — HTMX: test connectivity to a separated TruShore service URL
+  GET  /wizard/tls              — step 15 fragment (TLS / HTTPS configuration)
+  POST /wizard/tls              — save TLS config, return step 16 fragment (review)
   GET  /wizard/step/9           — step 15 fragment (review summary)
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
@@ -83,6 +86,7 @@ from weewx_clearskies_config.wizard.config_writer import (
     apply_wizard,
     build_marine_payload,
     build_skin_conf_payload,
+    build_trushore_payload,
     write_branding_json,
 )
 from weewx_clearskies_config.wizard.known_apis import load_known_apis, verify_or_pin_fingerprint
@@ -3017,6 +3021,24 @@ async def step_marine_post(request: Request) -> HTMLResponse:
     state.marine_observation_ttl_minutes = ttl_minutes if ttl_minutes in (15, 30, 60) else 30
 
     save_wizard_state(session_id, state)
+
+    # Advance to the TruShore step when marine is enabled AND at least one
+    # location has surf activity AND the SWAN binary is available (checked via
+    # GET /setup/marine/swan-check on the API).  In all other cases skip
+    # straight to TLS to preserve the existing no-surf flow.
+    has_surf_spot = any(
+        "surf" in loc_data.get("activities", [])
+        for loc_data in new_locations.values()
+    )
+    if has_surf_spot:
+        try:
+            client = _get_api_client(state)
+            swan_info = client._request("GET", "/setup/marine/swan-check").json()
+            if swan_info.get("available"):
+                return await step_trushore_get(request)
+        except Exception:  # noqa: BLE001
+            logger.debug("swan-check failed or returned unavailable — skipping trushore step")
+
     return await step_tls_get(request)
 
 
@@ -3483,9 +3505,188 @@ async def _handle_tls_upload(form: Any, field_name: str) -> tuple[str | None, st
     return str(dest), None
 
 
+@router.get("/trushore", response_class=HTMLResponse)
+async def step_trushore_get(request: Request) -> HTMLResponse:
+    """Step 14: SWAN+TruShore — render the nearshore model setup form.
+
+    This step is shown only when:
+    - marine_enabled is True AND at least one location has surf activity
+    - The SWAN binary is available (checked via GET /setup/marine/swan-check)
+
+    If SWAN is not available, the marine POST skips this step entirely and
+    advances directly to TLS.  The step can also be navigated to directly
+    (e.g. after a validation error on the TruShore POST).
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+
+    # Query SWAN availability from the API.
+    swan_info: dict[str, Any] = {"available": False, "version": None, "path": None, "cpu_cores": None}
+    error: str | None = None
+    try:
+        client = _get_api_client(state)
+        swan_info = client._request("GET", "/setup/marine/swan-check").json()
+    except ValueError:
+        error = _("API not connected. Go back to step 1 and reconnect.")
+    except Exception:  # noqa: BLE001
+        logger.debug("step_trushore_get: swan-check failed", exc_info=True)
+        error = _("Could not check SWAN availability — API may be unreachable.")
+
+    # Collect surf-enabled location names for the per-spot section.
+    surf_locations: dict[str, dict[str, Any]] = {
+        slug: loc
+        for slug, loc in state.marine_locations.items()
+        if "surf" in loc.get("activities", [])
+    }
+
+    return _render(
+        request,
+        "step_trushore.html",
+        {
+            "step": 14,
+            "state": state,
+            "swan_info": swan_info,
+            "surf_locations": surf_locations,
+            "error": error,
+        },
+    )
+
+
+@router.post("/trushore", response_class=HTMLResponse)
+async def step_trushore_post(request: Request) -> HTMLResponse:
+    """Save SWAN+TruShore configuration and advance to step 15 (TLS)."""
+    session_id = _require_session(request)
+    form = await request.form()
+    state = get_wizard_state(session_id)
+
+    # Deployment mode
+    deployment_mode = str(form.get("trushore_deployment_mode", "bundled")).strip()
+    if deployment_mode not in ("bundled", "separated"):
+        deployment_mode = "bundled"
+    state.trushore_deployment_mode = deployment_mode
+
+    # Service URL (only relevant for separated mode)
+    service_url = str(form.get("trushore_service_url", "")).strip()
+    if deployment_mode == "separated" and not service_url:
+        # Re-render step with validation error
+        swan_info: dict[str, Any] = {"available": True, "version": None, "path": None, "cpu_cores": None}
+        try:
+            client = _get_api_client(state)
+            swan_info = client._request("GET", "/setup/marine/swan-check").json()
+        except Exception:  # noqa: BLE001
+            pass
+        surf_locations = {
+            slug: loc
+            for slug, loc in state.marine_locations.items()
+            if "surf" in loc.get("activities", [])
+        }
+        return _render(
+            request,
+            "step_trushore.html",
+            {
+                "step": 14,
+                "state": state,
+                "swan_info": swan_info,
+                "surf_locations": surf_locations,
+                "error": _("Service URL is required for separated mode."),
+            },
+            status_code=422,
+        )
+    state.trushore_service_url = service_url
+
+    # OMP threads
+    omp_threads_raw = str(form.get("trushore_omp_num_threads", "0")).strip()
+    try:
+        omp_threads = max(0, int(omp_threads_raw))
+    except ValueError:
+        omp_threads = 0
+    state.trushore_omp_num_threads = omp_threads
+
+    # Grid resolution
+    resolution_raw = str(form.get("trushore_swan_grid_resolution_m", "200")).strip()
+    try:
+        resolution = int(resolution_raw)
+        if not (50 <= resolution <= 1000):
+            resolution = 200
+    except ValueError:
+        resolution = 200
+    state.trushore_swan_grid_resolution_m = resolution
+
+    # Per-spot surf settings: breaker_formula and surf_height_display
+    # Stored in marine_locations[slug]["surf"] — same dict used by build_marine_payload().
+    for slug, loc in state.marine_locations.items():
+        if "surf" not in loc.get("activities", []):
+            continue
+        surf = dict(loc.get("surf", {}))
+
+        bf = str(form.get(f"surf_{slug}_breaker_formula", "")).strip()
+        if bf in ("komar_gaughan", "caldwell"):
+            surf["breaker_formula"] = bf
+
+        shd = str(form.get(f"surf_{slug}_surf_height_display", "")).strip()
+        if shd in ("face", "hawaiian"):
+            surf["surf_height_display"] = shd
+
+        loc["surf"] = surf
+        state.marine_locations[slug] = loc
+
+    save_wizard_state(session_id, state)
+    return await step_tls_get(request)
+
+
+@router.post("/trushore/test-service", response_class=HTMLResponse)
+async def trushore_test_service(request: Request) -> HTMLResponse:
+    """HTMX: test connectivity to a separated TruShore service URL.
+
+    Tests whether the supplied service_url is reachable by sending a GET
+    request to ``{service_url}/health`` via the API (which may be on a
+    different network segment than the wizard UI host).
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    form = await request.form()
+    service_url = str(form.get("trushore_service_url", "")).strip()
+
+    if not service_url:
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Enter a service URL before testing."))
+            + "</span>"
+        )
+
+    try:
+        client = _get_api_client(state)
+        resp = client._request(
+            "GET",
+            "/setup/marine/trushore-check",
+            params={"service_url": service_url},
+        )
+        data = resp.json()
+        if data.get("reachable"):
+            return HTMLResponse(
+                '<span class="success-text">'
+                + html_escape(_("Service is reachable."))
+                + "</span>"
+            )
+        detail = data.get("error", _("Unknown error"))
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Service test failed: {error}").format(error=detail))
+            + "</span>",
+            status_code=200,
+        )
+    except Exception:  # noqa: BLE001
+        logger.debug("trushore_test_service: error", exc_info=True)
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Could not reach the API to test the service URL."))
+            + "</span>"
+        )
+
+
 @router.get("/tls", response_class=HTMLResponse)
 async def step_tls_get(request: Request) -> HTMLResponse:
-    """Step 14: TLS — render the certificate mode selection form."""
+    """Step 15: TLS — render the certificate mode selection form."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     if not state.tls_mode:
@@ -3818,6 +4019,18 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     marine_payload = build_marine_payload(state)
     if marine_payload:
         api_payload["marine"] = marine_payload
+
+    # SWAN+TruShore nearshore model (T4.4) — included when marine is enabled
+    # and the operator has at least one surf location.  The trushore wizard
+    # step is shown under these same conditions (when SWAN is available), so
+    # the payload always reflects the operator's choices from that step.
+    # When the step was skipped (SWAN not available), we still send the
+    # default payload so the API can initialize sane defaults.
+    if marine_payload and any(
+        "surf" in loc.get("activities", [])
+        for loc in state.marine_locations.values()
+    ):
+        api_payload["trushore"] = build_trushore_payload(state)
 
     # Unit configuration — sent to the API so it writes to api.conf [units].
     # This is the single unit authority (T2A.5, ADR-042).
