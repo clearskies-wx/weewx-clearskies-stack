@@ -44,7 +44,7 @@ Route summary:
   POST /wizard/trushore/test-service — HTMX: test connectivity to a separated TruShore service URL
   GET  /wizard/tls              — step 15 fragment (TLS / HTTPS configuration)
   POST /wizard/tls              — save TLS config, return step 16 fragment (review)
-  GET  /wizard/step/9           — step 15 fragment (review summary)
+  GET  /wizard/step/9           — step 16 fragment (review summary)
   POST /wizard/apply            — send config to API, write local config files, render completion page
 """
 
@@ -3539,6 +3539,19 @@ async def step_trushore_get(request: Request) -> HTMLResponse:
         if "surf" in loc.get("activities", [])
     }
 
+    # Pre-compute default SWAN grid bbox from marine location coordinates.
+    lats = [loc["lat"] for loc in state.marine_locations.values() if loc.get("lat") is not None]
+    lons = [loc["lon"] for loc in state.marine_locations.values() if loc.get("lon") is not None]
+    if lats and lons:
+        default_bbox = {
+            "south": round(min(lats) - 0.2, 2),
+            "north": round(max(lats) + 0.2, 2),
+            "west": round(min(lons) - 0.2, 2),
+            "east": round(max(lons) + 0.2, 2),
+        }
+    else:
+        default_bbox = {"south": "", "north": "", "west": "", "east": ""}
+
     return _render(
         request,
         "step_trushore.html",
@@ -3547,6 +3560,7 @@ async def step_trushore_get(request: Request) -> HTMLResponse:
             "state": state,
             "swan_info": swan_info,
             "surf_locations": surf_locations,
+            "default_bbox": default_bbox,
             "error": error,
         },
     )
@@ -3580,6 +3594,17 @@ async def step_trushore_post(request: Request) -> HTMLResponse:
             for slug, loc in state.marine_locations.items()
             if "surf" in loc.get("activities", [])
         }
+        lats = [loc["lat"] for loc in state.marine_locations.values() if loc.get("lat") is not None]
+        lons = [loc["lon"] for loc in state.marine_locations.values() if loc.get("lon") is not None]
+        if lats and lons:
+            default_bbox = {
+                "south": round(min(lats) - 0.2, 2),
+                "north": round(max(lats) + 0.2, 2),
+                "west": round(min(lons) - 0.2, 2),
+                "east": round(max(lons) + 0.2, 2),
+            }
+        else:
+            default_bbox = {"south": "", "north": "", "west": "", "east": ""}
         return _render(
             request,
             "step_trushore.html",
@@ -3588,6 +3613,7 @@ async def step_trushore_post(request: Request) -> HTMLResponse:
                 "state": state,
                 "swan_info": swan_info,
                 "surf_locations": surf_locations,
+                "default_bbox": default_bbox,
                 "error": _("Service URL is required for separated mode."),
             },
             status_code=422,

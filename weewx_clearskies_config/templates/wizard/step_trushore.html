@@ -133,45 +133,26 @@ pip install clearskies[nearshore]</code></pre>
     <h3>{{ _("SWAN computational grid") }}</h3>
     <p><small>{{ _("The bounding box and resolution define the geographic area SWAN models. Default values are derived from your marine location coordinates plus a 0.2° margin.") }}</small></p>
 
-    {# Compute default bbox from marine locations #}
-    {% set lats = [] %}
-    {% set lons = [] %}
-    {% for slug, loc in state.marine_locations.items() %}
-      {% if loc.lat is not none %}{% do lats.append(loc.lat) %}{% endif %}
-      {% if loc.lon is not none %}{% do lons.append(loc.lon) %}{% endif %}
-    {% endfor %}
-    {% if lats and lons %}
-      {% set default_south = (lats | min) - 0.2 %}
-      {% set default_north = (lats | max) + 0.2 %}
-      {% set default_west  = (lons | min) - 0.2 %}
-      {% set default_east  = (lons | max) + 0.2 %}
-    {% else %}
-      {% set default_south = "" %}
-      {% set default_north = "" %}
-      {% set default_west  = "" %}
-      {% set default_east  = "" %}
-    {% endif %}
-
     <div class="grid">
       <div>
         <label for="trushore-grid-south">{{ _("South boundary (°lat)") }}</label>
         <input type="number" step="0.01" id="trushore-grid-south" name="trushore_grid_south"
-               value="{{ default_south }}" placeholder="-90 to 90">
+               value="{{ default_bbox.south }}" placeholder="-90 to 90">
       </div>
       <div>
         <label for="trushore-grid-north">{{ _("North boundary (°lat)") }}</label>
         <input type="number" step="0.01" id="trushore-grid-north" name="trushore_grid_north"
-               value="{{ default_north }}" placeholder="-90 to 90">
+               value="{{ default_bbox.north }}" placeholder="-90 to 90">
       </div>
       <div>
         <label for="trushore-grid-west">{{ _("West boundary (°lon)") }}</label>
         <input type="number" step="0.01" id="trushore-grid-west" name="trushore_grid_west"
-               value="{{ default_west }}" placeholder="-180 to 180">
+               value="{{ default_bbox.west }}" placeholder="-180 to 180">
       </div>
       <div>
         <label for="trushore-grid-east">{{ _("East boundary (°lon)") }}</label>
         <input type="number" step="0.01" id="trushore-grid-east" name="trushore_grid_east"
-               value="{{ default_east }}" placeholder="-180 to 180">
+               value="{{ default_bbox.east }}" placeholder="-180 to 180">
       </div>
     </div>
 
