@@ -2899,8 +2899,8 @@ async def trushore_save(request: Request) -> HTMLResponse:
     """Save SWAN+TruShore configuration via /setup/apply.
 
     Updates deployment mode, service_url, omp_num_threads,
-    swan_grid_resolution_m, and per-spot surf settings (breaker_formula,
-    surf_height_display) for all surf locations.
+    outer_grid_resolution_km, inner_nest_resolution_m, and per-spot surf
+    settings (breaker_formula, surf_height_display) for all surf locations.
     """
     _require_session(request)
     form = await request.form()
@@ -2958,17 +2958,28 @@ async def trushore_save(request: Request) -> HTMLResponse:
     except ValueError:
         omp_threads = 0
 
-    resolution_raw = str(form.get("trushore_swan_grid_resolution_m", "200")).strip()
+    # Outer grid resolution (km) — coarse continental shelf grid
+    outer_res_raw = str(form.get("trushore_outer_grid_resolution_km", "3")).strip()
     try:
-        resolution = int(resolution_raw)
-        if not (50 <= resolution <= 1000):
-            resolution = 200
+        outer_res = float(outer_res_raw)
+        if not (1.0 <= outer_res <= 10.0):
+            outer_res = 3.0
     except ValueError:
-        resolution = 200
+        outer_res = 3.0
+
+    # Inner nest resolution (m) — fine grid focused on surf spots
+    inner_res_raw = str(form.get("trushore_inner_nest_resolution_m", "200")).strip()
+    try:
+        inner_res = int(inner_res_raw)
+        if not (50 <= inner_res <= 1000):
+            inner_res = 200
+    except ValueError:
+        inner_res = 200
 
     trushore_payload: dict[str, Any] = {
         "omp_num_threads": omp_threads,
-        "swan_grid_resolution_m": resolution,
+        "outer_grid_resolution_km": outer_res,
+        "inner_nest_resolution_m": inner_res,
         "service_url": service_url if deployment_mode == "separated" else None,
     }
 

@@ -156,14 +156,34 @@ pip install clearskies[nearshore]</code></pre>
       </div>
     </div>
 
-    <label for="trushore-resolution">{{ _("Grid resolution (m)") }}</label>
-    <input type="number" step="50" min="50" max="1000" id="trushore-resolution"
-           name="trushore_swan_grid_resolution_m"
-           value="{{ state.trushore_swan_grid_resolution_m }}"
-           aria-describedby="trushore-resolution-help">
-    <small id="trushore-resolution-help">
-      {{ _("Spatial resolution of the SWAN grid in metres (50–1000). Lower values are more accurate but slower to compute. 200 m is recommended for most setups.") }}
-    </small>
+    {# ---------------------------------------------------------------- #}
+    {# SWAN nested grid                                                  #}
+    {# ---------------------------------------------------------------- #}
+    <h3>{{ _("SWAN nested grid") }}</h3>
+    <p><small>{{ _("SWAN uses a two-level nested grid — a coarse outer grid for continental shelf wave propagation, and a fine inner nest focused on your surf spots.") }}</small></p>
+
+    <div class="grid">
+      <div>
+        <label for="trushore-outer-res">{{ _("Outer grid resolution (km)") }}</label>
+        <input type="number" step="0.5" min="1" max="10" id="trushore-outer-res"
+               name="trushore_outer_grid_resolution_km"
+               value="{{ state.trushore_outer_grid_resolution_km }}"
+               aria-describedby="trushore-outer-res-help">
+        <small id="trushore-outer-res-help">
+          {{ _("Resolution of the coarse outer grid in kilometres (1–10). Covers the continental shelf approach. 3 km is recommended for most setups.") }}
+        </small>
+      </div>
+      <div>
+        <label for="trushore-inner-res">{{ _("Inner nest resolution (m)") }}</label>
+        <input type="number" step="50" min="50" max="1000" id="trushore-inner-res"
+               name="trushore_inner_nest_resolution_m"
+               value="{{ state.trushore_inner_nest_resolution_m }}"
+               aria-describedby="trushore-inner-res-help">
+        <small id="trushore-inner-res-help">
+          {{ _("Resolution of the fine inner grid in metres (50–1000). Focused on your surf spots. 200 m recommended for most setups.") }}
+        </small>
+      </div>
+    </div>
 
     {# ---------------------------------------------------------------- #}
     {# OMP threads                                                       #}

@@ -505,7 +505,8 @@ def build_trushore_payload(state: WizardState) -> dict[str, Any]:
     Args:
         state: The current WizardState, populated by the trushore wizard step
                (trushore_deployment_mode, trushore_service_url,
-               trushore_omp_num_threads, trushore_swan_grid_resolution_m).
+               trushore_omp_num_threads, trushore_outer_grid_resolution_km,
+               trushore_inner_nest_resolution_m).
 
     Returns:
         Dict suitable for the ``"trushore"`` key in the POST /setup/apply
@@ -515,7 +516,8 @@ def build_trushore_payload(state: WizardState) -> dict[str, Any]:
     """
     payload: dict[str, Any] = {
         "omp_num_threads": state.trushore_omp_num_threads,
-        "swan_grid_resolution_m": state.trushore_swan_grid_resolution_m,
+        "outer_grid_resolution_km": state.trushore_outer_grid_resolution_km,
+        "inner_nest_resolution_m": state.trushore_inner_nest_resolution_m,
     }
     if state.trushore_deployment_mode == "separated" and state.trushore_service_url:
         payload["service_url"] = state.trushore_service_url

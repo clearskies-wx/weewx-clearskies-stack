@@ -253,7 +253,15 @@ class WizardState:
     trushore_omp_num_threads: int = 0
     # SWAN computational grid resolution in metres (50–1000). Lower = finer
     # resolution = more accurate but slower. 200 m is the recommended default.
+    # Kept for backward-compatibility with serialized wizard states written
+    # before the nested-grid migration (T7.4). New code writes
+    # trushore_outer_grid_resolution_km and trushore_inner_nest_resolution_m.
     trushore_swan_grid_resolution_m: int = 200
+    # Nested grid fields (T7.4): two-level SWAN grid architecture.
+    # Outer (coarse) grid covers the continental shelf; inner (fine) nest
+    # is focused on surf spot coordinates.
+    trushore_outer_grid_resolution_km: float = 3.0
+    trushore_inner_nest_resolution_m: int = 200
 
     # Registry-keyed values for wizard steps that delegate field rendering
     # to the config registry macros.  Key = registry config_key (e.g. "enabled",

@@ -3628,15 +3628,25 @@ async def step_trushore_post(request: Request) -> HTMLResponse:
         omp_threads = 0
     state.trushore_omp_num_threads = omp_threads
 
-    # Grid resolution
-    resolution_raw = str(form.get("trushore_swan_grid_resolution_m", "200")).strip()
+    # Outer grid resolution (km) — coarse continental shelf grid
+    outer_res_raw = str(form.get("trushore_outer_grid_resolution_km", "3")).strip()
     try:
-        resolution = int(resolution_raw)
-        if not (50 <= resolution <= 1000):
-            resolution = 200
+        outer_res = float(outer_res_raw)
+        if not (1.0 <= outer_res <= 10.0):
+            outer_res = 3.0
     except ValueError:
-        resolution = 200
-    state.trushore_swan_grid_resolution_m = resolution
+        outer_res = 3.0
+    state.trushore_outer_grid_resolution_km = outer_res
+
+    # Inner nest resolution (m) — fine grid focused on surf spots
+    inner_res_raw = str(form.get("trushore_inner_nest_resolution_m", "200")).strip()
+    try:
+        inner_res = int(inner_res_raw)
+        if not (50 <= inner_res <= 1000):
+            inner_res = 200
+    except ValueError:
+        inner_res = 200
+    state.trushore_inner_nest_resolution_m = inner_res
 
     # Per-spot surf settings: breaker_formula and surf_height_display
     # Stored in marine_locations[slug]["surf"] — same dict used by build_marine_payload().

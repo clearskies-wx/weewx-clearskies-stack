@@ -498,7 +498,7 @@ You should see messages like `clearskies_truesun: CAMS AOD fetch successful`. To
 
 ### SWAN+TruShore Nearshore Model (optional)
 
-SWAN+TruShore is the Clear Skies nearshore wave model. It runs SWAN (Simulating WAves Nearshore, a Fortran spectral wave model from Delft University of Technology) as a subprocess inside the API, driven by HRRR forecast winds on a fixed hourly schedule, to produce 72-hour surf forecasts with nearshore physics. When the `[nearshore]` pip extra is installed and the SWAN binary is available, SWAN+TruShore becomes the sole source for surf forecasts at configured surf spot locations. It replaces the former dependence on NOAA's Nearshore Wave Prediction System (NWPS).
+SWAN+TruShore is the Clear Skies nearshore wave model. It runs SWAN (Simulating WAves Nearshore, a Fortran spectral wave model from Delft University of Technology) as a subprocess inside the API, using a two-level nested grid architecture driven by blended wind forcing (HRRR for hours 0–48 + GFS for hours 48–72), running 4× daily on extended HRRR cycles (00/06/12/18Z), to produce 72-hour surf forecasts with nearshore physics. Total memory budget: ≤300 MB. When the `[nearshore]` pip extra is installed and the SWAN binary is available, SWAN+TruShore becomes the sole source for surf forecasts at configured surf spot locations. It replaces the former dependence on NOAA's Nearshore Wave Prediction System (NWPS).
 
 #### Prerequisites
 
@@ -507,7 +507,7 @@ SWAN+TruShore is the Clear Skies nearshore wave model. It runs SWAN (Simulating 
 | SWAN binary | Fortran executable — not a Python package. Install via package manager or compile from source. |
 | gfortran | Required to build SWAN from source. Not needed if installing via `apt`. |
 | OpenMP | Parallel execution. Bundled with gfortran on most distributions. |
-| `weewx-clearskies-api[nearshore]` | Pip extra that adds the HRRR wind provider and SWAN runner. |
+| `weewx-clearskies-api[nearshore]` | Pip extra that adds the HRRR wind provider, GFS wind provider, and SWAN runner. |
 
 **Install on Debian / Ubuntu:**
 
@@ -554,14 +554,17 @@ When SWAN is available, the step collects:
 | Bundled (default) | SWAN runs as a subprocess on this host inside the API process. No additional service needed. Suitable for most operators. |
 | Separated service | SWAN runs on a remote host running `weewx-clearskies-trushore`. Enter the service URL (e.g. `https://trushore.example.com:8766`). The wizard tests connectivity before allowing you to proceed. Use this when you want SWAN on a dedicated or more powerful machine. |
 
-**SWAN computational grid:**
+**SWAN nested grid:**
 
-| Field | Default | Range |
-|-------|---------|-------|
-| Bounding box (N/S/E/W) | Auto-computed from marine location coordinates ± 0.2° | ±90° lat, ±180° lon |
-| Grid resolution | 200 m | 50–1000 m |
+SWAN uses a two-level nested grid — a coarse outer grid for continental shelf wave propagation, and a fine inner nest focused on your surf spots. This is the standard approach used by NOAA's NWPS and all operational nearshore wave forecast systems.
 
-Lower grid resolution values are more accurate but slower to compute. 200 m is recommended for most setups.
+| Field | Default | Range | Description |
+|-------|---------|-------|-------------|
+| Outer grid resolution | 3 km | 1–10 km | Coarse grid covering the shelf approach. Larger domain, fewer grid points. |
+| Inner nest resolution | 200 m | 50–1000 m | Fine grid focused on surf spots. Resolves coastal features (jetties, headlands, reefs). |
+| Inner nest bounding box (N/S/E/W) | Auto-computed from surf spot coordinates ± 0.2° | ±90° lat, ±180° lon | The tight domain around your configured surf spots. |
+
+The outer grid domain is derived from the HRRR bounding box (the full marine location extent). The inner nest domain is derived from the surf spot coordinates. Lower inner nest resolution values are more accurate but increase memory and compute time. 200 m is recommended for most setups. Total memory for both grids: ≤300 MB.
 
 **OpenMP thread count:** Number of CPU cores SWAN may use. `0` uses all available cores. Limit this on shared hosts to leave capacity for other processes.
 
@@ -583,15 +586,18 @@ Open `https://your-domain/admin` and navigate to **SWAN+TruShore**.
 | Binary | Available or Not found, with version and path when found |
 | CPU cores | OpenMP-available cores on this host |
 | Last run | Timestamp of the most recent completed SWAN run, or "Never run" |
-| Grid resolution | Current SWAN grid resolution in metres |
+| Outer grid resolution | Current outer grid resolution (km) |
+| Inner nest resolution | Current inner nest resolution (metres) |
+| Memory budget | Peak memory during SWAN run (target ≤300 MB) |
 
-**Run SWAN Now** triggers an immediate run outside the regular hourly schedule. Use this after changing grid settings to verify the configuration before the next automatic cycle.
+**Run SWAN Now** triggers an immediate run outside the regular 6-hourly schedule (00/06/12/18Z). Use this after changing grid settings to verify the configuration before the next automatic cycle.
 
 **Configuration form** lets you update:
 
 - **Deployment mode** — switch between Bundled and Separated. When switching to Separated, enter the service URL and use **Test connectivity** before saving.
 - **OpenMP thread count** — adjust CPU parallelism for SWAN.
-- **Grid resolution** — coarser values (400–500 m) reduce run time; finer values (50–100 m) increase accuracy at higher compute cost. Changes take effect on the next SWAN run.
+- **Outer grid resolution** — coarser values (4–5 km) reduce run time; finer values (1–2 km) improve shelf wave propagation accuracy. Changes take effect on the next SWAN run.
+- **Inner nest resolution** — coarser values (400–500 m) reduce run time; finer values (50–100 m) increase nearshore accuracy at higher compute cost. Changes take effect on the next SWAN run.
 - **Per-spot surf settings** — update breaker formula and surf height display per surf location. Changes take effect on the next SWAN run.
 
 #### Troubleshooting
@@ -615,11 +621,15 @@ sudo systemctl restart weewx-clearskies-api
 
 **SWAN runs taking more than 15 minutes**
 
-Increase the grid resolution in the admin interface (**SWAN+TruShore** → **Grid resolution**). A 200 m grid reduces run time to 2–5 minutes on most hardware. Only reduce below 200 m if your domain is small and your hardware supports the finer resolution.
+Increase the inner nest resolution in the admin interface (**SWAN+TruShore** → **Inner nest resolution**). A 200 m inner nest typically completes both grid levels in 2–10 minutes. Only reduce below 200 m if your domain is small and your hardware supports the finer resolution. If runs are still slow, increase the outer grid resolution (e.g. from 2 km to 3 km).
 
-**HRRR wind data unavailable**
+**SWAN uses too much memory (OOM killed)**
 
-If NOMADS returns an error or the current HRRR cycle has not yet posted, the SWAN runner skips that hourly cycle and retries on the next. Surf forecasts continue to serve from the most recent successful run. Check for errors:
+The nested grid architecture is designed to stay under 300 MB total. If SWAN is OOM-killed, check: (1) inner nest domain is tight around surf spots, not covering the whole coast — the outer grid handles the shelf; (2) inner nest resolution is not too fine for the domain size. A 50 m resolution over a 30 km domain produces ~360,000 grid points (~6 GB). Use 200–500 m for typical setups.
+
+**HRRR or GFS wind data unavailable**
+
+If NOMADS returns an error or the current cycle has not yet posted, the SWAN runner skips that cycle and retries on the next (6 hours later for extended cycles). Surf forecasts continue to serve from the most recent successful run. If only GFS is unavailable, the runner produces a shortened forecast (HRRR hours 0–48 only). Check for errors:
 
 ```bash
 journalctl -u weewx-clearskies-api | grep -i "hrrr\|trushore"
@@ -759,7 +769,7 @@ Configure optional features:
 
 ### SWAN+TruShore (conditional)
 
-This step appears when marine is enabled with at least one surf location configured and the SWAN binary is found on PATH. It collects the deployment mode (Bundled or Separated service), the SWAN computational grid bounding box and resolution, the OpenMP thread count, and per-spot surf settings (breaker formula and surf height display convention). If SWAN is not installed, the wizard shows install instructions and a **Skip** button — you can proceed without surf forecasting and add SWAN later. See [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions) for full SWAN installation details.
+This step appears when marine is enabled with at least one surf location configured and the SWAN binary is found on PATH. It collects the deployment mode (Bundled or Separated service), the nested grid parameters (outer grid resolution, inner nest resolution, inner nest bounding box), the OpenMP thread count, and per-spot surf settings (breaker formula and surf height display convention). If SWAN is not installed, the wizard shows install instructions and a **Skip** button — you can proceed without surf forecasting and add SWAN later. See [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions) for full SWAN installation details.
 
 ### TLS configuration
 
@@ -856,7 +866,7 @@ The **Marine Locations** section manages marine, surf, fishing, and beach safety
 
 ### Managing SWAN+TruShore
 
-The **SWAN+TruShore** section shows current SWAN model status (binary availability, version, last run time, and grid resolution), lets you switch between Bundled and Separated deployment modes, trigger a manual SWAN run, adjust OpenMP thread count and grid resolution, and update per-spot surf settings (breaker formula and surf height display preference). Changes to deployment mode or per-spot settings take effect on the next SWAN run. For installation details and background on the Bundled versus Separated modes, see [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions).
+The **SWAN+TruShore** section shows current SWAN model status (binary availability, version, last run time, memory usage, and nested grid resolutions), lets you switch between Bundled and Separated deployment modes, trigger a manual SWAN run, adjust OpenMP thread count and grid resolutions (outer and inner nest), and update per-spot surf settings (breaker formula and surf height display preference). Changes to deployment mode or per-spot settings take effect on the next SWAN run. For installation details and background on the Bundled versus Separated modes, see [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions).
 
 ---
 
