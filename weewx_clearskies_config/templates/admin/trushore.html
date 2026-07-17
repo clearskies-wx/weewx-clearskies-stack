@@ -1,0 +1,250 @@
+{# -------------------------------------------------------------------------
+   SWAN+TruShore admin section (T4.5).
+   Loaded via HTMX into #admin-content. Provides:
+
+   - Current SWAN status: binary availability, version, last run time
+   - Deployment mode switch (bundled / separated) with service URL editor
+   - OMP threads and grid resolution settings
+   - Manual SWAN run trigger
+   - Per-spot surf settings (breaker formula, surf height display)
+
+   Context variables (provided by admin/routes.py trushore_get):
+     swan_info   — dict from GET /setup/marine/swan-check
+                    {available, version, path, cpu_cores, last_run_time, ...}
+     trushore_cfg — dict from GET /setup/current-config .trushore
+                    {service_url, omp_num_threads, swan_grid_resolution_m, ...}
+     surf_locations — dict[location_id, location] for surf-enabled locations
+     error       — str|None
+     flash       — str|None
+   ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
+<style>
+.admin-alert{padding:.75rem 1rem;border-radius:var(--pico-border-radius,.25rem);margin-block:1rem;font-size:.875rem}
+.admin-alert-error{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
+.admin-alert-success{background:#f0fdf4;border:1px solid #86efac;color:#166534}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}:root:not([data-theme="light"]) .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}}
+[data-theme="dark"] .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}
+[data-theme="dark"] .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}
+.error-text{color:var(--pico-del-color,#dc2626)}
+.success-text{color:var(--pico-ins-color,#16a34a)}
+</style>
+<article>
+  <header>
+    <nav aria-label="{{ _('Breadcrumb') }}">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">{{ _("Admin") }}</a>
+        </li>
+        <li>{{ _("SWAN+TruShore") }}</li>
+      </ul>
+    </nav>
+    <h2>{{ _("SWAN+TruShore Nearshore Model") }}</h2>
+    {{ help_trigger("/admin/help/trushore") }}
+  </header>
+
+  {% if flash %}
+  <div role="status" class="admin-alert admin-alert-success">{{ flash }}</div>
+  {% endif %}
+
+  {% if error %}
+  <div role="alert" class="admin-alert admin-alert-error">
+    <strong>{{ _("Error.") }}</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  {# -------------------------------------------------------------------- #}
+  {# SWAN status panel                                                     #}
+  {# -------------------------------------------------------------------- #}
+  <section aria-labelledby="trushore-status-heading" style="margin-block:1.25rem">
+    <h3 id="trushore-status-heading">{{ _("SWAN Status") }}</h3>
+    <dl style="display:grid;grid-template-columns:max-content 1fr;gap:0.3rem 1rem;font-size:0.9rem">
+      <dt>{{ _("Binary") }}</dt>
+      <dd>
+        {% if swan_info.available %}
+          <span class="success-text">&#x2705; {{ _("Available") }}</span>
+          {% if swan_info.version %} &mdash; SWAN {{ swan_info.version }}{% endif %}
+          {% if swan_info.path %} <small>({{ swan_info.path }})</small>{% endif %}
+        {% else %}
+          <span class="error-text">&#x274C; {{ _("Not found") }}</span>
+          <small>&mdash; {{ _("Install SWAN to enable nearshore wave modeling.") }}</small>
+        {% endif %}
+      </dd>
+      {% if swan_info.cpu_cores %}
+      <dt>{{ _("CPU cores") }}</dt>
+      <dd>{{ swan_info.cpu_cores }}</dd>
+      {% endif %}
+      {% if trushore_cfg.get("last_run_time") %}
+      <dt>{{ _("Last run") }}</dt>
+      <dd>{{ trushore_cfg.last_run_time }}</dd>
+      {% else %}
+      <dt>{{ _("Last run") }}</dt>
+      <dd><em>{{ _("Never run") }}</em></dd>
+      {% endif %}
+      {% if trushore_cfg.get("swan_grid_resolution_m") %}
+      <dt>{{ _("Grid resolution") }}</dt>
+      <dd>{{ trushore_cfg.swan_grid_resolution_m }} m</dd>
+      {% endif %}
+    </dl>
+  </section>
+
+  {# Manual SWAN run trigger #}
+  {% if swan_info.available %}
+  <div style="margin-block:0.75rem">
+    <button type="button"
+            hx-post="/admin/trushore/trigger-run"
+            hx-target="#trushore-trigger-result"
+            hx-swap="innerHTML"
+            hx-disabled-elt="this"
+            hx-indicator="#trushore-trigger-indicator">
+      {{ _("Run SWAN Now") }}
+    </button>
+    <div id="trushore-trigger-indicator" style="display:none;align-items:center;gap:0.5rem;font-size:0.875rem;margin-block-start:0.5rem">
+      <span class="spinner-ring" aria-hidden="true"></span>
+      <span>{{ _("Running…") }}</span>
+    </div>
+    <div id="trushore-trigger-result" style="font-size:0.875rem;margin-block-start:0.5rem"></div>
+  </div>
+  {% endif %}
+
+  <hr style="margin-block:1.25rem">
+
+  {# -------------------------------------------------------------------- #}
+  {# Configuration form                                                    #}
+  {# -------------------------------------------------------------------- #}
+  <section aria-labelledby="trushore-config-heading">
+    <h3 id="trushore-config-heading">{{ _("Configuration") }}</h3>
+
+    <form hx-post="/admin/trushore/save"
+          hx-target="#admin-content"
+          hx-swap="innerHTML"
+          hx-disabled-elt="find button[type='submit']"
+          hx-indicator="#trushore-form-indicator"
+          autocomplete="off">
+
+      {# Deployment mode #}
+      <fieldset>
+        <legend>{{ _("Deployment mode") }}</legend>
+        <label>
+          <input type="radio" name="trushore_deployment_mode" value="bundled"
+                 {% if trushore_cfg.get("service_url") is none or not trushore_cfg.get("service_url") %}checked{% endif %}
+                 onchange="document.getElementById('admin-trushore-url-row').style.display='none'">
+          <strong>{{ _("Bundled") }}</strong>
+          &nbsp;<small>{{ _("SWAN runs as a subprocess on this host.") }}</small>
+        </label>
+        <label>
+          <input type="radio" name="trushore_deployment_mode" value="separated"
+                 {% if trushore_cfg.get("service_url") %}checked{% endif %}
+                 onchange="document.getElementById('admin-trushore-url-row').style.display=''">
+          <strong>{{ _("Separated service") }}</strong>
+          &nbsp;<small>{{ _("SWAN runs on a separate host.") }}</small>
+        </label>
+      </fieldset>
+
+      <div id="admin-trushore-url-row"
+           {% if not trushore_cfg.get("service_url") %}style="display:none"{% endif %}>
+        <label for="admin-trushore-url">{{ _("Service URL") }}</label>
+        <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap">
+          <input type="url" id="admin-trushore-url" name="trushore_service_url"
+                 value="{{ trushore_cfg.get('service_url', '') }}"
+                 placeholder="https://trushore.example.com"
+                 style="flex:1;min-width:0">
+          <button type="button" class="secondary outline"
+                  style="white-space:nowrap;flex-shrink:0"
+                  hx-post="/admin/trushore/test-service"
+                  hx-include="#admin-trushore-url"
+                  hx-target="#admin-trushore-test-result"
+                  hx-swap="innerHTML"
+                  hx-disabled-elt="this">
+            {{ _("Test connectivity") }}
+          </button>
+        </div>
+        <div id="admin-trushore-test-result" style="font-size:0.875rem;margin-block-start:0.25rem"></div>
+      </div>
+
+      {# OMP threads #}
+      <label for="admin-trushore-omp">{{ _("OpenMP thread count") }}</label>
+      <input type="number" step="1" min="0" id="admin-trushore-omp"
+             name="trushore_omp_num_threads"
+             value="{{ trushore_cfg.get('omp_num_threads', 0) }}"
+             aria-describedby="admin-trushore-omp-help">
+      <small id="admin-trushore-omp-help">
+        {{ _("Number of CPU threads SWAN may use. 0 = use all available cores.") }}
+        {% if swan_info.cpu_cores %}
+          {{ _("This host has {n} cores.").format(n=swan_info.cpu_cores) }}
+        {% endif %}
+      </small>
+
+      {# Grid resolution #}
+      <label for="admin-trushore-res">{{ _("Grid resolution (m)") }}</label>
+      <input type="number" step="50" min="50" max="1000" id="admin-trushore-res"
+             name="trushore_swan_grid_resolution_m"
+             value="{{ trushore_cfg.get('swan_grid_resolution_m', 200) }}"
+             aria-describedby="admin-trushore-res-help">
+      <small id="admin-trushore-res-help">
+        {{ _("Spatial resolution of the SWAN computational grid in metres (50–1000). Lower values are more accurate but slower. 200 m recommended for most setups.") }}
+      </small>
+
+      {# Per-spot surf settings #}
+      {% if surf_locations %}
+      <h4 style="margin-block-start:1.25rem">{{ _("Per-spot surf settings") }}</h4>
+      <p><small>{{ _("Breaker formula and surf height display preference for each surf location.") }}</small></p>
+
+      {% for loc_id, loc in surf_locations.items() %}
+      {% set surf = loc.get("surf", {}) %}
+      <fieldset style="padding:0.75rem 1rem;margin-block:0.75rem;border:1px solid var(--pico-muted-border-color);border-radius:var(--pico-border-radius)">
+        <legend><strong>{{ loc.get("name", loc_id) }}</strong></legend>
+
+        <label for="admin-surf-{{ loc_id }}-breaker">{{ _("Breaker formula") }}</label>
+        <select id="admin-surf-{{ loc_id }}-breaker"
+                name="surf_{{ loc_id }}_breaker_formula"
+                aria-describedby="admin-surf-{{ loc_id }}-breaker-help">
+          <option value="komar_gaughan"
+                  {% if surf.get("breaker_formula", "komar_gaughan") == "komar_gaughan" %}selected{% endif %}>
+            {{ _("Komar-Gaughan (general purpose)") }}
+          </option>
+          <option value="caldwell"
+                  {% if surf.get("breaker_formula") == "caldwell" %}selected{% endif %}>
+            {{ _("Caldwell (volcanic island coasts)") }}
+          </option>
+        </select>
+        <small id="admin-surf-{{ loc_id }}-breaker-help">
+          {{ _("Komar-Gaughan is general purpose. Caldwell is tuned for steep volcanic coasts (Hawaii, Indonesia, Tahiti) and auto-falls to Komar-Gaughan for short-period swell.") }}
+        </small>
+
+        <label for="admin-surf-{{ loc_id }}-display" style="margin-block-start:0.75rem">
+          {{ _("Surf height display") }}
+        </label>
+        <select id="admin-surf-{{ loc_id }}-display"
+                name="surf_{{ loc_id }}_surf_height_display"
+                aria-describedby="admin-surf-{{ loc_id }}-display-help">
+          <option value="face"
+                  {% if surf.get("surf_height_display", "face") == "face" %}selected{% endif %}>
+            {{ _("Face height (US mainland / Europe)") }}
+          </option>
+          <option value="hawaiian"
+                  {% if surf.get("surf_height_display") == "hawaiian" %}selected{% endif %}>
+            {{ _("Hawaiian / back-of-wave (Hawaii / Australia)") }}
+          </option>
+        </select>
+        <small id="admin-surf-{{ loc_id }}-display-help">
+          {{ _("Face height = trough-to-crest of the breaking face. Hawaiian / back-of-wave ≈ half face height.") }}
+        </small>
+      </fieldset>
+      {% endfor %}
+      {% endif %}
+
+      <div id="trushore-form-indicator" style="display:none;align-items:center;gap:0.5rem;font-size:0.875rem;margin-block:0.5rem">
+        <span class="spinner-ring" aria-hidden="true"></span>
+        <span>{{ _("Saving…") }}</span>
+      </div>
+
+      <button type="submit">{{ _("Save TruShore Settings") }}</button>
+
+    </form>
+  </section>
+
+</article>

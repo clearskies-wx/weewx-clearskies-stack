@@ -3101,7 +3101,7 @@ async def trushore_test_service(request: Request) -> HTMLResponse:
     if not service_url:
         return HTMLResponse(
             '<span class="error-text">'
-            + html_escape(_("Enter a service URL before testing."))
+            + _marine_esc(_("Enter a service URL before testing."))
             + "</span>"
         )
 
@@ -3109,7 +3109,7 @@ async def trushore_test_service(request: Request) -> HTMLResponse:
     if client is None:
         return HTMLResponse(
             '<span class="error-text">'
-            + html_escape(_("API unreachable."))
+            + _marine_esc(_("API unreachable."))
             + "</span>"
         )
 
@@ -3123,19 +3123,19 @@ async def trushore_test_service(request: Request) -> HTMLResponse:
         if data.get("reachable"):
             return HTMLResponse(
                 '<span class="success-text">'
-                + html_escape(_("Service is reachable."))
+                + _marine_esc(_("Service is reachable."))
                 + "</span>"
             )
         detail = data.get("error", _("Unknown error"))
         return HTMLResponse(
             '<span class="error-text">'
-            + html_escape(_("Service test failed: {error}").format(error=detail))
+            + _marine_esc(_("Service test failed: {error}").format(error=detail))
             + "</span>"
         )
     except Exception as exc:  # noqa: BLE001
         logger.warning("trushore_test_service: error", exc_info=True)
         return HTMLResponse(
             '<span class="error-text">'
-            + html_escape(_("Could not reach the API: {detail}").format(detail=str(exc)))
+            + _marine_esc(_("Could not reach the API: {detail}").format(detail=str(exc)))
             + "</span>"
         )
