@@ -154,7 +154,6 @@ if (typeof L === "undefined") {
       {% if loc.get("ndbc_station_ids") %}<p>{{ _("NDBC buoy(s):") }} {{ loc["ndbc_station_ids"] | join(", ") }}</p>{% endif %}
       {% if loc.get("coops_station_ids") %}<p>{{ _("CO-OPS tide station(s):") }} {{ loc["coops_station_ids"] | join(", ") }}</p>{% endif %}
       {% if loc.get("nws_marine_zone_id") %}<p>{{ _("NWS marine zone:") }} {{ loc["nws_marine_zone_id"] }}</p>{% endif %}
-      {% if loc.get("nwps_wfo") %}<p>{{ _("NWS forecast office:") }} {{ loc["nwps_wfo"] }}</p>{% endif %}
     </div>
     {% endif %}
   </div>
@@ -165,7 +164,6 @@ if (typeof L === "undefined") {
   <input type="hidden" name="loc_{{ idx }}_ndbc_station_ids" class="hidden-ndbc-ids" value="{{ loc.get('ndbc_station_ids', []) | join(',') }}">
   <input type="hidden" name="loc_{{ idx }}_coops_station_ids" class="hidden-coops-ids" value="{{ loc.get('coops_station_ids', []) | join(',') }}">
   <input type="hidden" name="loc_{{ idx }}_nws_marine_zone_id" class="hidden-marine-zone" value="{{ loc.get('nws_marine_zone_id', '') }}">
-  <input type="hidden" name="loc_{{ idx }}_nwps_wfo" class="hidden-nwps-wfo" value="{{ loc.get('nwps_wfo', '') }}">
 
   {# ---- Surf ---- #}
   <div class="activity-section" data-section="surf" {% if "surf" not in activities %}style="display: none;"{% endif %}>

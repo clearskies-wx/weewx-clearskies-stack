@@ -329,8 +329,8 @@ class ApiClient:
         """GET /setup/marine/discover-stations — find nearby marine data sources.
 
         Used by the marine wizard step (T6.1) to look up NDBC buoys, CO-OPS
-        tide stations, the NWS marine zone, and the NWPS forecast office
-        (WFO) nearest a marine location the operator is configuring.
+        tide stations, and the NWS marine zone nearest a marine location
+        the operator is configuring.
 
         Args:
             lat: Location latitude, decimal degrees.
@@ -339,7 +339,7 @@ class ApiClient:
 
         Returns:
             Dict with keys such as "ndbc_station_ids", "coops_station_ids",
-            "nws_marine_zone_id", "nwps_wfo" (exact shape defined by the API).
+            "nws_marine_zone_id" (exact shape defined by the API).
         """
         _log.info("Discovering marine stations near %s,%s via API", lat, lon)
         response = self._request(

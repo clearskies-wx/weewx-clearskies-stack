@@ -17,9 +17,6 @@
   {% if result.get("nws_marine_zone_id") %}
   <p>{{ _("NWS marine zone:") }} {{ result["nws_marine_zone_id"] }}</p>
   {% endif %}
-  {% if result.get("nwps_wfo") %}
-  <p>{{ _("NWS forecast office:") }} {{ result["nwps_wfo"] }}</p>
-  {% endif %}
   {% if not (result.get("ndbc_station_ids") or result.get("coops_station_ids")) %}
   <p>{{ _("No nearby marine stations were found within the search radius.") }}</p>
   {% endif %}
@@ -35,7 +32,6 @@
     setHidden("hidden-ndbc-ids", {{ (result.get("ndbc_station_ids", []) | join(",")) | tojson }});
     setHidden("hidden-coops-ids", {{ (result.get("coops_station_ids", []) | join(",")) | tojson }});
     setHidden("hidden-marine-zone", {{ (result.get("nws_marine_zone_id", "") or "") | tojson }});
-    setHidden("hidden-nwps-wfo", {{ (result.get("nwps_wfo", "") or "") | tojson }});
   })();
 </script>
 {% endif %}

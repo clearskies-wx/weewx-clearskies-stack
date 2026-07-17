@@ -2876,9 +2876,6 @@ async def step_marine_post(request: Request) -> HTMLResponse:
         marine_zone = str(form.get(f"loc_{idx}_nws_marine_zone_id", "")).strip()
         if marine_zone:
             loc["nws_marine_zone_id"] = marine_zone
-        wfo = str(form.get(f"loc_{idx}_nwps_wfo", "")).strip()
-        if wfo:
-            loc["nwps_wfo"] = wfo
 
         if "surf" in activities:
             facing = _to_float(form.get(f"loc_{idx}_surf_beach_facing_degrees"))
@@ -3127,7 +3124,6 @@ def _render_wizard_coverage_html(cov: dict) -> str:
     ndbc = cov.get("nearest_ndbc_buoy")
     coops = cov.get("nearest_coops_station")
     nws_zone = cov.get("nws_marine_zone")
-    nwps_wfo = cov.get("nwps_wfo")
     on_prem = cov.get("on_premises_sensor", "not_configured")
 
     tier_labels = {
@@ -3184,7 +3180,6 @@ def _render_wizard_coverage_html(cov: dict) -> str:
         parts.append(_check(False, _("No CO-OPS station within range")))
 
     parts.append(_check(bool(nws_zone), _("NWS marine zone: {zone}").format(zone=nws_zone or "\u2014")))
-    parts.append(_check(bool(nwps_wfo), _("NWPS WFO: {wfo}").format(wfo=nwps_wfo or "\u2014")))
 
     prem_labels = {
         "within_threshold": _("Weather station nearby"),
@@ -4707,10 +4702,6 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                     entry["coops_station_ids"] = [s.strip() for s in coops.split(",") if s.strip()]
                 if loc_data.get("nws_marine_zone_id"):
                     entry["nws_marine_zone_id"] = str(loc_data["nws_marine_zone_id"])
-                if loc_data.get("nwps_wfo"):
-                    entry["nwps_wfo"] = str(loc_data["nwps_wfo"])
-                if loc_data.get("nwps_cg_grid"):
-                    entry["nwps_cg_grid"] = str(loc_data["nwps_cg_grid"])
                 surf = loc_data.get("surf")
                 if isinstance(surf, dict):
                     entry["surf"] = dict(surf)

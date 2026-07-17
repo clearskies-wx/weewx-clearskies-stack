@@ -220,7 +220,7 @@ class WizardState:
     # location config dict. Shape:
     #   {"name": str, "lat": float, "lon": float, "activities": [str, ...],
     #    "ndbc_station_ids": [str, ...], "coops_station_ids": [str, ...],
-    #    "nws_marine_zone_id": str, "nwps_wfo": str,
+    #    "nws_marine_zone_id": str,
     #    "surf": {"beach_facing_degrees": float, "bottom_type": str,
     #             "topographic_feature": str, "directional_exposure": [str, ...]},
     #    "fishing": {"target_category": str, "species": [str, ...]},

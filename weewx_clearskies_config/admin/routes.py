@@ -1955,7 +1955,7 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
 
     Returns a dict keyed by location id; each value has keys: id, name, lat,
     lon, activities, ndbc_station_ids, coops_station_ids, nws_marine_zone_id,
-    nwps_wfo, surf, fishing, beach_safety (the latter three are ``{}`` when
+    surf, fishing, beach_safety (the latter three are ``{}`` when
     the corresponding activity is not selected for that location).
     """
     raw_locations = marine_cfg.get("locations") if isinstance(marine_cfg, dict) else None
@@ -1998,7 +1998,6 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
             "ndbc_station_ids": _marine_to_str_list(raw.get("ndbc_station_ids")),
             "coops_station_ids": _marine_to_str_list(raw.get("coops_station_ids")),
             "nws_marine_zone_id": str(raw.get("nws_marine_zone_id", "") or ""),
-            "nwps_wfo": str(raw.get("nwps_wfo", "") or ""),
             "surf": {
                 "beach_facing_degrees": _marine_to_float(surf_raw.get("beach_facing_degrees")),
                 "bottom_type": str(surf_raw.get("bottom_type", "") or ""),
@@ -2071,7 +2070,6 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
             s.strip() for s in str(form.get("coops_station_ids", "")).split(",") if s.strip()
         ],
         "nws_marine_zone_id": str(form.get("nws_marine_zone_id", "")).strip(),
-        "nwps_wfo": "",
         "surf": {},
         "fishing": {},
         "beach_safety": {},
@@ -2751,7 +2749,6 @@ def _render_coverage_html(cov: dict) -> str:
     ndbc = cov.get("nearest_ndbc_buoy")
     coops = cov.get("nearest_coops_station")
     nws_zone = cov.get("nws_marine_zone")
-    nwps_wfo = cov.get("nwps_wfo")
     on_prem = cov.get("on_premises_sensor", "not_configured")
 
     tier_labels = {
@@ -2816,7 +2813,6 @@ def _render_coverage_html(cov: dict) -> str:
         html_parts.append(_check(False, _("No CO-OPS station within range")))
 
     html_parts.append(_check(bool(nws_zone), _("NWS marine zone: {zone}").format(zone=nws_zone or "—")))
-    html_parts.append(_check(bool(nwps_wfo), _("NWPS WFO: {wfo}").format(wfo=nwps_wfo or "—")))
 
     prem_labels = {
         "within_threshold": _("Weather station nearby"),
