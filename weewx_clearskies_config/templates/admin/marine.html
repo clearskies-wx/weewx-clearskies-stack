@@ -632,6 +632,59 @@
   </table>
   </div>
   {% endif %}
+
+  {# -------------------------------------------------------------------- #}
+  {# T22.2 — Bathymetry Data quality card                                  #}
+  {# Rendered when routes.py passes `bathymetry` in the template context.  #}
+  {# -------------------------------------------------------------------- #}
+  {% if bathymetry %}
+  <article style="margin-block-start:1.5rem">
+    <header>{{ _("Bathymetry Data") }}</header>
+    {% for level in bathymetry.levels %}
+    <div style="display:flex;justify-content:space-between;padding:0.25rem 0">
+      <span>{{ _("Level") }} {{ level.level }}</span>
+      <span>
+        {% if level.quality == "high" %}
+          <mark style="background:var(--pico-ins-color)">{{ level.quality_label }}</mark>
+        {% else %}
+          <mark style="background:var(--pico-del-color)">{{ level.quality_label }}</mark>
+        {% endif %}
+        <small>({{ level.source_name }}, {{ level.resolution_m|round(0)|int }}m)</small>
+      </span>
+    </div>
+    {% endfor %}
+    {% if bathymetry.warning %}
+    <p style="font-size:0.85rem;color:var(--pico-del-color)">{{ bathymetry.warning }}</p>
+    {% endif %}
+  </article>
+  {% endif %}
+
+  {# -------------------------------------------------------------------- #}
+  {# T24.3 — Custom Bathymetry upload card                                 #}
+  {# -------------------------------------------------------------------- #}
+  <article style="margin-block-start:1.5rem">
+    <header>{{ _("Custom Bathymetry") }}</header>
+    <p style="font-size:0.85rem">{{ _("Upload your own bathymetry file for higher-resolution nearshore data.") }}</p>
+    <form hx-post="/admin/marine/bathymetry"
+          hx-encoding="multipart/form-data"
+          hx-target="#bathy-upload-result">
+      <label>{{ _("File") }} <small>(GeoTIFF .tif)</small>
+        <input type="file" name="file" accept=".tif,.tiff" required>
+      </label>
+      <label>{{ _("Vertical Datum") }}
+        <select name="datum">
+          <option value="MSL">MSL</option>
+          <option value="NAVD88">NAVD88</option>
+          <option value="MLLW">MLLW</option>
+          <option value="MHW">MHW</option>
+          <option value="MHHW">MHHW</option>
+        </select>
+      </label>
+      <button type="submit">{{ _("Upload") }}</button>
+    </form>
+    <div id="bathy-upload-result"></div>
+  </article>
+
   {% endif %}
 
   <div style="margin-block-start:1.5rem">
