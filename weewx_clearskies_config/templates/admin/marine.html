@@ -668,17 +668,18 @@
     <form hx-post="/admin/marine/bathymetry"
           hx-encoding="multipart/form-data"
           hx-target="#bathy-upload-result">
-      <label>{{ _("File") }} <small>(GeoTIFF .tif)</small>
-        <input type="file" name="file" accept=".tif,.tiff" required>
+      <label>{{ _("File") }} <small>(GeoTIFF, NetCDF, ASCII XYZ)</small>
+        <input type="file" name="file" accept=".tif,.tiff,.nc,.xyz" required>
       </label>
       <label>{{ _("Vertical Datum") }}
         <select name="datum">
-          <option value="MSL">MSL</option>
           <option value="NAVD88">NAVD88</option>
           <option value="MLLW">MLLW</option>
           <option value="MHW">MHW</option>
           <option value="MHHW">MHHW</option>
+          <option value="MSL">MSL</option>
         </select>
+        <small>{{ _("Select the vertical datum of your bathymetry file. The system will fetch tide predictions in the same datum to ensure consistency. If your data is in a different datum, convert it before uploading using VDatum (vdatum.noaa.gov) or QGIS.") }}</small>
       </label>
       <button type="submit">{{ _("Upload") }}</button>
     </form>
