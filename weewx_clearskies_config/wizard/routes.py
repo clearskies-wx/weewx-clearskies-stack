@@ -2719,7 +2719,6 @@ _MARINE_VALID_TARGET_CATEGORIES = frozenset(
 _MARINE_LOC_INDEX_RE = re.compile(r"^loc_(\d+)_name$")
 _MARINE_LAT_KEY_RE = re.compile(r"^loc_\d+_lat$")
 _MARINE_LON_KEY_RE = re.compile(r"^loc_\d+_lon$")
-_MARINE_FACING_KEY_RE = re.compile(r"^loc_\d+_surf_beach_facing_degrees$")
 _MARINE_TARGET_CATEGORY_KEY_RE = re.compile(r"^loc_(\d+)_fishing_target_categor(?:y|ies)$")
 _MARINE_SPECIES_PREV_KEY_RE = re.compile(r"^loc_\d+_fishing_species_prev$")
 
@@ -2882,15 +2881,21 @@ async def step_marine_post(request: Request) -> HTMLResponse:
             loc["nws_marine_zone_id"] = marine_zone
 
         if "surf" in activities:
-            facing = _to_float(form.get(f"loc_{idx}_surf_beach_facing_degrees"))
+            seg_start_lat = _to_float(form.get(f"loc_{idx}_surf_segment_start_lat"))
+            seg_start_lon = _to_float(form.get(f"loc_{idx}_surf_segment_start_lon"))
+            seg_end_lat   = _to_float(form.get(f"loc_{idx}_surf_segment_end_lat"))
+            seg_end_lon   = _to_float(form.get(f"loc_{idx}_surf_segment_end_lon"))
             bottom_type = str(form.get(f"loc_{idx}_surf_bottom_type", "")).strip()
             topo = str(form.get(f"loc_{idx}_surf_topographic_feature", "")).strip()
             exposure = [
                 v for v in form.getlist(f"loc_{idx}_surf_exposure") if v in _MARINE_VALID_EXPOSURE
             ]
             surf_cfg: dict[str, Any] = {}
-            if facing is not None:
-                surf_cfg["beach_facing_degrees"] = facing
+            if all(x is not None for x in [seg_start_lat, seg_start_lon, seg_end_lat, seg_end_lon]):
+                surf_cfg["segment_start_lat"] = seg_start_lat
+                surf_cfg["segment_start_lon"] = seg_start_lon
+                surf_cfg["segment_end_lat"]   = seg_end_lat
+                surf_cfg["segment_end_lon"]   = seg_end_lon
             if bottom_type in _MARINE_VALID_BOTTOM_TYPES:
                 surf_cfg["bottom_type"] = bottom_type
             if topo in _MARINE_VALID_TOPO_FEATURES:
@@ -3270,6 +3275,10 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
         "semi_permeable": "Semi-permeable",
         "permeable": "Permeable",
     }
+    # Collect obstacle geometries to pass to window.csMapStructures.
+    # geometry is [[lat, lon], ...] per MarineDiscoveredStructure.
+    map_structures: list[dict[str, Any]] = []
+
     for i, s in enumerate(structures):
         stype = s.get("type", "breakwater")
         name = s.get("name") or type_labels.get(stype, stype.title())
@@ -3284,6 +3293,8 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
         else:
             mat_html = '<span style="color:var(--pico-del-color);">&#9888; Needs input</span>'
         bearing_html = f'{bearing:.0f}°'
+        geometry = s.get("geometry") or []
+        geometry_json = html_escape(json.dumps(geometry))
         html_parts.append(
             f'<label style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;'
             f'border:1px solid var(--pico-muted-border-color);border-radius:0.375rem;cursor:pointer;">'
@@ -3295,7 +3306,8 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
             f'data-material-source="{mat_source}" '
             f'data-length="{length:.1f}" '
             f'data-bearing="{bearing:.1f}" '
-            f'data-distance="{dist:.1f}">'
+            f'data-distance="{dist:.1f}" '
+            f'data-geometry="{geometry_json}">'
             f'<div style="flex:1;line-height:1.4;">'
             f'<strong>{name}</strong>'
             f'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));'
@@ -3310,7 +3322,19 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
             f'Length, bearing, and distance computed from OpenStreetMap geometry.'
             f'</small></div></label>'
         )
+        map_structures.append({"type": stype, "geometry": geometry})
     html_parts.append('</div>')
+
+    # Emit a <script> that calls window.csMapStructures to paint discovered
+    # OBSTACLE geometries on the map and refresh transect colors.
+    html_parts.append(
+        f'<script>'
+        f'(function(){{'
+        f'  var s={json.dumps(map_structures)};'
+        f'  if(typeof window.csMapStructures==="function"){{window.csMapStructures({json.dumps(card_idx)},s);}}'
+        f'}})();'
+        f'</script>'
+    )
     html_parts.append('<script>')
     html_parts.append('document.querySelectorAll(".discovered-structure-check").forEach(function(cb) {')
     html_parts.append('  cb.addEventListener("change", function() {')

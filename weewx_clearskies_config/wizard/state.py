@@ -221,7 +221,9 @@ class WizardState:
     #   {"name": str, "lat": float, "lon": float, "activities": [str, ...],
     #    "ndbc_station_ids": [str, ...], "coops_station_ids": [str, ...],
     #    "nws_marine_zone_id": str,
-    #    "surf": {"beach_facing_degrees": float, "bottom_type": str,
+    #    "surf": {"segment_start_lat": float, "segment_start_lon": float,
+    #             "segment_end_lat": float, "segment_end_lon": float,
+    #             "bottom_type": str,
     #             "topographic_feature": str, "directional_exposure": [str, ...]},
     #    "fishing": {"target_category": str, "species": [str, ...]},
     #    "beach_safety": {"external_links": [{"label": str, "url": str}, ...]}}

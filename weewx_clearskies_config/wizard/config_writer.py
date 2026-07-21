@@ -450,7 +450,10 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
         if isinstance(surf, dict) and surf:
             surf_out: dict[str, Any] = {}
             for k in (
-                "beach_facing_degrees",
+                "segment_start_lat",
+                "segment_start_lon",
+                "segment_end_lat",
+                "segment_end_lon",
                 "bottom_type",
                 "topographic_feature",
                 "breaker_formula",

@@ -169,11 +169,31 @@ if (typeof L === "undefined") {
   <div class="activity-section" data-section="surf" {% if "surf" not in activities %}style="display: none;"{% endif %}>
     <h4>{{ _("Surf") }}</h4>
 
-    <label for="loc_{{ idx }}_surf_beach_facing_degrees">{{ _("Beach facing direction (degrees)") }}</label>
-    <input type="number" min="0" max="360" id="loc_{{ idx }}_surf_beach_facing_degrees"
-           name="loc_{{ idx }}_surf_beach_facing_degrees" value="{{ surf.get('beach_facing_degrees', '') }}"
-           aria-describedby="loc_{{ idx }}_bearing_help">
-    <small id="loc_{{ idx }}_bearing_help">{{ _("Compass direction the beach faces toward the ocean, in degrees. A beach facing south = 180°.") }}</small>
+    {# Shoreline Segment UI (T2.4) — replaces beach_facing_degrees.
+       The operator draws a 2-point line along the beach; the system generates
+       cross-shore transects at 10 m spacing and flags any that cross a
+       discovered OBSTACLE structure. #}
+    <div class="shoreline-segment-ui">
+      <label>{{ _("Shoreline Segment") }}</label>
+      <small>{{ _("Draw a line along the beach to define the surfable zone. Transects at 10 m spacing will appear perpendicular to this segment.") }}</small>
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;margin-block:0.5rem;">
+        <button type="button" class="draw-shoreline-btn outline">{{ _("Draw Shoreline Segment") }}</button>
+        <span class="shoreline-segment-summary" aria-live="polite"></span>
+      </div>
+      <span class="shoreline-draw-status" role="status" aria-live="polite"></span>
+      <div class="shoreline-legend" style="display:none;margin-block:0.25rem 0.5rem;">
+        <span class="shoreline-legend-item">
+          <span class="shoreline-legend-swatch" style="background:#2a9d8f;display:inline-block;width:1.2em;height:0.6em;border-radius:2px;margin-inline-end:0.25em;"></span>{{ _("Open transect") }}
+        </span>
+        <span class="shoreline-legend-item" style="margin-inline-start:1rem;">
+          <span class="shoreline-legend-swatch" style="background:#f4a261;display:inline-block;width:1.2em;height:0.6em;border-radius:2px;margin-inline-end:0.25em;"></span>{{ _("Structure-affected transect") }}
+        </span>
+      </div>
+    </div>
+    <input type="hidden" name="loc_{{ idx }}_surf_segment_start_lat" class="surf-segment-start-lat" value="{{ surf.get('segment_start_lat', '') }}">
+    <input type="hidden" name="loc_{{ idx }}_surf_segment_start_lon" class="surf-segment-start-lon" value="{{ surf.get('segment_start_lon', '') }}">
+    <input type="hidden" name="loc_{{ idx }}_surf_segment_end_lat" class="surf-segment-end-lat" value="{{ surf.get('segment_end_lat', '') }}">
+    <input type="hidden" name="loc_{{ idx }}_surf_segment_end_lon" class="surf-segment-end-lon" value="{{ surf.get('segment_end_lon', '') }}">
 
     <label for="loc_{{ idx }}_surf_bottom_type">{{ _("Bottom type") }}</label>
     <select id="loc_{{ idx }}_surf_bottom_type" name="loc_{{ idx }}_surf_bottom_type"
@@ -620,6 +640,13 @@ if (typeof L === "undefined") {
     .drawn-structure-label::before {
       display: none !important;
     }
+    /* Shoreline segment drawing cursor (T2.4) */
+    .shoreline-drawing-cursor {
+      cursor: crosshair !important;
+    }
+    .shoreline-drawing-cursor * {
+      cursor: crosshair !important;
+    }
   </style>
 
   <form id="marine-form"
@@ -702,7 +729,12 @@ if (typeof L === "undefined") {
     stationDataUsed: {{ _("Station weather data will be used (no additional API calls).") | tojson }},
     forecastProviderUsed: {{ _("Weather data will be fetched from your forecast provider.") | tojson }},
     enterCoordinates: {{ _("Enter coordinates to see which data source will be used.") | tojson }},
-    drawnStructureLabel: {{ _("{length} m, {bearing}°") | tojson }}
+    drawnStructureLabel: {{ _("{length} m, {bearing}°") | tojson }},
+    shorelineClickFirst: {{ _("Click on the map to place the first endpoint of the shoreline segment.") | tojson }},
+    shorelineClickSecond: {{ _("Click again to place the second endpoint. Press Esc to cancel.") | tojson }},
+    shorelineSegmentSummary: {{ _("{length} m segment · {count} transects") | tojson }},
+    shorelineRedraw: {{ _("Redraw Shoreline Segment") | tojson }},
+    shorelineCancel: {{ _("Press Esc to cancel drawing.") | tojson }}
   };
 
   var form = document.getElementById("marine-form");
@@ -917,6 +949,306 @@ if (typeof L === "undefined") {
 
     // Attach Leaflet.draw polyline control (loaded async — retries internally)
     initDrawControl(card, map);
+
+    // Attach shoreline segment drawing mode (T2.4)
+    initShorelineDrawing(card, map);
+  }
+
+  // -------------------------------------------------------------------------
+  // Shoreline segment drawing (T2.4)
+  // Custom 2-click drawing mode with draggable endpoints, cross-shore
+  // transects at 10 m spacing, and obstacle-crossing detection.
+  // -------------------------------------------------------------------------
+
+  // WGS84 spherical utilities (small-area planar approximation for transects).
+  function _toRad(d) { return d * Math.PI / 180; }
+
+  // Return destination point given start (lat/lon), bearing (degrees), and
+  // distance (metres). Uses spherical earth (R = 6 371 000 m).
+  function destPoint(lat, lon, bearingDeg, distM) {
+    var R = 6371000;
+    var d = distM / R;
+    var b = _toRad(bearingDeg);
+    var la = _toRad(lat);
+    var lo = _toRad(lon);
+    var la2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(b));
+    var lo2 = lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2));
+    return [la2 * 180 / Math.PI, lo2 * 180 / Math.PI];
+  }
+
+  // 2D planar segment intersection test.
+  // Segments: p1→p2 and p3→p4 (each point is [x,y] = [lon,lat] approx).
+  // Returns true if they intersect (endpoints count as touching).
+  function segmentsIntersect(p1, p2, p3, p4) {
+    var d1x = p2[0] - p1[0], d1y = p2[1] - p1[1];
+    var d2x = p4[0] - p3[0], d2y = p4[1] - p3[1];
+    var denom = d1x * d2y - d1y * d2x;
+    if (Math.abs(denom) < 1e-12) return false; // parallel
+    var dx = p3[0] - p1[0], dy = p3[1] - p1[1];
+    var t = (dx * d2y - dy * d2x) / denom;
+    var s = (dx * d1y - dy * d1x) / denom;
+    return t >= 0 && t <= 1 && s >= 0 && s <= 1;
+  }
+
+  // Draw transects on the map for a given segment and return the layer group.
+  // obstacles: array of {geometry: [[lat,lon],...]} (MarineDiscoveredStructure).
+  function drawTransects(map, startLat, startLon, endLat, endLon, obstacles) {
+    var TRANSECT_HALF_LEN = 75; // m each side of the segment
+    var TRANSECT_SPACING = 10;  // m along segment
+
+    // Bearing from start to end (segment direction).
+    var segBearing = computeBearing(startLat, startLon, endLat, endLon);
+    // Cross-shore bearing: perpendicular (segment bearing + 90).
+    var crossBearing = (segBearing + 90) % 360;
+
+    // Segment length in metres.
+    var segLen = L.latLng(startLat, startLon).distanceTo(L.latLng(endLat, endLon));
+
+    var fg = L.featureGroup().addTo(map);
+    var count = 0;
+    for (var d = 0; d <= segLen; d += TRANSECT_SPACING) {
+      var frac = segLen > 0 ? d / segLen : 0;
+      var cLat = startLat + (endLat - startLat) * frac;
+      var cLon = startLon + (endLon - startLon) * frac;
+
+      // Transect endpoints: cross-shore half-length each way.
+      var tA = destPoint(cLat, cLon, crossBearing, TRANSECT_HALF_LEN);
+      var tB = destPoint(cLat, cLon, (crossBearing + 180) % 360, TRANSECT_HALF_LEN);
+
+      // Check if this transect crosses any obstacle geometry.
+      var blocked = false;
+      if (obstacles && obstacles.length) {
+        outer:
+        for (var oi = 0; oi < obstacles.length; oi++) {
+          var geom = obstacles[oi].geometry || [];
+          for (var gi = 1; gi < geom.length; gi++) {
+            // geom[gi] = [lat, lon]; use [lon, lat] for 2D test.
+            if (segmentsIntersect(
+              [tA[1], tA[0]], [tB[1], tB[0]],
+              [geom[gi-1][1], geom[gi-1][0]], [geom[gi][1], geom[gi][0]]
+            )) {
+              blocked = true;
+              break outer;
+            }
+          }
+        }
+      }
+
+      L.polyline([tA, tB], {
+        color: blocked ? "#f4a261" : "#2a9d8f",
+        weight: blocked ? 2.5 : 1.5,
+        opacity: 0.75
+      }).addTo(fg);
+      count++;
+    }
+    fg._transectCount = count;
+    return fg;
+  }
+
+  // Draw the segment line itself (thin dashed grey).
+  function drawSegmentLine(map, startLat, startLon, endLat, endLon) {
+    return L.polyline([[startLat, startLon], [endLat, endLon]], {
+      color: "#555",
+      weight: 2,
+      dashArray: "6 4",
+      opacity: 0.7
+    }).addTo(map);
+  }
+
+  // Public hook: called by the HTMX discover-structures inline <script> to
+  // paint discovered OBSTACLE geometries and refresh transect colors.
+  // structures: array of MarineDiscoveredStructure objects from the server.
+  window.csMapStructures = function (cardIdx, structures) {
+    var mapDiv = document.getElementById("loc_" + cardIdx + "_map");
+    if (!mapDiv || !mapDiv._csMap) return;
+    var map = mapDiv._csMap;
+
+    // Remove old obstacle layer if any.
+    if (map._csObstacleLayer) {
+      map.removeLayer(map._csObstacleLayer);
+    }
+    var obstacleGroup = L.featureGroup().addTo(map);
+    var OBSTACLE_TYPES = { "jetty": true, "breakwater": true, "groin": true, "pier": true, "seawall": true };
+    var obstacles = [];
+    for (var i = 0; i < structures.length; i++) {
+      var s = structures[i];
+      var geom = s.geometry || [];
+      if (geom.length < 2) continue;
+      obstacles.push(s);
+      var latlngs = geom.map(function (pt) { return [pt[0], pt[1]]; });
+      L.polyline(latlngs, { color: "#e63946", weight: 3, opacity: 0.8 }).addTo(obstacleGroup);
+    }
+    map._csObstacleLayer = obstacleGroup;
+    map._csDiscoveredObstacles = obstacles;
+
+    // Redraw transects if a segment already exists.
+    if (typeof map._csRedrawTransects === "function") {
+      map._csRedrawTransects();
+    }
+  };
+
+  function initShorelineDrawing(card, map) {
+    var idx = card.getAttribute("data-idx");
+    var drawBtn   = card.querySelector(".draw-shoreline-btn");
+    var statusEl  = card.querySelector(".shoreline-draw-status");
+    var summaryEl = card.querySelector(".shoreline-segment-summary");
+    var legendEl  = card.querySelector(".shoreline-legend");
+    var startLatIn  = card.querySelector(".surf-segment-start-lat");
+    var startLonIn  = card.querySelector(".surf-segment-start-lon");
+    var endLatIn    = card.querySelector(".surf-segment-end-lat");
+    var endLonIn    = card.querySelector(".surf-segment-end-lon");
+
+    if (!drawBtn) return;
+
+    var state = { drawing: false, step: 0, startPt: null, tempLine: null };
+    var segGroup = null;    // holds segment line + transect lines
+    var endptMarkers = [];  // [startMarker, endMarker]
+
+    function clearSegment() {
+      if (segGroup) { map.removeLayer(segGroup); segGroup = null; }
+      endptMarkers.forEach(function (m) { map.removeLayer(m); });
+      endptMarkers = [];
+      if (legendEl) legendEl.style.display = "none";
+      if (summaryEl) summaryEl.textContent = "";
+    }
+
+    function redrawSegment(sLat, sLon, eLat, eLon) {
+      clearSegment();
+      segGroup = L.featureGroup().addTo(map);
+
+      var segLine = drawSegmentLine(map, sLat, sLon, eLat, eLon);
+      segGroup.addLayer(segLine);
+
+      var obstacles = map._csDiscoveredObstacles || [];
+      var transectLayer = drawTransects(map, sLat, sLon, eLat, eLon, obstacles);
+      transectLayer.getLayers().forEach(function (l) { segGroup.addLayer(l); });
+
+      var segLenM = L.latLng(sLat, sLon).distanceTo(L.latLng(eLat, eLon));
+      if (summaryEl) {
+        summaryEl.textContent = i18n.shorelineSegmentSummary
+          .replace("{length}", Math.round(segLenM))
+          .replace("{count}", transectLayer._transectCount || 0);
+      }
+      if (legendEl) legendEl.style.display = "";
+
+      // Draggable endpoint markers.
+      function makeEndpointMarker(lat, lon, isStart) {
+        var m = L.marker([lat, lon], {
+          draggable: true,
+          icon: L.divIcon({
+            className: "shoreline-endpoint-icon",
+            iconSize: [14, 14],
+            iconAnchor: [7, 7],
+            html: '<div style="width:12px;height:12px;border-radius:50%;background:#555;border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.5);"></div>'
+          })
+        }).addTo(map);
+        m.on("dragend", function () {
+          var p = m.getLatLng();
+          var curSLat = parseFloat(startLatIn.value);
+          var curSLon = parseFloat(startLonIn.value);
+          var curELat = parseFloat(endLatIn.value);
+          var curELon = parseFloat(endLonIn.value);
+          if (isStart) {
+            startLatIn.value = p.lat.toFixed(6);
+            startLonIn.value = p.lng.toFixed(6);
+            redrawSegment(p.lat, p.lng, curELat, curELon);
+          } else {
+            endLatIn.value = p.lat.toFixed(6);
+            endLonIn.value = p.lng.toFixed(6);
+            redrawSegment(curSLat, curSLon, p.lat, p.lng);
+          }
+        });
+        return m;
+      }
+
+      endptMarkers.push(makeEndpointMarker(sLat, sLon, true));
+      endptMarkers.push(makeEndpointMarker(eLat, eLon, false));
+
+      // Store redraw callback for csMapStructures to call.
+      map._csRedrawTransects = function () {
+        var sLat2 = parseFloat(startLatIn.value);
+        var sLon2 = parseFloat(startLonIn.value);
+        var eLat2 = parseFloat(endLatIn.value);
+        var eLon2 = parseFloat(endLonIn.value);
+        if (!isNaN(sLat2) && !isNaN(sLon2) && !isNaN(eLat2) && !isNaN(eLon2)) {
+          redrawSegment(sLat2, sLon2, eLat2, eLon2);
+        }
+      };
+    }
+
+    function cancelDraw() {
+      state.drawing = false;
+      state.step = 0;
+      state.startPt = null;
+      if (state.tempLine) { map.removeLayer(state.tempLine); state.tempLine = null; }
+      map.off("click", onMapClick);
+      map.off("mousemove", onMapMouseMove);
+      document.removeEventListener("keydown", onEsc);
+      L.DomUtil.removeClass(map.getContainer(), "shoreline-drawing-cursor");
+      if (statusEl) statusEl.textContent = "";
+    }
+
+    function onEsc(ev) {
+      if (ev.key === "Escape") cancelDraw();
+    }
+
+    function onMapMouseMove(e) {
+      if (state.step !== 1 || !state.startPt) return;
+      var latlngs = [state.startPt, e.latlng];
+      if (!state.tempLine) {
+        state.tempLine = L.polyline(latlngs, { color: "#555", weight: 2, dashArray: "4 4", opacity: 0.6 }).addTo(map);
+      } else {
+        state.tempLine.setLatLngs(latlngs);
+      }
+    }
+
+    function onMapClick(e) {
+      if (state.step === 0) {
+        // First click: store start point, advance to step 1.
+        state.startPt = e.latlng;
+        state.step = 1;
+        if (statusEl) statusEl.textContent = i18n.shorelineClickSecond;
+      } else if (state.step === 1) {
+        // Second click: finish.
+        var sLat = state.startPt.lat, sLon = state.startPt.lng;
+        var eLat = e.latlng.lat, eLon = e.latlng.lng;
+        cancelDraw();
+
+        startLatIn.value = sLat.toFixed(6);
+        startLonIn.value = sLon.toFixed(6);
+        endLatIn.value = eLat.toFixed(6);
+        endLonIn.value = eLon.toFixed(6);
+
+        redrawSegment(sLat, sLon, eLat, eLon);
+        drawBtn.textContent = i18n.shorelineRedraw;
+      }
+    }
+
+    function startDraw() {
+      clearSegment();
+      state.drawing = true;
+      state.step = 0;
+      state.startPt = null;
+      if (state.tempLine) { map.removeLayer(state.tempLine); state.tempLine = null; }
+      L.DomUtil.addClass(map.getContainer(), "shoreline-drawing-cursor");
+      map.on("click", onMapClick);
+      map.on("mousemove", onMapMouseMove);
+      document.addEventListener("keydown", onEsc);
+      if (statusEl) statusEl.textContent = i18n.shorelineClickFirst;
+    }
+
+    drawBtn.addEventListener("click", startDraw);
+
+    // If segment coords already saved (e.g. re-render after validation error),
+    // restore the visual immediately.
+    var savedSLat = parseFloat(startLatIn ? startLatIn.value : "");
+    var savedSLon = parseFloat(startLonIn ? startLonIn.value : "");
+    var savedELat = parseFloat(endLatIn ? endLatIn.value : "");
+    var savedELon = parseFloat(endLonIn ? endLonIn.value : "");
+    if (!isNaN(savedSLat) && !isNaN(savedSLon) && !isNaN(savedELat) && !isNaN(savedELon)) {
+      redrawSegment(savedSLat, savedSLon, savedELat, savedELon);
+      drawBtn.textContent = i18n.shorelineRedraw;
+    }
   }
 
   function initDrawControl(card, map) {
