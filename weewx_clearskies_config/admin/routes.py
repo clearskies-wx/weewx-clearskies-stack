@@ -2006,6 +2006,7 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
                 "segment_end_lat": _marine_to_float(surf_raw.get("segment_end_lat")),
                 "segment_end_lon": _marine_to_float(surf_raw.get("segment_end_lon")),
                 "transect_spacing_m": _marine_to_float(surf_raw.get("transect_spacing_m")) or 10.0,
+                "l3_enabled": str(surf_raw.get("l3_enabled", "auto") or "auto"),
                 "bottom_type": str(surf_raw.get("bottom_type", "") or ""),
                 "topographic_feature": str(surf_raw.get("topographic_feature", "") or ""),
                 "directional_exposure": _marine_exposure_list(surf_raw.get("directional_exposure")),
@@ -2125,12 +2126,17 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
                 })
             si += 1
 
+        l3_enabled = str(form.get("surf_l3_enabled", "auto")).strip().lower()
+        if l3_enabled not in {"auto", "on", "off"}:
+            l3_enabled = "auto"
+
         surf_cfg: dict = {
             "segment_start_lat": seg_start_lat,
             "segment_start_lon": seg_start_lon,
             "segment_end_lat": seg_end_lat,
             "segment_end_lon": seg_end_lon,
             "transect_spacing_m": transect_spacing,
+            "l3_enabled": l3_enabled,
             "bottom_type": bottom_type,
             "topographic_feature": topo,
             "directional_exposure": [
@@ -2231,6 +2237,7 @@ def _build_marine_apply_payload(
                 "segment_end_lon": s["segment_end_lon"],
                 "bottom_type": s["bottom_type"],
                 "topographic_feature": s["topographic_feature"],
+                "l3_enabled": s.get("l3_enabled", "auto"),
             }
             if s.get("transect_spacing_m") and s["transect_spacing_m"] != 10.0:
                 entry["surf"]["transect_spacing_m"] = s["transect_spacing_m"]

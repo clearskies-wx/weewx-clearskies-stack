@@ -289,6 +289,13 @@
                value="{{ surf.get('transect_spacing_m', 10.0) if surf.get('transect_spacing_m') is not none else '10.0' }}">
         <small>{{ _("Distance between cross-shore transects along the shoreline. Default: 10 m.") }}</small>
 
+        <label for="surf_l3_enabled">{{ _("L3 Grid") }}</label>
+        <select id="surf_l3_enabled" name="surf_l3_enabled">
+            <option value="auto" {% if surf.get('l3_enabled', 'auto') == 'auto' %}selected{% endif %}>{{ _("Auto (structures)") }}</option>
+            <option value="on" {% if surf.get('l3_enabled') == 'on' %}selected{% endif %}>{{ _("Always on") }}</option>
+            <option value="off" {% if surf.get('l3_enabled') == 'off' %}selected{% endif %}>{{ _("Off") }}</option>
+        </select>
+
         <label for="marine-surf-bottom">{{ _("Bottom type") }}</label>
         <select id="marine-surf-bottom" name="surf_bottom_type">
           <option value="">{{ _("— select —") }}</option>
