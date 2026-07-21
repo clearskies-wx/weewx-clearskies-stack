@@ -1999,7 +1999,13 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
             "coops_station_ids": _marine_to_str_list(raw.get("coops_station_ids")),
             "nws_marine_zone_id": str(raw.get("nws_marine_zone_id", "") or ""),
             "surf": {
-                "beach_facing_degrees": _marine_to_float(surf_raw.get("beach_facing_degrees")),
+                # Segment fields (T2.5 — replaces beach_facing_degrees, which is now
+                # computed by the API from the segment bearing via _perpendicular_bearing).
+                "segment_start_lat": _marine_to_float(surf_raw.get("segment_start_lat")),
+                "segment_start_lon": _marine_to_float(surf_raw.get("segment_start_lon")),
+                "segment_end_lat": _marine_to_float(surf_raw.get("segment_end_lat")),
+                "segment_end_lon": _marine_to_float(surf_raw.get("segment_end_lon")),
+                "transect_spacing_m": _marine_to_float(surf_raw.get("transect_spacing_m")) or 10.0,
                 "bottom_type": str(surf_raw.get("bottom_type", "") or ""),
                 "topographic_feature": str(surf_raw.get("topographic_feature", "") or ""),
                 "directional_exposure": _marine_exposure_list(surf_raw.get("directional_exposure")),
@@ -2081,11 +2087,23 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
     }
 
     if "surf" in activities:
-        facing = _marine_to_float(form.get("surf_beach_facing_degrees"))
+        # Segment fields (T2.5 — replaces beach_facing_degrees).
+        seg_start_lat = _marine_to_float(form.get("surf_segment_start_lat"))
+        seg_start_lon = _marine_to_float(form.get("surf_segment_start_lon"))
+        seg_end_lat = _marine_to_float(form.get("surf_segment_end_lat"))
+        seg_end_lon = _marine_to_float(form.get("surf_segment_end_lon"))
+        if seg_start_lat is None or not (-90 <= seg_start_lat <= 90):
+            return location, _("Surf: a shoreline segment is required — draw it on the map above.")
+        if seg_start_lon is None or not (-180 <= seg_start_lon <= 180):
+            return location, _("Surf: a shoreline segment is required — draw it on the map above.")
+        if seg_end_lat is None or not (-90 <= seg_end_lat <= 90):
+            return location, _("Surf: a shoreline segment is required — draw it on the map above.")
+        if seg_end_lon is None or not (-180 <= seg_end_lon <= 180):
+            return location, _("Surf: a shoreline segment is required — draw it on the map above.")
+        raw_spacing = _marine_to_float(form.get("transect_spacing_m"))
+        transect_spacing: float = raw_spacing if (raw_spacing is not None and 1 <= raw_spacing <= 500) else 10.0
         bottom_type = str(form.get("surf_bottom_type", "")).strip()
         topo = str(form.get("surf_topographic_feature", "")).strip()
-        if facing is None or not (0 <= facing < 360):
-            return location, _("Surf: beach facing direction (0-359 degrees) is required.")
         if bottom_type not in _MARINE_VALID_BOTTOM_TYPES:
             return location, _("Surf: a valid bottom type is required.")
         if topo not in _MARINE_VALID_TOPO_FEATURES:
@@ -2108,7 +2126,11 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
             si += 1
 
         surf_cfg: dict = {
-            "beach_facing_degrees": facing,
+            "segment_start_lat": seg_start_lat,
+            "segment_start_lon": seg_start_lon,
+            "segment_end_lat": seg_end_lat,
+            "segment_end_lon": seg_end_lon,
+            "transect_spacing_m": transect_spacing,
             "bottom_type": bottom_type,
             "topographic_feature": topo,
             "directional_exposure": [
@@ -2199,11 +2221,19 @@ def _build_marine_apply_payload(
             entry["nws_marine_zone_id"] = loc["nws_marine_zone_id"]
         if "surf" in activities and loc.get("surf"):
             s = loc["surf"]
+            # Segment fields sent instead of beach_facing_degrees (T2.5).
+            # The API's /setup/apply handler computes beach_facing_degrees from
+            # the segment bearing via _perpendicular_bearing(_segment_bearing(...)).
             entry["surf"] = {
-                "beach_facing_degrees": s["beach_facing_degrees"],
+                "segment_start_lat": s["segment_start_lat"],
+                "segment_start_lon": s["segment_start_lon"],
+                "segment_end_lat": s["segment_end_lat"],
+                "segment_end_lon": s["segment_end_lon"],
                 "bottom_type": s["bottom_type"],
                 "topographic_feature": s["topographic_feature"],
             }
+            if s.get("transect_spacing_m") and s["transect_spacing_m"] != 10.0:
+                entry["surf"]["transect_spacing_m"] = s["transect_spacing_m"]
             if s.get("directional_exposure"):
                 entry["surf"]["directional_exposure"] = {d: True for d in s["directional_exposure"]}
             if s.get("structures"):
