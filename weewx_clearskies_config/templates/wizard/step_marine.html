@@ -1068,7 +1068,6 @@ if (typeof L === "undefined") {
       map.removeLayer(map._csObstacleLayer);
     }
     var obstacleGroup = L.featureGroup().addTo(map);
-    var OBSTACLE_TYPES = { "jetty": true, "breakwater": true, "groin": true, "pier": true, "seawall": true };
     var obstacles = [];
     for (var i = 0; i < structures.length; i++) {
       var s = structures[i];
@@ -1098,7 +1097,7 @@ if (typeof L === "undefined") {
     var endLatIn    = card.querySelector(".surf-segment-end-lat");
     var endLonIn    = card.querySelector(".surf-segment-end-lon");
 
-    if (!drawBtn) return;
+    if (!drawBtn || !startLatIn || !startLonIn || !endLatIn || !endLonIn) return;
 
     var state = { drawing: false, step: 0, startPt: null, tempLine: null };
     var segGroup = null;    // holds segment line + transect lines
