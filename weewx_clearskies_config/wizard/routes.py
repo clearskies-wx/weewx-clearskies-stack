@@ -4962,6 +4962,11 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 if bounds_val and not state.librewxr_bounds:
                     state.librewxr_bounds = bounds_val
 
+    # Compute service — restore from API current-config on re-run.
+    compute_host_val = config.get("surf_compute_host")
+    if compute_host_val and not state.surf_compute_host:
+        state.surf_compute_host = str(compute_host_val).strip()
+
     # --- Station ---
     station = config.get("station", {})
     if isinstance(station, dict):
