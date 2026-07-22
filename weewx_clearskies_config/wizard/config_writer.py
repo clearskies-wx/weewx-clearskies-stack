@@ -475,6 +475,8 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
                 surf_out["surfbeat_enabled"] = surf["surfbeat_enabled"]
             if "surfbeat_cadence_hours" in surf:
                 surf_out["surfbeat_cadence_hours"] = surf["surfbeat_cadence_hours"]
+            if surf.get("friction_coefficient") is not None:
+                surf_out["friction_coefficient"] = surf["friction_coefficient"]
             entry["surf"] = surf_out
 
         fishing = loc_data.get("fishing")
