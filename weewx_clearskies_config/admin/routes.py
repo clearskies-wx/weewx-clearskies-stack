@@ -34,6 +34,9 @@ Route summary (admin landing + domain sections):
   POST /admin/marine/save             — validate + save one location via /setup/apply
   POST /admin/marine/delete           — delete one location via /setup/apply
   POST /admin/marine/test-connectivity — HTMX: NDBC/CO-OPS/NWS zone status for a location
+  GET  /admin/compute                — wave modeling compute service settings
+  POST /admin/compute                — save compute host URL + optional new secret
+  POST /admin/compute/test           — HTMX: test connectivity to compute service URL
 
 Route summary (config editor — formerly config/routes.py):
   GET  /admin/config                          — config dashboard (all sections)
@@ -890,6 +893,13 @@ _CUSTOM_SECTIONS: list[dict] = [
         "description": "",
     },
     {
+        "section_id": "wave-modeling",
+        "display_name": "Wave Modeling",
+        "group": "providers",
+        "url": "/admin/compute",
+        "description": "Remote compute service for SwellTrack and SurfBeat wave modeling.",
+    },
+    {
         "section_id": "now-layout",
         "display_name": "Now Page Layout",
         "group": "dashboard",
@@ -1099,6 +1109,18 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
         else:
             marine_rows.append(("Status", "Not configured"))
     custom_landing_values["marine"] = marine_rows
+
+    # Wave Modeling compute service summary (F1)
+    compute_rows: list[tuple[str, Any]] = []
+    if marine_config is None:
+        compute_rows.append(("Status", "API unreachable"))
+    else:
+        compute_host = marine_config.get("surf_compute_host", "")
+        if compute_host:
+            compute_rows.append(("Compute host", compute_host))
+        else:
+            compute_rows.append(("Status", "In-process (no remote host)"))
+    custom_landing_values["wave-modeling"] = compute_rows
 
     return _render(
         request,
@@ -3227,5 +3249,172 @@ async def trushore_test_service(request: Request) -> HTMLResponse:
         return HTMLResponse(
             '<span class="error-text">'
             + _marine_esc(_("Could not reach the API: {detail}").format(detail=str(exc)))
+            + "</span>"
+        )
+
+
+# ---------------------------------------------------------------------------
+# Wave Modeling compute service admin section (F1 — Phase 5 audit remediation)
+# ---------------------------------------------------------------------------
+
+
+def _read_saved_compute_secret() -> str:
+    """Read the current SURF_COMPUTE_SECRET from secrets.env on disk.
+
+    Returns an empty string if the file is missing or the key is absent.
+    Used by the admin test-compute handler to fall back to the saved secret
+    when the operator does not type a new one.
+    """
+    if _config_dir is None:
+        return ""
+    from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
+    secrets = _read_secrets_env(_config_dir)
+    return secrets.get("SURF_COMPUTE_SECRET", "")
+
+
+@router.get("/compute", response_class=HTMLResponse)
+async def compute_get(request: Request) -> HTMLResponse:
+    """Render the Wave Modeling compute service admin section.
+
+    Non-HTMX requests redirect to the admin landing page — the compute
+    template is a fragment designed to load inside #admin-content.
+    """
+    _require_session(request)
+    if not request.headers.get("HX-Request"):
+        return RedirectResponse(url="/admin/config#wave-modeling", status_code=303)
+
+    config = _fetch_current_config()
+    error: str | None = None
+    compute_host = ""
+    has_secret = False
+    verify_tls = True
+    if config is None:
+        error = _("Cannot connect to the API — check that the API is running and configured.")
+    else:
+        compute_host = config.get("surf_compute_host", "") or ""
+        verify_tls = config.get("surf_compute_verify_tls", True)
+        has_secret = bool(_read_saved_compute_secret())
+
+    return _render(request, "compute.html", {
+        "compute_host": compute_host,
+        "has_secret": has_secret,
+        "verify_tls": verify_tls,
+        "error": error,
+        "flash": None,
+    })
+
+
+@router.post("/compute", response_class=HTMLResponse)
+async def compute_save(request: Request) -> HTMLResponse:
+    """Save compute host URL and optional new secret via /setup/apply."""
+    _require_session(request)
+    form = await request.form()
+    compute_host = str(form.get("surf_compute_host", "")).strip()
+    compute_secret = str(form.get("surf_compute_secret", "")).strip()
+
+    client = _get_api_client()
+    if client is None:
+        return _render(request, "compute.html", {
+            "compute_host": compute_host,
+            "has_secret": bool(_read_saved_compute_secret()),
+            "verify_tls": True,
+            "error": _("Cannot connect to the API — check that the API is running and configured."),
+            "flash": None,
+        })
+
+    # Build a minimal apply payload with only the compute fields.
+    apply_payload: dict[str, Any] = {}
+    apply_payload["surf_compute_host"] = compute_host
+    if compute_secret:
+        apply_payload["surf_compute_secret"] = compute_secret
+
+    error: str | None = None
+    flash: str | None = None
+    try:
+        client.apply(apply_payload)
+        _restart_api_after_apply(client)
+        flash = _("Compute settings saved. The API is restarting to apply the change.")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("compute_save: apply failed", exc_info=True)
+        error = _("Save failed: {detail}").format(detail=exc)
+
+    # Re-read config for an accurate display after save.
+    refreshed = _fetch_current_config()
+    display_host = compute_host
+    display_verify_tls = True
+    if refreshed is not None:
+        display_host = refreshed.get("surf_compute_host", "") or ""
+        display_verify_tls = refreshed.get("surf_compute_verify_tls", True)
+
+    return _render(request, "compute.html", {
+        "compute_host": display_host,
+        "has_secret": bool(compute_secret or _read_saved_compute_secret()),
+        "verify_tls": display_verify_tls,
+        "error": error,
+        "flash": flash,
+    })
+
+
+@router.post("/compute/test", response_class=HTMLResponse)
+async def compute_test(request: Request) -> HTMLResponse:
+    """HTMX: test connectivity to the compute service URL.
+
+    Proxies to the API's POST /setup/providers/test-compute endpoint.
+    If the operator left the secret field blank, falls back to the saved
+    secret from secrets.env.
+    """
+    _require_session(request)
+    form = await request.form()
+    compute_url = str(form.get("surf_compute_host", "")).strip()
+    compute_secret = str(form.get("surf_compute_secret", "")).strip()
+
+    # Fall back to saved secret when the form field is blank.
+    if not compute_secret:
+        compute_secret = _read_saved_compute_secret()
+
+    if not compute_url:
+        return HTMLResponse(
+            '<span class="error-text">'
+            + _marine_esc(_("Enter a compute host URL before testing."))
+            + "</span>"
+        )
+
+    client = _get_api_client()
+    if client is None:
+        return HTMLResponse(
+            '<span class="error-text">'
+            + _marine_esc(_("Cannot connect to the API — check that the API is running and configured."))
+            + "</span>"
+        )
+
+    try:
+        resp = client._request(
+            "POST",
+            "/setup/providers/test-compute",
+            json={"url": compute_url, "secret": compute_secret},
+        )
+        data = resp.json()
+        if data.get("ok"):
+            version = data.get("version", "")
+            msg = _("Connection successful.")
+            if version:
+                msg += f" (v{version})"
+            return HTMLResponse(
+                '<span class="success-text">'
+                + _marine_esc(msg)
+                + "</span>"
+            )
+        detail = data.get("error", _("Unknown error"))
+        return HTMLResponse(
+            '<span class="error-text">'
+            + _marine_esc(_("Connection failed: {error}").format(error=detail))
+            + "</span>",
+            status_code=200,
+        )
+    except Exception:  # noqa: BLE001
+        logger.debug("compute_test: error", exc_info=True)
+        return HTMLResponse(
+            '<span class="error-text">'
+            + _marine_esc(_("Could not reach the API to test the compute service."))
             + "</span>"
         )

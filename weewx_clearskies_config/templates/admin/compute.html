@@ -1,0 +1,151 @@
+{# -------------------------------------------------------------------------
+   Wave Modeling compute service admin section (F1 — Phase 5 audit).
+   Loaded via HTMX into #admin-content.
+   Context: compute_host, has_secret, verify_tls, error, flash
+   ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
+<style>
+.admin-alert{padding:.75rem 1rem;border-radius:var(--pico-border-radius,.25rem);margin-block:1rem;font-size:.875rem}
+.admin-alert-error{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
+.admin-alert-success{background:#f0fdf4;border:1px solid #86efac;color:#166534}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}:root:not([data-theme="light"]) .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}}
+[data-theme="dark"] .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}
+[data-theme="dark"] .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}
+.error-text{color:var(--pico-del-color,#dc2626)}
+.success-text{color:var(--pico-ins-color,#16a34a)}
+</style>
+<article>
+  <header>
+    <nav aria-label="{{ _('Breadcrumb') }}">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">{{ _("Admin") }}</a>
+        </li>
+        <li>{{ _("Wave Modeling") }}</li>
+      </ul>
+    </nav>
+    <h2>{{ _("Wave Modeling") }}</h2>
+    {{ help_trigger("/admin/help/compute") }}
+  </header>
+
+  {% if flash %}
+  <div role="status" class="admin-alert admin-alert-success">
+    {{ flash }}
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div role="alert" class="admin-alert admin-alert-error">
+    <strong>{{ _("Error.") }}</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <p>{{ _("Offloads SwellTrack and SurfBeat wave computations to a remote host. Leave blank to compute on the API host.") }}</p>
+
+  <form hx-post="/admin/compute"
+        hx-target="#admin-content"
+        hx-swap="innerHTML"
+        id="compute-form">
+
+    <fieldset>
+      <legend>{{ _("Compute service") }}</legend>
+
+      <label for="surf_compute_host">
+        {{ _("Compute host URL") }}
+        <input
+          type="url"
+          id="surf_compute_host"
+          name="surf_compute_host"
+          value="{{ compute_host }}"
+          placeholder="https://host:8770"
+          aria-describedby="compute-host-hint"
+        >
+      </label>
+      <small id="compute-host-hint">
+        {{ _("URL of a remote wave modeling service. Offloads SwellTrack and SurfBeat computations to a more powerful machine. Leave blank to compute on the API host (works but slower on limited hardware).") }}
+      </small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>{{ _("Compute secret") }}</legend>
+
+      <label for="surf_compute_secret">
+        {{ _("Update secret") }}
+        <div style="display:flex;gap:0.5rem;align-items:start">
+          <div style="flex:1;position:relative">
+            <input type="password" id="surf_compute_secret" name="surf_compute_secret"
+                   value=""
+                   placeholder="{{ _('Authentication token') }}"
+                   aria-describedby="compute-secret-hint"
+                   autocomplete="off">
+          </div>
+          <button type="button" class="outline secondary" id="compute-secret-toggle"
+                  style="white-space:nowrap;flex-shrink:0;padding:0.5rem 0.75rem"
+                  aria-label="{{ _('Show or hide secret') }}">
+            {{ _("Show") }}
+          </button>
+        </div>
+      </label>
+      <small id="compute-secret-hint">
+        {{ _("The authentication token generated when the compute service was first installed.") }}
+      </small>
+      {% if has_secret %}
+      <small style="color:var(--pico-muted-color)">
+        {{ _("A secret is already saved. Leave blank to keep it, or enter a new value to replace it.") }}
+      </small>
+      {% endif %}
+    </fieldset>
+
+    <div style="margin-block-start:1rem;display:flex;align-items:center;gap:0.75rem">
+      <button type="button" class="outline secondary"
+              id="test-compute-btn"
+              hx-post="/admin/compute/test"
+              hx-include="#surf_compute_host,#surf_compute_secret"
+              hx-target="#compute-test-result"
+              hx-swap="innerHTML"
+              hx-disabled-elt="this"
+              hx-indicator="#compute-test-indicator">
+        {{ _("Test Connection") }}
+      </button>
+      <span id="compute-test-indicator"
+            class="htmx-indicator"
+            style="font-size:0.85rem;color:var(--pico-muted-color)">
+        {{ _("Testing…") }}
+      </span>
+    </div>
+    <div id="compute-test-result" style="margin-block-start:0.5rem"></div>
+
+    <div role="group" style="margin-block-start:1.5rem">
+      <button type="submit">{{ _("Save") }}</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">{{ _("Cancel") }}</a>
+    </div>
+  </form>
+</article>
+
+<script>
+(function(){
+  var toggle = document.getElementById("compute-secret-toggle");
+  var input = document.getElementById("surf_compute_secret");
+  if (toggle && input) {
+    toggle.addEventListener("click", function() {
+      if (input.type === "password") {
+        input.type = "text";
+        toggle.textContent = "{{ _('Hide') }}";
+      } else {
+        input.type = "password";
+        toggle.textContent = "{{ _('Show') }}";
+      }
+    });
+  }
+})();
+</script>
