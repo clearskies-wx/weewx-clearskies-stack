@@ -200,6 +200,64 @@
     </fieldset>
     {% endfor %}
 
+    {# Wave Modeling — compute service provider (T5.2).
+       Not a data provider the dashboard consumes — it is a backend service
+       the API calls to offload SwellTrack/SurfBeat computation.  Blank URL
+       means compute in-process on the API host.  Secret stored in secrets.env. #}
+    <fieldset>
+      <legend>{{ _("Wave Modeling") }}</legend>
+      <p><small>{{ _("Offloads SwellTrack and SurfBeat wave computations to a remote host. Leave blank to compute on the API host.") }}</small></p>
+
+      <label for="surf_compute_host">{{ _("Compute host URL") }}</label>
+      <input type="url" id="surf_compute_host" name="surf_compute_host"
+             value="{{ state.surf_compute_host }}"
+             placeholder="https://host:8770"
+             aria-describedby="compute-host-help">
+      <small id="compute-host-help">{{ _("URL of a remote wave modeling service. Offloads SwellTrack and SurfBeat computations to a more powerful machine. Leave blank to compute on the API host (works but slower on limited hardware).") }}</small>
+
+      <label for="surf_compute_secret">{{ _("Compute secret") }}</label>
+      <div style="display:flex;gap:0.5rem;align-items:start">
+        <div style="flex:1;position:relative">
+          <input type="password" id="surf_compute_secret" name="surf_compute_secret"
+                 value="{{ '' if state.surf_compute_secret else '' }}"
+                 placeholder="{{ _('Authentication token') }}"
+                 aria-describedby="compute-secret-help"
+                 autocomplete="off">
+          {% if state.surf_compute_secret %}
+          <input type="hidden" name="surf_compute_secret_unchanged" value="1">
+          {% endif %}
+        </div>
+        <button type="button" class="outline secondary" id="compute-secret-toggle"
+                style="white-space:nowrap;flex-shrink:0;padding:0.5rem 0.75rem"
+                aria-label="{{ _('Show or hide secret') }}">
+          {{ _("Show") }}
+        </button>
+      </div>
+      <small id="compute-secret-help">{{ _("The authentication token generated when the compute service was first installed.") }}</small>
+      {% if state.surf_compute_secret %}
+      <small style="color:var(--pico-muted-color)">{{ _("A secret is already saved. Leave blank to keep it, or enter a new value to replace it.") }}</small>
+      {% endif %}
+
+      <div style="margin-block-start:0.75rem;display:flex;align-items:center;gap:0.75rem">
+        <button type="button" class="outline secondary"
+                id="test-compute-btn"
+                hx-post="/wizard/providers/test-compute"
+                hx-include="#surf_compute_host,#surf_compute_secret"
+                hx-target="#compute-test-result"
+                hx-swap="innerHTML"
+                hx-disabled-elt="this"
+                hx-indicator="#compute-test-indicator">
+          {{ _("Test Connection") }}
+        </button>
+        <span id="compute-test-indicator"
+              class="htmx-indicator"
+              style="font-size:0.85rem;color:var(--pico-muted-color)">
+          {{ _("Testing…") }}
+        </span>
+      </div>
+      <div id="compute-test-result" style="margin-block-start:0.5rem"></div>
+    </fieldset>
+
     <div role="group">
       <button type="button"
               hx-get="/wizard/step/4"
@@ -239,6 +297,25 @@
           }
         });
       });
+      // Show/hide compute secret toggle (T5.2)
+      (function () {
+        var toggleBtn = document.getElementById('compute-secret-toggle');
+        var secretInput = document.getElementById('surf_compute_secret');
+        if (toggleBtn && secretInput) {
+          toggleBtn.addEventListener('click', function () {
+            var isPassword = secretInput.type === 'password';
+            secretInput.type = isPassword ? 'text' : 'password';
+            toggleBtn.textContent = isPassword ? '{{ _("Hide") }}' : '{{ _("Show") }}';
+          });
+        }
+        // Clear the unchanged sentinel when the user types a new secret
+        if (secretInput) {
+          secretInput.addEventListener('input', function () {
+            var sentinel = document.querySelector('input[name="surf_compute_secret_unchanged"]');
+            if (sentinel) { sentinel.value = '0'; }
+          });
+        }
+      })();
     </script>
   </form>
 </article>

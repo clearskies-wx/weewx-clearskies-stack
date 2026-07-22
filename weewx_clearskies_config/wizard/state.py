@@ -241,6 +241,14 @@ class WizardState:
     # alerts provider is selected.
     marine_alert_radius_miles: int = 0
 
+    # Compute service for wave modeling offloading (T5.2).
+    # URL of a remote compute service (e.g. https://host:8770).
+    # Empty string means compute in-process on the API host.
+    surf_compute_host: str = ""
+    # Authentication token for the compute service.
+    # Written to secrets.env as SURF_COMPUTE_SECRET, never to api.conf.
+    surf_compute_secret: str = ""
+
     # SWAN+TruShore nearshore model configuration (T4.4).
     # Shown only when the [nearshore] pip extra is detected (swan-check passes).
     # trushore_deployment_mode: "bundled" (SWAN runs as a subprocess inside

@@ -1866,6 +1866,24 @@ _MARINE_ACTIVITY_LABELS: dict[str, str] = {
 }
 
 
+def _marine_to_bool(value: Any, *, default: bool = False) -> bool:
+    """Best-effort bool coercion for ConfigObj-sourced values (T5.3).
+
+    ConfigObj stores booleans as strings (``"True"``/``"False"``).
+    Also handles actual ``bool``, ``int``, and ``None``.
+    """
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in ("true", "1", "yes", "on"):
+        return True
+    if text in ("false", "0", "no", "off"):
+        return False
+    return default
+
+
 def _marine_to_float(value: Any) -> float | None:
     """Best-effort float coercion for ConfigObj-sourced scalar values."""
     try:
@@ -2011,6 +2029,10 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
                 "topographic_feature": str(surf_raw.get("topographic_feature", "") or ""),
                 "directional_exposure": _marine_exposure_list(surf_raw.get("directional_exposure")),
                 "structures": _marine_structures_list(surf_raw.get("structures")),
+                # SurfBeat and friction fields (T5.3).
+                "surfbeat_enabled": _marine_to_bool(surf_raw.get("surfbeat_enabled"), default=True),
+                "surfbeat_cadence_hours": int(_marine_to_float(surf_raw.get("surfbeat_cadence_hours")) or 3),
+                "friction_coefficient": _marine_to_float(surf_raw.get("friction_coefficient")) or 0.038,
             } if "surf" in activities else {},
             "fishing": {
                 "target_categories": fishing_raw.get("target_categories") or ([fishing_raw["target_category"]] if fishing_raw.get("target_category") else []),
@@ -2145,6 +2167,19 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
         }
         if structures:
             surf_cfg["structures"] = structures
+
+        # SurfBeat and friction fields (T5.3).
+        surfbeat_checked = form.get("surfbeat_enabled")
+        surf_cfg["surfbeat_enabled"] = surfbeat_checked is not None
+        raw_cadence = _marine_to_float(form.get("surfbeat_cadence_hours"))
+        cadence_int = int(raw_cadence) if raw_cadence is not None and 1 <= raw_cadence <= 6 else 3
+        surf_cfg["surfbeat_cadence_hours"] = cadence_int
+        raw_friction = _marine_to_float(form.get("friction_coefficient"))
+        if raw_friction is not None and raw_friction > 0:
+            surf_cfg["friction_coefficient"] = raw_friction
+        else:
+            surf_cfg["friction_coefficient"] = 0.038
+
         location["surf"] = surf_cfg
 
     if "fishing" in activities:
@@ -2245,6 +2280,13 @@ def _build_marine_apply_payload(
                 entry["surf"]["directional_exposure"] = {d: True for d in s["directional_exposure"]}
             if s.get("structures"):
                 entry["surf"]["structures"] = s["structures"]
+            # SurfBeat and friction fields (T5.3).
+            if "surfbeat_enabled" in s:
+                entry["surf"]["surfbeat_enabled"] = s["surfbeat_enabled"]
+            if "surfbeat_cadence_hours" in s:
+                entry["surf"]["surfbeat_cadence_hours"] = s["surfbeat_cadence_hours"]
+            if "friction_coefficient" in s:
+                entry["surf"]["friction_coefficient"] = s["friction_coefficient"]
         if "fishing" in activities and loc.get("fishing"):
             cats = loc["fishing"].get("target_categories") or ([loc["fishing"]["target_category"]] if loc["fishing"].get("target_category") else [])
             if cats:

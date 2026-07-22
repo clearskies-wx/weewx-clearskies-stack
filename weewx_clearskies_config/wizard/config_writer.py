@@ -470,6 +470,11 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
                 surf_out["bathymetric_profile"] = surf["bathymetric_profile"]
             if surf.get("structures"):
                 surf_out["structures"] = surf["structures"]
+            # SurfBeat fields (T5.1) — per-spot toggle and cadence.
+            if "surfbeat_enabled" in surf:
+                surf_out["surfbeat_enabled"] = surf["surfbeat_enabled"]
+            if "surfbeat_cadence_hours" in surf:
+                surf_out["surfbeat_cadence_hours"] = surf["surfbeat_cadence_hours"]
             entry["surf"] = surf_out
 
         fishing = loc_data.get("fishing")

@@ -217,6 +217,15 @@ if (typeof L === "undefined") {
     </select>
     <small id="loc_{{ idx }}_topo_help">{{ _("Coastal landform shape. Point breaks focus wave energy; bays shelter it.") }}</small>
 
+    <label>
+      <input type="checkbox" name="loc_{{ idx }}_surfbeat_enabled" value="1"
+             {% if surf.get("surfbeat_enabled", true) %}checked{% endif %}>
+      {{ _("Enable set/lull timing (SurfBeat)") }}
+    </label>
+    <small>{{ _("Adds set timing predictions showing how often bigger waves arrive. Increases compute time by ~12 minutes per forecast cycle.") }}</small>
+    <input type="hidden" name="loc_{{ idx }}_surfbeat_cadence_hours"
+           value="{{ surf.get('surfbeat_cadence_hours', 3) }}">
+
     <fieldset aria-describedby="loc_{{ idx }}_exposure_help">
       <legend>{{ _("Directional exposure") }}</legend>
       <small id="loc_{{ idx }}_exposure_help">{{ _("Select which compass directions have open ocean exposure at this spot. A south-facing beach with headlands to the east and west would have S, SE, SW exposed and N, NE, NW, E, W blocked. Swells from blocked directions cannot reach this spot and are excluded from the surf forecast.") }}</small>

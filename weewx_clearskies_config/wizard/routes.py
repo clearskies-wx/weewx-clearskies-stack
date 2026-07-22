@@ -42,6 +42,7 @@ Route summary:
   GET  /wizard/trushore         — step 14 fragment (SWAN+TruShore nearshore model setup)
   POST /wizard/trushore         — save TruShore config, return step 15 fragment (TLS)
   POST /wizard/trushore/test-service — HTMX: test connectivity to a separated TruShore service URL
+  POST /wizard/providers/test-compute — HTMX: test connectivity to a compute service URL (T5.2)
   GET  /wizard/tls              — step 15 fragment (TLS / HTTPS configuration)
   POST /wizard/tls              — save TLS config, return step 16 fragment (review)
   GET  /wizard/step/9           — step 16 fragment (review summary)
@@ -2174,6 +2175,17 @@ async def step6_post(request: Request) -> HTMLResponse:
     submitted_bounds = str(form.get("librewxr_bounds", "")).strip()
     state.librewxr_bounds = submitted_bounds
 
+    # Compute service for wave modeling offloading (T5.2).
+    submitted_compute_host = str(form.get("surf_compute_host", "")).strip()
+    state.surf_compute_host = submitted_compute_host
+    submitted_compute_secret = str(form.get("surf_compute_secret", "")).strip()
+    if submitted_compute_secret:
+        state.surf_compute_secret = submitted_compute_secret
+    elif str(form.get("surf_compute_secret_unchanged", "0")).strip() == "1":
+        pass  # keep existing secret in state
+    else:
+        state.surf_compute_secret = ""
+
     save_wizard_state(session_id, state)
     return await step7_get(request)
 
@@ -2924,6 +2936,15 @@ async def step_marine_post(request: Request) -> HTMLResponse:
                 si += 1
             if structures:
                 surf_cfg["structures"] = structures
+
+            # SurfBeat toggle and cadence (T5.1).
+            surfbeat_checked = form.get(f"loc_{idx}_surfbeat_enabled")
+            surf_cfg["surfbeat_enabled"] = surfbeat_checked is not None
+            raw_cadence = _parse_int(
+                str(form.get(f"loc_{idx}_surfbeat_cadence_hours", "3")),
+                default=3,
+            )
+            surf_cfg["surfbeat_cadence_hours"] = raw_cadence if 1 <= raw_cadence <= 6 else 3
 
             loc["surf"] = surf_cfg
 
@@ -3744,6 +3765,66 @@ async def trushore_test_service(request: Request) -> HTMLResponse:
         )
 
 
+@router.post("/providers/test-compute", response_class=HTMLResponse)
+async def providers_test_compute(request: Request) -> HTMLResponse:
+    """HTMX: test connectivity to a compute service URL (T5.2).
+
+    Proxies a POST to the API's ``/setup/providers/test-compute`` endpoint,
+    which makes an authenticated ``GET /health`` request to the compute
+    service and returns ``{ok, version, error}``.
+    """
+    session_id = _require_session(request)
+    state = get_wizard_state(session_id)
+    form = await request.form()
+    compute_url = str(form.get("surf_compute_host", "")).strip()
+    compute_secret = str(form.get("surf_compute_secret", "")).strip()
+
+    # If the secret field is empty but the sentinel says unchanged, use
+    # the saved secret from wizard state.
+    if not compute_secret and state.surf_compute_secret:
+        compute_secret = state.surf_compute_secret
+
+    if not compute_url:
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Enter a compute host URL before testing."))
+            + "</span>"
+        )
+
+    try:
+        client = _get_api_client(state)
+        resp = client._request(
+            "POST",
+            "/setup/providers/test-compute",
+            json={"url": compute_url, "secret": compute_secret},
+        )
+        data = resp.json()
+        if data.get("ok"):
+            version = data.get("version", "")
+            msg = _("Connection successful.")
+            if version:
+                msg += f" (v{version})"
+            return HTMLResponse(
+                '<span class="success-text">'
+                + html_escape(msg)
+                + "</span>"
+            )
+        detail = data.get("error", _("Unknown error"))
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Connection failed: {error}").format(error=detail))
+            + "</span>",
+            status_code=200,
+        )
+    except Exception:  # noqa: BLE001
+        logger.debug("providers_test_compute: error", exc_info=True)
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(_("Could not reach the API to test the compute service."))
+            + "</span>"
+        )
+
+
 @router.get("/tls", response_class=HTMLResponse)
 async def step_tls_get(request: Request) -> HTMLResponse:
     """Step 15: TLS — render the certificate mode selection form."""
@@ -4091,6 +4172,14 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         for loc in state.marine_locations.values()
     ):
         api_payload["trushore"] = build_trushore_payload(state)
+
+    # Compute service for wave modeling offloading (T5.2).
+    # Top-level fields: the API writes surf_compute_host to [providers] in
+    # api.conf and surf_compute_secret to secrets.env.
+    if state.surf_compute_host:
+        api_payload["surf_compute_host"] = state.surf_compute_host
+    if state.surf_compute_secret:
+        api_payload["surf_compute_secret"] = state.surf_compute_secret
 
     # Unit configuration — sent to the API so it writes to api.conf [units].
     # This is the single unit authority (T2A.5, ADR-042).
