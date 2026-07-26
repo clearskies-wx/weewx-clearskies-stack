@@ -23,14 +23,15 @@
   {# SWAN binary not found — show install instructions and a Skip button   #}
   {# -------------------------------------------------------------------- #}
   <div role="alert" class="alert-warning" style="margin-block:1rem;padding:1rem;border:1px solid var(--pico-del-color, #fca5a5);border-radius:var(--pico-border-radius);background:var(--pico-del-background-color, #fef2f2)">
-    <strong>{{ _("SWAN binary not found.") }}</strong>
-    <p>{{ _("The SWAN spectral wave model is not installed on this host. Surf forecasts will fall back to WaveWatch III offshore data without nearshore refinement.") }}</p>
-    <p>{{ _("To enable nearshore wave modeling, install SWAN and the clearskies[nearshore] Python extra, then restart the setup wizard.") }}</p>
+    <strong>{{ _("SWAN binary not found on the marine service host.") }}</strong>
+    <p>{{ _("The marine service reports that the SWAN spectral wave model is not installed on the machine it runs on. Surf forecasts will fall back to WaveWatch III offshore data without nearshore refinement.") }}</p>
+    <p>{{ _("To enable nearshore wave modeling, install SWAN and the marine service's nearshore extra on the marine service host, then restart the marine service.") }}</p>
     <details style="margin-block-start:0.75rem">
       <summary style="cursor:pointer;font-weight:600">{{ _("Install instructions") }}</summary>
+      <p style="font-size:0.8rem">{{ _("Run these on the host where the marine service runs — not necessarily this one.") }}</p>
       <pre style="font-size:0.8rem;overflow-x:auto;white-space:pre-wrap;margin-block-start:0.5rem"><code># Debian / Ubuntu
 sudo apt-get install -y swan gfortran
-pip install clearskies[nearshore]
+pip install "weewx-clearskies-marine[nearshore]"
 
 # From source (any Linux)
 git clone https://github.com/SWANTEAM/SWAN.git
@@ -38,7 +39,7 @@ cd SWAN
 make config
 make
 sudo cp swan /usr/local/bin/swan
-pip install clearskies[nearshore]</code></pre>
+pip install "weewx-clearskies-marine[nearshore]"</code></pre>
     </details>
   </div>
 

@@ -261,7 +261,9 @@ class WizardState:
     marine_verify_tls: bool = True
 
     # SWAN+TruShore nearshore model tuning (T4.4).
-    # Shown only when the [nearshore] pip extra is detected (swan-check passes).
+    # Shown only when swan-check passes — that is, when the marine service
+    # reports a usable SWAN binary on its own host (C-54/C-66).  It is not a
+    # pip-extra check on this host, and never was one on the API host either.
     # Where SWAN runs is no longer configured here (T7.2): SWAN lives in the
     # marine service, reached at marine_service_url above.  These are the
     # model's tuning knobs only.
