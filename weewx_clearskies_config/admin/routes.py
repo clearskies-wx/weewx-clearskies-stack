@@ -2985,7 +2985,11 @@ async def trushore_get(request: Request) -> HTMLResponse:
     trushore_cfg: dict[str, Any] = {}
     surf_locations: dict[str, dict[str, Any]] = {}
     if config is not None:
-        trushore_cfg = config.get("trushore") or {}
+        # "swan", not "trushore" — /setup/current-config emits the section
+        # under "swan" (API _serialize_swan_section).  Reading the old key
+        # silently yielded {} and rendered defaults over the operator's saved
+        # settings.  See C-67.
+        trushore_cfg = config.get("swan") or {}
         marine_cfg = config.get("marine") or {}
         all_locations = _parse_marine_locations(marine_cfg)
         surf_locations = {
@@ -3112,7 +3116,10 @@ async def trushore_save(request: Request) -> HTMLResponse:
     # them /setup/apply rejects the request outright: ApplyRequest.database
     # has no default and the model is extra="forbid".
     apply_payload: dict[str, Any] = _build_base_apply_payload(config)
-    apply_payload["trushore"] = trushore_payload
+    # Key is "swan", not "trushore" — the API's ApplyRequest field was renamed
+    # in the TruShore->SWAN rename and never followed here.  extra="forbid"
+    # means the old key 422s the whole apply.  See C-67.
+    apply_payload["swan"] = trushore_payload
     apply_payload["marine"] = {"locations": updated_locations} if updated_locations else {}
 
     try:
@@ -3130,7 +3137,7 @@ async def trushore_save(request: Request) -> HTMLResponse:
         }
         return _render(request, "trushore.html", {
             "swan_info": swan_info_r,
-            "trushore_cfg": config.get("trushore") or {},
+            "trushore_cfg": config.get("swan") or {},
             "surf_locations": surf_locations,
             "error": _("API error: {detail}").format(detail=str(exc)),
             "flash": None,
@@ -3138,7 +3145,7 @@ async def trushore_save(request: Request) -> HTMLResponse:
 
     # Re-fetch to show updated state
     updated_config = _fetch_current_config()
-    updated_trushore = (updated_config or {}).get("trushore") or {}
+    updated_trushore = (updated_config or {}).get("swan") or {}
     swan_info_after: dict[str, Any] = {}
     try:
         swan_info_after = client._request("GET", "/setup/marine/swan-check").json()

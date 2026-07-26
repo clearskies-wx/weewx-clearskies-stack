@@ -502,7 +502,7 @@ def build_marine_payload(state: WizardState) -> dict[str, Any]:
 
 
 def build_trushore_payload(state: WizardState) -> dict[str, Any]:
-    """Build the ``trushore`` payload for POST /setup/apply (T4.4).
+    """Build the ``swan`` payload for POST /setup/apply (T4.4).
 
     Mirrors ``build_marine_payload()``: a pure function from WizardState to
     the dict shape the API's ApplyRequest ``trushore`` field expects.
@@ -519,7 +519,7 @@ def build_trushore_payload(state: WizardState) -> dict[str, Any]:
                trushore_inner_nest_resolution_m).
 
     Returns:
-        Dict suitable for the ``"trushore"`` key in the POST /setup/apply
+        Dict suitable for the ``"swan"`` key in the POST /setup/apply
         payload.  The caller adds it to api_payload unconditionally when the
         trushore step was completed.
     """

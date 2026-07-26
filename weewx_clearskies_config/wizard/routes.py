@@ -4168,7 +4168,11 @@ async def wizard_apply(request: Request) -> HTMLResponse:
         "surf" in loc.get("activities", [])
         for loc in state.marine_locations.values()
     ):
-        api_payload["trushore"] = build_trushore_payload(state)
+        # Key is "swan", not "trushore": the API renamed this ApplyRequest
+        # field in the TruShore->SWAN rename (API 0685121) and the stack was
+        # never updated.  ApplyRequest is extra="forbid", so the old key 422s
+        # the entire apply.  See C-67.
+        api_payload["swan"] = build_trushore_payload(state)
 
     # Marine companion service connection (T7.2).
     # Top-level fields, matching where the compute fields used to sit: the API
