@@ -34,9 +34,9 @@ Route summary (admin landing + domain sections):
   POST /admin/marine/save             — validate + save one location via /setup/apply
   POST /admin/marine/delete           — delete one location via /setup/apply
   POST /admin/marine/test-connectivity — HTMX: NDBC/CO-OPS/NWS zone status for a location
-  GET  /admin/compute                — wave modeling compute service settings
-  POST /admin/compute                — save compute host URL + optional new secret
-  POST /admin/compute/test           — HTMX: test connectivity to compute service URL
+  GET  /admin/marine-service         — marine companion service connection settings (T7.5)
+  POST /admin/marine-service         — save marine service URL, TLS flag + optional new secret
+  POST /admin/marine-service/test    — HTMX: ask the API to test the marine service (T7.3)
 
 Route summary (config editor — formerly config/routes.py):
   GET  /admin/config                          — config dashboard (all sections)
@@ -893,11 +893,11 @@ _CUSTOM_SECTIONS: list[dict] = [
         "description": "",
     },
     {
-        "section_id": "wave-modeling",
-        "display_name": "Wave Modeling",
+        "section_id": "marine-service",
+        "display_name": "Marine Service",
         "group": "providers",
-        "url": "/admin/compute",
-        "description": "Remote compute service for SwellTrack and SurfBeat wave modeling.",
+        "url": "/admin/marine-service",
+        "description": "Connection to the marine companion service that provides all marine features.",
     },
     {
         "section_id": "now-layout",
@@ -1110,17 +1110,17 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
             marine_rows.append(("Status", "Not configured"))
     custom_landing_values["marine"] = marine_rows
 
-    # Wave Modeling compute service summary (F1)
-    compute_rows: list[tuple[str, Any]] = []
+    # Marine Service connection summary (T7.5)
+    marine_service_rows: list[tuple[str, Any]] = []
     if marine_config is None:
-        compute_rows.append(("Status", "API unreachable"))
+        marine_service_rows.append(("Status", "API unreachable"))
     else:
-        compute_host = marine_config.get("surf_compute_host", "")
-        if compute_host:
-            compute_rows.append(("Compute host", compute_host))
+        marine_service_url = marine_config.get("marine_service_url", "")
+        if marine_service_url:
+            marine_service_rows.append(("Service URL", marine_service_url))
         else:
-            compute_rows.append(("Status", "In-process (no remote host)"))
-    custom_landing_values["wave-modeling"] = compute_rows
+            marine_service_rows.append(("Status", "Not configured"))
+    custom_landing_values["marine-service"] = marine_service_rows
 
     return _render(
         request,
@@ -2232,19 +2232,20 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
     return location, None
 
 
-def _build_marine_apply_payload(
-    config: dict[str, Any], locations: dict[str, dict[str, Any]]
-) -> dict[str, Any]:
-    """Build a minimal, safe /setup/apply payload that updates only marine locations.
+def _build_base_apply_payload(config: dict[str, Any]) -> dict[str, Any]:
+    """Build the always-rewritten half of a safe /setup/apply payload.
 
-    See the module-level "NOTE on write path" comment above for why
-    database/station/column_mapping/column_units must always be re-sent
-    faithfully from *config* while every other optional section is omitted.
+    See the module-level "NOTE on write path" comment above: ``database``,
+    ``station``, ``column_mapping`` and ``column_units`` are non-Optional on
+    the API's ``ApplyRequest`` and are rewritten from whatever arrives, so any
+    admin section doing a partial edit must re-send them faithfully from a
+    just-fetched current-config.  Every skip-if-absent section is omitted.
+    Callers add only the keys their own section owns.
     """
     database = config.get("database") or {}
     station = config.get("station") or {}
 
-    payload: dict[str, Any] = {
+    return {
         "database": {
             "kind": database.get("kind", "mysql"),
             "host": database.get("host", ""),
@@ -2265,6 +2266,13 @@ def _build_marine_apply_payload(
         "column_mapping": config.get("column_mapping") or {},
         "column_units": config.get("column_units") or {},
     }
+
+
+def _build_marine_apply_payload(
+    config: dict[str, Any], locations: dict[str, dict[str, Any]]
+) -> dict[str, Any]:
+    """Build a minimal, safe /setup/apply payload that updates only marine locations."""
+    payload: dict[str, Any] = _build_base_apply_payload(config)
 
     location_list: list[dict[str, Any]] = []
     for loc_id, loc in locations.items():
@@ -3252,130 +3260,214 @@ async def trushore_test_service(request: Request) -> HTMLResponse:
             + "</span>"
         )
 
-
 # ---------------------------------------------------------------------------
-# Wave Modeling compute service admin section (F1 — Phase 5 audit remediation)
+# Marine Service admin section (T7.1/T7.2/T7.3/T7.5/T7.6)
+#
+# Replaces the former compute-offload section (F1, renamed by T7.1).  The
+# marine service is not a compute-offload option: it is a companion service
+# that owns all marine computation, reached only through the API
+# (ARCHITECTURE.md, "The marine service is an add-on reached only through the
+# API — INVARIANT").  This section records where it lives and how to
+# authenticate; the API does every probe and every push.
 # ---------------------------------------------------------------------------
 
+# Address the marine service is reached at when it runs on the same host as
+# the API.  Offered by the "same host" checkbox (T7.2) and documented as the
+# same-host example in API-MANUAL §19.2.  Deliberately a local copy of the
+# wizard's MARINE_SAME_HOST_URL rather than an import: this module keeps its
+# own copies of wizard-router constants so neither router depends on the
+# other at import time (see _() and _MARINE_VALID_ACTIVITIES above).
+_MARINE_SAME_HOST_URL = "https://localhost:8780"
 
-def _read_saved_compute_secret() -> str:
-    """Read the current SURF_COMPUTE_SECRET from secrets.env on disk.
 
-    Returns an empty string if the file is missing or the key is absent.
-    Used by the admin test-compute handler to fall back to the saved secret
-    when the operator does not type a new one.
+def _marine_service_context(
+    config: dict[str, Any] | None,
+    *,
+    error: str | None = None,
+    flash: str | None = None,
+    marine_config_push: dict[str, Any] | None = None,
+    url_override: str | None = None,
+    verify_tls_override: bool | None = None,
+    has_secret_override: bool | None = None,
+) -> dict[str, Any]:
+    """Build the marine-service template context from a current-config response.
+
+    The connection settings are read back from the API rather than from this
+    host's own secrets.env: the API is where they live (api.conf [providers]
+    plus its own secrets.env), and on a split deployment the config UI's
+    secrets.env is a different file on a different host.  The secret is
+    returned unmasked by /setup/current-config on purpose — CLAUDE.md, "Never
+    hide operator secrets from the operator" — and only its presence is shown.
+
+    The ``*_override`` arguments let the POST handler echo what the operator
+    just submitted when the API cannot be re-read afterwards.
     """
-    if _config_dir is None:
-        return ""
-    from weewx_clearskies_config.wizard.state_persistence import _read_secrets_env
-    secrets = _read_secrets_env(_config_dir)
-    return secrets.get("SURF_COMPUTE_SECRET", "")
+    cfg = config or {}
+    url = cfg.get("marine_service_url") or ""
+    verify_tls = cfg.get("marine_verify_tls")
+    has_secret = bool(cfg.get("marine_service_secret"))
+    return {
+        "marine_service_url": url_override if url_override is not None else str(url),
+        "verify_tls": (
+            verify_tls_override
+            if verify_tls_override is not None
+            else _marine_to_bool(verify_tls, default=True)
+        ),
+        "has_secret": has_secret_override if has_secret_override is not None else has_secret,
+        "same_host_url": _MARINE_SAME_HOST_URL,
+        "marine_config_push": marine_config_push,
+        "error": error,
+        "flash": flash,
+    }
 
 
-@router.get("/compute", response_class=HTMLResponse)
-async def compute_get(request: Request) -> HTMLResponse:
-    """Render the Wave Modeling compute service admin section.
+@router.get("/marine-service", response_class=HTMLResponse)
+async def marine_service_get(request: Request) -> HTMLResponse:
+    """Render the Marine Service admin section.
 
-    Non-HTMX requests redirect to the admin landing page — the compute
-    template is a fragment designed to load inside #admin-content.
+    Non-HTMX requests redirect to the admin landing page — the template is a
+    fragment designed to load inside #admin-content.
     """
     _require_session(request)
     if not request.headers.get("HX-Request"):
-        return RedirectResponse(url="/admin/config#wave-modeling", status_code=303)
+        return RedirectResponse(url="/admin/config#marine-service", status_code=303)
 
     config = _fetch_current_config()
-    error: str | None = None
-    compute_host = ""
-    has_secret = False
-    verify_tls = True
-    if config is None:
-        error = _("Cannot connect to the API — check that the API is running and configured.")
-    else:
-        compute_host = config.get("surf_compute_host", "") or ""
-        verify_tls = config.get("surf_compute_verify_tls", True)
-        has_secret = bool(_read_saved_compute_secret())
-
-    return _render(request, "compute.html", {
-        "compute_host": compute_host,
-        "has_secret": has_secret,
-        "verify_tls": verify_tls,
-        "error": error,
-        "flash": None,
-    })
+    error = (
+        _("Cannot connect to the API — check that the API is running and configured.")
+        if config is None
+        else None
+    )
+    return _render(request, "marine-service.html", _marine_service_context(config, error=error))
 
 
-@router.post("/compute", response_class=HTMLResponse)
-async def compute_save(request: Request) -> HTMLResponse:
-    """Save compute host URL and optional new secret via /setup/apply."""
-    _require_session(request)
-    form = await request.form()
-    compute_host = str(form.get("surf_compute_host", "")).strip()
-    compute_secret = str(form.get("surf_compute_secret", "")).strip()
+@router.post("/marine-service", response_class=HTMLResponse)
+async def marine_service_save(request: Request) -> HTMLResponse:
+    """Save the marine service URL, TLS flag and optional new secret via /setup/apply.
 
-    client = _get_api_client()
-    if client is None:
-        return _render(request, "compute.html", {
-            "compute_host": compute_host,
-            "has_secret": bool(_read_saved_compute_secret()),
-            "verify_tls": True,
-            "error": _("Cannot connect to the API — check that the API is running and configured."),
-            "flash": None,
-        })
-
-    # Build a minimal apply payload with only the compute fields.
-    apply_payload: dict[str, Any] = {}
-    apply_payload["surf_compute_host"] = compute_host
-    if compute_secret:
-        apply_payload["surf_compute_secret"] = compute_secret
-
-    error: str | None = None
-    flash: str | None = None
-    try:
-        client.apply(apply_payload)
-        _restart_api_after_apply(client)
-        flash = _("Compute settings saved. The API is restarting to apply the change.")
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("compute_save: apply failed", exc_info=True)
-        error = _("Save failed: {detail}").format(detail=exc)
-
-    # Re-read config for an accurate display after save.
-    refreshed = _fetch_current_config()
-    display_host = compute_host
-    display_verify_tls = True
-    if refreshed is not None:
-        display_host = refreshed.get("surf_compute_host", "") or ""
-        display_verify_tls = refreshed.get("surf_compute_verify_tls", True)
-
-    return _render(request, "compute.html", {
-        "compute_host": display_host,
-        "has_secret": bool(compute_secret or _read_saved_compute_secret()),
-        "verify_tls": display_verify_tls,
-        "error": error,
-        "flash": flash,
-    })
-
-
-@router.post("/compute/test", response_class=HTMLResponse)
-async def compute_test(request: Request) -> HTMLResponse:
-    """HTMX: test connectivity to the compute service URL.
-
-    Proxies to the API's POST /setup/providers/test-compute endpoint.
-    If the operator left the secret field blank, falls back to the saved
-    secret from secrets.env.
+    Field names are the API's top-level ``marine_service_url`` /
+    ``marine_verify_tls`` / ``marine_service_secret`` (API-MANUAL §19.2) — the
+    same three the wizard sends.  The always-rewritten sections are re-sent
+    from the just-fetched current-config per the module-level "NOTE on write
+    path"; without them ``/setup/apply`` rejects the request outright, since
+    ``ApplyRequest.database`` has no default and the model is ``extra=forbid``.
     """
     _require_session(request)
     form = await request.form()
-    compute_url = str(form.get("surf_compute_host", "")).strip()
-    compute_secret = str(form.get("surf_compute_secret", "")).strip()
 
-    # Fall back to saved secret when the form field is blank.
-    if not compute_secret:
-        compute_secret = _read_saved_compute_secret()
+    # "Same host" wins over whatever is in the URL box: the checkbox makes the
+    # field read-only client-side, so a submission carrying both a checked box
+    # and a different URL means the read-only guard was bypassed, and the
+    # explicit checkbox is the clearer statement of intent.
+    if str(form.get("marine_same_host", "")).strip() == "1":
+        marine_url = _MARINE_SAME_HOST_URL
+    else:
+        marine_url = str(form.get("marine_service_url", "")).strip()
+    # Unchecked checkboxes are not submitted; the control is always rendered
+    # on this form, so absence unambiguously means "do not verify".
+    verify_tls = str(form.get("marine_verify_tls", "")).strip() == "1"
+    # Blank means "keep the secret already saved" — the field always renders
+    # empty, so there is no way for a blank box to mean "clear it".
+    new_secret = str(form.get("marine_service_secret", "")).strip()
 
-    if not compute_url:
+    config = _fetch_current_config()
+    if config is None:
+        return _render(
+            request,
+            "marine-service.html",
+            _marine_service_context(
+                None,
+                error=_(
+                    "Cannot connect to the API — check that the API is running and configured."
+                ),
+                url_override=marine_url,
+                verify_tls_override=verify_tls,
+            ),
+        )
+
+    client = _get_api_client()
+    if client is None:
+        return _render(
+            request,
+            "marine-service.html",
+            _marine_service_context(
+                config,
+                error=_(
+                    "Cannot connect to the API — check that the API is running and configured."
+                ),
+                url_override=marine_url,
+                verify_tls_override=verify_tls,
+            ),
+        )
+
+    apply_payload = _build_base_apply_payload(config)
+    apply_payload["marine_service_url"] = marine_url
+    apply_payload["marine_verify_tls"] = verify_tls
+    if new_secret:
+        apply_payload["marine_service_secret"] = new_secret
+
+    error: str | None = None
+    flash: str | None = None
+    marine_config_push: dict[str, Any] | None = None
+    try:
+        apply_response = client.apply(apply_payload)
+        # T7.6: {"attempted": bool, "ok": bool, "error": str | None}.  A failed
+        # push never fails the apply (API-MANUAL §19.5), so this is rendered as
+        # a reachability warning, never as a failed save.  attempted=False
+        # means no marine service is configured — say nothing.
+        if isinstance(apply_response, dict):
+            push_raw = apply_response.get("marine_config_push")
+            if isinstance(push_raw, dict):
+                marine_config_push = push_raw
+        _restart_api_after_apply(client)
+        flash = _("Marine service settings saved. The API is restarting to apply the change.")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("marine_service_save: apply failed", exc_info=True)
+        error = _("Save failed: {detail}").format(detail=exc)
+
+    # Re-read for an accurate display after save.  The API is mid-restart, so
+    # fall back to echoing what was just submitted when the re-read fails.
+    refreshed = _fetch_current_config()
+    return _render(
+        request,
+        "marine-service.html",
+        _marine_service_context(
+            refreshed,
+            error=error,
+            flash=flash,
+            marine_config_push=marine_config_push,
+            url_override=None if refreshed else marine_url,
+            verify_tls_override=None if refreshed else verify_tls,
+            has_secret_override=(
+                None if refreshed else bool(new_secret or config.get("marine_service_secret"))
+            ),
+        ),
+    )
+
+
+@router.post("/marine-service/test", response_class=HTMLResponse)
+async def marine_service_test(request: Request) -> HTMLResponse:
+    """HTMX: ask the API to test the marine service connection (T7.3).
+
+    The admin never contacts the marine service itself — that would break the
+    invariant that the marine service is reached only through the API
+    (ARCHITECTURE.md).  This proxies a POST to the API's
+    ``/setup/providers/test-marine``, which probes the marine service and
+    returns ``{ok, version, spots, last_run, status, error}``.
+
+    The API also decides whether a failure was a rejected secret; this handler
+    renders what it is told and never infers that classification itself.
+    """
+    _require_session(request)
+    form = await request.form()
+    marine_url = str(form.get("marine_service_url", "")).strip()
+    marine_secret = str(form.get("marine_service_secret", "")).strip()
+    verify_tls = str(form.get("marine_verify_tls", "")).strip() == "1"
+
+    if not marine_url:
         return HTMLResponse(
             '<span class="error-text">'
-            + _marine_esc(_("Enter a compute host URL before testing."))
+            + _marine_esc(_("Enter a marine service URL before testing."))
             + "</span>"
         )
 
@@ -3383,38 +3475,67 @@ async def compute_test(request: Request) -> HTMLResponse:
     if client is None:
         return HTMLResponse(
             '<span class="error-text">'
-            + _marine_esc(_("Cannot connect to the API — check that the API is running and configured."))
+            + _marine_esc(
+                _("Cannot connect to the API — check that the API is running and configured.")
+            )
             + "</span>"
         )
+
+    # The secret box always renders empty, so an empty box means "test with the
+    # secret already saved."  Read it back from the API, which is where it
+    # lives, rather than from this host's own secrets.env.
+    if not marine_secret:
+        saved = _fetch_current_config() or {}
+        marine_secret = str(saved.get("marine_service_secret") or "")
 
     try:
         resp = client._request(
             "POST",
-            "/setup/providers/test-compute",
-            json={"url": compute_url, "secret": compute_secret},
+            "/setup/providers/test-marine",
+            json={
+                "url": marine_url,
+                "secret": marine_secret,
+                "verify_tls": verify_tls,
+            },
         )
         data = resp.json()
-        if data.get("ok"):
-            version = data.get("version", "")
-            msg = _("Connection successful.")
-            if version:
-                msg += f" (v{version})"
-            return HTMLResponse(
-                '<span class="success-text">'
-                + _marine_esc(msg)
-                + "</span>"
-            )
-        detail = data.get("error", _("Unknown error"))
+    except Exception:  # noqa: BLE001
+        logger.debug("marine_service_test: error", exc_info=True)
         return HTMLResponse(
             '<span class="error-text">'
-            + _marine_esc(_("Connection failed: {error}").format(error=detail))
+            + _marine_esc(_("Could not reach the API to test the marine service."))
+            + "</span>"
+        )
+
+    if not data.get("ok"):
+        detail = data.get("error") or _("Unknown error")
+        return HTMLResponse(
+            '<span class="error-text">'
+            + _marine_esc(
+                _("The API could not use the marine service: {error}").format(error=detail)
+            )
             + "</span>",
             status_code=200,
         )
-    except Exception:  # noqa: BLE001
-        logger.debug("compute_test: error", exc_info=True)
-        return HTMLResponse(
-            '<span class="error-text">'
-            + _marine_esc(_("Could not reach the API to test the compute service."))
-            + "</span>"
-        )
+
+    parts = [
+        '<span class="success-text">'
+        + _marine_esc(_("The API reached the marine service."))
+        + "</span>"
+    ]
+    details: list[str] = []
+    version = data.get("version")
+    if version:
+        details.append(_("Version {version}").format(version=version))
+    spots = data.get("spots")
+    if spots is not None:
+        details.append(_("{n} configured location(s)").format(n=spots))
+    status = data.get("status")
+    if status:
+        details.append(_("Status: {status}").format(status=status))
+    last_run = data.get("last_run")
+    if last_run:
+        details.append(_("Last run: {when}").format(when=last_run))
+    if details:
+        parts.append("<br><small>" + _marine_esc(" · ".join(str(d) for d in details)) + "</small>")
+    return HTMLResponse("".join(parts))
