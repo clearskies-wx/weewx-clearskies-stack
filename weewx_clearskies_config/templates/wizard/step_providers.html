@@ -229,7 +229,6 @@
              value="{{ state.marine_service_url }}"
              placeholder="https://marine.example.com:8780"
              {% if state.marine_service_url == marine_same_host_url %}readonly{% endif %}
-             {% if state.marine_enabled %}required{% endif %}
              aria-describedby="marine-url-help">
       <small id="marine-url-help">{{ _("Base URL of the marine service, including scheme and port — for example https://localhost:8780 on the same host, or https://192.0.2.10:8780 on another. For a bare IPv6 address, put it in square brackets: https://[2001:db8::1]:8780. Leave blank if you have not installed the marine service.") }}</small>
       <div id="marine-url-client-error" role="alert" style="margin-block-start:0.25rem;font-size:0.875rem"></div>
