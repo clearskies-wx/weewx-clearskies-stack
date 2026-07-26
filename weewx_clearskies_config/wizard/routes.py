@@ -4384,6 +4384,18 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     if apply_response and isinstance(apply_response, dict):
         restart_token = apply_response.get("restart_token") or None
 
+    # Marine config push outcome (T7.6): {"attempted": bool, "ok": bool,
+    # "error": str | None}.  The API pushes the marine config subset to the
+    # marine service after writing api.conf; a failed push never fails the
+    # apply (API-MANUAL §19.5), so this is surfaced on the completion page as
+    # a reachability warning and never as a failed save.  Absent or
+    # attempted=False means no marine service is configured — say nothing.
+    marine_config_push: dict[str, Any] | None = None
+    if apply_response and isinstance(apply_response, dict):
+        push_raw = apply_response.get("marine_config_push")
+        if isinstance(push_raw, dict):
+            marine_config_push = push_raw
+
     # Resolve any unresolved imported images via the API (ADR-043).
     # The API is confirmed connected at this point (apply succeeded above).
     if state.imported_images:
@@ -4628,6 +4640,7 @@ async def wizard_apply(request: Request) -> HTMLResponse:
             "result": result,
             "api_restart_triggered": api_restart_triggered,
             "imported_images": state.imported_images,
+            "marine_config_push": marine_config_push,
         },
         status_code=200,
     )

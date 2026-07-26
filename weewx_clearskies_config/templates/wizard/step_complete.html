@@ -35,6 +35,31 @@
     </p>
   </div>
 
+  {# ---- Marine service config push outcome (T7.6) --------------------- #}
+  {# The API writes its own configuration first and then pushes the marine
+     subset to the marine service.  A failed push never blocks the save
+     (API-MANUAL §19.5), so this is a warning about reachability, not a
+     failed setup.  Nothing is shown when no marine service is configured. #}
+  {% if marine_config_push and marine_config_push.attempted %}
+  {% if marine_config_push.ok %}
+  <div role="status" aria-live="polite" class="alert-success">
+    <p>{{ _("Your marine settings were sent to the marine service.") }}</p>
+  </div>
+  {% else %}
+  {# .alert-warning has no rule in layout.html — styled inline, the same way
+     step_trushore.html's warning does it. #}
+  <div role="status" aria-live="polite" class="alert-warning"
+       style="margin-block:1rem;padding:0.75rem 1rem;border:1px solid var(--pico-del-color, #fca5a5);border-radius:0.25rem;background:var(--pico-del-background-color, #fef2f2)">
+    <h3 style="margin-block-start:0">{{ _("Saved — but the marine service could not be reached") }}</h3>
+    <p>{{ _("Your settings were saved successfully. The API could not pass the marine settings on to the marine service, so marine data will not appear until it can.") }}</p>
+    {% if marine_config_push.error %}
+    <p><small>{{ _("Reason: {error}").format(error=marine_config_push.error) }}</small></p>
+    {% endif %}
+    <p><small>{{ _("Check that the marine service is running and reachable at the address you entered. The API retries automatically the next time you save settings, and the marine service also collects its configuration itself when it restarts — so no settings are lost.") }}</small></p>
+  </div>
+  {% endif %}
+  {% endif %}
+
   {# ---- Live service restart status ---------------------------------- #}
   <section aria-labelledby="restart-status-heading">
     <h3 id="restart-status-heading">{{ _("Service Restart") }}</h3>
