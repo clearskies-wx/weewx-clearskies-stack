@@ -3007,9 +3007,9 @@ async def trushore_get(request: Request) -> HTMLResponse:
 async def trushore_save(request: Request) -> HTMLResponse:
     """Save SWAN+TruShore configuration via /setup/apply.
 
-    Updates deployment mode, service_url, omp_num_threads,
-    outer_grid_resolution_km, inner_nest_resolution_m, and per-spot surf
-    settings (breaker_formula, surf_height_display) for all surf locations.
+    Updates omp_num_threads, outer_grid_resolution_km, inner_nest_resolution_m,
+    and per-spot surf settings (breaker_formula, surf_height_display) for all
+    surf locations.
     """
     _require_session(request)
     form = await request.form()
@@ -3035,32 +3035,10 @@ async def trushore_save(request: Request) -> HTMLResponse:
             "flash": None,
         })
 
-    # Build trushore config from form
-    deployment_mode = str(form.get("trushore_deployment_mode", "bundled")).strip()
-    if deployment_mode not in ("bundled", "separated"):
-        deployment_mode = "bundled"
-
-    service_url = str(form.get("trushore_service_url", "")).strip()
-    if deployment_mode == "separated" and not service_url:
-        swan_info: dict[str, Any] = {}
-        try:
-            swan_info = client._request("GET", "/setup/marine/swan-check").json()
-        except Exception:  # noqa: BLE001
-            pass
-        marine_cfg = config.get("marine") or {}
-        all_locations = _parse_marine_locations(marine_cfg)
-        surf_locations = {
-            slug: loc for slug, loc in all_locations.items()
-            if "surf" in loc.get("activities", [])
-        }
-        return _render(request, "trushore.html", {
-            "swan_info": swan_info,
-            "trushore_cfg": config.get("trushore") or {},
-            "surf_locations": surf_locations,
-            "error": _("Service URL is required for separated mode."),
-            "flash": None,
-        }, status_code=422)
-
+    # Build trushore config from form.  Deployment mode and service URL are
+    # gone (T7.2): where SWAN runs is no longer a per-section choice.  SWAN
+    # lives in the marine service, reached at the single marine_service_url
+    # set in the Marine Service section.
     omp_threads_raw = str(form.get("trushore_omp_num_threads", "0")).strip()
     try:
         omp_threads = max(0, int(omp_threads_raw))
@@ -3089,7 +3067,6 @@ async def trushore_save(request: Request) -> HTMLResponse:
         "omp_num_threads": omp_threads,
         "outer_grid_resolution_km": outer_res,
         "inner_nest_resolution_m": inner_res,
-        "service_url": service_url if deployment_mode == "separated" else None,
     }
 
     # Build per-spot surf settings updates.
@@ -3210,55 +3187,6 @@ async def trushore_trigger_run(request: Request) -> HTMLResponse:
             + "</span>"
         )
 
-
-@router.post("/trushore/test-service", response_class=HTMLResponse)
-async def trushore_test_service(request: Request) -> HTMLResponse:
-    """HTMX: test connectivity to a separated TruShore service URL."""
-    _require_session(request)
-    form = await request.form()
-    service_url = str(form.get("trushore_service_url", "")).strip()
-
-    if not service_url:
-        return HTMLResponse(
-            '<span class="error-text">'
-            + _marine_esc(_("Enter a service URL before testing."))
-            + "</span>"
-        )
-
-    client = _get_api_client()
-    if client is None:
-        return HTMLResponse(
-            '<span class="error-text">'
-            + _marine_esc(_("API unreachable."))
-            + "</span>"
-        )
-
-    try:
-        resp = client._request(
-            "GET",
-            "/setup/marine/trushore-check",
-            params={"service_url": service_url},
-        )
-        data = resp.json()
-        if data.get("reachable"):
-            return HTMLResponse(
-                '<span class="success-text">'
-                + _marine_esc(_("Service is reachable."))
-                + "</span>"
-            )
-        detail = data.get("error", _("Unknown error"))
-        return HTMLResponse(
-            '<span class="error-text">'
-            + _marine_esc(_("Service test failed: {error}").format(error=detail))
-            + "</span>"
-        )
-    except Exception as exc:  # noqa: BLE001
-        logger.warning("trushore_test_service: error", exc_info=True)
-        return HTMLResponse(
-            '<span class="error-text">'
-            + _marine_esc(_("Could not reach the API: {detail}").format(detail=str(exc)))
-            + "</span>"
-        )
 
 # ---------------------------------------------------------------------------
 # Marine Service admin section (T7.1/T7.2/T7.3/T7.5/T7.6)

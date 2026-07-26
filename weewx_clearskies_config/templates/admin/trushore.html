@@ -3,7 +3,6 @@
    Loaded via HTMX into #admin-content. Provides:
 
    - Current SWAN status: binary availability, version, last run time
-   - Deployment mode switch (bundled / separated) with service URL editor
    - OMP threads and grid resolution settings
    - Manual SWAN run trigger
    - Per-spot surf settings (breaker formula, surf height display)
@@ -12,7 +11,7 @@
      swan_info   — dict from GET /setup/marine/swan-check
                     {available, version, path, cpu_cores, last_run_time, ...}
      trushore_cfg — dict from GET /setup/current-config .trushore
-                    {service_url, omp_num_threads, swan_grid_resolution_m, ...}
+                    {omp_num_threads, swan_grid_resolution_m, ...}
      surf_locations — dict[location_id, location] for surf-enabled locations
      error       — str|None
      flash       — str|None
@@ -136,45 +135,10 @@
           hx-indicator="#trushore-form-indicator"
           autocomplete="off">
 
-      {# Deployment mode #}
-      <fieldset>
-        <legend>{{ _("Deployment mode") }}</legend>
-        <label>
-          <input type="radio" name="trushore_deployment_mode" value="bundled"
-                 {% if trushore_cfg.get("service_url") is none or not trushore_cfg.get("service_url") %}checked{% endif %}
-                 onchange="document.getElementById('admin-trushore-url-row').style.display='none'">
-          <strong>{{ _("Bundled") }}</strong>
-          &nbsp;<small>{{ _("SWAN runs as a subprocess on this host.") }}</small>
-        </label>
-        <label>
-          <input type="radio" name="trushore_deployment_mode" value="separated"
-                 {% if trushore_cfg.get("service_url") %}checked{% endif %}
-                 onchange="document.getElementById('admin-trushore-url-row').style.display=''">
-          <strong>{{ _("Separated service") }}</strong>
-          &nbsp;<small>{{ _("SWAN runs on a separate host.") }}</small>
-        </label>
-      </fieldset>
-
-      <div id="admin-trushore-url-row"
-           {% if not trushore_cfg.get("service_url") %}style="display:none"{% endif %}>
-        <label for="admin-trushore-url">{{ _("Service URL") }}</label>
-        <div style="display:flex;gap:0.5rem;align-items:flex-start;flex-wrap:wrap">
-          <input type="url" id="admin-trushore-url" name="trushore_service_url"
-                 value="{{ trushore_cfg.get('service_url', '') }}"
-                 placeholder="https://trushore.example.com"
-                 style="flex:1;min-width:0">
-          <button type="button" class="secondary outline"
-                  style="white-space:nowrap;flex-shrink:0"
-                  hx-post="/admin/trushore/test-service"
-                  hx-include="#admin-trushore-url"
-                  hx-target="#admin-trushore-test-result"
-                  hx-swap="innerHTML"
-                  hx-disabled-elt="this">
-            {{ _("Test connectivity") }}
-          </button>
-        </div>
-        <div id="admin-trushore-test-result" style="font-size:0.875rem;margin-block-start:0.25rem"></div>
-      </div>
+      {# Deployment mode and service URL removed (T7.2).  Where SWAN runs is no
+         longer chosen here: SWAN lives in the marine service, which the API
+         reaches at the single Marine Service URL set in the Marine Service
+         section.  What remains below is SWAN model tuning only. #}
 
       {# OMP threads #}
       <label for="admin-trushore-omp">{{ _("OpenMP thread count") }}</label>
