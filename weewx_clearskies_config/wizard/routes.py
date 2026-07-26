@@ -3086,6 +3086,30 @@ async def step_marine_post(request: Request) -> HTMLResponse:
     ttl_minutes = _parse_int(str(form.get("marine_observation_ttl_minutes", "30")), default=30)
     state.marine_observation_ttl_minutes = ttl_minutes if ttl_minutes in (15, 30, 60) else 30
 
+    # T7.4: the same rule the providers step enforces, applied here too.
+    # Marine is enabled on this step but the marine service URL is entered on
+    # the providers step, which comes earlier — so on a straight first pass the
+    # providers-step check cannot fire.  Without this, an operator can enable
+    # marine features, never go back, and get no marine data with nothing
+    # saying why.  Checked after the location parsing above so the re-render
+    # still shows the locations just entered.
+    if not state.marine_service_url:
+        _apply_marine_photo_sidecar(state, _config_dir)
+        return _render(
+            request,
+            "step_marine.html",
+            {
+                "step": 13,
+                "state": state,
+                "error": _(
+                    "Marine features need a marine service to talk to, and no marine "
+                    "service URL is configured. Go back to the Providers step and enter "
+                    "the address of your marine service under Marine Service."
+                ),
+            },
+            status_code=422,
+        )
+
     save_wizard_state(session_id, state)
 
     # Advance to the TruShore step when marine is enabled AND at least one
