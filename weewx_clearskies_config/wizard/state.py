@@ -241,13 +241,24 @@ class WizardState:
     # alerts provider is selected.
     marine_alert_radius_miles: int = 0
 
-    # Compute service for wave modeling offloading (T5.2).
-    # URL of a remote compute service (e.g. https://host:8770).
-    # Empty string means compute in-process on the API host.
-    surf_compute_host: str = ""
-    # Authentication token for the compute service.
-    # Written to secrets.env as SURF_COMPUTE_SECRET, never to api.conf.
-    surf_compute_secret: str = ""
+    # Marine companion service connection (T7.2).
+    # The marine service is an add-on to the API: the API is the only thing
+    # that talks to it (ARCHITECTURE.md, "The marine service is an add-on
+    # reached only through the API — INVARIANT").  The wizard only records
+    # where it lives and how to authenticate; the API does the talking.
+    #
+    # Base URL of the marine service, including scheme and port — e.g.
+    # https://localhost:8780 (same host) or https://192.0.2.10:8780.
+    # IPv6 literals must be bracketed: https://[2001:db8::1]:8780.
+    # Written by the API to api.conf [providers] marine_service_url.
+    # Empty string means no marine service is connected.
+    marine_service_url: str = ""
+    # Shared bearer token for the marine service.  Written by the API to
+    # secrets.env as MARINE_SERVICE_SECRET, never to api.conf.
+    marine_service_secret: str = ""
+    # Whether the API verifies the marine service's TLS certificate.
+    # Written by the API to api.conf [providers] marine_verify_tls.
+    marine_verify_tls: bool = True
 
     # SWAN+TruShore nearshore model configuration (T4.4).
     # Shown only when the [nearshore] pip extra is detected (swan-check passes).

@@ -200,62 +200,90 @@
     </fieldset>
     {% endfor %}
 
-    {# Wave Modeling — compute service provider (T5.2).
-       Not a data provider the dashboard consumes — it is a backend service
-       the API calls to offload SwellTrack/SurfBeat computation.  Blank URL
-       means compute in-process on the API host.  Secret stored in secrets.env. #}
+    {# Marine Service (T7.1/T7.2) — the connection to the marine companion
+       service.  This is not a data provider the dashboard consumes, and it is
+       not a compute-offload option: the marine service is an add-on to the API
+       that owns all marine computation (waves, tides, buoys, fishing, beach
+       safety).  Only the API ever talks to it — the wizard records where it
+       lives and how to authenticate, and every marine query the wizard makes
+       is proxied through the API (ARCHITECTURE.md, "The marine service is an
+       add-on reached only through the API — INVARIANT").
+       URL → api.conf [providers] marine_service_url; TLS flag →
+       [providers] marine_verify_tls; secret → secrets.env as
+       MARINE_SERVICE_SECRET (API-MANUAL §19.2). #}
     <fieldset>
-      <legend>{{ _("Wave Modeling") }}</legend>
-      <p><small>{{ _("Offloads SwellTrack and SurfBeat wave computations to a remote host. Leave blank to compute on the API host.") }}</small></p>
+      <legend>{{ _("Marine Service") }}</legend>
+      <p><small>{{ _("The marine service is a separate companion service that provides all marine features — wave forecasts, tides, buoy observations, fishing conditions and beach safety. It is optional: leave this blank if you are not using marine features. Your API connects to it; nothing else does.") }}</small></p>
+      <p><small>{{ _("The marine service may run on the same host as your API, or on a more powerful separate machine. Either way, enter the address your API can reach it at.") }}</small></p>
 
-      <label for="surf_compute_host">{{ _("Compute host URL") }}</label>
-      <input type="url" id="surf_compute_host" name="surf_compute_host"
-             value="{{ state.surf_compute_host }}"
-             placeholder="https://host:8770"
-             aria-describedby="compute-host-help">
-      <small id="compute-host-help">{{ _("URL of a remote wave modeling service. Offloads SwellTrack and SurfBeat computations to a more powerful machine. Leave blank to compute on the API host (works but slower on limited hardware).") }}</small>
+      <label for="marine_same_host">
+        <input type="checkbox" id="marine_same_host" name="marine_same_host" value="1"
+               {% if state.marine_service_url == marine_same_host_url %}checked{% endif %}
+               aria-describedby="marine-same-host-help">
+        {{ _("Marine service runs on the same host as the API") }}
+      </label>
+      <small id="marine-same-host-help">{{ _("Fills in the standard same-host address and locks it. Uncheck to enter a different address.") }}</small>
 
-      <label for="surf_compute_secret">{{ _("Compute secret") }}</label>
+      <label for="marine_service_url">{{ _("Marine service URL") }}</label>
+      <input type="url" id="marine_service_url" name="marine_service_url"
+             value="{{ state.marine_service_url }}"
+             placeholder="https://marine.example.com:8780"
+             {% if state.marine_service_url == marine_same_host_url %}readonly{% endif %}
+             {% if state.marine_enabled %}required{% endif %}
+             aria-describedby="marine-url-help">
+      <small id="marine-url-help">{{ _("Base URL of the marine service, including scheme and port — for example https://localhost:8780 on the same host, or https://192.0.2.10:8780 on another. For a bare IPv6 address, put it in square brackets: https://[2001:db8::1]:8780. Leave blank if you have not installed the marine service.") }}</small>
+      <div id="marine-url-client-error" role="alert" style="margin-block-start:0.25rem;font-size:0.875rem"></div>
+
+      <label for="marine_service_secret">{{ _("Marine service secret") }}</label>
       <div style="display:flex;gap:0.5rem;align-items:start">
         <div style="flex:1;position:relative">
-          <input type="password" id="surf_compute_secret" name="surf_compute_secret"
-                 value="{{ '' if state.surf_compute_secret else '' }}"
+          <input type="password" id="marine_service_secret" name="marine_service_secret"
+                 value=""
                  placeholder="{{ _('Authentication token') }}"
-                 aria-describedby="compute-secret-help"
+                 aria-describedby="marine-secret-help"
                  autocomplete="off">
-          {% if state.surf_compute_secret %}
-          <input type="hidden" name="surf_compute_secret_unchanged" value="1">
+          {% if state.marine_service_secret %}
+          <input type="hidden" name="marine_service_secret_unchanged" value="1">
           {% endif %}
         </div>
-        <button type="button" class="outline secondary" id="compute-secret-toggle"
+        <button type="button" class="outline secondary" id="marine-secret-toggle"
                 style="white-space:nowrap;flex-shrink:0;padding:0.5rem 0.75rem"
                 aria-label="{{ _('Show or hide secret') }}">
           {{ _("Show") }}
         </button>
       </div>
-      <small id="compute-secret-help">{{ _("The authentication token generated when the compute service was first installed.") }}</small>
-      {% if state.surf_compute_secret %}
+      <small id="marine-secret-help">{{ _("The shared token the marine service was installed with. The API sends it on every request to the marine service, and the marine service rejects requests without it. It is stored in secrets.env as MARINE_SERVICE_SECRET, never in api.conf.") }}</small>
+      {% if state.marine_service_secret %}
       <small style="color:var(--pico-muted-color)">{{ _("A secret is already saved. Leave blank to keep it, or enter a new value to replace it.") }}</small>
       {% endif %}
 
+      <label for="marine_verify_tls" style="margin-block-start:0.75rem">
+        <input type="checkbox" id="marine_verify_tls" name="marine_verify_tls" value="1"
+               {% if state.marine_verify_tls %}checked{% endif %}
+               aria-describedby="marine-verify-tls-help">
+        {{ _("Verify the marine service's TLS certificate") }}
+      </label>
+      <small id="marine-verify-tls-help">{{ _("Leave this on whenever the marine service presents a certificate your API trusts. Turn it off only if the marine service uses a self-signed certificate — common on a same-host install. Turning it off means the API can no longer detect an impostor on that address.") }}</small>
+
       <div style="margin-block-start:0.75rem;display:flex;align-items:center;gap:0.75rem">
         <button type="button" class="outline secondary"
-                id="test-compute-btn"
-                hx-post="/wizard/providers/test-compute"
-                hx-include="#surf_compute_host,#surf_compute_secret"
-                hx-target="#compute-test-result"
+                id="test-marine-btn"
+                hx-post="/wizard/providers/test-marine"
+                hx-include="#marine_service_url,#marine_service_secret,#marine_verify_tls"
+                hx-target="#marine-test-result"
                 hx-swap="innerHTML"
                 hx-disabled-elt="this"
-                hx-indicator="#compute-test-indicator">
+                hx-indicator="#marine-test-indicator">
           {{ _("Test Connection") }}
         </button>
-        <span id="compute-test-indicator"
+        <span id="marine-test-indicator"
               class="htmx-indicator"
               style="font-size:0.85rem;color:var(--pico-muted-color)">
           {{ _("Testing…") }}
         </span>
       </div>
-      <div id="compute-test-result" style="margin-block-start:0.5rem"></div>
+      <small>{{ _("Asks your API to contact the marine service at this address and report what it finds.") }}</small>
+      <div id="marine-test-result" style="margin-block-start:0.5rem"></div>
     </fieldset>
 
     <div role="group">
@@ -297,10 +325,10 @@
           }
         });
       });
-      // Show/hide compute secret toggle (T5.2)
+      // Marine service secret show/hide toggle (T7.2)
       (function () {
-        var toggleBtn = document.getElementById('compute-secret-toggle');
-        var secretInput = document.getElementById('surf_compute_secret');
+        var toggleBtn = document.getElementById('marine-secret-toggle');
+        var secretInput = document.getElementById('marine_service_secret');
         if (toggleBtn && secretInput) {
           toggleBtn.addEventListener('click', function () {
             var isPassword = secretInput.type === 'password';
@@ -311,10 +339,52 @@
         // Clear the unchanged sentinel when the user types a new secret
         if (secretInput) {
           secretInput.addEventListener('input', function () {
-            var sentinel = document.querySelector('input[name="surf_compute_secret_unchanged"]');
+            var sentinel = document.querySelector('input[name="marine_service_secret_unchanged"]');
             if (sentinel) { sentinel.value = '0'; }
           });
         }
+      })();
+      // "Same host" checkbox: fill in the standard same-host URL and lock the
+      // field, so a checked box and a hand-edited URL can never disagree (T7.2).
+      (function () {
+        var sameHost = document.getElementById('marine_same_host');
+        var urlInput = document.getElementById('marine_service_url');
+        if (!sameHost || !urlInput) { return; }
+        var SAME_HOST_URL = {{ marine_same_host_url | tojson }};
+        var previousUrl = (urlInput.value === SAME_HOST_URL) ? '' : urlInput.value;
+        sameHost.addEventListener('change', function () {
+          if (sameHost.checked) {
+            if (urlInput.value !== SAME_HOST_URL) { previousUrl = urlInput.value; }
+            urlInput.value = SAME_HOST_URL;
+            urlInput.readOnly = true;
+          } else {
+            urlInput.readOnly = false;
+            urlInput.value = previousUrl;
+          }
+        });
+      })();
+      // Client-side validation: a marine service URL is required once marine
+      // features are enabled on the marine step (T7.4).  The server re-checks
+      // this — this only saves the operator a round trip.
+      (function () {
+        var form = document.getElementById('providers-form');
+        var urlInput = document.getElementById('marine_service_url');
+        var errorBox = document.getElementById('marine-url-client-error');
+        if (!form || !urlInput || !errorBox) { return; }
+        var marineEnabled = {{ 'true' if state.marine_enabled else 'false' }};
+        if (!marineEnabled) { return; }
+        form.addEventListener('submit', function (evt) {
+          if (urlInput.value.trim() === '') {
+            evt.preventDefault();
+            evt.stopPropagation();
+            errorBox.innerHTML = '<span class="error-text">'
+              + {{ _("Marine features are enabled, so a marine service URL is required. Enter the address of your marine service, or turn marine features off on the marine step.") | tojson }}
+              + '</span>';
+            urlInput.focus();
+          } else {
+            errorBox.innerHTML = '';
+          }
+        }, true);
       })();
     </script>
   </form>

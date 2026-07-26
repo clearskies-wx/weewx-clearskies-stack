@@ -42,7 +42,7 @@ Route summary:
   GET  /wizard/trushore         — step 14 fragment (SWAN+TruShore nearshore model setup)
   POST /wizard/trushore         — save TruShore config, return step 15 fragment (TLS)
   POST /wizard/trushore/test-service — HTMX: test connectivity to a separated TruShore service URL
-  POST /wizard/providers/test-compute — HTMX: test connectivity to a compute service URL (T5.2)
+  POST /wizard/providers/test-marine — HTMX: ask the API to test the marine service (T7.3)
   GET  /wizard/tls              — step 15 fragment (TLS / HTTPS configuration)
   POST /wizard/tls              — save TLS config, return step 16 fragment (review)
   GET  /wizard/step/9           — step 16 fragment (review summary)
@@ -1909,6 +1909,34 @@ async def step4_timezone(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------
 
 
+# Address the marine service is reached at when it runs on the same host as
+# the API.  Offered by the providers step's "same host" checkbox (T7.2) and
+# documented as the same-host example in API-MANUAL §19.2.
+MARINE_SAME_HOST_URL = "https://localhost:8780"
+
+
+def _render_step6(
+    request: Request,
+    state: Any,
+    error: str | None = None,
+    status_code: int = 200,
+) -> HTMLResponse:
+    """Render the providers step. Shared by the GET handler and the POST error path."""
+    return _render(
+        request,
+        "step_providers.html",
+        {
+            "step": 8,
+            "state": state,
+            "providers_by_domain": providers_by_domain(),
+            "aqi_suggestion": _aqi_suggestion_from_state(state),
+            "marine_same_host_url": MARINE_SAME_HOST_URL,
+            "error": error,
+        },
+        status_code=status_code,
+    )
+
+
 @router.get("/step/6", response_class=HTMLResponse)
 async def step6_get(request: Request) -> HTMLResponse:
     session_id = _require_session(request)
@@ -1916,21 +1944,7 @@ async def step6_get(request: Request) -> HTMLResponse:
     if not state.providers:
         _merge_from_existing_config(state)
 
-    by_domain = providers_by_domain()
-
-    aqi_suggestion = _aqi_suggestion_from_state(state)
-
-    return _render(
-        request,
-        "step_providers.html",
-        {
-            "step": 8,
-            "state": state,
-            "providers_by_domain": by_domain,
-            "aqi_suggestion": aqi_suggestion,
-            "error": None,
-        },
-    )
+    return _render_step6(request, state)
 
 
 @router.get("/step/6/key-fields/{domain}/{provider_id}", response_class=HTMLResponse)
@@ -2175,16 +2189,42 @@ async def step6_post(request: Request) -> HTMLResponse:
     submitted_bounds = str(form.get("librewxr_bounds", "")).strip()
     state.librewxr_bounds = submitted_bounds
 
-    # Compute service for wave modeling offloading (T5.2).
-    submitted_compute_host = str(form.get("surf_compute_host", "")).strip()
-    state.surf_compute_host = submitted_compute_host
-    submitted_compute_secret = str(form.get("surf_compute_secret", "")).strip()
-    if submitted_compute_secret:
-        state.surf_compute_secret = submitted_compute_secret
-    elif str(form.get("surf_compute_secret_unchanged", "0")).strip() == "1":
+    # Marine companion service connection (T7.2).
+    # "Same host" wins over whatever is in the URL box: the checkbox makes the
+    # field read-only client-side, so a submission carrying both a checked box
+    # and a different URL means the read-only guard was bypassed, and the
+    # explicit checkbox is the clearer statement of intent.
+    if str(form.get("marine_same_host", "")).strip() == "1":
+        state.marine_service_url = MARINE_SAME_HOST_URL
+    else:
+        state.marine_service_url = str(form.get("marine_service_url", "")).strip()
+
+    submitted_marine_secret = str(form.get("marine_service_secret", "")).strip()
+    if submitted_marine_secret:
+        state.marine_service_secret = submitted_marine_secret
+    elif str(form.get("marine_service_secret_unchanged", "0")).strip() == "1":
         pass  # keep existing secret in state
     else:
-        state.surf_compute_secret = ""
+        state.marine_service_secret = ""
+
+    # Unchecked checkboxes are not submitted, so absence means "do not verify".
+    # The fieldset is always rendered on this step, so absence is unambiguous.
+    state.marine_verify_tls = str(form.get("marine_verify_tls", "")).strip() == "1"
+
+    # T7.4: marine features cannot work without somewhere to reach the marine
+    # service.  Re-render with the error rather than saving a configuration
+    # that is guaranteed to produce no marine data.
+    if state.marine_enabled and not state.marine_service_url:
+        return _render_step6(
+            request,
+            state,
+            error=_(
+                "Marine features are enabled, so a marine service URL is required. "
+                "Enter the address of your marine service, or turn marine features "
+                "off on the marine step."
+            ),
+            status_code=422,
+        )
 
     save_wizard_state(session_id, state)
     return await step7_get(request)
@@ -3765,29 +3805,35 @@ async def trushore_test_service(request: Request) -> HTMLResponse:
         )
 
 
-@router.post("/providers/test-compute", response_class=HTMLResponse)
-async def providers_test_compute(request: Request) -> HTMLResponse:
-    """HTMX: test connectivity to a compute service URL (T5.2).
+@router.post("/providers/test-marine", response_class=HTMLResponse)
+async def providers_test_marine(request: Request) -> HTMLResponse:
+    """HTMX: ask the API to test the marine service connection (T7.3).
 
-    Proxies a POST to the API's ``/setup/providers/test-compute`` endpoint,
-    which makes an authenticated ``GET /health`` request to the compute
-    service and returns ``{ok, version, error}``.
+    The wizard never contacts the marine service itself — that would break the
+    invariant that the marine service is reached only through the API
+    (ARCHITECTURE.md).  This proxies a POST to the API's
+    ``/setup/providers/test-marine`` endpoint, which probes the marine service
+    and returns ``{ok, version, spots, last_run, status, error}``.
+
+    The API also decides whether a failure was a rejected secret; this handler
+    renders what it is told and never infers that classification itself.
     """
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
     form = await request.form()
-    compute_url = str(form.get("surf_compute_host", "")).strip()
-    compute_secret = str(form.get("surf_compute_secret", "")).strip()
+    marine_url = str(form.get("marine_service_url", "")).strip()
+    marine_secret = str(form.get("marine_service_secret", "")).strip()
+    verify_tls = str(form.get("marine_verify_tls", "")).strip() == "1"
 
-    # If the secret field is empty but the sentinel says unchanged, use
-    # the saved secret from wizard state.
-    if not compute_secret and state.surf_compute_secret:
-        compute_secret = state.surf_compute_secret
+    # The secret box renders empty when a secret is already saved, so an empty
+    # box means "test with the secret I already have."
+    if not marine_secret and state.marine_service_secret:
+        marine_secret = state.marine_service_secret
 
-    if not compute_url:
+    if not marine_url:
         return HTMLResponse(
             '<span class="error-text">'
-            + html_escape(_("Enter a compute host URL before testing."))
+            + html_escape(_("Enter a marine service URL before testing."))
             + "</span>"
         )
 
@@ -3795,34 +3841,55 @@ async def providers_test_compute(request: Request) -> HTMLResponse:
         client = _get_api_client(state)
         resp = client._request(
             "POST",
-            "/setup/providers/test-compute",
-            json={"url": compute_url, "secret": compute_secret},
+            "/setup/providers/test-marine",
+            json={
+                "url": marine_url,
+                "secret": marine_secret,
+                "verify_tls": verify_tls,
+            },
         )
         data = resp.json()
-        if data.get("ok"):
-            version = data.get("version", "")
-            msg = _("Connection successful.")
-            if version:
-                msg += f" (v{version})"
-            return HTMLResponse(
-                '<span class="success-text">'
-                + html_escape(msg)
-                + "</span>"
-            )
-        detail = data.get("error", _("Unknown error"))
+    except Exception:  # noqa: BLE001
+        logger.debug("providers_test_marine: error", exc_info=True)
         return HTMLResponse(
             '<span class="error-text">'
-            + html_escape(_("Connection failed: {error}").format(error=detail))
+            + html_escape(_("Could not reach the API to test the marine service."))
+            + "</span>"
+        )
+
+    if not data.get("ok"):
+        detail = data.get("error") or _("Unknown error")
+        return HTMLResponse(
+            '<span class="error-text">'
+            + html_escape(
+                _("The API could not use the marine service: {error}").format(error=detail)
+            )
             + "</span>",
             status_code=200,
         )
-    except Exception:  # noqa: BLE001
-        logger.debug("providers_test_compute: error", exc_info=True)
-        return HTMLResponse(
-            '<span class="error-text">'
-            + html_escape(_("Could not reach the API to test the compute service."))
-            + "</span>"
+
+    # Success — report what the API learned about the service.
+    lines = ['<span class="success-text">'
+             + html_escape(_("The API reached the marine service."))
+             + "</span>"]
+    details: list[str] = []
+    version = data.get("version")
+    if version:
+        details.append(_("Version {version}").format(version=version))
+    spots = data.get("spots")
+    if spots is not None:
+        details.append(_("{n} configured location(s)").format(n=spots))
+    status = data.get("status")
+    if status:
+        details.append(_("Status: {status}").format(status=status))
+    last_run = data.get("last_run")
+    if last_run:
+        details.append(_("Last run: {when}").format(when=last_run))
+    if details:
+        lines.append(
+            '<br><small>' + html_escape(" · ".join(str(d) for d in details)) + "</small>"
         )
+    return HTMLResponse("".join(lines))
 
 
 @router.get("/tls", response_class=HTMLResponse)
@@ -4173,13 +4240,16 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     ):
         api_payload["trushore"] = build_trushore_payload(state)
 
-    # Compute service for wave modeling offloading (T5.2).
-    # Top-level fields: the API writes surf_compute_host to [providers] in
-    # api.conf and surf_compute_secret to secrets.env.
-    if state.surf_compute_host:
-        api_payload["surf_compute_host"] = state.surf_compute_host
-    if state.surf_compute_secret:
-        api_payload["surf_compute_secret"] = state.surf_compute_secret
+    # Marine companion service connection (T7.2).
+    # Top-level fields, matching where the compute fields used to sit: the API
+    # writes marine_service_url and marine_verify_tls to [providers] in
+    # api.conf, and marine_service_secret to secrets.env as
+    # MARINE_SERVICE_SECRET (API-MANUAL §19.2).
+    if state.marine_service_url:
+        api_payload["marine_service_url"] = state.marine_service_url
+        api_payload["marine_verify_tls"] = state.marine_verify_tls
+    if state.marine_service_secret:
+        api_payload["marine_service_secret"] = state.marine_service_secret
 
     # Unit configuration — sent to the API so it writes to api.conf [units].
     # This is the single unit authority (T2A.5, ADR-042).
