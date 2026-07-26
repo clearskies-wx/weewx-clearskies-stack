@@ -69,6 +69,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from weewx_clearskies_config.auth import COOKIE_NAME, SessionManager
+from weewx_clearskies_config.constants import MARINE_SAME_HOST_URL
 from weewx_clearskies_config.i18n import (
     DEFAULT_LOCALE,
     LOCALE_COOKIE_NAME,
@@ -1906,12 +1907,6 @@ async def step4_timezone(request: Request) -> HTMLResponse:
 # ---------------------------------------------------------------------------
 # Step 6: Provider Selection + Inline API Key Entry
 # ---------------------------------------------------------------------------
-
-
-# Address the marine service is reached at when it runs on the same host as
-# the API.  Offered by the providers step's "same host" checkbox (T7.2) and
-# documented as the same-host example in API-MANUAL §19.2.
-MARINE_SAME_HOST_URL = "https://localhost:8780"
 
 
 def _render_step6(

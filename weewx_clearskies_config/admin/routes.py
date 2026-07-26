@@ -73,6 +73,7 @@ from weewx_clearskies_config.config.updater import (
     update_managed_region,
     update_secrets,
 )
+from weewx_clearskies_config.constants import MARINE_SAME_HOST_URL
 from weewx_clearskies_config.i18n import get_current_locale, translate, translate_md
 from weewx_clearskies_config.wizard.providers import PROVIDERS, get_provider, test_provider
 
@@ -3209,15 +3210,6 @@ async def trushore_trigger_run(request: Request) -> HTMLResponse:
 # authenticate; the API does every probe and every push.
 # ---------------------------------------------------------------------------
 
-# Address the marine service is reached at when it runs on the same host as
-# the API.  Offered by the "same host" checkbox (T7.2) and documented as the
-# same-host example in API-MANUAL §19.2.  Deliberately a local copy of the
-# wizard's MARINE_SAME_HOST_URL rather than an import: this module keeps its
-# own copies of wizard-router constants so neither router depends on the
-# other at import time (see _() and _MARINE_VALID_ACTIVITIES above).
-_MARINE_SAME_HOST_URL = "https://localhost:8780"
-
-
 def _marine_service_context(
     config: dict[str, Any] | None,
     *,
@@ -3252,7 +3244,7 @@ def _marine_service_context(
             else _marine_to_bool(verify_tls, default=True)
         ),
         "has_secret": has_secret_override if has_secret_override is not None else has_secret,
-        "same_host_url": _MARINE_SAME_HOST_URL,
+        "same_host_url": MARINE_SAME_HOST_URL,
         "marine_config_push": marine_config_push,
         "error": error,
         "flash": flash,
@@ -3298,7 +3290,7 @@ async def marine_service_save(request: Request) -> HTMLResponse:
     # and a different URL means the read-only guard was bypassed, and the
     # explicit checkbox is the clearer statement of intent.
     if str(form.get("marine_same_host", "")).strip() == "1":
-        marine_url = _MARINE_SAME_HOST_URL
+        marine_url = MARINE_SAME_HOST_URL
     else:
         marine_url = str(form.get("marine_service_url", "")).strip()
     # Unchecked checkboxes are not submitted; the control is always rendered
