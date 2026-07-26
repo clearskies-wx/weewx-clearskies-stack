@@ -2594,6 +2594,29 @@ async def marine_save(request: Request) -> HTMLResponse:
     locations = _parse_marine_locations(config.get("marine") or {})
     _apply_marine_photo_sidecar(locations, _config_dir)
 
+    # C-64, second direction: the operator can reach the same broken state
+    # from either screen, so both are guarded.  Adding a location with no
+    # marine service configured produces a location nothing will ever serve,
+    # and until now nothing said so.  Only *new* locations are blocked: an
+    # install that already has locations and no URL (hand-edited api.conf,
+    # or a config predating this guard) must stay editable, and the error
+    # below tells the operator where to fix the real problem either way.
+    if not location_id and not str(config.get("marine_service_url") or "").strip():
+        return _render(request, "marine.html", {
+            "locations": locations,
+            "activity_labels": _MARINE_ACTIVITY_LABELS,
+            "edit_mode": True,
+            "edit_location_id": "",
+            "edit_location": parsed,
+            "edit_error": _(
+                "A marine service connection must be configured before adding marine "
+                "locations — without one there is nothing to provide their data. Set the "
+                "marine service URL in the Marine Service section first."
+            ),
+            "error": None,
+            "flash": None,
+        }, status_code=422)
+
     if location_id:
         if location_id not in locations:
             return _render(request, "marine.html", {
@@ -3315,6 +3338,37 @@ async def marine_service_save(request: Request) -> HTMLResponse:
             ),
         )
 
+    # C-64: the admin counterpart of the wizard's blank-URL guard (C-57).
+    # The wizard keys its guard off state.marine_enabled, which is wizard
+    # session state with no admin equivalent — the admin edits marine
+    # locations in a different section from this one.  On the admin surface
+    # "marine is enabled" means the *saved* configuration has at least one
+    # marine location: persisted state is the right analogue for a screen
+    # that has none of its own, and it is exactly what those locations
+    # depend on this URL for (coordinator ruling, 2026-07-26).
+    #
+    # Without this, clearing the field wrote `marine_service_url = ` to
+    # api.conf and reported success — Pydantic accepts "" as a str, so
+    # ApplyRequest raised no 422 — silently disconnecting every configured
+    # marine location.
+    if not marine_url and _parse_marine_locations(config.get("marine") or {}):
+        return _render(
+            request,
+            "marine-service.html",
+            _marine_service_context(
+                config,
+                error=_(
+                    "The marine service URL cannot be blank while marine locations are "
+                    "configured — those locations would have no service to provide their "
+                    "data. Enter the address of your marine service, or delete the marine "
+                    "locations first."
+                ),
+                url_override=marine_url,
+                verify_tls_override=verify_tls,
+            ),
+            status_code=422,
+        )
+
     client = _get_api_client()
     if client is None:
         return _render(
@@ -3331,8 +3385,19 @@ async def marine_service_save(request: Request) -> HTMLResponse:
         )
 
     apply_payload = _build_base_apply_payload(config)
-    apply_payload["marine_service_url"] = marine_url
-    apply_payload["marine_verify_tls"] = verify_tls
+    # C-64 part 1: a blank box must never be sent as an empty string.
+    # ApplyRequest.marine_service_url is `str | None = None` and Pydantic
+    # accepts "" as a valid str, so an empty submission used to be written
+    # verbatim into api.conf as a URL that can never resolve.  Omitting the
+    # key entirely is the API's documented "leave this alone" signal
+    # (setup.py: `if apply.marine_service_url is not None:` — None writes
+    # nothing).  marine_verify_tls travels with it because the API writes
+    # the pair inside that same branch; sending it alone would do nothing.
+    # This mirrors the wizard, which already sends the key only when the
+    # URL is non-empty (wizard/routes.py `if state.marine_service_url:`).
+    if marine_url:
+        apply_payload["marine_service_url"] = marine_url
+        apply_payload["marine_verify_tls"] = verify_tls
     if new_secret:
         apply_payload["marine_service_secret"] = new_secret
 
