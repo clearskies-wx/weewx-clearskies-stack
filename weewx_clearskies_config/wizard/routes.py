@@ -41,7 +41,6 @@ Route summary:
                                            target category (T2.5)
   GET  /wizard/trushore         — step 14 fragment (SWAN+TruShore nearshore model setup)
   POST /wizard/trushore         — save TruShore config, return step 15 fragment (TLS)
-  POST /wizard/trushore/test-service — HTMX: test connectivity to a separated TruShore service URL
   POST /wizard/providers/test-marine — HTMX: ask the API to test the marine service (T7.3)
   GET  /wizard/tls              — step 15 fragment (TLS / HTTPS configuration)
   POST /wizard/tls              — save TLS config, return step 16 fragment (review)
@@ -3682,52 +3681,9 @@ async def step_trushore_post(request: Request) -> HTMLResponse:
     form = await request.form()
     state = get_wizard_state(session_id)
 
-    # Deployment mode
-    deployment_mode = str(form.get("trushore_deployment_mode", "bundled")).strip()
-    if deployment_mode not in ("bundled", "separated"):
-        deployment_mode = "bundled"
-    state.trushore_deployment_mode = deployment_mode
-
-    # Service URL (only relevant for separated mode)
-    service_url = str(form.get("trushore_service_url", "")).strip()
-    if deployment_mode == "separated" and not service_url:
-        # Re-render step with validation error
-        swan_info: dict[str, Any] = {"available": True, "version": None, "path": None, "cpu_cores": None}
-        try:
-            client = _get_api_client(state)
-            swan_info = client._request("GET", "/setup/marine/swan-check").json()
-        except Exception:  # noqa: BLE001
-            pass
-        surf_locations = {
-            slug: loc
-            for slug, loc in state.marine_locations.items()
-            if "surf" in loc.get("activities", [])
-        }
-        lats = [loc["lat"] for loc in state.marine_locations.values() if loc.get("lat") is not None]
-        lons = [loc["lon"] for loc in state.marine_locations.values() if loc.get("lon") is not None]
-        if lats and lons:
-            default_bbox = {
-                "south": round(min(lats) - 0.2, 2),
-                "north": round(max(lats) + 0.2, 2),
-                "west": round(min(lons) - 0.2, 2),
-                "east": round(max(lons) + 0.2, 2),
-            }
-        else:
-            default_bbox = {"south": "", "north": "", "west": "", "east": ""}
-        return _render(
-            request,
-            "step_trushore.html",
-            {
-                "step": 14,
-                "state": state,
-                "swan_info": swan_info,
-                "surf_locations": surf_locations,
-                "default_bbox": default_bbox,
-                "error": _("Service URL is required for separated mode."),
-            },
-            status_code=422,
-        )
-    state.trushore_service_url = service_url
+    # Deployment mode and service URL are gone (T7.2): where SWAN runs is no
+    # longer a per-step choice.  SWAN lives in the marine service, which is
+    # reached at the single marine_service_url set on the providers step.
 
     # OMP threads
     omp_threads_raw = str(form.get("trushore_omp_num_threads", "0")).strip()
@@ -3777,56 +3733,6 @@ async def step_trushore_post(request: Request) -> HTMLResponse:
 
     save_wizard_state(session_id, state)
     return await step_tls_get(request)
-
-
-@router.post("/trushore/test-service", response_class=HTMLResponse)
-async def trushore_test_service(request: Request) -> HTMLResponse:
-    """HTMX: test connectivity to a separated TruShore service URL.
-
-    Tests whether the supplied service_url is reachable by sending a GET
-    request to ``{service_url}/health`` via the API (which may be on a
-    different network segment than the wizard UI host).
-    """
-    session_id = _require_session(request)
-    state = get_wizard_state(session_id)
-    form = await request.form()
-    service_url = str(form.get("trushore_service_url", "")).strip()
-
-    if not service_url:
-        return HTMLResponse(
-            '<span class="error-text">'
-            + html_escape(_("Enter a service URL before testing."))
-            + "</span>"
-        )
-
-    try:
-        client = _get_api_client(state)
-        resp = client._request(
-            "GET",
-            "/setup/marine/trushore-check",
-            params={"service_url": service_url},
-        )
-        data = resp.json()
-        if data.get("reachable"):
-            return HTMLResponse(
-                '<span class="success-text">'
-                + html_escape(_("Service is reachable."))
-                + "</span>"
-            )
-        detail = data.get("error", _("Unknown error"))
-        return HTMLResponse(
-            '<span class="error-text">'
-            + html_escape(_("Service test failed: {error}").format(error=detail))
-            + "</span>",
-            status_code=200,
-        )
-    except Exception:  # noqa: BLE001
-        logger.debug("trushore_test_service: error", exc_info=True)
-        return HTMLResponse(
-            '<span class="error-text">'
-            + html_escape(_("Could not reach the API to test the service URL."))
-            + "</span>"
-        )
 
 
 @router.post("/providers/test-marine", response_class=HTMLResponse)

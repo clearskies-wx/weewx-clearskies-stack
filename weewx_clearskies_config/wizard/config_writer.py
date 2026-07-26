@@ -507,34 +507,27 @@ def build_trushore_payload(state: WizardState) -> dict[str, Any]:
     Mirrors ``build_marine_payload()``: a pure function from WizardState to
     the dict shape the API's ApplyRequest ``trushore`` field expects.
 
-    Two deployment modes:
-    - **Bundled** (default): ``service_url`` is ``None`` — SWAN runs as a
-      subprocess inside the API process.
-    - **Separated**: ``service_url`` points to a remote SWAN+TruShore instance.
+    SWAN model tuning only.  ``service_url`` is no longer emitted (T7.2): where
+    SWAN runs is not a per-model setting any more — SWAN lives in the marine
+    service, and the API reaches it at ``[providers] marine_service_url``, the
+    single key that replaced both this and ``surf_compute_host``
+    (API-MANUAL §19.2).
 
     Args:
         state: The current WizardState, populated by the trushore wizard step
-               (trushore_deployment_mode, trushore_service_url,
-               trushore_omp_num_threads, trushore_outer_grid_resolution_km,
+               (trushore_omp_num_threads, trushore_outer_grid_resolution_km,
                trushore_inner_nest_resolution_m).
 
     Returns:
         Dict suitable for the ``"trushore"`` key in the POST /setup/apply
         payload.  The caller adds it to api_payload unconditionally when the
-        trushore step was completed — the API accepts an empty/null service_url
-        to mean "bundled mode."
+        trushore step was completed.
     """
-    payload: dict[str, Any] = {
+    return {
         "omp_num_threads": state.trushore_omp_num_threads,
         "outer_grid_resolution_km": state.trushore_outer_grid_resolution_km,
         "inner_nest_resolution_m": state.trushore_inner_nest_resolution_m,
     }
-    if state.trushore_deployment_mode == "separated" and state.trushore_service_url:
-        payload["service_url"] = state.trushore_service_url
-    else:
-        # Explicit None signals bundled mode to the API.
-        payload["service_url"] = None
-    return payload
 
 
 def write_caddy_env(state: WizardState, config_dir: Path) -> Path | None:

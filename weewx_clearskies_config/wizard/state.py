@@ -260,14 +260,11 @@ class WizardState:
     # Written by the API to api.conf [providers] marine_verify_tls.
     marine_verify_tls: bool = True
 
-    # SWAN+TruShore nearshore model configuration (T4.4).
+    # SWAN+TruShore nearshore model tuning (T4.4).
     # Shown only when the [nearshore] pip extra is detected (swan-check passes).
-    # trushore_deployment_mode: "bundled" (SWAN runs as a subprocess inside
-    #   the API, no service_url needed) or "separated" (operator provides a
-    #   service_url for a remote SWAN+TruShore instance).
-    trushore_deployment_mode: str = "bundled"
-    # For "separated" mode: URL of the remote SWAN+TruShore service.
-    trushore_service_url: str = ""
+    # Where SWAN runs is no longer configured here (T7.2): SWAN lives in the
+    # marine service, reached at marine_service_url above.  These are the
+    # model's tuning knobs only.
     # OpenMP thread count for the SWAN subprocess. 0 = use all CPU cores;
     # positive values limit SWAN to that many threads (useful on multi-tenant
     # hosts where SWAN should not monopolize all cores).
