@@ -3107,10 +3107,13 @@ async def trushore_save(request: Request) -> HTMLResponse:
             entry["beach_safety"] = loc["beach_safety"]
         updated_locations.append(entry)
 
-    apply_payload: dict[str, Any] = {
-        "trushore": trushore_payload,
-        "marine": {"locations": updated_locations} if updated_locations else {},
-    }
+    # The always-rewritten sections must be re-sent from the just-fetched
+    # current-config — see the module-level "NOTE on write path".  Without
+    # them /setup/apply rejects the request outright: ApplyRequest.database
+    # has no default and the model is extra="forbid".
+    apply_payload: dict[str, Any] = _build_base_apply_payload(config)
+    apply_payload["trushore"] = trushore_payload
+    apply_payload["marine"] = {"locations": updated_locations} if updated_locations else {}
 
     try:
         client.apply(apply_payload)
