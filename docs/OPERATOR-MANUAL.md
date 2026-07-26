@@ -498,44 +498,56 @@ You should see messages like `clearskies_truesun: CAMS AOD fetch successful`. To
 
 ### SWAN+TruShore Nearshore Model (optional)
 
-SWAN+TruShore is the Clear Skies nearshore wave model. It runs SWAN (Simulating WAves Nearshore, a Fortran spectral wave model from Delft University of Technology) as a subprocess inside the API, using a two-level nested grid architecture driven by blended wind forcing (HRRR for hours 0–48 + GFS for hours 48–72), running 4× daily on extended HRRR cycles (00/06/12/18Z), to produce 72-hour surf forecasts with nearshore physics. Total memory budget: ≤300 MB. When the `[nearshore]` pip extra is installed and the SWAN binary is available, SWAN+TruShore becomes the sole source for surf forecasts at configured surf spot locations. It replaces the former dependence on NOAA's Nearshore Wave Prediction System (NWPS).
+SWAN+TruShore is the Clear Skies nearshore wave model. SWAN (Simulating WAves Nearshore, a Fortran spectral wave model from Delft University of Technology) runs inside the marine service — a separate companion process that communicates with the API over a configured network connection. The marine service need not run on the same host as the API. SWAN uses a two-level nested grid architecture driven by blended wind forcing (HRRR for hours 0–48 + GFS for hours 48–72), running 4× daily on extended HRRR cycles (00/06/12/18Z), to produce 72-hour surf forecasts with nearshore physics. Total memory budget: ≤300 MB. When the marine service is connected and SWAN is available, SWAN+TruShore becomes the sole source for surf forecasts at configured surf spot locations. It replaces the former dependence on NOAA's Nearshore Wave Prediction System (NWPS).
 
 #### Prerequisites
+
+All requirements in this section apply to the **marine service host**, not the API host.
 
 | Requirement | Notes |
 |-------------|-------|
 | SWAN binary | Fortran executable — not a Python package. Install via package manager or compile from source. |
 | gfortran | Required to build SWAN from source. Not needed if installing via `apt`. |
 | OpenMP | Parallel execution. Bundled with gfortran on most distributions. |
-| `weewx-clearskies-api[nearshore]` | Pip extra that adds the HRRR wind provider, GFS wind provider, and SWAN runner. |
+| eccodes system library | Required by the `[nearshore]` extra. Install before the pip package. |
+| `weewx-clearskies-marine[nearshore]` | Pip extra that adds the HRRR wind provider, GFS wind provider, and SWAN runner to the marine service. |
 
-**Install on Debian / Ubuntu:**
+**Install on Debian / Ubuntu (on the marine service host):**
 
 ```bash
-sudo apt-get install -y swan gfortran
-sudo -u clearskies /opt/clearskies-api/bin/pip install --pre weewx-clearskies-api[nearshore]
+sudo apt-get install -y libeccodes-dev swan gfortran
+pip install "weewx-clearskies-marine[nearshore]"
 ```
 
-**Build from source (any Linux):**
+**Install on RHEL / Fedora (on the marine service host):**
+
+```bash
+sudo dnf install eccodes-devel
+pip install "weewx-clearskies-marine[nearshore]"
+```
+
+**Install on Alpine (on the marine service host):**
+
+```bash
+apk add eccodes-dev
+pip install "weewx-clearskies-marine[nearshore]"
+```
+
+**Build SWAN from source (any Linux):**
 
 ```bash
 sudo bash scripts/install_swan.sh   # download and compile SWAN
-sudo -u clearskies /opt/clearskies-api/bin/pip install --pre weewx-clearskies-api[nearshore]
 ```
 
-Verify the binary is on PATH after installing:
+Verify the SWAN binary is on PATH on the marine service host:
 
 ```bash
 swan --version
 ```
 
-Restart the API to load the `[nearshore]` extra:
+Restart the marine service to load the `[nearshore]` extra.
 
-```bash
-sudo systemctl restart weewx-clearskies-api
-```
-
-**Docker:** The SWAN-enabled image variant includes the `[nearshore]` extra and the SWAN binary. Pull the latest image:
+**Docker:** The SWAN-enabled marine service image includes the `[nearshore]` extra and the SWAN binary. Pull the latest image:
 
 ```bash
 docker compose pull && docker compose up -d
@@ -543,16 +555,9 @@ docker compose pull && docker compose up -d
 
 #### Wizard Setup
 
-The SWAN+TruShore wizard step appears when marine is enabled, at least one configured location has surf activity, and the SWAN binary is found on PATH. If SWAN is not installed, the step shows install instructions and a **Skip** button — surf forecasting will be unavailable until SWAN is installed and the API is restarted.
+The SWAN+TruShore wizard step appears when marine is enabled, at least one configured location has surf activity, and the connected marine service reports SWAN is installed and available. If the marine service is not connected or SWAN is not available, the step shows a notice and a **Skip** button — surf forecasting will be unavailable until a marine service with SWAN is connected.
 
 When SWAN is available, the step collects:
-
-**Deployment mode:**
-
-| Mode | Description |
-|------|-------------|
-| Bundled (default) | SWAN runs as a subprocess on this host inside the API process. No additional service needed. Suitable for most operators. |
-| Separated service | SWAN runs on a remote host running `weewx-clearskies-trushore`. Enter the service URL (e.g. `https://trushore.example.com:8766`). The wizard tests connectivity before allowing you to proceed. Use this when you want SWAN on a dedicated or more powerful machine. |
 
 **SWAN nested grid:**
 
@@ -594,7 +599,6 @@ Open `https://your-domain/admin` and navigate to **SWAN+TruShore**.
 
 **Configuration form** lets you update:
 
-- **Deployment mode** — switch between Bundled and Separated. When switching to Separated, enter the service URL and use **Test connectivity** before saving.
 - **OpenMP thread count** — adjust CPU parallelism for SWAN. 2–4 cores recommended; beyond 6 cores, returns diminish sharply and can slow down on small grids.
 - **Outer grid resolution** — coarser values (4–5 km) reduce run time; finer values (1–2 km) improve shelf wave propagation accuracy. Changes take effect on the next SWAN run.
 - **Inner nest resolution** — coarser values (400–500 m) reduce run time; finer values (50–100 m) increase nearshore accuracy at higher compute cost. Changes take effect on the next SWAN run.
@@ -604,9 +608,10 @@ Open `https://your-domain/admin` and navigate to **SWAN+TruShore**.
 
 **SWAN binary not found**
 
-If the `[nearshore]` extra is installed but `swan` is not on PATH, the API logs a CRITICAL message at startup and surf forecast fields in API responses return null.
+If the `[nearshore]` extra is installed on the marine service host but `swan` is not on PATH, the marine service cannot run SWAN and surf forecast fields in API responses return null. The Marine Service admin section shows SWAN availability.
 
 ```bash
+# Run these on the marine service host:
 which swan          # check whether swan is on PATH
 swan --version      # confirm it runs
 
@@ -615,9 +620,9 @@ sudo apt-get install -y swan gfortran
 
 # Build from source:
 sudo bash scripts/install_swan.sh
-
-sudo systemctl restart weewx-clearskies-api
 ```
+
+After installing, restart the marine service.
 
 **SWAN runs taking more than 15 minutes**
 
@@ -635,12 +640,12 @@ If NOMADS returns an error or the current cycle has not yet posted, the SWAN run
 journalctl -u weewx-clearskies-api | grep -i "hrrr\|trushore"
 ```
 
-**Separated service unreachable**
+**Marine service unreachable**
 
-When Separated mode is configured and the remote TruShore service becomes unreachable, the API logs an ERROR and serves the last successful SWAN+TruShore cache. No manual intervention is required — the API resumes fetching fresh data within 60 seconds of the service recovering.
+When the marine service becomes unreachable, the API logs an ERROR and serves the last successful SWAN+TruShore cache. No manual intervention is required — the API resumes fetching fresh data when the service recovers. Check the **Marine Service** admin section to verify the connection status.
 
 ```bash
-journalctl -u weewx-clearskies-api | grep -i "trushore"
+journalctl -u weewx-clearskies-api | grep -i "marine\|trushore"
 ```
 
 ---
@@ -769,7 +774,7 @@ Configure optional features:
 
 ### SWAN+TruShore (conditional)
 
-This step appears when marine is enabled with at least one surf location configured and the SWAN binary is found on PATH. It collects the deployment mode (Bundled or Separated service), the nested grid parameters (outer grid resolution, inner nest resolution, inner nest bounding box), the OpenMP thread count, and per-spot surf settings (breaker formula and surf height display convention). If SWAN is not installed, the wizard shows install instructions and a **Skip** button — you can proceed without surf forecasting and add SWAN later. See [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions) for full SWAN installation details.
+This step appears when marine is enabled with at least one surf location configured and the connected marine service reports SWAN is installed and available. It collects the nested grid parameters (outer grid resolution, inner nest resolution, inner nest bounding box), the OpenMP thread count, and per-spot surf settings (breaker formula and surf height display convention). If the marine service is not connected or SWAN is not available, the wizard shows a notice and a **Skip** button — you can proceed without surf forecasting and configure the marine service later. See [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions) for full SWAN installation details.
 
 ### TLS configuration
 
@@ -864,9 +869,30 @@ The **Marine Locations** section manages marine, surf, fishing, and beach safety
 - **Test** checks whether NDBC buoys and CO-OPS tide stations are reachable near the location's coordinates, and whether an NWS marine zone id is stored. This is a best-effort connectivity check, not a live verification that a specific station is currently transmitting data.
 - **Update Bathymetry** (surf locations only) re-downloads the seafloor depth profile used for wave forecasting — useful after correcting a beach's facing direction.
 
+### Marine Service
+
+The **Marine Service** section manages the connection between the API and the external marine service that runs SWAN wave computations. This section appears when at least one location has surf activity enabled.
+
+**Status panel** shows:
+
+| Field | Description |
+|-------|-------------|
+| Connection | Whether the API can currently reach the marine service |
+| Shared secret | Whether a shared secret is stored (shown as "Set" or "Not set") |
+| TLS certificate verification | Whether TLS certificate verification is enabled for the marine service connection |
+| Configured at | The URL the marine service is configured at, or "Not configured — no marine service is connected." if no URL has been saved |
+
+**Configuration form** lets you update:
+
+- **Marine service URL** — the address of the marine service, including scheme and port (e.g. `https://marine.example.com:8766` or `http://[::1]:8766`). Leave blank to disconnect.
+- **Shared secret** — the authentication secret for the marine service. Leave blank to keep the existing secret.
+- **TLS certificate verification** — enable to verify the marine service's TLS certificate against system-trusted CAs. Disable only for self-signed certificates on trusted private networks.
+
+Use **Test connectivity** to verify the API can reach the marine service at the configured URL before saving. If the most recent wizard apply pushed marine configuration to the service and the push failed, a warning is shown here.
+
 ### Managing SWAN+TruShore
 
-The **SWAN+TruShore** section shows current SWAN model status (binary availability, version, last run time, memory usage, and nested grid resolutions), lets you switch between Bundled and Separated deployment modes, trigger a manual SWAN run, adjust OpenMP thread count and grid resolutions (outer and inner nest), and update per-spot surf settings (breaker formula and surf height display preference). Changes to deployment mode or per-spot settings take effect on the next SWAN run. For installation details and background on the Bundled versus Separated modes, see [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions).
+The **SWAN+TruShore** section shows current SWAN model status (binary availability, version, last run time, memory usage, and nested grid resolutions), lets you trigger a manual SWAN run, adjust OpenMP thread count and grid resolutions (outer and inner nest), and update per-spot surf settings (breaker formula and surf height display preference). Changes to per-spot settings take effect on the next SWAN run. For installation details see [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions).
 
 ---
 
