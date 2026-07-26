@@ -112,6 +112,9 @@ def load_progress(session_id: str, config_dir: Path) -> WizardState | None:
     if raw.get("proxy_secret") == _SECRET_SENTINEL:
         raw["proxy_secret"] = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
 
+    if raw.get("marine_service_secret") == _SECRET_SENTINEL:
+        raw["marine_service_secret"] = secrets.get("MARINE_SERVICE_SECRET", "")
+
     providers: dict[str, str] = raw.get("providers", {}) if isinstance(raw.get("providers"), dict) else {}
     api_keys: dict[str, dict[str, str]] = {}
     raw_api_keys = raw.get("api_keys", {})
@@ -205,6 +208,9 @@ def load_most_recent_progress(config_dir: Path) -> WizardState | None:
 
     if raw.get("proxy_secret") == _SECRET_SENTINEL:
         raw["proxy_secret"] = secrets.get("WEEWX_CLEARSKIES_PROXY_SECRET")
+
+    if raw.get("marine_service_secret") == _SECRET_SENTINEL:
+        raw["marine_service_secret"] = secrets.get("MARINE_SERVICE_SECRET", "")
 
     providers: dict[str, str] = raw.get("providers", {}) if isinstance(raw.get("providers"), dict) else {}
     api_keys: dict[str, dict[str, str]] = {}
@@ -324,6 +330,25 @@ def populate_from_config(config_dir: Path) -> WizardState:
                 if provider_id:
                     providers[domain] = provider_id
         state.providers = providers
+
+        # Marine companion service connection (T7.2).  api.conf holds the
+        # address and the TLS flag under [providers]; the shared token lives
+        # only in secrets.env (API-MANUAL §19.2), so it is read from there and
+        # shown back to the operator rather than being silently withheld.
+        providers_section = api_cfg.get("providers", {})
+        if isinstance(providers_section, dict):
+            marine_url = str(providers_section.get("marine_service_url", "") or "").strip()
+            if marine_url:
+                state.marine_service_url = marine_url
+            verify_raw = providers_section.get("marine_verify_tls")
+            if verify_raw is not None:
+                state.marine_verify_tls = str(verify_raw).strip().lower() not in (
+                    "false",
+                    "0",
+                    "no",
+                    "off",
+                )
+        state.marine_service_secret = secrets.get("MARINE_SERVICE_SECRET", "")
 
         station_section = api_cfg.get("station", {})
         if isinstance(station_section, dict):

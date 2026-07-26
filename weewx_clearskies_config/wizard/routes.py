@@ -5032,10 +5032,19 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 if bounds_val and not state.librewxr_bounds:
                     state.librewxr_bounds = bounds_val
 
-    # Compute service — restore from API current-config on re-run.
-    compute_host_val = config.get("surf_compute_host")
-    if compute_host_val and not state.surf_compute_host:
-        state.surf_compute_host = str(compute_host_val).strip()
+    # Marine service connection — restore from API current-config on re-run
+    # (T7.2), so the operator never retypes an address or a secret the API
+    # already holds.  The TLS flag is only adopted alongside the URL: a flag
+    # applied on its own would silently overwrite a choice made this session.
+    marine_url_val = config.get("marine_service_url")
+    if marine_url_val and not state.marine_service_url:
+        state.marine_service_url = str(marine_url_val).strip()
+        verify_val = config.get("marine_verify_tls")
+        if isinstance(verify_val, bool):
+            state.marine_verify_tls = verify_val
+    marine_secret_val = config.get("marine_service_secret")
+    if marine_secret_val and not state.marine_service_secret:
+        state.marine_service_secret = str(marine_secret_val).strip()
 
     # --- Station ---
     station = config.get("station", {})
