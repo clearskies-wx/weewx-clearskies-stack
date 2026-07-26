@@ -1,0 +1,240 @@
+{# -------------------------------------------------------------------------
+   Marine Service admin section (T7.1/T7.2/T7.3/T7.5).
+   Renamed from the former compute-offload section (T7.1): the
+   marine service is not a compute-offload option, it is a companion service
+   that owns all marine computation (waves, tides, buoys, fishing, beach
+   safety).  Only the API ever talks to it (ARCHITECTURE.md, "The marine
+   service is an add-on reached only through the API — INVARIANT"), so this
+   page records where it lives and how to authenticate, and every probe of it
+   is proxied through the API.
+   URL → api.conf [providers] marine_service_url; TLS flag →
+   [providers] marine_verify_tls; secret → secrets.env as
+   MARINE_SERVICE_SECRET (API-MANUAL §19.2).
+   Loaded via HTMX into #admin-content.
+   Context: marine_service_url, has_secret, verify_tls, same_host_url,
+            marine_config_push, error, flash
+   ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
+<style>
+.admin-alert{padding:.75rem 1rem;border-radius:var(--pico-border-radius,.25rem);margin-block:1rem;font-size:.875rem}
+.admin-alert-error{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
+.admin-alert-success{background:#f0fdf4;border:1px solid #86efac;color:#166534}
+.admin-alert-warning{background:#fffbeb;border:1px solid #fcd34d;color:#78350f}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}:root:not([data-theme="light"]) .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}:root:not([data-theme="light"]) .admin-alert-warning{background:#2e2205;border-color:#78350f;color:#fcd34d}}
+[data-theme="dark"] .admin-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}
+[data-theme="dark"] .admin-alert-success{background:#0a2a1a;border-color:#166534;color:#86efac}
+[data-theme="dark"] .admin-alert-warning{background:#2e2205;border-color:#78350f;color:#fcd34d}
+.error-text{color:var(--pico-del-color,#dc2626)}
+.success-text{color:var(--pico-ins-color,#16a34a)}
+</style>
+<article>
+  <header>
+    <nav aria-label="{{ _('Breadcrumb') }}">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">{{ _("Admin") }}</a>
+        </li>
+        <li>{{ _("Marine Service") }}</li>
+      </ul>
+    </nav>
+    <h2>{{ _("Marine Service") }}</h2>
+    {{ help_trigger("/admin/help/marine_service") }}
+  </header>
+
+  {% if flash %}
+  <div role="status" class="admin-alert admin-alert-success">
+    {{ flash }}
+  </div>
+  {% endif %}
+
+  {# Marine service config push outcome (T7.6).  The API writes its own
+     configuration first and then pushes the marine subset on to the marine
+     service.  A failed push never blocks the save (API-MANUAL §19.5), so
+     this is a warning about reachability and must never read as a failed
+     save.  Nothing is shown when no marine service is configured
+     (attempted = false). #}
+  {% if marine_config_push and marine_config_push.attempted and not marine_config_push.ok %}
+  <div role="status" aria-live="polite" class="admin-alert admin-alert-warning">
+    <strong>{{ _("Saved — but the marine service could not be reached.") }}</strong>
+    <p>{{ _("Your settings were saved successfully. The API could not pass the marine settings on to the marine service, so marine data will not appear until it can.") }}</p>
+    {% if marine_config_push.error %}
+    <p><small>{{ _("Reason: {error}").format(error=marine_config_push.error) }}</small></p>
+    {% endif %}
+    <p><small>{{ _("Check that the marine service is running and reachable at the address you entered. The API retries automatically the next time you save settings, and the marine service also collects its configuration itself when it restarts — so no settings are lost.") }}</small></p>
+  </div>
+  {% endif %}
+
+  {% if error %}
+  <div role="alert" class="admin-alert admin-alert-error">
+    <strong>{{ _("Error.") }}</strong> {{ error }}
+  </div>
+  {% endif %}
+
+  <p>{{ _("The marine service is a separate companion service that provides all marine features — wave forecasts, tides, buoy observations, fishing conditions and beach safety. It is optional: leave this blank if you are not using marine features. Your API connects to it; nothing else does.") }}</p>
+  <p><small>{{ _("The marine service may run on the same host as your API, or on a more powerful separate machine. Either way, enter the address your API can reach it at.") }}</small></p>
+
+  <section aria-labelledby="marine-service-status-heading">
+    <h3 id="marine-service-status-heading">{{ _("Current status") }}</h3>
+    <dl>
+      <dt>{{ _("Connection") }}</dt>
+      <dd>
+        {% if marine_service_url %}
+        {{ _("Configured at {url}").format(url=marine_service_url) }}
+        {% else %}
+        {{ _("Not configured — no marine service is connected.") }}
+        {% endif %}
+      </dd>
+      <dt>{{ _("Shared secret") }}</dt>
+      <dd>
+        {% if has_secret %}{{ _("Saved") }}{% else %}{{ _("Not set") }}{% endif %}
+      </dd>
+      <dt>{{ _("TLS certificate verification") }}</dt>
+      <dd>
+        {% if verify_tls %}{{ _("On") }}{% else %}{{ _("Off") }}{% endif %}
+      </dd>
+    </dl>
+  </section>
+
+  <form hx-post="/admin/marine-service"
+        hx-target="#admin-content"
+        hx-swap="innerHTML"
+        id="marine-service-form">
+
+    <fieldset>
+      <legend>{{ _("Marine service connection") }}</legend>
+
+      <label for="marine_same_host">
+        <input type="checkbox" id="marine_same_host" name="marine_same_host" value="1"
+               {% if marine_service_url == same_host_url %}checked{% endif %}
+               aria-describedby="marine-same-host-hint">
+        {{ _("Marine service runs on the same host as the API") }}
+      </label>
+      <small id="marine-same-host-hint">{{ _("Fills in the standard same-host address and locks it. Uncheck to enter a different address.") }}</small>
+
+      <label for="marine_service_url">{{ _("Marine service URL") }}</label>
+      <input
+        type="url"
+        id="marine_service_url"
+        name="marine_service_url"
+        value="{{ marine_service_url }}"
+        placeholder="https://marine.example.com:8780"
+        {% if marine_service_url == same_host_url %}readonly{% endif %}
+        aria-describedby="marine-url-hint"
+      >
+      <small id="marine-url-hint">
+        {{ _("Base URL of the marine service, including scheme and port — for example https://localhost:8780 on the same host, or https://192.0.2.10:8780 on another. For a bare IPv6 address, put it in square brackets: https://[2001:db8::1]:8780. Leave blank if you have not installed the marine service.") }}
+      </small>
+
+      <label for="marine_verify_tls" style="margin-block-start:0.75rem">
+        <input type="checkbox" id="marine_verify_tls" name="marine_verify_tls" value="1"
+               {% if verify_tls %}checked{% endif %}
+               aria-describedby="marine-verify-tls-hint">
+        {{ _("Verify the marine service's TLS certificate") }}
+      </label>
+      <small id="marine-verify-tls-hint">{{ _("Leave this on whenever the marine service presents a certificate your API trusts. Turn it off only if the marine service uses a self-signed certificate — common on a same-host install. Turning it off means the API can no longer detect an impostor on that address.") }}</small>
+    </fieldset>
+
+    <fieldset style="margin-block-start:1rem">
+      <legend>{{ _("Marine service secret") }}</legend>
+
+      <label for="marine_service_secret">
+        {{ _("Update secret") }}
+        <div style="display:flex;gap:0.5rem;align-items:start">
+          <div style="flex:1;position:relative">
+            <input type="password" id="marine_service_secret" name="marine_service_secret"
+                   value=""
+                   placeholder="{{ _('Authentication token') }}"
+                   aria-describedby="marine-secret-hint"
+                   autocomplete="off">
+          </div>
+          <button type="button" class="outline secondary" id="marine-secret-toggle"
+                  style="white-space:nowrap;flex-shrink:0;padding:0.5rem 0.75rem"
+                  aria-label="{{ _('Show or hide secret') }}">
+            {{ _("Show") }}
+          </button>
+        </div>
+      </label>
+      <small id="marine-secret-hint">
+        {{ _("The shared token the marine service was installed with. The API sends it on every request to the marine service, and the marine service rejects requests without it. It is stored in secrets.env as MARINE_SERVICE_SECRET, never in api.conf.") }}
+      </small>
+      {% if has_secret %}
+      <small style="color:var(--pico-muted-color)">
+        {{ _("A secret is already saved. Leave blank to keep it, or enter a new value to replace it.") }}
+      </small>
+      {% endif %}
+    </fieldset>
+
+    <div style="margin-block-start:1rem;display:flex;align-items:center;gap:0.75rem">
+      <button type="button" class="outline secondary"
+              id="test-marine-btn"
+              hx-post="/admin/marine-service/test"
+              hx-include="#marine_service_url,#marine_service_secret,#marine_verify_tls"
+              hx-target="#marine-test-result"
+              hx-swap="innerHTML"
+              hx-disabled-elt="this"
+              hx-indicator="#marine-test-indicator">
+        {{ _("Test Connection") }}
+      </button>
+      <span id="marine-test-indicator"
+            class="htmx-indicator"
+            style="font-size:0.85rem;color:var(--pico-muted-color)">
+        {{ _("Testing…") }}
+      </span>
+    </div>
+    <small>{{ _("Asks your API to contact the marine service at this address and report what it finds.") }}</small>
+    <div id="marine-test-result" style="margin-block-start:0.5rem"></div>
+
+    <div role="group" style="margin-block-start:1.5rem">
+      <button type="submit">{{ _("Save") }}</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">{{ _("Cancel") }}</a>
+    </div>
+  </form>
+</article>
+
+<script>
+(function(){
+  var toggle = document.getElementById("marine-secret-toggle");
+  var input = document.getElementById("marine_service_secret");
+  if (toggle && input) {
+    toggle.addEventListener("click", function() {
+      if (input.type === "password") {
+        input.type = "text";
+        toggle.textContent = "{{ _('Hide') }}";
+      } else {
+        input.type = "password";
+        toggle.textContent = "{{ _('Show') }}";
+      }
+    });
+  }
+})();
+// "Same host" checkbox: fill in the standard same-host URL and lock the
+// field, so a checked box and a hand-edited URL can never disagree (T7.2).
+// Mirrors the identical control on the wizard's providers step.
+(function(){
+  var sameHost = document.getElementById("marine_same_host");
+  var urlInput = document.getElementById("marine_service_url");
+  if (!sameHost || !urlInput) { return; }
+  var SAME_HOST_URL = {{ same_host_url | tojson }};
+  var previousUrl = (urlInput.value === SAME_HOST_URL) ? "" : urlInput.value;
+  sameHost.addEventListener("change", function() {
+    if (sameHost.checked) {
+      if (urlInput.value !== SAME_HOST_URL) { previousUrl = urlInput.value; }
+      urlInput.value = SAME_HOST_URL;
+      urlInput.readOnly = true;
+    } else {
+      urlInput.readOnly = false;
+      urlInput.value = previousUrl;
+    }
+  });
+})();
+</script>
