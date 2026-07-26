@@ -864,7 +864,7 @@ The **Geographic Features** section lets you download and manage the vector map 
 
 The **Marine Locations** section manages marine, surf, fishing, and beach safety locations after initial setup — the ongoing counterpart to the setup wizard's Marine Locations step. Each location has a name, coordinates, one or more activities (Marine/Boating, Surf, Fishing, Beach Safety), and activity-specific fields (surf beach-facing direction/bottom type/topographic feature, fishing target category, beach safety links).
 
-- **Add / Edit** opens a form with the same fields as the wizard step. Saving re-applies the full marine configuration and restarts the API so the change takes effect within a few seconds.
+- **Add / Edit** opens a form with the same fields as the wizard step. Saving re-applies the full marine configuration and restarts the API so the change takes effect within a few seconds. Adding a *new* location requires a marine service connection to already be configured — see [Marine Service](#marine-service) below. Without one there is nothing to provide the location's data, so the save is refused rather than accepted silently. Editing a location that already exists is never blocked.
 - **Delete** removes a location after confirmation.
 - **Test** checks whether NDBC buoys and CO-OPS tide stations are reachable near the location's coordinates, and whether an NWS marine zone id is stored. This is a best-effort connectivity check, not a live verification that a specific station is currently transmitting data.
 - **Update Bathymetry** (surf locations only) re-downloads the seafloor depth profile used for wave forecasting — useful after correcting a beach's facing direction.
@@ -884,7 +884,7 @@ The **Marine Service** section manages the connection between the API and the ex
 
 **Configuration form** lets you update:
 
-- **Marine service URL** — the address of the marine service, including scheme and port (e.g. `https://marine.example.com:8766` or `http://[::1]:8766`). Leave blank to disconnect.
+- **Marine service URL** — the address of the marine service, including scheme and port (e.g. `https://marine.example.com:8780`, `https://localhost:8780` on the same host, or `https://[2001:db8::1]:8780` for a bare IPv6 address). Leaving it blank does **not** disconnect a marine service that is already saved — the saved URL is left as it is. To disconnect one, delete its marine locations and then edit `api.conf [providers]` on the API host. The form will refuse to save a blank URL while any marine location is configured, because those locations would have nothing to provide their data.
 - **Marine service secret** — the authentication secret for the marine service. Leave blank to keep the existing secret.
 - **Verify the marine service's TLS certificate** — enable to verify the marine service's TLS certificate against system-trusted CAs. Disable only for self-signed certificates on trusted private networks.
 
