@@ -885,10 +885,10 @@ The **Marine Service** section manages the connection between the API and the ex
 **Configuration form** lets you update:
 
 - **Marine service URL** — the address of the marine service, including scheme and port (e.g. `https://marine.example.com:8766` or `http://[::1]:8766`). Leave blank to disconnect.
-- **Shared secret** — the authentication secret for the marine service. Leave blank to keep the existing secret.
-- **TLS certificate verification** — enable to verify the marine service's TLS certificate against system-trusted CAs. Disable only for self-signed certificates on trusted private networks.
+- **Marine service secret** — the authentication secret for the marine service. Leave blank to keep the existing secret.
+- **Verify the marine service's TLS certificate** — enable to verify the marine service's TLS certificate against system-trusted CAs. Disable only for self-signed certificates on trusted private networks.
 
-Use **Test connectivity** to verify the API can reach the marine service at the configured URL before saving. If the most recent wizard apply pushed marine configuration to the service and the push failed, a warning is shown here.
+Use **Test Connection** to verify the API can reach the marine service at the configured URL before saving. If the most recent wizard apply pushed marine configuration to the service and the push failed, a warning is shown here.
 
 ### Managing SWAN+TruShore
 
