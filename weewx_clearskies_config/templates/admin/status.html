@@ -1,0 +1,198 @@
+{# -------------------------------------------------------------------------
+   Status admin section (B4, Marine Model Restoration Plan).
+
+   Read-only: displays API reachability and the marine service's health
+   payload. Never acts — no forms, no writes. The marine service is reached
+   only through the API (ARCHITECTURE.md, "The marine service is an add-on
+   reached only through the API — INVARIANT"); this page never contacts it
+   directly, only via /admin/status[/panel] -> ApiClient.health() and
+   ApiClient._request("GET", "/setup/marine/health").
+
+   Every value shown from the marine health payload may be absent (the
+   pre-B3 marine service reports only status/version/last_run/spots/
+   run_in_progress) or of an unexpected shape — this template renders such
+   gaps as "not reported by this version of the marine service", never as a
+   blank section or a crash. See _status_context() (admin/routes.py) for the
+   defensive parsing that produces this template's context.
+
+   Rendered by two routes sharing the same _status_context():
+     GET /admin/status        -- full section (panel_only=False): breadcrumb,
+                                  header, and the polling panel container.
+     GET /admin/status/panel  -- HTMX fragment (panel_only=True): just the
+                                  panel content, for the 30s poll.
+
+   Context: panel_only, api_reachable, marine_reachable, marine_error,
+            marine_status, marine_version, marine_last_run,
+            marine_run_in_progress, marine_reasons, marine_reasons_reported,
+            marine_inputs, marine_inputs_reported, marine_invariants,
+            marine_invariants_reported
+   ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
+<style>
+.status-alert{padding:.75rem 1rem;border-radius:var(--pico-border-radius,.25rem);margin-block:1rem;font-size:.875rem}
+.status-badge{display:inline-flex;align-items:center;gap:.4rem;padding:.25rem .65rem;border-radius:999px;font-weight:600;font-size:.85rem}
+.status-badge-ok{background:#f0fdf4;color:#166534;border:1px solid #86efac}
+.status-badge-degraded{background:#fffbeb;color:#78350f;border:1px solid #fcd34d;font-size:1rem;font-weight:700}
+.status-badge-failed{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5;font-size:1rem;font-weight:700}
+.status-badge-unreachable{background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
+.status-badge-unknown{background:var(--pico-muted-border-color,#e5e5e5);color:var(--pico-muted-color,#57534e)}
+[data-theme="dark"] .status-badge-ok{background:#0a2a1a;border-color:#166534;color:#86efac}
+[data-theme="dark"] .status-badge-degraded{background:#2e2205;border-color:#78350f;color:#fcd34d}
+[data-theme="dark"] .status-badge-failed{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}
+[data-theme="dark"] .status-badge-unreachable{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}
+.status-reasons{margin:.5rem 0 0;padding-left:1.25rem}
+.status-reasons li{font-family:var(--pico-font-family-monospace,monospace);font-size:.85rem}
+.status-note{color:var(--pico-muted-color);font-size:.85rem}
+table.status-inputs td, table.status-inputs th{padding:.35rem .6rem}
+</style>
+{% macro render_marine_badge(reachable, status) %}
+  {% if not reachable %}
+    <span class="status-badge status-badge-unreachable" role="status">&#9679; {{ _("Unreachable") }}</span>
+  {% elif status == "ok" %}
+    <span class="status-badge status-badge-ok" role="status">&#9679; {{ _("OK") }}</span>
+  {% elif status == "degraded" %}
+    <span class="status-badge status-badge-degraded" role="status" aria-live="polite">&#9679; {{ _("DEGRADED") }}</span>
+  {% elif status == "failed" %}
+    <span class="status-badge status-badge-failed" role="status" aria-live="polite">&#9679; {{ _("FAILED") }}</span>
+  {% else %}
+    <span class="status-badge status-badge-unknown" role="status">&#9679; {{ _("Unknown") }}</span>
+  {% endif %}
+{% endmacro %}
+{% macro render_panel() %}
+  <section aria-labelledby="status-api-heading">
+    <h3 id="status-api-heading">{{ _("API") }}</h3>
+    <p>
+      {% if api_reachable %}
+      <span class="status-badge status-badge-ok" role="status">&#9679; {{ _("Reachable") }}</span>
+      {% else %}
+      <span class="status-badge status-badge-unreachable" role="status">&#9679; {{ _("Not reachable") }}</span>
+      {% endif %}
+    </p>
+    <p class="status-note">
+      {{ _("Only reachability is shown here — the API does not currently expose a version or last-update timestamp to this page.") }}
+    </p>
+  </section>
+
+  <section aria-labelledby="status-marine-heading">
+    <h3 id="status-marine-heading">{{ _("Marine service") }}</h3>
+    <p>{{ render_marine_badge(marine_reachable, marine_status) }}</p>
+
+    {% if not marine_reachable %}
+    <div role="alert" class="status-alert" style="background:#fef2f2;border:1px solid #fca5a5;color:#991b1b">
+      <strong>{{ _("The marine service could not be reached.") }}</strong>
+      {% if marine_error %}
+      <p>{{ marine_error }}</p>
+      {% endif %}
+    </div>
+    {% else %}
+
+    <dl>
+      <dt>{{ _("Version") }}</dt>
+      <dd>{{ marine_version if marine_version else _("Not reported") }}</dd>
+      <dt>{{ _("Last run") }}</dt>
+      <dd>{{ marine_last_run if marine_last_run else _("Not reported") }}</dd>
+      <dt>{{ _("Run in progress") }}</dt>
+      <dd>{{ _("Yes") if marine_run_in_progress else _("No") }}</dd>
+    </dl>
+
+    <h4>{{ _("Reasons") }}</h4>
+    {% if not marine_reasons_reported %}
+    <p class="status-note">{{ _("Not reported by this version of the marine service.") }}</p>
+    {% elif marine_reasons %}
+    <ul class="status-reasons">
+      {% for reason in marine_reasons %}
+      <li>{{ reason }}</li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="status-note">{{ _("None.") }}</p>
+    {% endif %}
+
+    <h4>{{ _("Inputs") }}</h4>
+    {% if not marine_inputs_reported %}
+    <p class="status-note">{{ _("Not reported by this version of the marine service.") }}</p>
+    {% else %}
+    <table class="status-inputs" role="table">
+      <thead>
+        <tr>
+          <th scope="col">{{ _("Input") }}</th>
+          <th scope="col">{{ _("Available") }}</th>
+          <th scope="col">{{ _("Age") }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in marine_inputs %}
+        <tr>
+          <td>{{ row.name }}</td>
+          <td>{{ _("Yes") if row.available else _("No") }}</td>
+          <td>
+            {% if row.age_human %}
+            {{ row.age_human }} <span class="status-note">({{ row.age_s }}s)</span>
+            {% else %}
+            {{ _("Unknown") }}
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% endif %}
+
+    <h4>{{ _("Invariants") }}</h4>
+    {% if not marine_invariants_reported %}
+    <p class="status-note">{{ _("Not reported by this version of the marine service.") }}</p>
+    {% else %}
+    <dl>
+      <dt>{{ _("Total fired") }}</dt>
+      <dd>{{ marine_invariants.fired_total if marine_invariants.fired_total is not none else _("Not reported") }}</dd>
+      <dt>{{ _("Last fired at") }}</dt>
+      <dd>{{ marine_invariants.last_fired_at if marine_invariants.last_fired_at else _("Never") }}</dd>
+      <dt>{{ _("Last fired names") }}</dt>
+      <dd>
+        {% if marine_invariants.last_fired_names %}
+        <ul class="status-reasons">
+          {% for name in marine_invariants.last_fired_names %}
+          <li>{{ name }}</li>
+          {% endfor %}
+        </ul>
+        {% else %}
+        {{ _("None.") }}
+        {% endif %}
+      </dd>
+    </dl>
+    {% endif %}
+
+    {% endif %}
+  </section>
+{% endmacro %}
+{% if panel_only %}
+{{ render_panel() }}
+{% else %}
+<article>
+  <header>
+    <nav aria-label="{{ _('Breadcrumb') }}">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">{{ _("Admin") }}</a>
+        </li>
+        <li>{{ _("Status") }}</li>
+      </ul>
+    </nav>
+    <h2>{{ _("Status") }}</h2>
+    {{ help_trigger("/admin/help/status") }}
+  </header>
+
+  <p>{{ _("A read-only view of this installation's health: whether the API is reachable, and the marine service's reported status, reasons, input freshness, and invariant activity. This page only displays — it does not change any configuration.") }}</p>
+
+  <div id="status-panel"
+       hx-get="/admin/status/panel"
+       hx-trigger="load, every 30s"
+       hx-swap="innerHTML">
+    {{ render_panel() }}
+  </div>
+</article>
+{% endif %}

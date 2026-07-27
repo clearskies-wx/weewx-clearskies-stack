@@ -8,6 +8,8 @@ were formerly in config/routes.py.
 
 Route summary (admin landing + domain sections):
   GET  /admin                         — landing page (requires session)
+  GET  /admin/status                  — status page: API + marine service health (B4)
+  GET  /admin/status/panel            — HTMX fragment: status panel only, polled every 30s
   GET  /admin/pages                   — page visibility edit form fragment
   POST /admin/pages                   — save page visibility
   GET  /admin/branding                — appearance/branding edit form
@@ -837,6 +839,13 @@ _GROUP_LABELS: dict[str, str] = {
 # "url" is the HTMX GET target; "description" is a one-line summary shown
 # instead of a dl when there are no landing_display fields to render.
 _CUSTOM_SECTIONS: list[dict] = [
+    {
+        "section_id": "status",
+        "display_name": "Status",
+        "group": "station",
+        "url": "/admin/status",
+        "description": "",
+    },
     {
         "section_id": "station-identity",
         "display_name": "Station Identity",
@@ -3534,3 +3543,183 @@ async def marine_service_test(request: Request) -> HTMLResponse:
     if details:
         parts.append("<br><small>" + _marine_esc(" · ".join(str(d) for d in details)) + "</small>")
     return HTMLResponse("".join(parts))
+
+
+# ---------------------------------------------------------------------------
+# Status page (B4) — API health + marine service health, read-only
+# ---------------------------------------------------------------------------
+
+# Named inputs the B3 marine health payload may report under "inputs". Order
+# fixed here so the panel always lists them in the same order regardless of
+# JSON key ordering in the response.
+_MARINE_HEALTH_INPUT_NAMES: tuple[str, ...] = ("ww3_boundary", "wind", "bathymetry", "tide")
+
+
+def _format_age_seconds(age_s: Any) -> str | None:
+    """Render a raw ``age_s`` value as a short human-readable duration.
+
+    Display only — never used for any decision. Returns None (rendered as
+    "unknown" by the template) for anything that is not a non-negative
+    number, since a malformed value from an unverified payload must not be
+    guessed at.
+    """
+    if isinstance(age_s, bool) or not isinstance(age_s, (int, float)):
+        return None
+    if age_s < 0:
+        return None
+    total_seconds = int(age_s)
+    if total_seconds < 60:
+        return f"{total_seconds}s"
+    minutes, seconds = divmod(total_seconds, 60)
+    if minutes < 60:
+        return f"{minutes}m {seconds}s"
+    hours, minutes = divmod(minutes, 60)
+    if hours < 24:
+        return f"{hours}h {minutes}m"
+    days, hours = divmod(hours, 24)
+    return f"{days}d {hours}h"
+
+
+def _status_context() -> dict[str, Any]:
+    """Build the context shared by both /admin/status and /admin/status/panel.
+
+    Every value pulled from the marine health payload is read with ``.get()``
+    and type-checked before use — the payload is untrusted input from a
+    service that may be running an older version than this page expects
+    (pre-B3: only ``status``/``version``/``last_run``/``spots``/
+    ``run_in_progress``; post-B3 additionally ``reasons``/``inputs``/
+    ``invariants``). A key or shape this code does not recognise is rendered
+    as "not reported by this version of the marine service", never as a
+    crash or a blank panel.
+    """
+    context: dict[str, Any] = {
+        "api_reachable": False,
+        "marine_reachable": None,
+        "marine_error": None,
+        "marine_status": None,
+        "marine_version": None,
+        "marine_last_run": None,
+        "marine_run_in_progress": None,
+        "marine_reasons": [],
+        "marine_reasons_reported": False,
+        "marine_inputs": [],
+        "marine_inputs_reported": False,
+        "marine_invariants": None,
+        "marine_invariants_reported": False,
+    }
+
+    client = _get_api_client()
+    if client is None:
+        unreachable_msg = _(
+            "Cannot connect to the API — check that the API is running and configured."
+        )
+        context["marine_error"] = unreachable_msg
+        context["marine_reachable"] = False
+        return context
+
+    try:
+        context["api_reachable"] = bool(client.health())
+    except Exception:  # noqa: BLE001
+        logger.warning("status page: API health() call failed", exc_info=True)
+        context["api_reachable"] = False
+
+    try:
+        resp = client._request("GET", "/setup/marine/health")
+        data = resp.json()
+    except Exception:  # noqa: BLE001
+        logger.warning("status page: /setup/marine/health call failed", exc_info=True)
+        context["marine_error"] = _("Could not reach the API to check the marine service.")
+        context["marine_reachable"] = False
+        return context
+
+    if not isinstance(data, dict):
+        context["marine_error"] = _("The API returned an unexpected response.")
+        context["marine_reachable"] = False
+        return context
+
+    reachable = bool(data.get("reachable"))
+    context["marine_reachable"] = reachable
+    error = data.get("error")
+    context["marine_error"] = str(error) if error else None
+
+    health = data.get("health")
+    if not isinstance(health, dict):
+        return context
+
+    status = health.get("status")
+    if isinstance(status, str):
+        context["marine_status"] = status
+    version = health.get("version")
+    if version is not None:
+        context["marine_version"] = str(version)
+    last_run = health.get("last_run")
+    if last_run is not None:
+        context["marine_last_run"] = str(last_run)
+    context["marine_run_in_progress"] = bool(health.get("run_in_progress"))
+
+    reasons = health.get("reasons")
+    if isinstance(reasons, list):
+        context["marine_reasons_reported"] = True
+        context["marine_reasons"] = [str(r) for r in reasons]
+
+    inputs_raw = health.get("inputs")
+    if isinstance(inputs_raw, dict):
+        context["marine_inputs_reported"] = True
+        rows: list[dict[str, Any]] = []
+        for name in _MARINE_HEALTH_INPUT_NAMES:
+            entry = inputs_raw.get(name)
+            if not isinstance(entry, dict):
+                continue
+            age_s = entry.get("age_s")
+            rows.append(
+                {
+                    "name": name,
+                    "available": bool(entry.get("available")),
+                    "age_s": age_s,
+                    "age_human": _format_age_seconds(age_s),
+                }
+            )
+        context["marine_inputs"] = rows
+
+    invariants_raw = health.get("invariants")
+    if isinstance(invariants_raw, dict):
+        context["marine_invariants_reported"] = True
+        names = invariants_raw.get("last_fired_names")
+        context["marine_invariants"] = {
+            "fired_total": invariants_raw.get("fired_total"),
+            "last_fired_at": invariants_raw.get("last_fired_at"),
+            "last_fired_names": [str(n) for n in names] if isinstance(names, list) else [],
+        }
+
+    return context
+
+
+@router.get("/status", response_class=HTMLResponse, response_model=None)
+async def admin_status(request: Request) -> HTMLResponse:
+    """Render the Status admin section (B4): API health + marine service health.
+
+    Read-only. Non-HTMX requests redirect to the admin landing page — the
+    template is a fragment designed to load inside #admin-content, matching
+    marine_service_get's pattern.
+    """
+    _require_session(request)
+    if not request.headers.get("HX-Request"):
+        return RedirectResponse(url="/admin/config#status", status_code=303)
+
+    context = _status_context()
+    context["panel_only"] = False
+    return _render(request, "status.html", context)
+
+
+@router.get("/status/panel", response_class=HTMLResponse, response_model=None)
+async def admin_status_panel(request: Request) -> HTMLResponse:
+    """HTMX polling target: return only the inner status panel fragment.
+
+    Polled every 30s from status.html (`hx-trigger="load, every 30s"`).
+    Built from the same _status_context() as the full page so the two can
+    never drift apart.
+    """
+    _require_session(request)
+    context = _status_context()
+    context["panel_only"] = True
+    return _render(request, "status.html", context)
