@@ -809,6 +809,12 @@ if (typeof L === "undefined") {
     var lengthVal = prefill.length_m !== undefined ? prefill.length_m : "";
     var bearingVal = prefill.bearing_degrees !== undefined ? prefill.bearing_degrees : "";
     var distanceVal = prefill.distance_m !== undefined ? prefill.distance_m : "";
+    // Way/polyline geometry, already converted [lat,lon] -> [lon,lat] by the
+    // caller (StructureConfig.coordinates contract). Absent for manually
+    // added structures — never fabricated here.
+    var coordsInputHtml = (prefill.coordinates && prefill.coordinates.length)
+      ? '<input type="hidden" name="loc_' + sIdx + '_structure_' + si + '_coordinates" value="' + JSON.stringify(prefill.coordinates) + '">'
+      : "";
     fs.innerHTML =
       '<div style="display:flex;justify-content:space-between;align-items:center;">' +
       '<legend>Structure ' + (si + 1) + '</legend>' +
@@ -821,7 +827,8 @@ if (typeof L === "undefined") {
       '<option value="permeable">Permeable</option></select></label></div></div>' +
       '<div class="grid"><div><label>Length (m)<input type="number" step="0.1" min="1" name="loc_' + sIdx + '_structure_' + si + '_length_m" class="struct-length" value="' + lengthVal + '"></label></div>' +
       '<div><label>Bearing (°)<input type="number" step="0.1" min="0" max="360" name="loc_' + sIdx + '_structure_' + si + '_bearing_degrees" class="struct-bearing" value="' + bearingVal + '"></label></div>' +
-      '<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_' + sIdx + '_structure_' + si + '_distance_m" class="struct-distance" value="' + distanceVal + '"></label></div></div>';
+      '<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_' + sIdx + '_structure_' + si + '_distance_m" class="struct-distance" value="' + distanceVal + '"></label></div></div>' +
+      coordsInputHtml;
     container.appendChild(fs);
     return fs;
   }
@@ -1329,11 +1336,17 @@ if (typeof L === "undefined") {
         .replace("{bearing}", Math.round(bearing));
       layer.bindTooltip(labelText, { permanent: true, direction: "center", className: "drawn-structure-label" });
 
+      // Drawn polyline geometry, converted once here from Leaflet's
+      // [lat, lon] to the marine StructureConfig.coordinates contract
+      // [lon, lat]. Downstream (api, marine) does not re-order.
+      var coordinates = latlngs.map(function (p) { return [p.lng, p.lat]; });
+
       // Create a structure card with pre-filled geometry
       createStructureCard(card, {
         length_m: Math.round(length * 10) / 10,
         bearing_degrees: Math.round(bearing * 10) / 10,
-        distance_m: Math.round(distance * 10) / 10
+        distance_m: Math.round(distance * 10) / 10,
+        coordinates: coordinates
       });
     });
   }

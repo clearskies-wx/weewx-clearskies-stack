@@ -1973,13 +1973,20 @@ def _marine_structures_list(value: Any) -> list[dict[str, Any]]:
     result: list[dict[str, Any]] = []
     for struct in value.values():
         if isinstance(struct, dict):
-            result.append({
+            entry: dict[str, Any] = {
                 "type": str(struct.get("type", "")),
                 "material": str(struct.get("material", "")),
                 "length_m": _marine_to_float(struct.get("length_m")),
                 "bearing_degrees": _marine_to_float(struct.get("bearing_degrees")),
                 "distance_m": _marine_to_float(struct.get("distance_m")),
-            })
+            }
+            # Way/polyline geometry from the wizard's discovery or map-draw
+            # tool (E13), already [lon, lat]. Absent geometry stays absent —
+            # never fabricated here.
+            coords = struct.get("coordinates")
+            if isinstance(coords, list) and coords:
+                entry["coordinates"] = coords
+            result.append(entry)
     return result
 
 
@@ -2174,10 +2181,22 @@ def _validate_marine_location_form(form: Any) -> tuple[dict[str, Any] | None, st
             s_bearing = _marine_to_float(form.get(f"structure_{si}_bearing_degrees"))
             s_distance = _marine_to_float(form.get(f"structure_{si}_distance_m"))
             if s_type and s_material and s_length and s_bearing is not None and s_distance:
-                structures.append({
+                structure: dict[str, Any] = {
                     "type": s_type, "material": s_material,
                     "length_m": s_length, "bearing_degrees": s_bearing, "distance_m": s_distance,
-                })
+                }
+                # Way/polyline geometry round-tripped from the hidden
+                # structure_{n}_coordinates field (E13). Absent geometry
+                # stays absent — never fabricated here.
+                s_coords_raw = str(form.get(f"structure_{si}_coordinates", "")).strip()
+                if s_coords_raw:
+                    try:
+                        s_coords = json.loads(s_coords_raw)
+                    except (ValueError, TypeError):
+                        s_coords = None
+                    if isinstance(s_coords, list) and s_coords:
+                        structure["coordinates"] = s_coords
+                structures.append(structure)
             si += 1
 
         l3_enabled = str(form.get("surf_l3_enabled", "auto")).strip().lower()

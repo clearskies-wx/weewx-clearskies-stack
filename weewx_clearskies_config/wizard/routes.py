@@ -2960,13 +2960,28 @@ async def step_marine_post(request: Request) -> HTMLResponse:
                 s_bearing = _to_float(form.get(f"loc_{idx}_structure_{si}_bearing_degrees"))
                 s_distance = _to_float(form.get(f"loc_{idx}_structure_{si}_distance_m"))
                 if s_type and s_material and s_length and s_bearing is not None and s_distance:
-                    structures.append({
+                    structure: dict[str, Any] = {
                         "type": s_type,
                         "material": s_material,
                         "length_m": s_length,
                         "bearing_degrees": s_bearing,
                         "distance_m": s_distance,
-                    })
+                    }
+                    # Way geometry carried from the discovery-card hidden input
+                    # or the map-draw tool, already converted lon/lat once
+                    # upstream (StructureConfig.coordinates contract). Absent
+                    # geometry stays absent — never fabricated here.
+                    s_coords_raw = str(
+                        form.get(f"loc_{idx}_structure_{si}_coordinates", "")
+                    ).strip()
+                    if s_coords_raw:
+                        try:
+                            s_coords = json.loads(s_coords_raw)
+                        except (ValueError, TypeError):
+                            s_coords = None
+                        if isinstance(s_coords, list) and s_coords:
+                            structure["coordinates"] = s_coords
+                    structures.append(structure)
                 si += 1
             if structures:
                 surf_cfg["structures"] = structures
@@ -3430,6 +3445,17 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
     html_parts.append('      var matSrc = this.dataset.materialSource;')
     html_parts.append('      var matWarn = (matSrc !== "osm") ? " &#9888;" : "";')
     html_parts.append('      var matVal = this.dataset.material || "semi_permeable";')
+    html_parts.append('      var geomRaw = this.dataset.geometry;')
+    html_parts.append('      var coordsInputHtml = "";')
+    html_parts.append('      if (geomRaw) {')
+    html_parts.append('        try {')
+    html_parts.append('          var geomArr = JSON.parse(geomRaw);')
+    html_parts.append('          if (geomArr && geomArr.length) {')
+    html_parts.append('            var lonLatArr = geomArr.map(function (pt) { return [pt[1], pt[0]]; });')
+    html_parts.append('            coordsInputHtml = \'<input type="hidden" name="loc_\' + idx + \'_structure_\' + si + \'_coordinates" value="\' + JSON.stringify(lonLatArr) + \'">\';')
+    html_parts.append('          }')
+    html_parts.append('        } catch (e) {}')
+    html_parts.append('      }')
     html_parts.append('      fs.innerHTML = \'<div style="display:flex;justify-content:space-between;align-items:center;">\'')
     html_parts.append('        + \'<legend>Structure \' + (si+1) + \' (discovered)</legend>\'')
     html_parts.append('        + \'<button type="button" class="remove-structure-btn" style="font-size:0.8rem;padding:0.2rem 0.5rem;cursor:pointer;">&times;</button></div>\'')
@@ -3446,7 +3472,8 @@ async def marine_discover_structures(request: Request) -> HTMLResponse:
     html_parts.append('        + \'</select></label></div></div>\'')
     html_parts.append('        + \'<div class="grid"><div><label>Length (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_length_m" value="\' + this.dataset.length + \'"></label></div>\'')
     html_parts.append('        + \'<div><label>Bearing (&deg;)<input type="number" step="0.1" min="0" max="360" name="loc_\' + idx + \'_structure_\' + si + \'_bearing_degrees" value="\' + this.dataset.bearing + \'"></label></div>\'')
-    html_parts.append('        + \'<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_distance_m" value="\' + this.dataset.distance + \'"></label></div></div>\';')
+    html_parts.append('        + \'<div><label>Distance (m)<input type="number" step="0.1" min="1" name="loc_\' + idx + \'_structure_\' + si + \'_distance_m" value="\' + this.dataset.distance + \'"></label></div></div>\'')
+    html_parts.append('        + coordsInputHtml;')
     html_parts.append('      container.appendChild(fs);')
     html_parts.append('    } else {')
     html_parts.append('      var cards = container.querySelectorAll(".structure-card");')

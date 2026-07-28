@@ -361,6 +361,9 @@
               <div><label>{{ _("Bearing (°)") }}<input type="number" step="0.1" min="0" max="360" name="structure_{{ si }}_bearing_degrees" value="{{ struct.get('bearing_degrees','') }}"></label></div>
               <div><label>{{ _("Distance (m)") }}<input type="number" step="0.1" min="1" name="structure_{{ si }}_distance_m" value="{{ struct.get('distance_m','') }}"></label></div>
             </div>
+            {% if struct.get("coordinates") %}
+            <input type="hidden" name="structure_{{ si }}_coordinates" value='{{ struct.get("coordinates") | tojson }}'>
+            {% endif %}
           </fieldset>
           {% endfor %}
         </div>
@@ -587,12 +590,14 @@
       // templates/wizard/step_marine.html, adapted for the admin's single
       // form with unique element IDs.
       //
-      // Obstacle-crossing detection is not implemented here: admin structures
-      // are stored as bearing/length/distance from spot (no lat/lon geometry),
-      // so transect-obstacle intersection tests are not possible without first
-      // projecting structure endpoints from the spot coordinates. All transects
-      // render blue in the admin. The wizard performs crossing detection using
-      // geographic geometry from the discover-structures HTMX response.
+      // Obstacle-crossing detection is not implemented here: structures may
+      // now carry real lat/lon geometry (round-tripped via the hidden
+      // structure_{n}_coordinates field when the wizard discovered or drew
+      // the structure — E13), but this admin map does not read or draw it,
+      // so transect-obstacle intersection tests are not performed. All
+      // transects render blue in the admin. The wizard performs crossing
+      // detection using the same geographic geometry from the
+      // discover-structures HTMX response / map-draw tool.
 
       function _adminToRad(d) { return d * Math.PI / 180; }
 
