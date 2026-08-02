@@ -226,15 +226,31 @@ if (typeof L === "undefined") {
     <input type="hidden" name="loc_{{ idx }}_surfbeat_cadence_hours"
            value="{{ surf.get('surfbeat_cadence_hours', 3) }}">
 
+    {% set exposure_is_override = loc.get("directional_exposure_is_override", exposure|length > 0) %}
     <fieldset aria-describedby="loc_{{ idx }}_exposure_help">
       <legend>{{ _("Directional exposure") }}</legend>
-      <small id="loc_{{ idx }}_exposure_help">{{ _("Select which compass directions have open ocean exposure at this spot. A south-facing beach with headlands to the east and west would have S, SE, SW exposed and N, NE, NW, E, W blocked. Swells from blocked directions cannot reach this spot and are excluded from the surf forecast.") }}</small>
-      {% for dir in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] %}
+      <small id="loc_{{ idx }}_exposure_help">{{ _("Clear Skies automatically measures which compass directions have open ocean exposure at this spot from the coastline shape you drew above. Only turn on the manual override below if you have local knowledge the automatic measurement misses.") }}</small>
+
       <label class="compass-check">
-        <input type="checkbox" name="loc_{{ idx }}_surf_exposure" value="{{ dir }}" {% if dir in exposure %}checked{% endif %}>
-        {{ dir }}
+        <input type="radio" class="exposure-mode-toggle" name="loc_{{ idx }}_surf_exposure_mode" value="auto" {% if not exposure_is_override %}checked{% endif %}>
+        {{ _("Auto (measured)") }}
       </label>
-      {% endfor %}
+      <label class="compass-check">
+        <input type="radio" class="exposure-mode-toggle" name="loc_{{ idx }}_surf_exposure_mode" value="override" {% if exposure_is_override %}checked{% endif %}>
+        {{ _("Manual override") }}
+      </label>
+
+      <div class="exposure-override-directions" {% if not exposure_is_override %}style="display:none"{% endif %}>
+        <small>{{ _("Select which compass directions have open ocean exposure at this spot. A south-facing beach with headlands to the east and west would have S, SE, SW exposed and N, NE, NW, E, W blocked. Swells from blocked directions cannot reach this spot and are excluded from the surf forecast.") }}</small>
+        {% for dir in ["N", "NE", "E", "SE", "S", "SW", "W", "NW"] %}
+        <label class="compass-check">
+          <input type="checkbox" name="loc_{{ idx }}_surf_exposure" value="{{ dir }}"
+                 {% if dir in exposure %}checked{% endif %}
+                 {% if not exposure_is_override %}disabled{% endif %}>
+          {{ dir }}
+        </label>
+        {% endfor %}
+      </div>
     </fieldset>
 
     <h5>{{ _("Coastal Structures") }}</h5>
@@ -1383,6 +1399,19 @@ if (typeof L === "undefined") {
         var panel = card ? card.querySelector('.activity-section[data-section="' + section + '"]') : null;
         if (panel) {
           panel.style.display = target.checked ? "" : "none";
+        }
+        return;
+      }
+      if (target.classList.contains("exposure-mode-toggle")) {
+        var expCard = target.closest(".marine-location-card");
+        var directionsDiv = expCard ? expCard.querySelector(".exposure-override-directions") : null;
+        if (directionsDiv) {
+          var isOverride = target.value === "override";
+          directionsDiv.style.display = isOverride ? "" : "none";
+          var boxes = directionsDiv.querySelectorAll('input[type="checkbox"]');
+          for (var i = 0; i < boxes.length; i++) {
+            boxes[i].disabled = !isOverride;
+          }
         }
         return;
       }

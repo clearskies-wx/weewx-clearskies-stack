@@ -2080,6 +2080,22 @@ def _parse_marine_locations(marine_cfg: dict[str, Any]) -> dict[str, dict[str, A
             "beach_safety": {
                 "external_links": external_links,
             } if "beach_safety" in activities else {},
+            # C9b: display-only -- whether the on-disk config carries the
+            # directional_exposure key at all (any shape), i.e. whether this
+            # location has an explicit manual override in effect vs the
+            # fan-derived Auto default. Mirrors the marine service's own
+            # directional_exposure_is_override (marine_config.py) for
+            # vocabulary parity. Deliberately kept OUTSIDE the "surf" dict --
+            # both _build_marine_apply_payload() and the trushore_save
+            # rebuild path (`dict(loc["surf"])`) would otherwise forward an
+            # unrecognised key into the /setup/apply "surf" payload, which
+            # the API's extra="forbid" schema would reject. Never sent to
+            # the API; both apply-payload builders key off the normalized
+            # "directional_exposure" list above being non-empty, unchanged.
+            "directional_exposure_is_override": (
+                surf_raw.get("directional_exposure") is not None
+                if "surf" in activities else False
+            ),
         }
     return result
 

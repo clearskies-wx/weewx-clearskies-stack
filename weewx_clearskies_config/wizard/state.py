@@ -224,7 +224,22 @@ class WizardState:
     #    "surf": {"segment_start_lat": float, "segment_start_lon": float,
     #             "segment_end_lat": float, "segment_end_lon": float,
     #             "bottom_type": str,
-    #             "topographic_feature": str, "directional_exposure": [str, ...]},
+    #             "topographic_feature": str,
+    #             # directional_exposure: fan-derived (Auto) by default; an
+    #             # empty/absent list here means Auto -- the marine service
+    #             # measures exposure from the coastline fan. A non-empty
+    #             # list is a manual OVERRIDE the operator explicitly chose
+    #             # (C9b; parity with marine_config.py's
+    #             # directional_exposure_is_override).
+    #             "directional_exposure": [str, ...]},
+    #    # directional_exposure_is_override (bool, optional, location-level --
+    #    # NOT inside "surf"): display-only, set only when this location was
+    #    # restored from an already-applied config (see
+    #    # _merge_from_api_current_config in wizard/routes.py). Records that
+    #    # source config's own directional_exposure key-presence, for the
+    #    # step_marine.html mode toggle's default state (C9b). Kept outside
+    #    # "surf" so build_marine_payload()'s explicit surf-key whitelist
+    #    # (config_writer.py) can never forward it to the API.
     #    "fishing": {"target_category": str, "species": [str, ...]},
     #    "beach_safety": {"external_links": [{"label": str, "url": str}, ...]}}
     # "surf"/"fishing"/"beach_safety" keys are present only when that

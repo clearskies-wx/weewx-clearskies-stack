@@ -5119,7 +5119,67 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                     entry["nws_marine_zone_id"] = str(loc_data["nws_marine_zone_id"])
                 surf = loc_data.get("surf")
                 if isinstance(surf, dict):
-                    entry["surf"] = dict(surf)
+                    surf_copy = dict(surf)
+                    # C9b: normalize directional_exposure to the list-of-checked-
+                    # directions shape the wizard templates expect (matching
+                    # admin's _marine_exposure_list tolerance for dict / bare-list
+                    # / ConfigObj "DIR:true" on-disk shapes), and record whether
+                    # the source config carried the key at all as an explicit
+                    # override -- presentation-only. Without this, a dict shape
+                    # like {"N": true, "SE": true, ...} rendered via `dir in
+                    # exposure` (membership on dict keys) showed every direction
+                    # checked regardless of its bool value. The wire shape sent by
+                    # build_marine_payload() is unaffected -- it still keys off
+                    # the normalized list being non-empty.
+                    raw_exposure = surf_copy.get("directional_exposure")
+                    is_override = raw_exposure is not None
+                    if isinstance(raw_exposure, dict):
+                        directions = [
+                            d for d, v in raw_exposure.items()
+                            if v is True or str(v).lower() == "true"
+                        ]
+                    else:
+                        if raw_exposure is None:
+                            raw_list: list[str] = []
+                        elif isinstance(raw_exposure, list | tuple):
+                            raw_list = [str(v).strip() for v in raw_exposure if str(v).strip()]
+                        else:
+                            text = str(raw_exposure).strip()
+                            raw_list = [text] if text else []
+                        directions = []
+                        for item in raw_list:
+                            if ":" in item:
+                                dir_part, bool_part = item.split(":", 1)
+                                if bool_part.strip().lower() == "true":
+                                    directions.append(dir_part.strip())
+                            else:
+                                directions.append(item.strip())
+                    normalized_directions = [
+                        d for d in directions if d in _MARINE_VALID_EXPOSURE
+                    ]
+                    # Only set the key when non-empty -- matches every other
+                    # write path's truthy gate (wizard/routes.py step_marine_post
+                    # `if exposure: surf_cfg["directional_exposure"] = exposure`,
+                    # admin's `if s.get("directional_exposure"):` in
+                    # _build_marine_apply_payload). config_writer.py's
+                    # build_marine_payload() branches on isinstance(list), not
+                    # truthiness -- an explicit "present but empty" list here
+                    # would make a restored-then-untouched Auto location send
+                    # an empty-dict OVERRIDE on next apply. Leaving the key
+                    # absent when empty keeps state.marine_locations in the
+                    # same shape a fresh (never-restored) location would have.
+                    if normalized_directions:
+                        surf_copy["directional_exposure"] = normalized_directions
+                    else:
+                        surf_copy.pop("directional_exposure", None)
+                    entry["surf"] = surf_copy
+                    # Kept OUTSIDE "surf" (entry-level, not surf_copy) so that
+                    # build_marine_payload()'s explicit key-by-key surf_out
+                    # whitelist (config_writer.py) can never accidentally pick
+                    # it up if that whitelist is ever changed to a broader
+                    # copy -- matches admin/routes.py's _parse_marine_locations
+                    # placement of the same field for the same reason.
+                    entry["directional_exposure_is_override"] = is_override
                 fishing = loc_data.get("fishing")
                 if isinstance(fishing, dict):
                     entry["fishing"] = dict(fishing)
