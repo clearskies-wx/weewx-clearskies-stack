@@ -3009,6 +3009,206 @@ def _render_coverage_html(cov: dict) -> str:
     )
 
 
+@router.post("/marine/discover-structures", response_class=HTMLResponse)
+async def marine_discover_structures(request: Request) -> HTMLResponse:
+    """HTMX: discover nearby coastal structures via OSM Overpass (R-ADMIN-1).
+
+    Mirrors the wizard's ``POST /wizard/marine/discover-structures``
+    (wizard/routes.py) 1:1 against the same API endpoint
+    (``ApiClient.discover_structures`` -> ``GET
+    /setup/marine/discover-structures``) -- this admin edit form carries a
+    single location's coordinates in flat ``lat``/``lon`` fields (no
+    ``loc_N_`` prefix, unlike the wizard's multi-location cards), so the
+    field lookup is simpler than the wizard's regex-over-form-keys approach.
+    """
+    _require_session(request)
+    form = await request.form()
+    lat = _marine_to_float(form.get("lat"))
+    lon = _marine_to_float(form.get("lon"))
+    if lat is None or lon is None:
+        return HTMLResponse(
+            content='<div class="admin-alert admin-alert-error" role="alert">'
+            + _marine_esc(_("Enter coordinates before discovering structures."))
+            + "</div>",
+            status_code=200,
+        )
+
+    client = _get_api_client()
+    if client is None:
+        return HTMLResponse(
+            content='<div class="admin-alert admin-alert-error" role="alert">'
+            + _marine_esc(_("API unreachable."))
+            + "</div>",
+            status_code=200,
+        )
+
+    try:
+        result = client.discover_structures(lat, lon, radius_m=2000)
+    except Exception:  # noqa: BLE001
+        logger.warning("marine_discover_structures: error", exc_info=True)
+        return HTMLResponse(
+            content='<div class="admin-alert admin-alert-error" role="alert">'
+            + _marine_esc(_("Could not discover structures. Check API connection."))
+            + "</div>",
+            status_code=200,
+        )
+
+    structures = result.get("structures", [])
+    if not structures:
+        return HTMLResponse(
+            content='<div class="admin-alert admin-alert-warning" role="status">'
+            + _marine_esc(
+                _('No structures found within 2 km. Use "+ Add Structure" if you know of structures nearby.')
+            )
+            + "</div>",
+            status_code=200,
+        )
+
+    count = len(structures)
+    label = _("structure") if count == 1 else _("structures")
+    html_parts = [
+        '<div class="admin-alert admin-alert-success" role="status">',
+        f"<p><strong>{_('Found {count} {label}').format(count=count, label=label)}</strong> "
+        f"{_('within 2 km. Check the ones that affect waves at your spot:')}</p>",
+        "</div>",
+        '<div class="admin-discovered-structures-list" '
+        'style="display:flex;flex-direction:column;gap:0.5rem;margin:0.5rem 0;">',
+    ]
+    type_labels = {
+        "breakwater": _("Breakwater"),
+        "pier": _("Pier"),
+        "groin": _("Groin"),
+        "seawall": _("Seawall"),
+        "jetty": _("Jetty"),
+    }
+    mat_labels = {
+        "impermeable": _("Impermeable"),
+        "semi_permeable": _("Semi-permeable"),
+        "permeable": _("Permeable"),
+    }
+    for s in structures:
+        stype = s.get("type", "breakwater")
+        name = s.get("name") or type_labels.get(stype, stype.title())
+        dist = s.get("distance_m", 0)
+        length = s.get("length_m", 0)
+        bearing = s.get("bearing_degrees", 0)
+        mat = s.get("material") or ""
+        mat_source = s.get("material_source", "operator")
+        mat_display = mat_labels.get(mat, "")
+        if mat_display and mat_source == "osm":
+            mat_html = _marine_esc(mat_display)
+        else:
+            mat_html = f'<span style="color:var(--pico-del-color);">&#9888; {_marine_esc(_("Needs input"))}</span>'
+        bearing_html = f"{bearing:.0f}°"
+        # geometry is [[lat, lon], ...] per MarineDiscoveredStructure -- same
+        # shape the wizard's route emits; JS below converts to the
+        # [lon, lat] StructureConfig.coordinates contract, matching the
+        # wizard's client-side conversion exactly.
+        geometry = s.get("geometry") or []
+        geometry_json = _marine_esc(json.dumps(geometry))
+        html_parts.append(
+            f'<label style="display:flex;align-items:flex-start;gap:0.75rem;padding:0.75rem;'
+            f'border:1px solid var(--pico-muted-border-color);border-radius:0.375rem;cursor:pointer;">'
+            f'<input type="checkbox" class="admin-discovered-structure-check" '
+            f'style="margin-top:0.25rem;flex-shrink:0;" '
+            f'data-type="{stype}" '
+            f'data-material="{mat}" '
+            f'data-material-source="{mat_source}" '
+            f'data-length="{length:.1f}" '
+            f'data-bearing="{bearing:.1f}" '
+            f'data-distance="{dist:.1f}" '
+            f'data-geometry="{geometry_json}">'
+            f'<div style="flex:1;line-height:1.4;">'
+            f'<strong>{_marine_esc(name)}</strong>'
+            f'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(10rem,1fr));'
+            f'gap:0.25rem 1rem;margin-top:0.25rem;">'
+            f'<small style="color:var(--pico-muted-color);">{_marine_esc(_("Type"))}: '
+            f'{_marine_esc(type_labels.get(stype, stype.title()))}</small>'
+            f'<small style="color:var(--pico-muted-color);">{_marine_esc(_("Distance"))}: {dist:.0f} m</small>'
+            f'<small style="color:var(--pico-muted-color);">{_marine_esc(_("Length"))}: {length:.0f} m</small>'
+            f'<small style="color:var(--pico-muted-color);">{_marine_esc(_("Bearing"))}: {bearing_html}</small>'
+            f'<small style="color:var(--pico-muted-color);">{_marine_esc(_("Material"))}: {mat_html}</small>'
+            f'</div></div></label>'
+        )
+    html_parts.append("</div>")
+
+    # Emit an inline <script> that builds a .admin-structure-card fieldset
+    # when a discovered structure is checked -- HTMX evaluates <script> tags
+    # in swapped fragments (see _coverage_populate_script's identical
+    # pattern above). This is a standalone card-builder, deliberately NOT
+    # sharing code with the existing #admin-add-structure-btn handler
+    # (marine.html) per the no-refactor-existing-code constraint -- the
+    # wizard's equivalent (createStructureCard(), step_marine.html:815) is a
+    # single helper reused by its add/discover/draw entry points; admin's
+    # three entry points each build their own fieldset HTML. A future
+    # consolidation round could extract a shared admin card-builder.
+    html_parts.append(
+        "<script>"
+        "document.querySelectorAll('.admin-discovered-structure-check').forEach(function(cb){"
+        "cb.addEventListener('change', function(){"
+        "var container = document.getElementById('admin-structure-cards');"
+        "if (!container) return;"
+        "if (this.checked) {"
+        "var si = container.querySelectorAll('.admin-structure-card').length;"
+        "var matSrc = this.dataset.materialSource;"
+        "var matWarn = (matSrc !== 'osm') ? ' \\u26A0' : '';"
+        "var matVal = this.dataset.material || 'semi_permeable';"
+        "var geomRaw = this.dataset.geometry;"
+        "var coordsInputHtml = '';"
+        "if (geomRaw) {"
+        "try {"
+        "var geomArr = JSON.parse(geomRaw);"
+        "if (geomArr && geomArr.length) {"
+        "var lonLatArr = geomArr.map(function (pt) { return [pt[1], pt[0]]; });"
+        "coordsInputHtml = '<input type=\"hidden\" name=\"structure_' + si + '_coordinates\" value=\"' "
+        "+ JSON.stringify(lonLatArr) + '\">';"
+        "}"
+        "} catch (e) {}"
+        "}"
+        "var fs = document.createElement('fieldset');"
+        "fs.className = 'admin-structure-card';"
+        "fs.style.cssText = 'margin-block:0.5rem;padding:0.75rem;border:1px solid "
+        "var(--pico-muted-border-color);border-radius:4px;';"
+        "fs.innerHTML = '<div style=\"display:flex;justify-content:space-between;align-items:center;\">'"
+        "+ '<strong>Structure ' + (si+1) + ' (discovered)</strong>'"
+        "+ '<button type=\"button\" class=\"admin-remove-structure-btn\" "
+        "style=\"font-size:0.8rem;padding:0.2rem 0.5rem;cursor:pointer;background:none;"
+        "border:1px solid var(--pico-del-color,#cf222e);color:var(--pico-del-color,#cf222e);"
+        "border-radius:0.25rem;\">&times;</button></div>'"
+        "+ '<div class=\"grid\" style=\"margin-block-start:0.5rem;\"><div><label>Type"
+        "<select name=\"structure_' + si + '_type\">'"
+        "+ '<option value=\"jetty\"' + (this.dataset.type==='jetty'?' selected':'') + '>Jetty</option>'"
+        "+ '<option value=\"pier\"' + (this.dataset.type==='pier'?' selected':'') + '>Pier</option>'"
+        "+ '<option value=\"breakwater\"' + (this.dataset.type==='breakwater'?' selected':'') + '>Breakwater</option>'"
+        "+ '<option value=\"seawall\"' + (this.dataset.type==='seawall'?' selected':'') + '>Seawall</option>'"
+        "+ '<option value=\"groin\"' + (this.dataset.type==='groin'?' selected':'') + '>Groin</option>'"
+        "+ '</select></label></div><div><label>Material' + matWarn + '<select name=\"structure_' + si "
+        "+ '_material\" class=\"struct-material\"' + (matSrc !== 'osm' ? ' style=\"border-color:"
+        "var(--pico-del-color);\"' : '') + '>'"
+        "+ '<option value=\"impermeable\"' + (matVal==='impermeable'?' selected':'') + '>Impermeable</option>'"
+        "+ '<option value=\"semi_permeable\"' + (matVal==='semi_permeable'?' selected':'') + '>Semi-permeable</option>'"
+        "+ '<option value=\"permeable\"' + (matVal==='permeable'?' selected':'') + '>Permeable</option>'"
+        "+ '</select></label></div></div>'"
+        "+ '<div class=\"grid\"><div><label>Length (m)<input type=\"number\" step=\"0.1\" min=\"1\" "
+        "name=\"structure_' + si + '_length_m\" value=\"' + this.dataset.length + '\"></label></div>'"
+        "+ '<div><label>Bearing (\\u00B0)<input type=\"number\" step=\"0.1\" min=\"0\" max=\"360\" "
+        "name=\"structure_' + si + '_bearing_degrees\" value=\"' + this.dataset.bearing + '\"></label></div>'"
+        "+ '<div><label>Distance (m)<input type=\"number\" step=\"0.1\" min=\"1\" "
+        "name=\"structure_' + si + '_distance_m\" value=\"' + this.dataset.distance + '\"></label></div></div>'"
+        "+ coordsInputHtml;"
+        "container.appendChild(fs);"
+        "} else {"
+        "var cards = container.querySelectorAll('.admin-structure-card');"
+        "if (cards.length > 0) cards[cards.length - 1].remove();"
+        "}"
+        "});"
+        "});"
+        "</script>"
+    )
+
+    return HTMLResponse(content="\n".join(html_parts), status_code=200)
+
+
 # ---------------------------------------------------------------------------
 # SWAN+TruShore admin section (T4.5)
 # ---------------------------------------------------------------------------
