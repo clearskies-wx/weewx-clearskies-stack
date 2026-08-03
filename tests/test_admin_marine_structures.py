@@ -272,3 +272,107 @@ def test_save_structure_coordinates_empty_string_does_not_fabricate():
     location, error = _validate_marine_location_form(form)
     assert error is None
     assert "coordinates" not in location["surf"]["structures"][0]
+
+
+# ---------------------------------------------------------------------------
+# G6.3: admin polygon draw tool. The admin-panel side of the plan's binding
+# wizard/admin parity ruling -- templates/admin/marine.html's L.Control.Draw
+# now enables L.Draw.Polygon alongside the polyline (was `polygon: false`).
+# The captured ring flows through the SAME structure_{n}_coordinates
+# JSON-string hidden field as a drawn polyline (frozen E13 contract) -- no
+# new field, no shape change. Ring-closure convention (operator ruling
+# 2026-08-03): a drawn polygon is written first==last on the wire by the
+# template's JS before JSON.stringify, matching OSM's own closed-way
+# convention (this contract's primary data source). The parser itself
+# enforces no closure rule -- it accepts any non-empty JSON list of
+# [lon,lat] pairs verbatim, open or closed; these KATs assert the *closed*
+# ring the browser now sends survives round-trip byte-faithfully, not that
+# the server enforces closure.
+# ---------------------------------------------------------------------------
+
+def test_save_with_drawn_polygon_coordinates_closed_ring_round_trip_byte_faithful():
+    """A drawn polygon's closed ring (first==last, as the template's JS now
+    writes it) survives form-parse -> apply-payload build byte-faithfully,
+    same as the polyline case above -- same field, same contract, no
+    reordering/dedup/truncation, and the closing vertex is neither added
+    nor dropped by the server-side parser."""
+    ring = [
+        [-118.0067, 33.6553],
+        [-118.0090, 33.6551],
+        [-118.0113, 33.6549],
+        [-118.0067, 33.6553],  # closing vertex == first vertex
+    ]
+    assert ring[0] == ring[-1]  # sanity: the fixture itself is a closed ring
+
+    fields = list(_base_surf_form_fields().items()) + [
+        ("structure_0_type", "breakwater"),
+        ("structure_0_material", "impermeable"),
+        ("structure_0_length_m", "300.0"),
+        ("structure_0_bearing_degrees", "10.0"),
+        ("structure_0_distance_m", "120.0"),
+        ("structure_0_coordinates", json.dumps(ring)),
+    ]
+    form = FormData(fields)
+
+    location, error = _validate_marine_location_form(form)
+    assert error is None
+    assert location is not None
+    structures = location["surf"]["structures"]
+    assert len(structures) == 1
+    assert structures[0]["coordinates"] == ring  # byte-faithful, same value
+    assert structures[0]["coordinates"][0] == structures[0]["coordinates"][-1]  # still closed
+
+    payload = _build_marine_apply_payload(
+        {"database": {}, "station": {}}, {"test-breakwater": location}
+    )
+    sent = payload["marine"]["locations"][0]["surf"]["structures"][0]["coordinates"]
+    assert sent == ring
+    assert sent[0] == sent[-1]  # closure survives the apply-payload build too
+    # JSON round-trip is exact, not just equal-by-coincidence.
+    assert json.loads(json.dumps(sent)) == ring
+
+
+# ---------------------------------------------------------------------------
+# G6.3: polygon-availability + polyline-byte-identical source guards.
+# templates/admin/marine.html has no dedicated JS test harness (see module
+# docstring) -- these read the rendered template source directly, the same
+# escape hatch used elsewhere in this repo for template behavior that can't
+# be exercised through the pure Python functions above.
+# ---------------------------------------------------------------------------
+
+def _admin_marine_template_source() -> str:
+    from pathlib import Path
+    import weewx_clearskies_config
+
+    path = (
+        Path(weewx_clearskies_config.__file__).parent
+        / "templates" / "admin" / "marine.html"
+    )
+    return path.read_text(encoding="utf-8")
+
+
+def test_admin_marine_template_polygon_draw_enabled():
+    """L.Control.Draw's polygon option must be an enabled shape config, not
+    `false` -- this is the actual G6.3 change. Mutation-falsifiable: revert
+    the polygon line back to `polygon: false,` and this fails."""
+    src = _admin_marine_template_source()
+    assert 'polygon: { shapeOptions: { color: "#e63946", weight: 4, opacity: 0.85 } },' in src
+    assert "polygon: false," not in src
+
+
+def test_admin_marine_template_polyline_draw_config_unchanged():
+    """The polyline draw config -- the MUST-NOT-TOUCH flow -- is byte-
+    identical to its pre-G6.3 value."""
+    src = _admin_marine_template_source()
+    assert 'polyline: { shapeOptions: { color: "#e63946", weight: 4, opacity: 0.85 } },' in src
+
+
+def test_admin_marine_template_polygon_ring_closure_write_present():
+    """Mirrors the wizard's identical guard (test_wizard_marine_structures.py)
+    -- the CREATED handler must explicitly close a drawn polygon's ring
+    before it reaches adminCreateDrawnStructureCard()/JSON.stringify.
+    Mutation-falsifiable: delete the `coordinates.push(...)` line and this
+    fails."""
+    src = _admin_marine_template_source()
+    assert 'if (e.layerType === "polygon" && coordinates.length > 1) {' in src
+    assert "coordinates.push([firstPt[0], firstPt[1]]);" in src

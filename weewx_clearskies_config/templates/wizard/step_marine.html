@@ -1300,7 +1300,12 @@ if (typeof L === "undefined") {
     var drawControl = new L.Control.Draw({
       draw: {
         polyline: { shapeOptions: { color: "#e63946", weight: 4, opacity: 0.85 } },
-        polygon: false,
+        // Closed-ring drawing (G6.3) -- same styling as the polyline. Reached
+        // via the native leaflet-draw toolbar icon this enables (already
+        // visible/styled on this map, see .leaflet-draw-toolbar CSS above);
+        // the "Draw Structure on Map" button below stays wired to polyline
+        // only, so that flow is unchanged.
+        polygon: { shapeOptions: { color: "#e63946", weight: 4, opacity: 0.85 } },
         rectangle: false,
         circle: false,
         marker: false,
@@ -1317,6 +1322,11 @@ if (typeof L === "undefined") {
     map.on(L.Draw.Event.CREATED, function (e) {
       var layer = e.layer;
       var latlngs = layer.getLatLngs();
+      // Leaflet nests a polygon's vertices one level deeper than a polyline's
+      // (an array of rings, even for a simple polygon) -- unwrap to the ring
+      // itself so the rest of this handler (shared with polyline) sees a
+      // flat vertex list either way.
+      if (e.layerType === "polygon") { latlngs = latlngs[0]; }
       if (latlngs.length < 2) return;
 
       drawnItems.addLayer(layer);
@@ -1352,10 +1362,26 @@ if (typeof L === "undefined") {
         .replace("{bearing}", Math.round(bearing));
       layer.bindTooltip(labelText, { permanent: true, direction: "center", className: "drawn-structure-label" });
 
-      // Drawn polyline geometry, converted once here from Leaflet's
-      // [lat, lon] to the marine StructureConfig.coordinates contract
-      // [lon, lat]. Downstream (api, marine) does not re-order.
+      // Drawn geometry, converted once here from Leaflet's [lat, lon] to the
+      // marine StructureConfig.coordinates contract [lon, lat]. Downstream
+      // (api, marine) does not re-order.
       var coordinates = latlngs.map(function (p) { return [p.lng, p.lat]; });
+
+      // Closed-ring convention (G6.3, operator ruling 2026-08-03): a drawn
+      // polygon is written first==last on the wire, matching OSM's own
+      // convention for closed ways -- the same contract's primary data
+      // source (Overpass-discovered closed ways already arrive shaped this
+      // way). Downstream consumers (SWAN OBSTACLE emission, shadow
+      // computation) read coordinates as a point sequence; an open ring
+      // would silently lose the closing segment. Polyline geometry (above)
+      // is never closed -- this branch only fires for e.layerType "polygon".
+      if (e.layerType === "polygon" && coordinates.length > 1) {
+        var firstPt = coordinates[0];
+        var lastPt = coordinates[coordinates.length - 1];
+        if (firstPt[0] !== lastPt[0] || firstPt[1] !== lastPt[1]) {
+          coordinates.push([firstPt[0], firstPt[1]]);
+        }
+      }
 
       // Create a structure card with pre-filled geometry
       createStructureCard(card, {
