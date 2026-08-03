@@ -358,6 +358,13 @@ _SECTION_META: list[tuple[str, str, str, tuple[str, ...]]] = [
     ("api", "aqi", "AQI Provider", ()),
     ("api", "earthquakes", "Earthquakes Provider", ()),
     ("api", "radar", "Radar Provider", ()),
+    # Imagery (Phase LM / LM-3) — general-purpose orthophoto imagery provider,
+    # not marine-specific.  Unlike the other provider sections, api_key here is
+    # a PLAIN (non-secret) api.conf value per API-MANUAL §12a / ImagerySettings
+    # (future-proofing only; NAIP/ESRI do not use it in v1) — hence no secret
+    # fields tuple entry, and no reuse of provider_section.html's
+    # secrets.env/Test-connectivity shape (config/imagery_section.html instead).
+    ("api", "imagery", "Imagery Provider", ()),
     # stack.conf sections — webcam is a UI concern, written by the wizard to stack.conf
     ("stack", "ui", "UI Settings", ()),
     ("stack", "webcam", "Webcam", ()),
@@ -379,6 +386,7 @@ _SECTION_ALLOWED_KEYS: dict[tuple[str, str], frozenset[str]] = {
     ("api", "aqi"):         frozenset({"provider"}),
     ("api", "earthquakes"): frozenset({"provider"}),
     ("api", "radar"):       frozenset({"provider", "librewxr_endpoint", "librewxr_bounds"}),
+    ("api", "imagery"):     frozenset({"provider", "api_key"}),
     ("stack", "webcam"):    frozenset({"enabled", "image_url", "video_url", "refresh_interval"}),
     ("stack", "ui"):        frozenset({
         "enabled", "bind_host", "bind_port", "tls_cert_path", "tls_key_path",
@@ -903,6 +911,13 @@ _CUSTOM_SECTIONS: list[dict] = [
         "description": "",
     },
     {
+        "section_id": "imagery-provider",
+        "display_name": "Imagery",
+        "group": "providers",
+        "url": "/admin/config/api/imagery",
+        "description": "Orthophoto imagery background for the marine heatmap (display-only).",
+    },
+    {
         "section_id": "marine-service",
         "display_name": "Marine Service",
         "group": "providers",
@@ -1041,6 +1056,7 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
         "aqi-provider": "aqi",
         "earthquakes-provider": "earthquakes",
         "radar-provider": "radar",
+        "imagery-provider": "imagery",
     }
     custom_landing_values: dict[str, list[tuple[str, Any]]] = {}
 
