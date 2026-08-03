@@ -633,7 +633,10 @@ def _state_from_dict(raw: dict[str, Any]) -> WizardState:
         "marine_forecast_ttl_hours", "marine_observation_ttl_minutes", "marine_alert_radius_miles",
     }
     _FLOAT_FIELDS = {"latitude", "longitude", "altitude_meters", "earthquake_radius_km", "earthquake_min_magnitude"}
-    _BOOL_FIELDS = {"schema_skipped", "webcam_enabled", "tls_cert_uploaded", "tls_key_uploaded"}
+    _BOOL_FIELDS = {
+        "schema_skipped", "webcam_enabled", "tls_cert_uploaded", "tls_key_uploaded",
+        "swan_step_completed",
+    }
 
     kwargs: dict[str, Any] = {}
     for f in dataclasses.fields(WizardState):

@@ -306,6 +306,13 @@ class WizardState:
     # is focused on surf spot coordinates.
     trushore_outer_grid_resolution_km: float = 3.0
     trushore_inner_nest_resolution_m: int = 200
+    # True once POST /wizard/trushore has been submitted this session (or a
+    # resumed session that previously submitted it). Implements the
+    # 2026-08-03 operator ruling: the apply payload's "swan" block is sent
+    # only when the operator entered it this session, so a wizard re-run
+    # can't clobber persisted [swan] values on disk with rendered defaults
+    # (WIZARD-STUDY-AREA-RESET-INVESTIGATION-2026-08-03.md C9).
+    swan_step_completed: bool = False
 
     # Registry-keyed values for wizard steps that delegate field rendering
     # to the config registry macros.  Key = registry config_key (e.g. "enabled",

@@ -319,6 +319,9 @@ if (typeof L === "undefined") {
             </label>
           </div>
         </div>
+        {% if struct.get("coordinates") %}
+        <input type="hidden" name="loc_{{ idx }}_structure_{{ si }}_coordinates" value="{{ struct.get('coordinates') }}">
+        {% endif %}
       </fieldset>
       {% endfor %}
     </div>

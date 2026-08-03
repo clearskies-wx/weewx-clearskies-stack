@@ -2869,6 +2869,31 @@ async def step_marine_get(request: Request) -> HTMLResponse:
     """Step 13: Marine Locations — render marine feature configuration."""
     session_id = _require_session(request)
     state = get_wizard_state(session_id)
+    if not state.marine_locations and _is_rerun_mode(state.api_address):
+        # R1: _merge_from_api_current_config was previously reachable only
+        # via the rerun-mode POST /wizard/step/1 branch (routes.py:1285), so
+        # any re-entry to this step that didn't pass through that POST in
+        # the current session rendered a blank form
+        # (WIZARD-STUDY-AREA-RESET-INVESTIGATION-2026-08-03.md, "Path A").
+        # This fallback must never raise -- a failed merge just leaves the
+        # form blank as it does today.
+        try:
+            client = _get_api_client(state)
+            _merge_from_api_current_config(client, state)
+            logger.info(
+                "step_marine_get: marine_locations empty; fell back to "
+                "API current-config merge (rerun mode)"
+            )
+            save_wizard_state(session_id, state)
+        except ValueError:
+            logger.warning(
+                "step_marine_get: rerun-mode fallback merge skipped — "
+                "API client not available"
+            )
+        except Exception:  # noqa: BLE001
+            logger.warning(
+                "step_marine_get: rerun-mode fallback merge failed", exc_info=True
+            )
     _apply_marine_photo_sidecar(state, _config_dir)
     return _render(
         request,
@@ -3762,6 +3787,11 @@ async def step_trushore_post(request: Request) -> HTMLResponse:
         loc["surf"] = surf
         state.marine_locations[slug] = loc
 
+    # 2026-08-03 operator ruling (C9): marks this step submitted this
+    # session so the apply payload's "swan" block is only sent when the
+    # operator actually entered it -- see swan_step_completed (state.py).
+    state.swan_step_completed = True
+
     save_wizard_state(session_id, state)
     return await step_tls_get(request)
 
@@ -4200,15 +4230,24 @@ async def wizard_apply(request: Request) -> HTMLResponse:
     if marine_payload:
         api_payload["marine"] = marine_payload
 
-    # SWAN+TruShore nearshore model (T4.4) — included when marine is enabled
-    # and the operator has at least one surf location.  The trushore wizard
-    # step is shown under these same conditions (when SWAN is available), so
-    # the payload always reflects the operator's choices from that step.
-    # When the step was skipped (SWAN not available), we still send the
-    # default payload so the API can initialize sane defaults.
-    if marine_payload and any(
-        "surf" in loc.get("activities", [])
-        for loc in state.marine_locations.values()
+    # SWAN+TruShore nearshore model (T4.4) — included when marine is enabled,
+    # the operator has at least one surf location, AND the swan/TruShore step
+    # was actually submitted this session (state.swan_step_completed).
+    # 2026-08-03 operator ruling (C9): previously this block sent rendered
+    # DEFAULTS unconditionally whenever the first two conditions held, even
+    # when the trushore step was skipped (SWAN unavailable) or never
+    # reached -- overwriting any real [swan] values already on disk on
+    # re-run. Gating on swan_step_completed means a session that never
+    # POSTed the step never sends the block, and a resumed session that
+    # previously completed it still sends real values (the flag is
+    # persisted with the rest of WizardState — see state_persistence.py).
+    if (
+        marine_payload
+        and any(
+            "surf" in loc.get("activities", [])
+            for loc in state.marine_locations.values()
+        )
+        and state.swan_step_completed
     ):
         # Key is "swan", not "trushore": the API renamed this ApplyRequest
         # field in the TruShore->SWAN rename (API 0685121) and the stack was
@@ -5140,6 +5179,46 @@ def _merge_from_api_current_config(client: ApiClient, state: WizardState) -> Non
                 surf = loc_data.get("surf")
                 if isinstance(surf, dict):
                     surf_copy = dict(surf)
+                    # R2: normalize structures from ConfigObj dict-of-dicts
+                    # ({"0": {...}, "1": {...}}) to the list-of-dicts shape
+                    # state.marine_locations documents (state.py ~229-253)
+                    # and step_marine.html's server-rendered loop requires
+                    # (`for struct in surf.get("structures", [])`) — mirrors
+                    # admin/routes.py's _marine_structures_list normalization.
+                    # Unlike that function, coordinates is carried through
+                    # UNPARSED (whatever raw value is on the key, typically
+                    # the JSON string _build_marine_conf_section() writes)
+                    # rather than requiring isinstance(list) -- the wizard's
+                    # hidden input (step_marine.html) renders it verbatim and
+                    # step_marine_post() parses it back with json.loads(), so
+                    # the restore must round-trip the same string shape the
+                    # form field would have produced, not a parsed list.
+                    raw_structures = surf_copy.get("structures")
+                    if isinstance(raw_structures, dict):
+                        def _struct_sort_key(k: str) -> tuple[int, str]:
+                            try:
+                                return (0, "%020d" % int(k))
+                            except (TypeError, ValueError):
+                                return (1, str(k))
+                        normalized_structures: list[dict[str, Any]] = []
+                        for key in sorted(raw_structures, key=_struct_sort_key):
+                            struct = raw_structures[key]
+                            if not isinstance(struct, dict):
+                                continue
+                            struct_entry: dict[str, Any] = {
+                                "type": struct.get("type", ""),
+                                "material": struct.get("material", ""),
+                                "length_m": struct.get("length_m"),
+                                "bearing_degrees": struct.get("bearing_degrees"),
+                                "distance_m": struct.get("distance_m"),
+                            }
+                            coords = struct.get("coordinates")
+                            if coords:
+                                struct_entry["coordinates"] = coords
+                            normalized_structures.append(struct_entry)
+                        surf_copy["structures"] = normalized_structures
+                    elif not isinstance(raw_structures, list):
+                        surf_copy.pop("structures", None)
                     # C9b: normalize directional_exposure to the list-of-checked-
                     # directions shape the wizard templates expect (matching
                     # admin's _marine_exposure_list tolerance for dict / bare-list
