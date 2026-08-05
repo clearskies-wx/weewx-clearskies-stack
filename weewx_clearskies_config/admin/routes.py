@@ -39,6 +39,8 @@ Route summary (admin landing + domain sections):
   GET  /admin/marine-service         — marine companion service connection settings (T7.5)
   POST /admin/marine-service         — save marine service URL, TLS flag + optional new secret
   POST /admin/marine-service/test    — HTMX: ask the API to test the marine service (T7.3)
+  GET  /admin/surf-scoring           — surf score weights form (Round S, ADR-101 guidance 6)
+  POST /admin/surf-scoring           — validate + save top-level [surf_scoring] via /setup/apply
 
 Route summary (config editor — formerly config/routes.py):
   GET  /admin/config                          — config dashboard (all sections)
@@ -53,6 +55,7 @@ from __future__ import annotations
 
 import json
 import logging
+import math
 import os
 import re
 from pathlib import Path
@@ -109,6 +112,20 @@ _FC_DEFAULTS: dict[str, str] = {
     "retention_years": "3",
     "db_path": "/etc/weewx-clearskies/forecast_correction.db",
     "model_path": "/etc/weewx-clearskies/forecast_correction_model.pkl",
+}
+
+# Surf score weight defaults (Round S, ADR-101 guidance 6). These are the
+# ADR-101 shipped weights — the same code constants the marine service's
+# scorer falls back to. Defaults live in code, not config: an absent
+# top-level [surf_scoring] section in the API's current-config means these
+# values, so this dict is a display/pre-fill fallback and is never written
+# anywhere unless the operator saves the form.
+_SURF_SCORING_DEFAULTS: dict[str, str] = {
+    "weight_size": "0.25",
+    "weight_shape": "0.25",
+    "weight_conditions": "0.20",
+    "weight_power": "0.20",
+    "weight_consistency": "0.10",
 }
 
 # ---------------------------------------------------------------------------
@@ -966,6 +983,13 @@ _CUSTOM_SECTIONS: list[dict] = [
         "url": "/admin/marine",
         "description": "Configure marine, surf, fishing, and beach safety locations.",
     },
+    {
+        "section_id": "surf-scoring",
+        "display_name": "Surf Score Weights",
+        "group": "advanced",
+        "url": "/admin/surf-scoring",
+        "description": "Operator-adjustable importance weights for the five surf score components.",
+    },
 ]
 
 
@@ -1147,6 +1171,21 @@ async def admin_landing(request: Request) -> HTMLResponse | RedirectResponse:
         else:
             marine_service_rows.append(("Status", "Not configured"))
     custom_landing_values["marine-service"] = marine_service_rows
+
+    # Surf score weights summary (Round S, ADR-101 guidance 6)
+    surf_scoring_rows: list[tuple[str, Any]] = []
+    if marine_config is None:
+        surf_scoring_rows.append(("Status", "API unreachable"))
+    else:
+        configured_weights = _parse_surf_scoring_weights(marine_config.get("surf_scoring"))
+        if configured_weights is None:
+            surf_scoring_rows.append(("Status", "Defaults"))
+        else:
+            shares = _surf_scoring_shares(configured_weights)
+            surf_scoring_rows.append(
+                ("Weights", " / ".join(f"{shares[k]:.0f}%" for k in _SURF_SCORING_DEFAULTS))
+            )
+    custom_landing_values["surf-scoring"] = surf_scoring_rows
 
     return _render(
         request,
@@ -1718,6 +1757,164 @@ async def forecast_correction_retrain(request: Request) -> HTMLResponse:
         request,
         section_slug="forecast-correction",
         display_name=_("Forecast Correction"),
+        success=success,
+        error=error,
+        status_code=500 if error else 200,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Round S — Surf score weights admin (ADR-101 guidance 6)
+# ---------------------------------------------------------------------------
+
+
+def _parse_surf_scoring_weights(raw: Any) -> dict[str, float] | None:
+    """Parse the API's current-config top-level ``surf_scoring`` section into
+    the five positive floats, or None when the section is absent/empty/not a
+    dict (→ the caller shows the ADR-101 defaults).
+
+    Mirrors the marine service's per-key tolerance (its
+    ``SurfScoreWeightsConfig``): an individually malformed or non-positive
+    stored value falls back to that key's default rather than discarding the
+    whole section — the form then shows what the scorer would actually use.
+    """
+    if not isinstance(raw, dict) or not raw:
+        return None
+    weights: dict[str, float] = {}
+    for key, default in _SURF_SCORING_DEFAULTS.items():
+        try:
+            value = float(raw.get(key, default))
+        except (TypeError, ValueError):
+            value = float(default)
+        if not math.isfinite(value) or value <= 0:
+            value = float(default)
+        weights[key] = value
+    return weights
+
+
+def _surf_scoring_shares(weights: dict[str, float]) -> dict[str, float]:
+    """Effective percentage per component: value ÷ sum × 100 (ADR-101 —
+    the scorer normalizes by sum at computation time, so only proportions
+    matter)."""
+    total = sum(weights.values())
+    return {key: value / total * 100.0 for key, value in weights.items()}
+
+
+def _surf_scoring_components() -> list[tuple[str, str]]:
+    """Ordered (config_key, translated label) pairs for the five components.
+
+    Order and vocabulary match the visitor-facing score bars (ADR-101
+    display: Size / Shape / Conditions / Power / Consistency) so the
+    operator adjusts the same names visitors see on the dashboard. Built
+    per-request, not at import time, so labels follow the active locale.
+    """
+    return [
+        ("weight_size", _("Size")),
+        ("weight_shape", _("Shape")),
+        ("weight_conditions", _("Conditions")),
+        ("weight_power", _("Power")),
+        ("weight_consistency", _("Consistency")),
+    ]
+
+
+def _format_weight(value: float) -> str:
+    """Display format for a weight input value — trims float noise
+    (0.25 → "0.25", 0.2 → "0.2") without locale formatting, because the
+    value lands in an HTML number input, which always takes "." decimals."""
+    return f"{value:g}"
+
+
+@router.get("/surf-scoring", response_class=HTMLResponse)
+async def surf_scoring_get(request: Request) -> HTMLResponse:
+    """Render the surf score weights form, pre-filled from the API's
+    current-config top-level ``surf_scoring`` section — ADR-101 shipped
+    defaults when the section is absent (defaults live in code, not
+    config)."""
+    _require_session(request)
+    config = _fetch_current_config()
+    if config is None:
+        return _render(request, "surf_scoring.html", {
+            "api_unreachable": True,
+            "components": _surf_scoring_components(),
+        })
+    weights = _parse_surf_scoring_weights(config.get("surf_scoring"))
+    is_default = weights is None
+    if weights is None:
+        weights = {k: float(v) for k, v in _SURF_SCORING_DEFAULTS.items()}
+    return _render(request, "surf_scoring.html", {
+        "api_unreachable": False,
+        "components": _surf_scoring_components(),
+        "values": {k: _format_weight(v) for k, v in weights.items()},
+        "shares": _surf_scoring_shares(weights),
+        "is_default": is_default,
+        "defaults": _SURF_SCORING_DEFAULTS,
+        "errors": {},
+        "error_summary": None,
+    })
+
+
+@router.post("/surf-scoring", response_class=HTMLResponse)
+async def surf_scoring_post(request: Request) -> HTMLResponse:
+    """Validate the five weights and save them as the top-level
+    ``[surf_scoring]`` section via POST /setup/apply — the existing
+    admin → API path; the API pushes the section on to the marine service's
+    /config (the admin never talks to the marine service directly).
+
+    Zero, negative, non-numeric (including NaN/inf) and missing values are
+    rejected here with a 422 re-render (ADR-101 guidance 6: "reject
+    zero/negative values at the form"). The scorer normalizes by sum, so any
+    positive combination is valid — there is deliberately no combination
+    check.
+    """
+    _require_session(request)
+    form = await request.form()
+    components = _surf_scoring_components()
+    entered: dict[str, str] = {}
+    errors: dict[str, str] = {}
+    weights: dict[str, float] = {}
+    for key, _label in components:
+        raw = str(form.get(key, "")).strip()
+        entered[key] = raw
+        try:
+            value = float(raw)
+        except ValueError:
+            errors[key] = _("Enter a positive number.")
+            continue
+        if not math.isfinite(value) or value <= 0:
+            errors[key] = _("Enter a positive number.")
+            continue
+        weights[key] = value
+    if errors:
+        return _render(request, "surf_scoring.html", {
+            "api_unreachable": False,
+            "components": components,
+            "values": entered,
+            "shares": None,
+            "is_default": False,
+            "defaults": _SURF_SCORING_DEFAULTS,
+            "errors": errors,
+            "error_summary": _("All five weights must be positive numbers. Nothing was saved."),
+        }, status_code=422)
+
+    error: str | None = None
+    success = False
+    config = _fetch_current_config()
+    client = _get_api_client()
+    if config is None or client is None:
+        error = _("Cannot connect to API — check that the API is running and configured.")
+    else:
+        payload = _build_base_apply_payload(config)
+        payload["surf_scoring"] = {key: weights[key] for key, _label in components}
+        try:
+            client.apply(payload)
+            success = True
+        except Exception as exc:  # noqa: BLE001
+            error = _("API error: {detail}").format(detail=exc)
+            logger.warning("surf_scoring_post API error: %s", exc)
+    return _render_result(
+        request,
+        section_slug="surf-scoring",
+        display_name=_("Surf Score Weights"),
         success=success,
         error=error,
         status_code=500 if error else 200,

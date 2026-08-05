@@ -1,0 +1,185 @@
+{# -------------------------------------------------------------------------
+   Surf score weights admin section (Round S, ADR-101 guidance 6).
+   Loaded via HTMX into #admin-content.
+   Context:
+     api_unreachable — bool; when True only the unreachable notice renders
+     components — ordered list of (config_key, translated label) pairs,
+                  matching the visitor-facing bars: Size / Shape /
+                  Conditions / Power / Consistency
+     values     — dict config_key → display string (current or re-entered)
+     shares     — dict config_key → effective percentage float, or None on
+                  an error re-render (rows then show an em dash until the
+                  script recomputes from whatever is valid)
+     is_default — True when the API has no [surf_scoring] section yet
+     defaults   — ADR-101 shipped defaults as display strings
+     errors     — dict config_key → field error message (empty when valid)
+     error_summary — summary error line, or None
+   The five weights are system-wide (one set for the whole system, not per
+   spot) and are normalized by their sum at computation time, so only the
+   proportions matter (ADR-101). The inline script keeps the effective-share
+   column live; without JavaScript the server-rendered shares and the
+   per-field default hints keep the form fully usable.
+   ------------------------------------------------------------------------- #}
+{% from "macros/help_panel.html" import help_trigger %}
+<style>
+.ssw-grid{display:grid;grid-template-columns:max-content minmax(6rem,10rem) max-content;gap:0.25rem 1rem;align-items:center}
+.ssw-grid .ssw-head{font-size:0.8rem;color:var(--pico-muted-color);font-weight:600}
+.ssw-grid input[type="number"]{margin:0}
+.ssw-hint{grid-column:1 / -1;margin-block-end:0.5rem;font-size:0.75rem;color:var(--pico-muted-color)}
+.ssw-error{grid-column:1 / -1;margin-block-end:0.5rem;font-size:0.8rem;color:var(--pico-del-color,#dc2626)}
+.ssw-total{font-weight:600;border-block-start:1px solid var(--pico-muted-border-color);padding-block-start:0.4rem}
+.ssw-alert{padding:.75rem 1rem;border-radius:var(--pico-border-radius,.25rem);margin-block:1rem;font-size:.875rem}
+.ssw-alert-error{background:#fef2f2;border:1px solid #fca5a5;color:#991b1b}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .ssw-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}}
+[data-theme="dark"] .ssw-alert-error{background:#3a1212;border-color:#7f1d1d;color:#fca5a5}
+</style>
+<article>
+  <header>
+    <nav aria-label="{{ _('Breadcrumb') }}">
+      <ul>
+        <li>
+          <a href="/admin"
+             hx-get="/admin"
+             hx-target="#admin-content"
+             hx-swap="innerHTML"
+             hx-push-url="true">{{ _("Admin") }}</a>
+        </li>
+        <li>{{ _("Surf Score Weights") }}</li>
+      </ul>
+    </nav>
+    <h2>{{ _("Surf Score Weights") }}</h2>
+    {{ help_trigger("/admin/help/surf_scoring") }}
+  </header>
+
+  {% if api_unreachable %}
+  <div role="alert" class="ssw-alert ssw-alert-error">
+    <strong>{{ _("API unreachable.") }}</strong>
+    {{ _("The API is unreachable or not yet configured. Start the API service and reload this page to view or change surf score weights.") }}
+  </div>
+  {% else %}
+
+  <p>{{ _("The surf quality score is a weighted geometric mean of five components: Size, Shape, Conditions, Power and Consistency. The weights below set how much each component counts toward the score.") }}</p>
+  <p><small>{{ _("Any positive numbers work — the weights are normalized by their sum when the score is computed, so only the proportions matter. The effective share column shows the resulting percentage for each component.") }}</small></p>
+  <p><small>{{ _("One weight set applies to every surf spot.") }}</small></p>
+
+  {% if is_default %}
+  <p><small>{{ _("Using the built-in default weights — nothing has been saved yet.") }}</small></p>
+  {% endif %}
+
+  {% if error_summary %}
+  <div role="alert" class="ssw-alert ssw-alert-error">
+    <strong>{{ _("Error.") }}</strong> {{ error_summary }}
+  </div>
+  {% endif %}
+
+  <form hx-post="/admin/surf-scoring"
+        hx-target="#admin-content"
+        hx-swap="innerHTML"
+        id="surf-scoring-form">
+    <fieldset>
+      <legend style="position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)">{{ _("Surf Score Weights") }}</legend>
+      <div class="ssw-grid">
+        <span class="ssw-head" aria-hidden="true">{{ _("Component") }}</span>
+        <span class="ssw-head" aria-hidden="true">{{ _("Weight") }}</span>
+        <span class="ssw-head" aria-hidden="true">{{ _("Effective share") }}</span>
+
+        {% for key, label in components %}
+        <label for="ssw-{{ key }}" style="margin:0">{{ label }}</label>
+        <input type="number"
+               id="ssw-{{ key }}"
+               name="{{ key }}"
+               value="{{ values[key] }}"
+               step="any"
+               min="0.001"
+               inputmode="decimal"
+               required
+               data-ssw-weight
+               aria-describedby="ssw-{{ key }}-hint{% if errors.get(key) %} ssw-{{ key }}-error{% endif %}"
+               {% if errors.get(key) %}aria-invalid="true"{% endif %}>
+        <output id="ssw-{{ key }}-share"
+                for="ssw-{{ key }}"
+                aria-label="{{ _('Effective share') }} — {{ label }}">
+          {%- if shares -%}{{ "%.1f"|format(shares[key]) }}%{%- else -%}&mdash;{%- endif -%}
+        </output>
+        <small class="ssw-hint" id="ssw-{{ key }}-hint">{{ _("Default: {value}").format(value=defaults[key]) }}</small>
+        {% if errors.get(key) %}
+        <small class="ssw-error" id="ssw-{{ key }}-error">{{ errors[key] }}</small>
+        {% endif %}
+        {% endfor %}
+
+        <span class="ssw-total">{{ _("Total") }}</span>
+        <span class="ssw-total" aria-hidden="true"></span>
+        <span class="ssw-total" id="ssw-total">
+          {%- if shares -%}100%{%- else -%}&mdash;{%- endif -%}
+        </span>
+      </div>
+    </fieldset>
+
+    <div role="group" style="margin-block-start:1.25rem">
+      <button type="submit">{{ _("Save") }}</button>
+      <button type="button" class="outline secondary" id="ssw-reset">{{ _("Reset to defaults") }}</button>
+      <a href="/admin"
+         hx-get="/admin"
+         hx-target="#admin-content"
+         hx-swap="innerHTML"
+         hx-push-url="true"
+         role="button"
+         class="secondary outline">{{ _("Cancel") }}</a>
+    </div>
+  </form>
+  {% endif %}
+</article>
+
+{% if not api_unreachable %}
+<script>
+(function () {
+  var form = document.getElementById("surf-scoring-form");
+  if (!form) { return; }
+  var DEFAULTS = {{ defaults | tojson }};
+  var inputs = Array.prototype.slice.call(form.querySelectorAll("input[data-ssw-weight]"));
+  var formatter = null;
+  try {
+    formatter = new Intl.NumberFormat(document.documentElement.lang || undefined,
+                                      { style: "percent",
+                                        minimumFractionDigits: 1,
+                                        maximumFractionDigits: 1 });
+  } catch (e) { /* fall back to toFixed below */ }
+  function formatPercent(value) {
+    return formatter ? formatter.format(value / 100) : value.toFixed(1) + "%";
+  }
+  function recompute() {
+    var parsed = {};
+    var total = 0;
+    var allValid = true;
+    inputs.forEach(function (input) {
+      var value = parseFloat(input.value);
+      if (!isFinite(value) || value <= 0) { allValid = false; return; }
+      parsed[input.name] = value;
+      total += value;
+    });
+    inputs.forEach(function (input) {
+      var share = document.getElementById("ssw-" + input.name + "-share");
+      if (!share) { return; }
+      share.textContent = (allValid && total > 0)
+        ? formatPercent(parsed[input.name] / total * 100)
+        : "—";
+    });
+    var totalCell = document.getElementById("ssw-total");
+    if (totalCell) { totalCell.textContent = (allValid && total > 0) ? formatPercent(100) : "—"; }
+  }
+  inputs.forEach(function (input) { input.addEventListener("input", recompute); });
+  var reset = document.getElementById("ssw-reset");
+  if (reset) {
+    reset.addEventListener("click", function () {
+      inputs.forEach(function (input) {
+        if (Object.prototype.hasOwnProperty.call(DEFAULTS, input.name)) {
+          input.value = DEFAULTS[input.name];
+        }
+      });
+      recompute();
+    });
+  }
+  recompute();
+})();
+</script>
+{% endif %}
