@@ -894,6 +894,30 @@ Use **Test Connection** to verify the API can reach the marine service at the co
 
 The **SWAN+TruShore** section shows current SWAN model status (binary availability, version, last run time, memory usage, and nested grid resolutions), lets you trigger a manual SWAN run, adjust OpenMP thread count and grid resolutions (outer and inner nest), and update per-spot surf settings (breaker formula and surf height display preference). Changes to per-spot settings take effect on the next SWAN run. For installation details see [§5 — Installation — weewx Extensions](#5-installation--weewx-extensions).
 
+### Surf Score Weights
+
+The **Surf Score Weights** section adjusts how much each of the five surf quality score components — Size, Shape, Conditions, Power, and Consistency — counts toward the score. This section appears when at least one location has surf activity enabled (same visibility condition as Marine Service).
+
+The surf quality score is a weighted geometric mean of the five components (ADR-101): a very poor component drags the whole score down even if the others are strong, unlike a plain average. Each component's exponent in that geometric mean is one of the five weights below.
+
+The form shows one number field per component:
+
+| Field | Default |
+|-------|---------|
+| Size | 0.25 |
+| Shape | 0.25 |
+| Conditions | 0.20 |
+| Power | 0.20 |
+| Consistency | 0.10 |
+
+**Entering weights.** Any positive number is accepted for each field — zero, negative, and non-numeric entries are rejected on save with a "must be positive" error next to the field, and nothing is saved until every field is valid. There is no upper bound and no requirement that the five values sum to any particular total: the weights are normalized by their sum when the score is computed, so only the proportions between them matter. An "Effective share" column next to each field shows the resulting percentage live as you type, and a **Reset to defaults** button fills in the shipped defaults above (not saved until you click **Save**).
+
+**Scope.** One weight set applies system-wide — it is not configurable per surf spot.
+
+**Saving and effect.** Saving writes the five weights as a top-level `[surf_scoring]` configuration section (a sibling of `[marine]`, not nested under it) via the same `/setup/apply` path the admin uses for other config changes; the API then pushes the section on to the marine service. The marine service re-reads its configuration on every surf forecast computation, so a saved change takes effect on the next `GET /surf` request — no service restart is required. Until you save for the first time, the section shows the built-in shipped defaults above; those defaults live in code on both the admin UI and the marine service's scorer, not in any config file, so an unconfigured system already scores using them.
+
+The admin landing page's Surf Score Weights summary shows the current effective percentage for each component in the shipped order (Size / Shape / Conditions / Power / Consistency), or "Defaults" if nothing has been saved yet, or "API unreachable" if the API cannot be reached to read the current configuration.
+
 ---
 
 ## 8. Under the Hood
